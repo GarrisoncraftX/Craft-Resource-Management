@@ -1,0 +1,45 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: craft-resource-management-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: craft-resource-management.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 5003
+      - path: /java-api
+        pathType: Prefix
+        backend:
+          service:
+            name: java-backend
+            port:
+              number: 5002
+      - path: /nodejs-api
+        pathType: Prefix
+        backend:
+          service:
+            name: nodejs-backend
+            port:
+              number: 3000
+      - path: /python-api
+        pathType: Prefix
+        backend:
+            name: python-backend
+            port:
+              number: 5000

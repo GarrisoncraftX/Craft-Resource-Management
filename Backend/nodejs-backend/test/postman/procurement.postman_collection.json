@@ -1,0 +1,406 @@
+{
+  "info": {
+    "name": "Procurement API",
+    "_postman_id": "87654321-abcd-efgh-ijkl-0987654321ba",
+    "description": "Postman collection to test Procurement REST API endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Procurement Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "x-user-id",
+            "value": "user123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "2",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"procurement.manage\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/procurement/requests",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "procurement", "requests"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"New Laptops\",\n  \"description\": \"Procurement of new laptops for development team\",\n  \"estimatedAmount\": 15000,\n  \"departmentId\": 1,\n  \"requestedBy\": \"user123\",\n  \"priority\": \"high\",\n  \"items\": [\n    {\n      \"name\": \"Laptop\",\n      \"description\": \"15 inch laptop\",\n      \"quantity\": 10,\n      \"unitPrice\": 1500\n    }\n  ]\n}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Procurement Requests",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "user123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "2",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"procurement.view\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/procurement/requests",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "procurement", "requests"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Procurement Request By ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "user123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "2",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"procurement.view\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/procurement/requests/PR_123456789",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "procurement", "requests", "PR_123456789"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Procurement Request Status",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "x-user-id",
+            "value": "manager123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "3",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"procurement.approve\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/procurement/requests/PR_123456789/status",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "procurement", "requests", "PR_123456789", "status"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"approved\",\n  \"comments\": \"Approved by manager\"\n}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Vendor",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "x-user-id",
+            "value": "user123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "2",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"procurement.manage\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/procurement/vendors",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "procurement", "vendors"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Vendor A\",\n  \"contactPerson\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"phone\": \"1234567890\",\n  \"address\": \"123 Main St\",\n  \"category\": \"IT\",\n  \"taxId\": \"TAX123\",\n  \"registrationNumber\": \"REG456\"\n}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Vendors",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "user123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "2",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"procurement.view\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/procurement/vendors",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "procurement", "vendors"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Vendor By ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "user123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "2",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"procurement.view\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/procurement/vendors/V_123456789",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "procurement", "vendors", "V_123456789"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Tender",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "x-user-id",
+            "value": "user123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "2",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"procurement.manage\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/procurement/tenders",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "procurement", "tenders"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Tender for Office Supplies\",\n  \"description\": \"Tender for procurement of office supplies\",\n  \"tenderType\": \"open\",\n  \"estimatedValue\": 5000,\n  \"submissionDeadline\": \"2024-08-01\",\n  \"openingDate\": \"2024-08-05\",\n  \"createdBy\": \"user123\"\n}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Tenders",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "user123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "2",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"procurement.view\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/procurement/tenders",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "procurement", "tenders"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Tender By ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "user123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "2",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"procurement.view\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/procurement/tenders/T_123456789",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "procurement", "tenders", "T_123456789"]
+        }
+      },
+      "response": []
+    }
+  ]
+}

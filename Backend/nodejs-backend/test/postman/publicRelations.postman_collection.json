@@ -1,0 +1,130 @@
+{
+  "info": {
+    "name": "Public Relations API",
+    "_postman_id": "pr-12345678-abcd-efgh-ijkl-1234567890ab",
+    "description": "Postman collection to test Public Relations REST API endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Press Releases",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3002/api/public-relations/press-releases",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "public-relations", "press-releases"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Press Release",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/public-relations/press-releases",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "public-relations", "press-releases"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"New Product Launch\",\n  \"content\": \"Details about the new product launch...\"\n}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Media Contacts",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3002/api/public-relations/media-contacts",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "public-relations", "media-contacts"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Media Contact",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/public-relations/media-contacts",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "public-relations", "media-contacts"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Jane Smith\",\n  \"email\": \"jane@example.com\",\n  \"phone\": \"1234567890\"\n}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Public Events",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3002/api/public-relations/public-events",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "public-relations", "public-events"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Public Event",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/public-relations/public-events",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "public-relations", "public-events"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Annual Conference\",\n  \"date\": \"2024-09-15\",\n  \"location\": \"Conference Hall A\"\n}"
+        }
+      },
+      "response": []
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Virtual environment
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# dotenv environment variables file
+.env
+
+# Logs
+*.log
+
+# Dockerfile and docker-compose files
+Dockerfile
+docker-compose.yml
+
+# VSCode settings
+.vscode/

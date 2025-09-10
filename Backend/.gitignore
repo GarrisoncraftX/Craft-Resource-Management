@@ -1,0 +1,40 @@
+# Ignore node_modules in all subdirectories
+**/node_modules/
+
+# Ignore Java build output
+java-backend/target/
+
+# Ignore Java application properties
+Backend/java-backend/src/main/resources/application.properties
+
+# Ignore Python bytecode and virtual environments
+**/__pycache__/
+**/*.py[cod]
+**/venv/
+**/ENV/
+**/.env
+
+# Ignore log files
+*.log
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE/editor folders
+.vscode/
+.idea/
+
+# Ignore npm debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore coverage reports
+coverage/
+
+# Ignore Dockerfiles in backend folders containing secrets
+Backend/nodejs-backend/Dockerfile
+Backend/python-backend/Dockerfile
+Backend/java-backend/Dockerfile
+Backend/api-gateway/Dockerfile

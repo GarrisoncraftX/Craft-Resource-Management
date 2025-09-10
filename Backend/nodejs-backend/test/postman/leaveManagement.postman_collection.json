@@ -1,0 +1,280 @@
+{
+  "info": {
+    "name": "Leave Management API",
+    "_postman_id": "12345678-abcd-efgh-ijkl-1234567890ab",
+    "description": "Postman collection to test Leave Management REST API endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Leave Types",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "user123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "2",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"leave.view\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/leave/types",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "leave", "types"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Leave Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "x-user-id",
+            "value": "user123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "2",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"leave.request\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/leave/request",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "leave", "request"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"leaveTypeId\": 1,\n  \"startDate\": \"2024-07-01\",\n  \"endDate\": \"2024-07-05\",\n  \"reason\": \"Vacation\"\n}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get User Leave Requests",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "user123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "2",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"leave.view\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/leave/my-requests",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "leave", "my-requests"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Department Leave Requests",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "manager123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "3",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"leave.view_department\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/leave/department-requests",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "leave", "department-requests"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Leave Request Status",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "x-user-id",
+            "value": "manager123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "3",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"leave.approve\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/leave/request/123456/status",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "leave", "request", "123456", "status"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"approved\",\n  \"comments\": \"Approved by manager\"\n}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get User Leave Balance",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "user123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "2",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"leave.view\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/leave/balance/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "leave", "balance", "1"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Leave Statistics",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-user-id",
+            "value": "hr123",
+            "type": "text"
+          },
+          {
+            "key": "x-department-id",
+            "value": "1",
+            "type": "text"
+          },
+          {
+            "key": "x-role-id",
+            "value": "4",
+            "type": "text"
+          },
+          {
+            "key": "x-permissions",
+            "value": "[\"leave.view_statistics\"]",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3002/api/leave/statistics?startDate=2024-01-01&endDate=2024-12-31",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3002",
+          "path": ["api", "leave", "statistics"]
+        }
+      },
+      "response": []
+    }
+  ]
+}

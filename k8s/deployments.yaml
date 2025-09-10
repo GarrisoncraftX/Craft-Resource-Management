@@ -1,0 +1,242 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: api-gateway
+        image: api-gateway:v1.0.0
+        ports:
+        - containerPort: 5003
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+            ephemeral-storage: 500Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+            ephemeral-storage: 1Gi
+        env:
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: jwt-secret
+        - name: FRONTEND_URL
+          value: "http://frontend"
+        - name: PORT
+          value: "5003"
+        - name: PYTHON_BACKEND_URL
+          value: "http://python-backend:5000"
+        - name: NODE_BACKEND_URL
+          value: "http://nodejs-backend:3000"
+        - name: JAVA_BACKEND_URL
+          value: "http://java-backend:5002"
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: java-backend
+  template:
+    metadata:
+      labels:
+        app: java-backend
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: java-backend
+        image: java-backend:v1.0.0
+        ports:
+        - containerPort: 5002
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+            ephemeral-storage: 500Mi
+          limits:
+            cpu: 1000m
+            memory: 1024Mi
+            ephemeral-storage: 1Gi
+        env:
+        - name: SERVER_PORT
+          value: "5002"
+        # Add other environment variables as needed
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodejs-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodejs-backend
+  template:
+    metadata:
+      labels:
+        app: nodejs-backend
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: nodejs-backend
+        image: nodejs-backend:v1.0.0
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            cpu: 150m
+            memory: 192Mi
+            ephemeral-storage: 500Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+            ephemeral-storage: 1Gi
+        env:
+        - name: PORT
+          value: "3000"
+        # Add other environment variables as needed
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python-backend
+  template:
+    metadata:
+      labels:
+        app: python-backend
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: python-backend
+        image: python-backend:v1.0.0
+        ports:
+        - containerPort: 5000
+        resources:
+          requests:
+            cpu: 150m
+            memory: 192Mi
+            ephemeral-storage: 500Mi
+          limits:
+            cpu: 750m
+            memory: 768Mi
+            ephemeral-storage: 1Gi
+        env:
+        - name: PORT
+          value: "5000"
+        # Add other environment variables as needed
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: mysql
+        image: mysql:8.0.33
+        ports:
+        - containerPort: 3306
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+            ephemeral-storage: 1Gi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+            ephemeral-storage: 2Gi
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: mysql-root-password
+        - name: MYSQL_DATABASE
+          value: "craft_resource_management"
+        - name: MYSQL_USER
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: DB_USERNAME
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: db-password
+        volumeMounts:
+        - name: mysql-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-storage
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: frontend
+        image: frontend:v1.0.0
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+            ephemeral-storage: 500Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+            ephemeral-storage: 1Gi

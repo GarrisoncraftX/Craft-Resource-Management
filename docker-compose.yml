@@ -1,0 +1,133 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: ./Backend/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "5003:5003"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - PORT=5003
+      - PYTHON_BACKEND_URL=${PYTHON_BACKEND_URL}
+      - NODE_BACKEND_URL=${NODE_BACKEND_URL}
+      - JAVA_BACKEND_URL=${JAVA_BACKEND_URL}
+    depends_on:
+      - java-backend
+      - nodejs-backend
+      - python-backend
+      - mysql
+
+  java-backend:
+    build:
+      context: ./Backend/java-backend
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5002"
+    environment:
+      - SERVER_PORT=5002
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/craft_resource_management
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_SECURITY_USER_NAME=${SPRING_SECURITY_USER_NAME}
+      - SPRING_SECURITY_USER_PASSWORD=${SPRING_SECURITY_USER_PASSWORD}
+      - APIGATEWAY_SERVICE_URL=${APIGATEWAY_SERVICE_URL}
+      - PYTHON_SERVICE_URL=${PYTHON_SERVICE_URL}
+      - NODEJS_SERVICE_URL=${NODEJS_SERVICE_URL}
+      - OPENAI_API_URL=${OPENAI_API_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - mysql
+
+  nodejs-backend:
+    build:
+      context: ./Backend/nodejs-backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - FRONTEND_URL=${FRONTEND_URL}
+      - PYTHON_BASE_URL=${PYTHON_BASE_URL}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=craft_resource_management
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=${NODE_ENV}
+      - TEST_DB_HOST=mysql
+      - TEST_DB_PORT=3306
+      - TEST_DB_USERNAME=${TEST_DB_USERNAME}
+      - TEST_DB_PASSWORD=${TEST_DB_PASSWORD}
+      - TEST_DB_NAME=craft_resource_management_test
+      - DB_SSL=${DB_SSL}
+    depends_on:
+      - mysql
+
+  python-backend:
+    build:
+      context: ./Backend/python-backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - PYTHONDONTWRITEBYTECODE=${PYTHONDONTWRITEBYTECODE}
+      - PYTHONUNBUFFERED=${PYTHONUNBUFFERED}
+      - FLASK_ENV=${FLASK_ENV}
+      - PORT=5000
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=craft_resource_management
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - FACE_RECOGNITION_THRESHOLD=${FACE_RECOGNITION_THRESHOLD}
+      - FINGERPRINT_THRESHOLD=${FINGERPRINT_THRESHOLD}
+      - BIOMETRIC_TEMPLATE_ENCRYPTION=${BIOMETRIC_TEMPLATE_ENCRYPTION}
+      - OPENCV_FACE_CASCADE_PATH=${OPENCV_FACE_CASCADE_PATH}
+      - ML_MODEL_PATH=${ML_MODEL_PATH}
+      - LIGHTWEIGHT_FACE_DETECTOR_PROTOTXT=${LIGHTWEIGHT_FACE_DETECTOR_PROTOTXT}
+      - LIGHTWEIGHT_FACE_DETECTOR_MODEL=${LIGHTWEIGHT_FACE_DETECTOR_MODEL}
+      - LIGHTWEIGHT_FACE_RECOGNITION_MODEL=${LIGHTWEIGHT_FACE_RECOGNITION_MODEL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FILE=${LOG_FILE}
+      - LOG_MAX_BYTES=${LOG_MAX_BYTES}
+      - LOG_BACKUP_COUNT=${LOG_BACKUP_COUNT}
+      - BCRYPT_LOG_ROUNDS=${BCRYPT_LOG_ROUNDS}
+      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE}
+      - RATELIMIT_STORAGE_URL=${RATELIMIT_STORAGE_URL}
+      - RATELIMIT_DEFAULT=${RATELIMIT_DEFAULT}
+      - CACHE_TYPE=${CACHE_TYPE}
+      - CACHE_DEFAULT_TIMEOUT=${CACHE_DEFAULT_TIMEOUT}
+    depends_on:
+      - mysql
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: craft_resource_management
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+volumes:
+  mysql-data:

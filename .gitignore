@@ -1,0 +1,76 @@
+# Node modules
+**/node_modules/
+
+# Java build output
+**/target/
+
+# Java application properties
+**/src/main/resources/application.properties
+
+# Python bytecode and virtual environments
+**/__pycache__/
+**/*.py[cod]
+**/venv/
+**/ENV/
+**/.env
+
+# Log files
+*.log
+logs/
+**/logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# IDE/editor folders
+.vscode/
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+
+# npm debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Coverage reports
+coverage/
+
+# Build output
+**/dist/
+**/dist-ssr/
+**/node_modules/.vite/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Dockerfiles in backend folders containing secrets
+Backend/nodejs-backend/Dockerfile
+Backend/python-backend/Dockerfile
+Backend/java-backend/Dockerfile
+Backend/api-gateway/Dockerfile
+
+
+# Environment files
+*.local
+.env
+.env.local
+.env.development.local
+
+# Miscellaneous
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Kubernetes secrets
+k8s/secrets.yaml
