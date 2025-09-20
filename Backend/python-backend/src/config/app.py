@@ -39,7 +39,9 @@ class Config:
     # Biometric configuration
     FACE_RECOGNITION_THRESHOLD = float(os.getenv('FACE_RECOGNITION_THRESHOLD', 0.6))
     FINGERPRINT_THRESHOLD = float(os.getenv('FINGERPRINT_THRESHOLD', 0.8))
+    FINGERPRINT_PORT = os.getenv('FINGERPRINT_PORT')  # Optional for Windows Biometric Framework
     BIOMETRIC_TEMPLATE_ENCRYPTION = os.getenv('BIOMETRIC_TEMPLATE_ENCRYPTION', 'True').lower() == 'true'
+    USE_WINDOWS_BIOMETRIC = os.getenv('USE_WINDOWS_BIOMETRIC', 'True').lower() == 'true'  # Prioritize Windows Biometric Framework
     
     # OpenCV configuration
     OPENCV_FACE_CASCADE_PATH = os.getenv('OPENCV_FACE_CASCADE_PATH', 'haarcascade_frontalface_default.xml')
@@ -54,7 +56,7 @@ class Config:
     
     # Lightweight face detection model files
     LIGHTWEIGHT_FACE_DETECTOR_PROTOTXT = os.getenv('LIGHTWEIGHT_FACE_DETECTOR_PROTOTXT', 'deploy.prototxt')
-    LIGHTWEIGHT_FACE_DETECTOR_MODEL = os.getenv('LIGHTWEIGHT_FACE_DETECTOR_MODEL', 'res10_300x300_ssd_iter_140000_fp16.caffemodel')
+    LIGHTWEIGHT_FACE_DETECTOR_MODEL = os.getenv('LIGHTWEIGHT_FACE_DETECTOR_MODEL', 'res10_300x300_ssd_iter_140000.caffemodel')
     
     # Lightweight face recognition model weights
     LIGHTWEIGHT_FACE_RECOGNITION_MODEL = os.getenv('LIGHTWEIGHT_FACE_RECOGNITION_MODEL', 'mobilefacenet.pth')

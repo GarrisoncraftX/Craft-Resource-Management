@@ -6,40 +6,52 @@ import hashlib
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 
-# Mock biometric templates
+# Mock biometric templates (using realistic user IDs)
 mock_biometric_templates = {
-    "550e8400-e29b-41d4-a716-446655440000": {
+    "1": {  # System Administrator
         "face": {
-            "template_data": base64.b64encode(b"mock_face_template_user1").decode('utf-8'),
-            "template_hash": hashlib.sha256(b"mock_face_template_user1").hexdigest(),
+            "template_data": base64.b64encode(b"mock_face_template_admin").decode('utf-8'),
+            "template_hash": hashlib.sha256(b"mock_face_template_admin").hexdigest(),
             "created_at": "2024-01-15T10:00:00Z"
         },
         "fingerprint": {
-            "template_data": base64.b64encode(b"mock_fingerprint_template_user1").decode('utf-8'),
-            "template_hash": hashlib.sha256(b"mock_fingerprint_template_user1").hexdigest(),
+            "template_data": base64.b64encode(b"mock_fingerprint_template_admin").decode('utf-8'),
+            "template_hash": hashlib.sha256(b"mock_fingerprint_template_admin").hexdigest(),
             "created_at": "2024-01-15T10:00:00Z"
         }
     },
-    "550e8400-e29b-41d4-a716-446655440001": {
+    "2": {  # HR Head
         "face": {
-            "template_data": base64.b64encode(b"mock_face_template_user2").decode('utf-8'),
-            "template_hash": hashlib.sha256(b"mock_face_template_user2").hexdigest(),
+            "template_data": base64.b64encode(b"mock_face_template_hr").decode('utf-8'),
+            "template_hash": hashlib.sha256(b"mock_face_template_hr").hexdigest(),
             "created_at": "2024-01-16T14:30:00Z"
+        }
+    },
+    "3": {  # Finance Head
+        "fingerprint": {
+            "template_data": base64.b64encode(b"mock_fingerprint_template_finance").decode('utf-8'),
+            "template_hash": hashlib.sha256(b"mock_fingerprint_template_finance").hexdigest(),
+            "created_at": "2024-01-17T09:15:00Z"
         }
     }
 }
 
 # Mock user data for identification
 mock_users = {
-    "550e8400-e29b-41d4-a716-446655440000": {
-        "first_name": "John",
-        "last_name": "Doe",
+    "1": {
+        "first_name": "System",
+        "last_name": "Administrator",
         "employee_id": "EMP001"
     },
-    "550e8400-e29b-41d4-a716-446655440001": {
-        "first_name": "Jane",
-        "last_name": "Smith",
+    "2": {
+        "first_name": "Garrison",
+        "last_name": "Sayor",
         "employee_id": "EMP002"
+    },
+    "3": {
+        "first_name": "Christopher",
+        "last_name": "Leabon",
+        "employee_id": "EMP003"
     }
 }
 
@@ -131,18 +143,18 @@ def lookup_card_mock(card_identifier: str) -> Optional[Dict[str, str]]:
     """Mock card lookup"""
     return mock_id_cards.get(card_identifier)
 
-def log_biometric_access_mock(user_id: Optional[str], biometric_type: str, action: str, success: bool, details: Optional[Dict] = None):
+def log_biometric_access_mock(user_id: Optional[str], biometric_type: str, access_type: str, success: bool, details: Optional[Dict] = None):
     """Mock biometric access logging"""
     log_entry = {
         "id": f"LOG_{len(mock_access_logs) + 1}",
         "user_id": user_id,
         "biometric_type": biometric_type,
-        "action": action,
+        "access_type": access_type,
         "success": success,
         "details": details,
         "timestamp": datetime.now().isoformat()
     }
-    
+
     mock_access_logs.append(log_entry)
 
 def get_biometric_statistics_mock() -> Dict[str, Any]:

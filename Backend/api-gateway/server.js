@@ -34,7 +34,9 @@ app.use(express.urlencoded({ extended: true }));
 const publicRoutes = [
   "/api/auth/signin",
   "/api/auth/register",
-  "/api/lookup"
+  "/api/lookup",
+  "/api/biometric/enroll",
+  "/api/biometric/identify"
 ];
 
 // JWT validation middleware
@@ -96,13 +98,13 @@ const proxyRequest = async (req, res, targetUrl) => {
 };
 
 // Define routing based on path prefixes
-app.use((req, res, next) => {
+app.use((req, res, next) => { 
   const path = req.path;
 
   if (path.startsWith("/finance") || path.startsWith("/hr/attendance") || path.startsWith("/hr/employees") || path.startsWith("/security/visitors") ) {
     return proxyRequest(req, res, javaBackend);
   }
-  if (path.startsWith("/biometrics")) {
+  if (path.startsWith("/api/biometric") || path.startsWith("/api/visitors") || path.startsWith("/api/dashboard") || path.startsWith("/api/health-safety") || path.startsWith("/api/reports") || path.startsWith("/api/analytics")) {
     return proxyRequest(req, res, pythonBackend);
   }
   if (path.startsWith("/api/auth") || path.startsWith("/api/lookup") || path === "/departments" || path === "/roles" || path.startsWith("/api/leave") || path.startsWith("/api/procurement") || path.startsWith("/api/public-relations") || path.startsWith("/api/planning") || path.startsWith("/api/transportation")) {

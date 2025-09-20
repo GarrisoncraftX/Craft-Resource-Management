@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from src.biometric_module.controller import BiometricController
-from src.middleware.auth import auth_required
+from src.middleware.auth import auth_required, optional_auth
 from src.database.connection import DatabaseManager
 from src.config.app import config
 import os
@@ -26,7 +26,7 @@ db_manager = DatabaseManager(config_dict)
 biometric_controller = BiometricController(db_manager)
 
 @biometric_bp.route('/biometric/enroll', methods=['POST'])
-@auth_required
+@optional_auth
 def enroll_biometric():
     response, status_code = biometric_controller.enroll_biometric()
     return jsonify(response), status_code
@@ -38,7 +38,7 @@ def verify_biometric():
     return jsonify(response), status_code
 
 @biometric_bp.route('/biometric/identify', methods=['POST'])
-@auth_required
+@optional_auth
 def identify_biometric():
     response, status_code = biometric_controller.identify_biometric()
     return jsonify(response), status_code

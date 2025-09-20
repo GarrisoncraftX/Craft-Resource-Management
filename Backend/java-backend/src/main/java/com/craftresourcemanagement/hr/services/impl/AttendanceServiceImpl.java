@@ -77,7 +77,7 @@ public class AttendanceServiceImpl implements AttendanceService {
     }
 
     private boolean verifyBiometric(User user, BiometricData biometricData) {
-        String url = biometricServiceUrl + "/biometrics/verify";
+        String url = biometricServiceUrl + "/api/biometric/verify";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

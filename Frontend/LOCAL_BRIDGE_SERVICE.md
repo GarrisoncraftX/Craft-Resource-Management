@@ -14,13 +14,13 @@ Since web browsers cannot directly access fingerprint scanners due to security r
 
 ### 1. Status Check
 ```
-GET http://localhost:5003/status
+GET http://localhost:5000/status
 Response: { "status": "ready", "scanner": "connected" }
 ```
 
 ### 2. Scan Fingerprint
 ```
-POST http://localhost:5003/scan
+POST http://localhost:5000/scan
 Response: {
   "success": true,
   "template": "base64_encoded_template_data",
@@ -30,7 +30,7 @@ Response: {
 
 ### 3. Verify Fingerprint
 ```
-POST http://localhost:5003/verify
+POST http://localhost:5000/verify
 Body: {
   "template": "live_scan_template",
   "referenceTemplate": "stored_template"

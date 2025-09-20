@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { WebcamCapture } from './WebcamCapture';
-import { FingerprintScanner } from './FingerprintScanner';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Clock, Users, UserCheck, CheckCircle } from 'lucide-react';
 import { mockEmployees } from '@/services/mockData';
@@ -22,10 +21,9 @@ export const KioskInterface: React.FC = () => {
   const { user } = useAuth();
 
   const [activeSection, setActiveSection] = useState<'attendance' | 'visitor'>('attendance');
-  const [attendanceMethod, setAttendanceMethod] = useState<'face' | 'fingerprint' | 'manual'>('face');
+  const [attendanceMethod, setAttendanceMethod] = useState<'face' | 'manual'>('face');
   const [visitorMethod, setVisitorMethod] = useState<'face' | 'manual' | 'card'>('face');
   const [showWebcam, setShowWebcam] = useState(false);
-  const [showFingerprint, setShowFingerprint] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -43,7 +41,6 @@ export const KioskInterface: React.FC = () => {
   });
 
   const [faceData, setFaceData] = useState('');
-  const [fingerprintTemplate, setFingerprintTemplate] = useState('');
 
   const employees = mockEmployees;
 
@@ -73,9 +70,7 @@ export const KioskInterface: React.FC = () => {
       if (attendanceMethod === 'face' && faceData) {
         return { faceData };
       }
-      if (attendanceMethod === 'fingerprint' && fingerprintTemplate) {
-        return { fingerprintId: fingerprintTemplate };
-      }
+  
       if (attendanceMethod === 'manual') {
         return {
           employeeId: attendanceData.employeeId,
@@ -105,9 +100,7 @@ export const KioskInterface: React.FC = () => {
 
       setAttendanceData({ employeeId: '', password: '' });
       setFaceData('');
-      setFingerprintTemplate('');
       setShowWebcam(false);
-      setShowFingerprint(false);
     } catch (error) {
       if (error instanceof Error) {
         setFeedback(`❌ Error: ${error.message}`);
@@ -243,27 +236,15 @@ export const KioskInterface: React.FC = () => {
                       onClick={() => {
                         setAttendanceMethod('face');
                         setShowWebcam(true);
-                        setShowFingerprint(false);
                       }}
                     >
                       Face ID
-                    </Button>
-                    <Button
-                      variant={attendanceMethod === 'fingerprint' ? 'default' : 'outline'}
-                      onClick={() => {
-                        setAttendanceMethod('fingerprint');
-                        setShowFingerprint(true);
-                        setShowWebcam(false);
-                      }}
-                    >
-                      Fingerprint
                     </Button>
                     <Button
                       variant={attendanceMethod === 'manual' ? 'default' : 'outline'}
                       onClick={() => {
                         setAttendanceMethod('manual');
                         setShowWebcam(false);
-                        setShowFingerprint(false);
                       }}
                     >
                       Manual Entry
@@ -287,15 +268,6 @@ export const KioskInterface: React.FC = () => {
                             </Badge>
                           </div>
                         )}
-                      </div>
-                    )}
-
-                    {attendanceMethod === 'fingerprint' && (
-                      <div>
-                        <FingerprintScanner
-                          onCapture={setFingerprintTemplate}
-                          isActive={showFingerprint}
-                        />
                       </div>
                     )}
 

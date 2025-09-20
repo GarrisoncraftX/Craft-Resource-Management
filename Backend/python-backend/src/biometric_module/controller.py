@@ -22,16 +22,23 @@ class BiometricController:
         """Handle biometric enrollment"""
         try:
             data = request.get_json()
+
+            # Handle both snake_case and camelCase field names
+            user_id = data.get('user_id') or data.get('userId')
+            visitor_id = data.get('visitor_id') or data.get('visitorId')
+            biometric_type = data.get('biometric_type') or data.get('biometricType')
+            raw_data = data.get('raw_data') or data.get('rawData')
             
-            user_id = data.get('user_id')
-            visitor_id = data.get('visitor_id')
-            biometric_type = data.get('biometric_type')
-            raw_data = data.get('raw_data')
-            
-            if not biometric_type or not raw_data:
+            if not biometric_type:
                 return {
                     'success': False,
-                    'message': 'Biometric type and raw data are required'
+                    'message': 'Biometric type is required'
+                }, 400
+
+            if not raw_data:
+                return {
+                    'success': False,
+                    'message': 'Raw data is required for this biometric type'
                 }, 400
             
             if not user_id and not visitor_id:
@@ -55,7 +62,6 @@ class BiometricController:
             template_hash = None
             
             if biometric_type == 'face':
-                # Validate image quality first
                 is_valid, error_msg = self.biometric_service.validate_image_quality(raw_data)
                 if not is_valid:
                     return {
@@ -72,10 +78,7 @@ class BiometricController:
                 template_data = result['template_data']
                 template_hash = result['template_hash']
                 
-            elif biometric_type == 'fingerprint':
-                result = self.biometric_service.process_fingerprint_data(raw_data)
-                template_data = result['template_data']
-                template_hash = result['template_hash']
+
                 
             elif biometric_type == 'card':
                 result = self.biometric_service.process_card_data(raw_data)
@@ -135,17 +138,24 @@ class BiometricController:
         """Verify biometric data against stored template (1:1 verification)"""
         try:
             data = request.get_json()
-            
-            user_id = data.get('user_id')
-            biometric_type = data.get('biometric_type')
-            raw_data = data.get('raw_data')
-            
-            if not all([user_id, biometric_type, raw_data]):
+
+            # Handle both snake_case and camelCase field names
+            user_id = data.get('user_id') or data.get('userId')
+            biometric_type = data.get('biometric_type') or data.get('biometricType')
+            raw_data = data.get('raw_data') or data.get('rawData')
+
+            if not all([user_id, biometric_type]):
                 return {
                     'success': False,
-                    'message': 'User ID, biometric type, and raw data are required'
+                    'message': 'User ID and biometric type are required'
                 }, 400
-            
+
+            if not raw_data:
+                return {
+                    'success': False,
+                    'message': 'Raw data is required for this biometric type'
+                }, 400
+
             # Use mock data if configured
             if self.use_mock_data:
                 result = verify_biometric_mock(user_id, biometric_type, raw_data)
@@ -154,19 +164,18 @@ class BiometricController:
                     'success': True,
                     'data': result
                 }, 200
-            
+
             # Process the provided biometric data
             live_template = None
-            
+
             if biometric_type == 'face':
-                # Validate image quality first
                 is_valid, error_msg = self.biometric_service.validate_image_quality(raw_data)
                 if not is_valid:
                     return {
                         'success': False,
                         'message': f'Image quality validation failed: {error_msg}'
                     }, 400
-                
+
                 result, error = self.biometric_service.process_face_image(raw_data)
                 if error:
                     return {
@@ -174,9 +183,8 @@ class BiometricController:
                         'message': error
                     }, 400
                 live_template = result['template_data']
-            else:
-                # Mock processing for fingerprint/card
-                processed = self.biometric_service.process_fingerprint_data(raw_data) if biometric_type == 'fingerprint' else self.biometric_service.process_card_data(raw_data)
+            else: # card
+                processed = self.biometric_service.process_card_data(raw_data)
                 live_template = processed['template_data']
             
             # Retrieve stored template from database
@@ -223,21 +231,27 @@ class BiometricController:
         """Identify user from biometric data (1:N identification)"""
         try:
             data = request.get_json()
-            
+
             biometric_type = data.get('biometric_type')
             raw_data = data.get('raw_data')
-            
-            if not all([biometric_type, raw_data]):
+
+            if not biometric_type:
                 return {
                     'success': False,
-                    'message': 'Biometric type and raw data are required'
+                    'message': 'Biometric type is required'
                 }, 400
-            
+
+            if not raw_data:
+                return {
+                    'success': False,
+                    'message': 'Raw data is required for this biometric type'
+                }, 400
+
             # Use mock data if configured
             if self.use_mock_data:
                 result = identify_biometric_mock(biometric_type, raw_data)
                 logger.info(f"Mock biometric identification: {result}")
-                
+
                 if result:
                     return {
                         'success': True,
@@ -248,19 +262,18 @@ class BiometricController:
                         'success': False,
                         'message': 'No matching biometric template found'
                     }, 404
-            
+
             # Process the provided biometric data
             live_template = None
-            
+
             if biometric_type == 'face':
-                # Validate image quality first
                 is_valid, error_msg = self.biometric_service.validate_image_quality(raw_data)
                 if not is_valid:
                     return {
                         'success': False,
                         'message': f'Image quality validation failed: {error_msg}'
                     }, 400
-                
+
                 result, error = self.biometric_service.process_face_image(raw_data)
                 if error:
                     return {
@@ -268,9 +281,8 @@ class BiometricController:
                         'message': error
                     }, 400
                 live_template = result['template_data']
-            else:
-                # Mock processing for fingerprint/card
-                processed = self.biometric_service.process_fingerprint_data(raw_data) if biometric_type == 'fingerprint' else self.biometric_service.process_card_data(raw_data)
+            else: # card
+                processed = self.biometric_service.process_card_data(raw_data)
                 live_template = processed['template_data']
             
             # Retrieve all stored templates of the same type

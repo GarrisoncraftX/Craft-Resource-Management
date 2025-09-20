@@ -117,49 +117,44 @@ const mapAndCreateRole = async (roleId) => {
 };
 
 const validateAndCreateRole = async (roleId) => {
-  let role = await Role.findOne({ where: { name: roleId } });
+  const role = await Role.findByPk(roleId);
   if (!role) {
-    role = await Role.create({ name: roleId, description: 'Auto-created role' });
-    const defaultPermissions = await Permission.findAll();
-    const rolePermissions = defaultPermissions.map(permission => ({
-      roleId: role.id,
-      permissionId: permission.id,
-    }));
-    await RolePermission.bulkCreate(rolePermissions);
+    const error = new Error(`Role with ID ${roleId} not found.`);
+    error.statusCode = 400;
+    throw error;
   }
   return role;
 };
 
 const validateAndCreateDepartment = async (departmentId) => {
-  let department = await Department.findByPk(departmentId);
+  const department = await Department.findByPk(departmentId);
   if (!department) {
-    department = await Department.findOne({ where: { name: departmentId } });
-    if (!department) {
-      department = await Department.create({ id: departmentId, name: departmentId });
-    }
+    const error = new Error(`Department with ID ${departmentId} not found.`);
+    error.statusCode = 400;
+    throw error;
   }
   return department;
 };
 
-const enrollBiometrics = async (user, biometric_face_raw_data, biometric_fingerprint_raw_data) => {
-  if (biometric_face_raw_data || biometric_fingerprint_raw_data) {
+const enrollBiometrics = async (userId, biometric_type, raw_data) => {
+  if (biometric_type && raw_data) {
     try {
-      const response = await axios.post(`${BIOMETRIC_SERVICE_URL}/biometrics/enroll`, {
-        user_id: user.id,
-        biometric_face_raw_data,
-        biometric_fingerprint_raw_data,
+      const response = await axios.post(`${BIOMETRIC_SERVICE_URL}/api/biometric/enroll`, {
+        user_id: userId,
+        biometric_type,
+        raw_data,
       });
-      if (response.data && response.data.status === 'success') {
-        user.biometricEnrollmentStatus = 'ENROLLED';
+      if (response.data && response.data.success) {
+        return 'ENROLLED';
       } else {
-        user.biometricEnrollmentStatus = 'FAILED';
+        return 'FAILED';
       }
     } catch (error) {
-      console.error('Biometric enrollment error:', error);
-      throw error;
+      console.error('Biometric enrollment error:', error.response ? error.response.data : error.message);
+      return 'FAILED';
     }
-    await user.save();
   }
+  return 'NONE';
 };
 
 const register = async (userData) => {
@@ -181,12 +176,15 @@ const register = async (userData) => {
       address,
       hireDate,
       salary,
-      biometric_face_raw_data,
-      biometric_fingerprint_raw_data,
+      biometric_type,
+      raw_data,
+      biometric_type_face,
+      raw_data_face,
+      biometric_type_fingerprint,
+      raw_data_fingerprint,
     } = userData;
 
-    departmentId = await mapAndCreateDepartment(departmentId);
-    roleId = await mapAndCreateRole(roleId);
+    
 
     const existingUser = await User.findOne({ where: { employeeId: employeeId.toUpperCase() } });
     if (existingUser) {
@@ -227,11 +225,53 @@ const register = async (userData) => {
       employeeNumber: employeeId.toUpperCase(),
     });
 
-    await enrollBiometrics(user, biometric_face_raw_data, biometric_fingerprint_raw_data);
+    let biometricEnrollmentStatus = 'NONE';
+
+    // Handle face biometric
+    if (biometric_type_face && raw_data_face) {
+      const status = await enrollBiometrics(user.id, biometric_type_face, raw_data_face);
+      console.log('Face biometric enrollment status:', status);
+      if (status === 'ENROLLED') {
+        biometricEnrollmentStatus = 'ENROLLED';
+      } else if (status === 'FAILED' && biometricEnrollmentStatus === 'NONE') {
+        biometricEnrollmentStatus = 'FAILED';
+      }
+    }
+
+    // Handle fingerprint biometric
+    if (biometric_type_fingerprint && raw_data_fingerprint) {
+      const status = await enrollBiometrics(user.id, biometric_type_fingerprint, raw_data_fingerprint);
+      console.log('Fingerprint biometric enrollment status:', status);
+      if (status === 'ENROLLED') {
+        biometricEnrollmentStatus = 'ENROLLED';
+      } else if (status === 'FAILED' && biometricEnrollmentStatus === 'NONE') {
+        biometricEnrollmentStatus = 'FAILED';
+      }
+    }
+
+    // Handle legacy biometric_type if provided
+    if (biometric_type && raw_data && !biometric_type_face && !biometric_type_fingerprint) {
+      const status = await enrollBiometrics(user.id, biometric_type, raw_data);
+      console.log('Legacy biometric enrollment status:', status);
+      if (status === 'ENROLLED') {
+        biometricEnrollmentStatus = 'ENROLLED';
+      } else if (status === 'FAILED' && biometricEnrollmentStatus === 'NONE') {
+        biometricEnrollmentStatus = 'FAILED';
+      }
+    }
+
+    user.biometricEnrollmentStatus = biometricEnrollmentStatus;
+    try {
+      await user.save();
+      console.log('User saved successfully after biometric enrollment status update.');
+    } catch (saveError) {
+      console.error('Error saving user after biometric enrollment status update:', saveError);
+      throw saveError; 
+    }
 
     return user;
   } catch (error) {
-    console.error('Register error:', error);
+    console.error('Register error:', error.message, error.stack);
     throw error;
   }
 };
@@ -244,86 +284,98 @@ const getUserPermissions = async (roleId) => {
   return permissions.map(p => p.name);
 };
 
-const signin = async (employeeId, password, biometricData) => {
-  if (!employeeId || !password) {
-    throw new Error('Missing employeeId or password');
-  }
+const signin = async (employeeId, password, biometric_type, raw_data) => {
+  let user = null;
 
-  if (!process.env.JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is not set');
-  }
-
-  // Fetch user with associated Department and Role
-  
-  const user = await User.findOne({
-    where: { employeeId: employeeId.toUpperCase() },
-    include: [
-      { model: Department, attributes: ['id', 'name'] },
-      { model: Role, attributes: ['id', 'name'] },
-    ],
-  });
-
-  if (!user) {
-    throw new Error('Invalid credentials');
-  }
-
-  if (!user.isActive) {
-    throw new Error('Account is not active');
-  }
-
-  // Check if account is locked
-  const now = new Date();
-  if (user.accountLockedUntil && user.accountLockedUntil > now) {
-    throw new Error(`Account is locked until ${user.accountLockedUntil.toISOString()}`);
-  }
-
-  const passwordMatch = await bcrypt.compare(password, user.passwordHash);
-  if (!passwordMatch) {
-    // Increment failed login attempts
-    user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
-
-    // Lock account logic
-    if (user.failedLoginAttempts >= 5) {
-      let lockDurationMinutes = 1;
-      if (user.accountLockedUntil && user.accountLockedUntil > now) {
-        // If already locked, increase lock duration
-        const previousLockDuration = (user.accountLockedUntil - now) / 60000; 
-        if (previousLockDuration <= 1) {
-          lockDurationMinutes = 3;
-        } else if (previousLockDuration <= 3) {
-          lockDurationMinutes = 5;
-        } else {
-          lockDurationMinutes = 5; 
-        }
-      }
-      user.accountLockedUntil = new Date(now.getTime() + lockDurationMinutes * 60000);
-      user.failedLoginAttempts = 0; 
-    }
-
-    await user.save();
-    throw new Error('Invalid credentials');
-  }
-
-  // Reset failed login attempts on successful login
-  user.failedLoginAttempts = 0;
-  user.accountLockedUntil = null;
-
-  // Biometric login coordination
-  if (biometricData) {
+  if (biometric_type && raw_data) {
     try {
-      let response;
-      if (biometricData.employeeId) {
-        response = await axios.post(`${BIOMETRIC_SERVICE_URL}/biometrics/verify`, biometricData);
-      } else {
-        response = await axios.post(`${BIOMETRIC_SERVICE_URL}/biometrics/identify`, biometricData);
+      let biometricVerificationResult;
+      if (biometric_type === 'face') {
+        biometricVerificationResult = await axios.post(`${BIOMETRIC_SERVICE_URL}/api/biometric/identify`, {
+          biometric_type,
+          raw_data,
+        });
+      } else if (biometric_type === 'fingerprint') {
+        biometricVerificationResult = await axios.post(`${BIOMETRIC_SERVICE_URL}/api/biometric/identify`, {
+          biometric_type,
+          raw_data,
+        });
       }
-      if (!response.data || response.data.status !== 'success') {
-        throw new Error('Biometric verification failed');
+
+      if (biometricVerificationResult.data && biometricVerificationResult.data.success) {
+        const identifiedUserId = biometricVerificationResult.data.data.user_id;
+        user = await User.findByPk(identifiedUserId, {
+          include: [
+            { model: Department, attributes: ['id', 'name'] },
+            { model: Role, attributes: ['id', 'name'] },
+          ],
+        });
+        if (!user) {
+          throw new Error('User not found after biometric identification');
+        }
+      } else {
+        throw new Error(biometricVerificationResult.data.message || 'Biometric identification failed');
       }
     } catch (error) {
-      console.error('Biometric verification error:', error);
-      throw error;
+      console.error('Biometric identification error:', error.response ? error.response.data : error.message);
+      throw new Error('Biometric authentication failed');
     }
+  } else if (employeeId && password) {
+    user = await User.findOne({
+      where: { employeeId: employeeId.toUpperCase() },
+      include: [
+        { model: Department, attributes: ['id', 'name'] },
+        { model: Role, attributes: ['id', 'name'] },
+      ],
+    });
+
+    if (!user) {
+      throw new Error('Invalid credentials');
+    }
+
+    if (!user.isActive) {
+      throw new Error('Account is not active');
+    }
+
+    // Check if account is locked
+    const now = new Date();
+    if (user.accountLockedUntil && user.accountLockedUntil > now) {
+      throw new Error(`Account is locked until ${user.accountLockedUntil.toISOString()}`);
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!passwordMatch) {
+      // Increment failed login attempts
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+
+      // Lock account logic
+      if (user.failedLoginAttempts >= 5) {
+        let lockDurationMinutes = 1;
+        if (user.accountLockedUntil && user.accountLockedUntil > now) {
+          // If already locked, increase lock duration
+          const previousLockDuration = (user.accountLockedUntil - now) / 60000; 
+          if (previousLockDuration <= 1) {
+            lockDurationMinutes = 3;
+          } else if (previousLockDuration <= 3) {
+            lockDurationMinutes = 5;
+          } else {
+            lockDurationMinutes = 5; 
+          }
+        }
+        user.accountLockedUntil = new Date(now.getTime() + lockDurationMinutes * 60000);
+        user.failedLoginAttempts = 0; 
+      }
+
+      await user.save();
+      throw new Error('Invalid credentials');
+    }
+
+    // Reset failed login attempts on successful login
+    user.failedLoginAttempts = 0;
+    user.accountLockedUntil = null;
+
+  } else {
+    throw new Error('Missing employeeId/password or biometric data');
   }
 
   user.lastLogin = new Date();
