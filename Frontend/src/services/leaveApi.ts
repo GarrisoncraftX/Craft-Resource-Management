@@ -31,70 +31,89 @@ class LeaveApiService {
 
   // Leave Types
   async getLeaveTypes(): Promise<LeaveType[]> {
-    try {
-      const response = await apiClient.get('/api/leave/types');
-      if (Array.isArray(response)) {
-        return response;
-      } else if (response?.success) {
-        return response.data;
-      } else {
-        return response([mockLeaveTypes])
-      }
-    } catch (error) {
-      console.warn('Failed to fetch leavetypess, using mock data:', error);
-    }
+    return this.handleApiError(
+      async () => {
+        const response = await apiClient.get('/api/leave/types');
+        if (Array.isArray(response)) {
+          return response;
+        } else if (response?.success) {
+          return response.data;
+        } else {
+          return mockLeaveTypes;
+        }
+      },
+      mockLeaveTypes
+    );
   }
 
-  async createLeaveType(leaveType: LeaveType[]): Promise<LeaveType> {
-    try {
-      const response = await apiClient.post('/api/leave/types', leaveType);
-      if (response?.success)
-      return response;
-    } catch (error) {
-      console.warn('Failed to create leavetype, using mock data:', error);
-    }
+  async createLeaveType(leaveType: Partial<LeaveType>): Promise<LeaveType> {
+    return this.handleApiError(
+      async () => {
+        const response = await apiClient.post('/api/leave/types', leaveType);
+        if (response?.success) {
+          return response.data;
+        } else {
+          throw new Error('Failed to create leave type');
+        }
+      },
+      mockLeaveTypes[0]
+    );
   }
 
   // Leave Requests
   async getLeaveRequests(userId?: number): Promise<LeaveRequest[]> {
-    try {
-      const response = await apiClient.get(`/api/leave/requests/${userId}`);
-      if (Array.isArray(response)) {
-        return response;
-      } else if (response?.success) {
-        return response.data;
-      } else {
-        return response([mockLeaveRequests])
-      }
-    } catch (error) {
-      console.warn('Failed to fetch leaverequests, using mock data:', error);
-    }
+    return this.handleApiError(
+      async () => {
+        const response = await apiClient.get(`/api/leave/requests/${userId}`);
+        if (Array.isArray(response)) {
+          return response;
+        } else if (response?.success) {
+          return response.data;
+        } else {
+          return mockLeaveRequests;
+        }
+      },
+      mockLeaveRequests
+    );
   }
 
   // Get all leave requests (for HR view)
   async getAllLeaveRequests(): Promise<LeaveRequest[]> {
-    try {
-      const response = await apiClient.get(`/api/leave/requests`);
-      if (Array.isArray(response)) {
-        return response;
-      } else if (response?.success) {
-        return response.data
-      } else {
-        return response([mockLeaveRequests])
-      }
-    } catch (error) {
-      console.warn('Failed to fetch leaverequests, using mock data:', error);
-    }
+    return this.handleApiError(
+      async () => {
+        const response = await apiClient.get('/api/leave/requests');
+        if (Array.isArray(response)) {
+          return response;
+        } else if (response?.success) {
+          return response.data;
+        } else {
+          return mockLeaveRequests;
+        }
+      },
+      mockLeaveRequests
+    );
   }
 
   async createLeaveRequest(leaveRequest: LeaveRequestForm): Promise<LeaveRequest> {
-     try {
-      const response = await apiClient.post('/api/leave/requests', leaveRequest);
-      if (response?.success)
-      return response;
-    } catch (error) {
-      console.warn('Failed to create leaveRequests, using mock data:', error);
-    }
+    return this.handleApiError(
+      async () => {
+        const response = await apiClient.post('/api/leave/requests', leaveRequest);
+        if (response?.success) {
+          return response.data;
+        } else {
+          throw new Error('Failed to create leave request');
+        }
+      },
+      {
+        ...mockLeaveRequests[0],
+        ...leaveRequest,
+        id: `LR${Date.now()}`,
+        status: 'pending',
+        appliedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    );
   }
 
   async updateLeaveRequestStatus(
@@ -103,11 +122,18 @@ class LeaveApiService {
     reviewedBy: number = 1
   ): Promise<LeaveRequest> {
     return this.handleApiError(
-      () => apiClient.put(`/api/leave/requests/${id}/status`, {
-        status: action.status,
-        reviewedBy,
-        comments: action.comments
-      }),
+      async () => {
+        const response = await apiClient.put(`/api/leave/requests/${id}/status`, {
+          status: action.status,
+          reviewedBy,
+          comments: action.comments
+        });
+        if (response?.success) {
+          return response.data;
+        } else {
+          throw new Error('Failed to update leave request status');
+        }
+      },
       {
         ...mockLeaveRequests.find(req => req.id === id)!,
         status: action.status,
@@ -121,7 +147,14 @@ class LeaveApiService {
 
   async approveLeaveRequest(id: string, approverId: number = 1): Promise<LeaveRequest> {
     return this.handleApiError(
-      () => apiClient.post(`/api/leave/requests/${id}/approve`, { userId: approverId }),
+      async () => {
+        const response = await apiClient.post(`/api/leave/requests/${id}/approve`, { userId: approverId });
+        if (response?.success) {
+          return response.data;
+        } else {
+          throw new Error('Failed to approve leave request');
+        }
+      },
       {
         ...mockLeaveRequests.find(req => req.id === id)!,
         status: 'approved' as const,
@@ -134,7 +167,14 @@ class LeaveApiService {
 
   async rejectLeaveRequest(id: string, approverId: number = 1, reason?: string): Promise<LeaveRequest> {
     return this.handleApiError(
-      () => apiClient.post(`/api/leave/requests/${id}/reject`, { userId: approverId, reason }),
+      async () => {
+        const response = await apiClient.post(`/api/leave/requests/${id}/reject`, { userId: approverId, reason });
+        if (response?.success) {
+          return response.data;
+        } else {
+          throw new Error('Failed to reject leave request');
+        }
+      },
       {
         ...mockLeaveRequests.find(req => req.id === id)!,
         status: 'rejected' as const,
@@ -149,7 +189,16 @@ class LeaveApiService {
   // Leave Balances
   async getLeaveBalances(userId: number): Promise<LeaveBalance[]> {
     return this.handleApiError(
-      () => apiClient.get(`/api/leave/balances/${userId}`),
+      async () => {
+        const response = await apiClient.get(`/api/leave/balances/${userId}`);
+        if (Array.isArray(response)) {
+          return response;
+        } else if (response?.success) {
+          return response.data;
+        } else {
+          return mockLeaveBalances;
+        }
+      },
       mockLeaveBalances
     );
   }
@@ -157,7 +206,14 @@ class LeaveApiService {
   // Statistics
   async getLeaveStatistics(): Promise<typeof mockLeaveStatistics> {
     return this.handleApiError(
-      () => apiClient.get('/api/leave/statistics'),
+      async () => {
+        const response = await apiClient.get('/api/leave/statistics');
+        if (response?.success) {
+          return response.data;
+        } else {
+          return mockLeaveStatistics;
+        }
+      },
       mockLeaveStatistics
     );
   }

@@ -8,10 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
 import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign, } from 'lucide-react';
-import { apiClient } from '@/utils/apiClient';
-import { DashboardKPIs, LeaveBalance, LeaveRequest } from '@/types/api';
+import { leaveApiService } from '@/services/leaveApi';
+import { LeaveBalance, LeaveRequest } from '@/types/leave';
 import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData';
 import LeaveRequestForm from './modules/hr/LeaveRequestForm';
+import { DashboardKPIs } from '@/types/api';
 
 const calculateFormattedLeaveBalance = (totalDays: number): string => {
   if (totalDays >= 30) {
@@ -68,14 +69,8 @@ export const EmployeeDashboard: React.FC = () => {
   const refreshLeaveRequests = useCallback(async () => {
     if (!user?.userId) return;
     try {
-      const response = await apiClient.get(`/api/leave/requests/${user.userId}`);
-      if (Array.isArray(response)) {
-        setLeaveRequests(response);
-      } else if (response?.success) {
-        setLeaveRequests(response.data);
-      } else {
-        setLeaveRequests([]);
-      }
+      const response = await leaveApiService.getLeaveRequests(Number(user.userId));
+      setLeaveRequests(response);
     } catch {
       setLeaveRequests([]);
     }
@@ -91,9 +86,9 @@ export const EmployeeDashboard: React.FC = () => {
       }
 
       try {
-        const leaveBalanceResponse = await apiClient.get(`/api/leave/balances/${user.userId}`);
-        console.log('Fetched leave balance data:', leaveBalanceResponse.data);
-        const leaveBalanceData = leaveBalanceResponse.data;
+        const leaveBalanceResponse = await leaveApiService.getLeaveBalances(Number(user.userId));
+        console.log('Fetched leave balance data:', leaveBalanceResponse);
+        const leaveBalanceData = leaveBalanceResponse;
 
         const { totalLeaveBalance } = processLeaveBalances(leaveBalanceData);
         const formattedBalance = calculateFormattedLeaveBalance(totalLeaveBalance);
@@ -175,9 +170,9 @@ export const EmployeeDashboard: React.FC = () => {
       }
 
       try {
-        const leaveBalanceResponse = await apiClient.get(`/api/leave/balances/${user.userId}`);
-        console.log('Fetched leave balance data:', leaveBalanceResponse.data);
-        const leaveBalanceData = leaveBalanceResponse.data;
+        const leaveBalanceResponse = await leaveApiService.getLeaveBalances(Number(user.userId));
+        console.log('Fetched leave balance data:', leaveBalanceResponse);
+        const leaveBalanceData = leaveBalanceResponse;
 
         const { totalLeaveBalance } = processLeaveBalances(leaveBalanceData);
         const formattedBalance = calculateFormattedLeaveBalance(totalLeaveBalance);
@@ -189,15 +184,9 @@ export const EmployeeDashboard: React.FC = () => {
         setFormattedLeaveBalance(formattedBalance);
 
         // Fetch leave requests
-        const leaveRequestsResponse = await apiClient.get(`/api/leave/requests/${user.userId}`);
+        const leaveRequestsResponse = await leaveApiService.getLeaveRequests(Number(user.userId));
         console.log("Fetch leave requests: ", leaveRequestsResponse)
-        if (Array.isArray(leaveRequestsResponse)) {
-          setLeaveRequests(leaveRequestsResponse);
-        } else if (leaveRequestsResponse?.success) {
-          setLeaveRequests(leaveRequestsResponse.data);
-        } else {
-          setLeaveRequests([]);
-        }
+        setLeaveRequests(leaveRequestsResponse);
 
       } catch (error) {
         console.error('Failed to fetch dashboard data, using mock data fallback.', error);
@@ -423,7 +412,7 @@ export const EmployeeDashboard: React.FC = () => {
                   <TableBody>{leaveRequests.map((leave) => (
                     <TableRow key={leave.id}>
                       <TableCell>{leave.id}</TableCell>
-                      <TableCell>{leave.LeaveType?.name || 'N/A'}</TableCell>
+                      <TableCell>{leave.leaveType?.name || 'N/A'}</TableCell>
                       <TableCell>{leave.startDate}</TableCell>
                       <TableCell>{leave.endDate}</TableCell>
                       <TableCell>{leave.totalDays}</TableCell>

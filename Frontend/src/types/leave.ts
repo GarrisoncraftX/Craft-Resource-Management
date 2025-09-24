@@ -1,4 +1,3 @@
-// Leave Management Types
 export interface LeaveType {
   id: number;
   name: string;
@@ -32,6 +31,11 @@ export interface LeaveRequest {
   createdAt: string;
   updatedAt: string;
   leaveType?: LeaveType;
+  User?: {
+    firstName: string;
+    lastName: string;
+    employeeId: string;
+  };
 }
 
 export interface LeaveBalance {

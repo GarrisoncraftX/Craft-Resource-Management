@@ -1,6 +1,7 @@
 const { Op } = require("sequelize")
 const { sequelize } = require("../../config/sequelize")
 const { LeaveType, LeaveRequest, LeaveBalance, LeaveApproval } = require("./model")
+const User = require("../auth/model")
 
 class LeaveService {
   async getLeaveTypes() {
@@ -98,13 +99,13 @@ class LeaveService {
 
     const result = await LeaveRequest.findAll({
       where,
-      include: [{ model: LeaveType }],
+      include: [
+        { model: LeaveType },
+        { model: User, attributes: ['firstName', 'lastName', 'employeeId'] }
+      ],
       order: [["createdAt", "DESC"]],
       limit: filters && filters.limit ? parseInt(filters.limit) : undefined,
     });
-
-    console.log('getAllLeaveRequests - result count:', result.length);
-    console.log('getAllLeaveRequests - first result:', result[0]);
 
     return result;
   }

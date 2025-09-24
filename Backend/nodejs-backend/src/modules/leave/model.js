@@ -1,5 +1,6 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../../config/sequelize")
+const User = require("../auth/model")
 
 const LeaveType = sequelize.define("LeaveType", {
   id: {
@@ -54,6 +55,11 @@ const LeaveType = sequelize.define("LeaveType", {
     type: DataTypes.DATE,
     allowNull: false,
     field: "created_at",
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: "updated_at",
   },
 }, {
   tableName: "leave_types",
@@ -245,6 +251,11 @@ LeaveApproval.belongsTo(LeaveRequest, { foreignKey: "leave_request_id" })
 
 LeaveType.hasMany(LeaveBalance, { foreignKey: "leave_type_id" })
 LeaveBalance.belongsTo(LeaveType, { foreignKey: "leave_type_id" })
+
+
+
+LeaveRequest.belongsTo(User, { foreignKey: "user_id" })
+User.hasMany(LeaveRequest, { foreignKey: "user_id" })
 
 module.exports = {
   LeaveType,

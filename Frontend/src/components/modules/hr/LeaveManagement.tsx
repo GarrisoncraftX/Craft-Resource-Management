@@ -7,7 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarDays, Clock, CheckCircle, XCircle, Calendar as CalendarIcon, Users } from 'lucide-react';
 import { leaveApiService } from '@/services/leaveApi';
-import type { LeaveRequest, LeaveBalance, LeaveStatistics } from '@/types/leave';
+import type { LeaveRequest, LeaveBalance, LeaveStatistics, LeaveType } from '@/types/leave';
 
 export const LeaveManagement: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -15,6 +15,7 @@ export const LeaveManagement: React.FC = () => {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
   const [statistics, setStatistics] = useState<LeaveStatistics | null>(null);
+  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,22 +29,34 @@ export const LeaveManagement: React.FC = () => {
     setError(null);
 
     // Load all data in parallel
-    const [requestsData, balancesData, statsData] = await Promise.all([
+    const [requestsData, balancesData, statsData, typesData] = await Promise.all([
       leaveApiService.getAllLeaveRequests(),
       leaveApiService.getLeaveBalances(1),
-      leaveApiService.getLeaveStatistics()
+      leaveApiService.getLeaveStatistics(),
+      leaveApiService.getLeaveTypes()
     ]);
 
     // Ensure data is in expected format before setting state
-    setLeaveRequests(Array.isArray(requestsData) ? requestsData : []);
+    const requests = Array.isArray(requestsData) ? requestsData : [];
+    const types = Array.isArray(typesData) ? typesData : [];
+
+    // Map leave types to requests based on leaveTypeId
+    const requestsWithTypes = requests.map(request => ({
+      ...request,
+      leaveType: types.find(type => type.id === request.leaveTypeId) || request.leaveType
+    }));
+
+    setLeaveRequests(requestsWithTypes);
     setLeaveBalances(Array.isArray(balancesData) ? balancesData : []);
     setStatistics(statsData);
+    setLeaveTypes(types);
   } catch (err) {
     setError('Failed to load leave management data');
     console.error('Error loading leave data:', err);
     setLeaveRequests([]);
     setLeaveBalances([]);
     setStatistics(null);
+    setLeaveTypes([]);
   } finally {
     setLoading(false);
   }
@@ -189,8 +202,10 @@ export const LeaveManagement: React.FC = () => {
                   <TableBody>
                   {(leaveRequests || []).map((request) => (
                       <TableRow key={request.id}>
-                        <TableCell className="font-medium">Employee {request.userId}</TableCell>
-                        <TableCell>{request.leaveType?.name || 'Unknown'}</TableCell>
+                        <TableCell className="font-medium">
+                          {request.User ? `${request.User.firstName} ${request.User.lastName}` : `Employee ${request.userId}`}
+                        </TableCell>
+                        <TableCell>{request.leaveType?.name || `Leave Type ${request.leaveTypeId}`}</TableCell>
                         <TableCell>{request.startDate} to {request.endDate}</TableCell>
                         <TableCell>{request.totalDays}</TableCell>
                         <TableCell>{request.reason || 'No reason provided'}</TableCell>
@@ -244,7 +259,7 @@ export const LeaveManagement: React.FC = () => {
               <CardContent>
                 <div className="space-y-6">
                   <div className="border rounded-lg p-4">
-                    <h3 className="font-medium mb-4">Employee 1</h3>
+                    <h3 className="font-medium mb-4">Employee</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {(leaveBalances || []).map((balance) => (
                         <div key={balance.leaveTypeId} className="space-y-2">
@@ -297,7 +312,9 @@ export const LeaveManagement: React.FC = () => {
                       .map((request) => (
                         <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <div>
-                            <p className="font-medium">Employee {request.userId}</p>
+                            <p className="font-medium">
+                              {request.User ? `${request.User.firstName} ${request.User.lastName}` : `Employee ${request.userId}`}
+                            </p>
                             <p className="text-sm text-muted-foreground">{request.leaveType?.name} - {request.totalDays} days</p>
                           </div>
                           <Badge variant="default">Approved</Badge>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { apiClient } from '@/utils/apiClient';
-import { LeaveType } from '@/types/api';
+import { leaveApiService } from '@/services/leaveApi';
+import { LeaveType } from '@/types/leave';
 
 interface LeaveRequestFormProps {
   userId: number;
@@ -24,12 +24,8 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({ userId, isOpen, onC
   useEffect(() => {
     const fetchLeaveTypes = async () => {
       try {
-        const response = await apiClient.get('/api/leave/types');
-        if (Array.isArray(response)) {
-          setLeaveTypes(response);
-        } else if (response?.success) {
-          setLeaveTypes(response.data);
-        }
+        const response = await leaveApiService.getLeaveTypes();
+        setLeaveTypes(response);
       } catch (err) {
         console.error('Failed to fetch leave types', err);
       }
@@ -78,20 +74,14 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({ userId, isOpen, onC
     setError(null);
     try {
       const payload = {
-        userId,
         leaveTypeId,
         startDate,
         endDate,
-        daysRequested,
         reason,
       };
-      const response = await apiClient.post('/api/leave/requests', payload);
-      if (response?.success) {
-        onSuccess();
-        onClose();
-      } else {
-        setError('Failed to submit leave request.');
-      }
+      const response = await leaveApiService.createLeaveRequest(payload);
+      onSuccess();
+      onClose();
     } catch (err) {
       setError('Error submitting leave request.');
       console.error(err);
