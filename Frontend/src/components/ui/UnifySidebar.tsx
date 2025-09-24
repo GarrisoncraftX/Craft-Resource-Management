@@ -175,9 +175,9 @@ export function UnifySidebar() {
   const isCollapsed = state === "collapsed"
 
   const isActive = (path: string) => currentPath === path || currentPath.startsWith(path + "/")
-  
+
   // Check if a module or any of its sub-items are active to control the collapsible state
-  const isExpanded = (module: typeof modules[0]) => 
+  const isExpanded = (module: typeof modules[0]) =>
     module.subItems.some(item => isActive(item.url)) || isActive(module.url)
 
   const { user } = useAuth()
@@ -199,7 +199,7 @@ export function UnifySidebar() {
       'ASSETS': 'Asset Management',
     }
 
-    const adminRoles = ['ADMIN', 'SYSTEM_ADMIN']
+    const adminRoles = ['ADMIN', 'SYSTEM_ADMIN', 'SUPER_ADMIN']
 
     if (adminRoles.includes(user.roleCode)) {
       return modules
@@ -223,9 +223,9 @@ export function UnifySidebar() {
                 {module.subItems.length > 0 ? (
                   <Collapsible defaultOpen={isExpanded(module)}>
                     <CollapsibleTrigger asChild>
-                      <SidebarMenuButton 
+                      <SidebarMenuButton
                         className={`w-full justify-between transition-all duration-200 ${
-                          module.subItems.some(item => location.pathname.startsWith(item.url)) 
+                          module.subItems.some(item => location.pathname.startsWith(item.url))
                             ? "bg-blue-600 text-white shadow-md border-l-4 border-blue-300"
                             : "hover:bg-blue-100 hover:text-blue-700"
                         }`}
@@ -240,14 +240,13 @@ export function UnifySidebar() {
                     {!isCollapsed && (
                       <CollapsibleContent className="ml-4 mt-1 space-y-1">
                         {module.subItems.map((subItem) => (
-                          // Removed SidebarMenuButton from around NavLink
-                          <NavLink 
+                          <NavLink
                             key={subItem.title}
                             to={subItem.url}
-                            className={({ isActive }) => 
+                            className={({ isActive }) =>
                               `block px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                                isActive 
-                                  ? "bg-blue-300 text-white shadow-md border-l-4 border-blue-300 transform scale-[1.02]" 
+                                isActive
+                                  ? "bg-blue-300 text-white shadow-md border-l-4 border-blue-300 transform scale-[1.02]"
                                   : "text-muted-foreground hover:bg-blue-100 hover:text-blue-700 hover:border-l-2 hover:border-blue-200"
                               }`
                             }
@@ -260,12 +259,12 @@ export function UnifySidebar() {
                   </Collapsible>
                 ) : (
                   <SidebarMenuButton asChild>
-                    <NavLink 
+                    <NavLink
                       to={module.url}
-                      className={({ isActive }) => 
+                      className={({ isActive }) =>
                         `flex items-center w-full px-3 py-2 ${
-                          isActive 
-                            ? "bg-blue-600 text-white shadow-md border-l-4 border-blue-300" 
+                          isActive
+                            ? "bg-blue-600 text-white shadow-md border-l-4 border-blue-300"
                             : "hover:bg-blue-100 hover:text-blue-700"
                         }`
                       }
@@ -284,7 +283,7 @@ export function UnifySidebar() {
         </div>
         <SidebarTrigger />
       </div>
-      
+
       </SidebarContent>
     </Sidebar>
   )

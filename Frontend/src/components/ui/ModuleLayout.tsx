@@ -1,9 +1,11 @@
 import React from 'react';
 import { Button } from './button';
-import { Eye, LogOut, Menu } from 'lucide-react';
+import { Eye, Home, LogOut, Menu } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@radix-ui/react-dropdown-menu';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { UnifySidebar } from './UnifySidebar';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ModuleLayoutProps {
   title: string;
@@ -13,13 +15,16 @@ interface ModuleLayoutProps {
   children: React.ReactNode;
 }
 
-const ModuleLayout: React.FC<ModuleLayoutProps> = ({
-  title,
-  onViewDashboard,
-  onLogout,
-  isEmployeeDashboard,
-  children,
-}) => {
+const ModuleLayout: React.FC<ModuleLayoutProps> = ({ title, onViewDashboard, onLogout, isEmployeeDashboard, children, }) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  
+  const handleBackToAdmin = () => {
+    navigate('/admin/dashboard');
+  };
+        
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-dashboard">
@@ -33,6 +38,18 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
                   <h1 className="text-xl sm:text-2xl font-bold text-blue-900">{title}</h1>
                 </div>
                 <div className="hidden md:flex items-center space-x-4">
+             {/* Back to Admin button for SUPER_ADMIN users */}
+                      {user?.roleCode === 'SUPER_ADMIN' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleBackToAdmin}
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                        >
+                          <Home className="h-4 w-4 mr-2" />
+                          Back to Admin
+                        </Button>
+                      )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -60,6 +77,14 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        {/* Back to Admin button for SUPER_ADMIN users in mobile menu */}
+                      {user?.roleCode === 'SUPER_ADMIN' && (
+                        <DropdownMenuItem onClick={handleBackToAdmin}>
+                          <Home className="h-4 w-4 mr-2" />
+                          Back to Admin
+                        </DropdownMenuItem>
+                      )}
+                      
                       <DropdownMenuItem onClick={onViewDashboard}>
                         <Eye className="h-4 w-4 mr-2" />
                         {isEmployeeDashboard ? 'View System' : 'View Dashboard'}

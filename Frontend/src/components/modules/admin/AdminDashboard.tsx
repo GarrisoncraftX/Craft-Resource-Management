@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import React from 'react';
+import { NavLink} from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Settings, Users, Shield, Database, Activity, Bell, FileText, Home } from 'lucide-react';
-import { PermissionGuard } from '@/components/PermissionGuard';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
+import { SuperAdminDashboardSelector } from './SuperAdminDashboardSelector';
+import { useAuth } from '@/contexts/AuthContext';
 
 const adminMenuItems = [
   { title: "Overview", path: "/admin/dashboard", icon: Home },
@@ -21,8 +21,6 @@ const adminMenuItems = [
 
 const AdminSidebar = () => {
   const { state } = useSidebar();
-  const location = useLocation();
-  const currentPath = location.pathname;
 
   return (
     <Sidebar collapsible="icon">
@@ -34,9 +32,9 @@ const AdminSidebar = () => {
               {adminMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.path} 
-                      className={({ isActive }) => 
+                    <NavLink
+                      to={item.path}
+                      className={({ isActive }) =>
                         isActive ? "bg-muted text-primary font-medium" : "hover:bg-muted/50"
                       }
                     >
@@ -55,7 +53,12 @@ const AdminSidebar = () => {
 };
 
 export const AdminDashboard: React.FC = () => {
-  const [activeSection, setActiveSection] = useState('overview');
+  const { user } = useAuth();
+
+  // Show SuperAdminDashboardSelector for SUPER_ADMIN users
+  if (user?.roleCode === 'SUPER_ADMIN') {
+    return <SuperAdminDashboardSelector />;
+  }
 
   const systemStats = [
     { metric: 'Total Users', value: 247, change: '+5', status: 'up' },
@@ -83,7 +86,7 @@ export const AdminDashboard: React.FC = () => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AdminSidebar />
-        
+
         <div className="flex-1 flex flex-col">
           <header className="bg-white shadow-sm border-b h-12 flex items-center">
             <SidebarTrigger className="ml-2" />
@@ -127,8 +130,8 @@ export const AdminDashboard: React.FC = () => {
                           <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
                         </div>
                         <Badge variant={
-                          activity.type === 'success' ? 'default' : 
-                          activity.type === 'warning' ? 'destructive' : 
+                          activity.type === 'success' ? 'default' :
+                          activity.type === 'warning' ? 'destructive' :
                           'secondary'
                         }>
                           {activity.type}

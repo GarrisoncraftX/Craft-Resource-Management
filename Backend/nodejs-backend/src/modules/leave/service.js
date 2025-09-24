@@ -54,6 +54,11 @@ class LeaveService {
   }
 
   async getUserLeaveRequests(userId, filters = {}) {
+    // Validate userId to prevent undefined parameter error
+    if (!userId || userId === 'undefined') {
+      throw new Error("User ID is required and cannot be undefined")
+    }
+
     const where = { userId }
     if (filters.status) {
       where.status = filters.status
@@ -70,6 +75,38 @@ class LeaveService {
       order: [["createdAt", "DESC"]],
       limit: filters.limit ? parseInt(filters.limit) : undefined,
     })
+  }
+
+  async getAllLeaveRequests(filters = {}) {
+    // For HR to view all employees' leave requests
+    const where = {}
+    if (filters && filters.status) {
+      where.status = filters.status
+    }
+    if (filters && filters.startDate) {
+      where.startDate = { [Op.gte]: filters.startDate }
+    }
+    if (filters && filters.endDate) {
+      where.endDate = { [Op.lte]: filters.endDate }
+    }
+    if (filters && filters.userId && filters.userId !== 'undefined') {
+      where.userId = filters.userId
+    }
+
+    console.log('getAllLeaveRequests - filters:', filters);
+    console.log('getAllLeaveRequests - where clause:', where);
+
+    const result = await LeaveRequest.findAll({
+      where,
+      include: [{ model: LeaveType }],
+      order: [["createdAt", "DESC"]],
+      limit: filters && filters.limit ? parseInt(filters.limit) : undefined,
+    });
+
+    console.log('getAllLeaveRequests - result count:', result.length);
+    console.log('getAllLeaveRequests - first result:', result[0]);
+
+    return result;
   }
 
   async updateLeaveRequestStatus(id, status, reviewedBy, comments = null) {
@@ -166,6 +203,70 @@ class LeaveService {
     })
 
     return leaveRequest
+  }
+
+  async getLeaveStatistics() {
+    try {
+      const today = new Date()
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
+
+      // Count pending requests
+      const pendingRequests = await LeaveRequest.count({
+        where: { status: "pending" }
+      })
+
+      // Count approved requests today
+      const approvedToday = await LeaveRequest.count({
+        where: {
+          status: "approved",
+          reviewedAt: {
+            [Op.gte]: startOfDay,
+            [Op.lt]: endOfDay
+          }
+        }
+      })
+
+      // Count employees currently on leave (approved requests that overlap with today)
+      const employeesOnLeave = await LeaveRequest.count({
+        where: {
+          status: "approved",
+          startDate: { [Op.lte]: today },
+          endDate: { [Op.gte]: today }
+        },
+        distinct: true,
+        col: 'userId'
+      })
+
+      // Calculate average leave days for approved requests in the current month
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+
+      const approvedRequestsThisMonth = await LeaveRequest.findAll({
+        where: {
+          status: "approved",
+          startDate: {
+            [Op.gte]: startOfMonth,
+            [Op.lte]: endOfMonth
+          }
+        },
+        attributes: ['totalDays']
+      })
+
+      const averageLeaveDays = approvedRequestsThisMonth.length > 0
+        ? approvedRequestsThisMonth.reduce((sum, req) => sum + req.totalDays, 0) / approvedRequestsThisMonth.length
+        : 0
+
+      return {
+        pendingRequests,
+        approvedToday,
+        employeesOnLeave,
+        averageLeaveDays: Math.round(averageLeaveDays * 10) / 10 
+      }
+    } catch (error) {
+      console.error("Error calculating leave statistics:", error)
+      throw new Error("Failed to calculate leave statistics")
+    }
   }
 }
 

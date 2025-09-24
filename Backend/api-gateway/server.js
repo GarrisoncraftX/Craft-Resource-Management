@@ -36,7 +36,8 @@ const publicRoutes = [
   "/api/auth/register",
   "/api/lookup",
   "/api/biometric/enroll",
-  "/api/biometric/identify"
+  "/api/biometric/identify",
+  "/api/leave"
 ];
 
 // JWT validation middleware

@@ -136,11 +136,13 @@ export const EmployeeDashboard: React.FC = () => {
       'REVENUE_TAX': '/revenue-tax/dashboard',
       'SECURITY': '/security/dashboard',
       'ASSETS': '/assets/dashboard',
+      'INFORMATION_TECHNOLOGY': '/admin/dashboard',
     };
 
     const roleOverrides: Record<string, string> = {
       'ADMIN': '/admin/dashboard',
       'SYSTEM_ADMIN': '/admin/dashboard',
+      // SUPER_ADMIN removed from overrides to allow access to all departments
     };
 
     if (roleOverrides[roleCode]) {

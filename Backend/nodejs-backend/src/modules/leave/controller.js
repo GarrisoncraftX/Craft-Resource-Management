@@ -33,8 +33,22 @@ class LeaveController {
   async getUserLeaveRequests(req, res, next) {
     try {
       const userId = req.params.userId || req.userContext?.userId;
+      // Validate userId to prevent undefined parameter error
+      if (!userId || userId === 'undefined') {
+        return res.status(400).json({ success: false, message: "User ID is required and cannot be undefined" });
+      }
       const filters = req.query;
       const leaveRequests = await this.leaveService.getUserLeaveRequests(userId, filters);
+      res.json({ success: true, data: leaveRequests });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getAllLeaveRequests(req, res, next) {
+    try {
+      const filters = req.query;
+      const leaveRequests = await this.leaveService.getAllLeaveRequests(filters);
       res.json({ success: true, data: leaveRequests });
     } catch (error) {
       next(error);
@@ -83,6 +97,15 @@ class LeaveController {
       const reason = req.body.reason;
       const result = await this.leaveService.rejectLeaveRequest(id, userId, reason);
       res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getLeaveStatistics(req, res, next) {
+    try {
+      const statistics = await this.leaveService.getLeaveStatistics();
+      res.json({ success: true, data: statistics });
     } catch (error) {
       next(error);
     }

@@ -12,23 +12,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { FileText, BarChart3, Download, Calendar, Filter, TrendingUp, Users, DollarSign, Clock, Brain, AlertCircle, CheckCircle } from 'lucide-react';
+import { XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { FileText,  Download, Filter, TrendingUp, Users, DollarSign, Brain, AlertCircle, CheckCircle } from 'lucide-react';
 
 export const ReportsDashboard: React.FC = () => {
   const [reportBuilderDialog, setReportBuilderDialog] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState('month');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
 
-  // Mock data for analytics
-  const departmentPerformanceData = [
-    { department: 'Finance', efficiency: 92, productivity: 88, satisfaction: 95 },
-    { department: 'HR', efficiency: 89, productivity: 91, satisfaction: 93 },
-    { department: 'Security', efficiency: 95, productivity: 87, satisfaction: 90 },
-    { department: 'Assets', efficiency: 87, productivity: 89, satisfaction: 88 },
-    { department: 'Legal', efficiency: 90, productivity: 85, satisfaction: 92 },
-    { department: 'Procurement', efficiency: 85, productivity: 92, satisfaction: 87 }
-  ];
 
   const monthlyTrendsData = [
     { month: 'Jan', revenue: 450000, expenses: 320000, employees: 245, incidents: 3 },
@@ -346,15 +337,13 @@ export const ReportsDashboard: React.FC = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="overview">Overview Analytics</TabsTrigger>
-            <TabsTrigger value="department">Department Performance</TabsTrigger>
             <TabsTrigger value="reports">Report Management</TabsTrigger>
-            <TabsTrigger value="builder">Custom Builder</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Monthly Trends</CardTitle>
@@ -400,29 +389,6 @@ export const ReportsDashboard: React.FC = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="department" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Department Performance Analysis</CardTitle>
-                <CardDescription>Efficiency, productivity, and satisfaction metrics by department</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={departmentPerformanceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="department" />
-                      <YAxis />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="efficiency" fill="var(--color-efficiency)" />
-                      <Bar dataKey="productivity" fill="var(--color-productivity)" />
-                      <Bar dataKey="satisfaction" fill="var(--color-satisfaction)" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
             <Card>
@@ -483,57 +449,6 @@ export const ReportsDashboard: React.FC = () => {
                       ))}
                     </TableBody>
                   </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="builder" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Advanced Report Builder</CardTitle>
-                <CardDescription>Create complex, multi-source reports with custom analytics</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Quick Templates</h3>
-                    <div className="grid gap-3">
-                      <Button variant="outline" className="justify-start h-auto p-4">
-                        <div className="text-left">
-                          <div className="font-medium">Executive Summary</div>
-                          <div className="text-sm text-muted-foreground">High-level KPIs and insights</div>
-                        </div>
-                      </Button>
-                      <Button variant="outline" className="justify-start h-auto p-4">
-                        <div className="text-left">
-                          <div className="font-medium">Financial Performance</div>
-                          <div className="text-sm text-muted-foreground">Revenue, expenses, and budget analysis</div>
-                        </div>
-                      </Button>
-                      <Button variant="outline" className="justify-start h-auto p-4">
-                        <div className="text-left">
-                          <div className="font-medium">Operational Efficiency</div>
-                          <div className="text-sm text-muted-foreground">Process metrics and performance indicators</div>
-                        </div>
-                      </Button>
-                      <Button variant="outline" className="justify-start h-auto p-4">
-                        <div className="text-left">
-                          <div className="font-medium">Compliance Report</div>
-                          <div className="text-sm text-muted-foreground">Regulatory and policy compliance status</div>
-                        </div>
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Report Preview</h3>
-                    <div className="border rounded-lg p-4 bg-muted/10 min-h-[300px] flex items-center justify-center">
-                      <div className="text-center text-muted-foreground">
-                        <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p>Select a template or build custom report to see preview</p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>

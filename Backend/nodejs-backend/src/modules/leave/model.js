@@ -11,10 +11,9 @@ const LeaveType = sequelize.define("LeaveType", {
     type: DataTypes.STRING(100),
     allowNull: false,
   },
-  desciption: {
+  description: {
     type: DataTypes.TEXT,
     allowNull: true,
-    field: "description",
   },
   maxDaysPerYear: {
     type: DataTypes.INTEGER,

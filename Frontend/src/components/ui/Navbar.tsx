@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Eye, LogOut, Menu } from 'lucide-react';
+import { Eye, LogOut, Menu} from 'lucide-react';
 
 interface NavbarProps {
   title: string;
@@ -12,6 +12,9 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ title, onViewDashboard, onLogout, toggleSidebar, isEmployeeDashboard }) => {
+
+
+
   return (
     <header className="bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -31,6 +34,7 @@ const Navbar: React.FC<NavbarProps> = ({ title, onViewDashboard, onLogout, toggl
               <Eye className="h-4 w-4 mr-2" />
               {isEmployeeDashboard ? 'View System' : 'View Dashboard'}
             </Button>
+
             <Button
               variant="ghost"
               size="sm"

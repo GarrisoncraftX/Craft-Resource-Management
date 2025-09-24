@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,67 +6,95 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarDays, Clock, CheckCircle, XCircle, Calendar as CalendarIcon, Users } from 'lucide-react';
-
-const leaveRequests = [
-  {
-    id: 'LR001',
-    employee: 'John Doe',
-    type: 'Annual Leave',
-    startDate: '2024-02-15',
-    endDate: '2024-02-19',
-    days: 5,
-    status: 'Pending',
-    reason: 'Family vacation',
-    appliedDate: '2024-01-20'
-  },
-  {
-    id: 'LR002',
-    employee: 'Jane Smith',
-    type: 'Sick Leave',
-    startDate: '2024-02-12',
-    endDate: '2024-02-13',
-    days: 2,
-    status: 'Approved',
-    reason: 'Medical appointment',
-    appliedDate: '2024-02-10'
-  },
-  {
-    id: 'LR003',
-    employee: 'Mike Johnson',
-    type: 'Personal Leave',
-    startDate: '2024-02-20',
-    endDate: '2024-02-22',
-    days: 3,
-    status: 'Rejected',
-    reason: 'Personal matters',
-    appliedDate: '2024-02-05'
-  },
-];
-
-const leaveBalances = [
-  {
-    employee: 'John Doe',
-    annualLeave: { total: 25, used: 8, remaining: 17 },
-    sickLeave: { total: 12, used: 2, remaining: 10 },
-    personalLeave: { total: 5, used: 1, remaining: 4 }
-  },
-  {
-    employee: 'Jane Smith',
-    annualLeave: { total: 25, used: 12, remaining: 13 },
-    sickLeave: { total: 12, used: 4, remaining: 8 },
-    personalLeave: { total: 5, used: 0, remaining: 5 }
-  },
-  {
-    employee: 'Mike Johnson',
-    annualLeave: { total: 25, used: 15, remaining: 10 },
-    sickLeave: { total: 12, used: 1, remaining: 11 },
-    personalLeave: { total: 5, used: 2, remaining: 3 }
-  },
-];
+import { leaveApiService } from '@/services/leaveApi';
+import type { LeaveRequest, LeaveBalance, LeaveStatistics } from '@/types/leave';
 
 export const LeaveManagement: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [activeTab, setActiveTab] = useState('requests');
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
+  const [statistics, setStatistics] = useState<LeaveStatistics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+
+    // Load all data in parallel
+    const [requestsData, balancesData, statsData] = await Promise.all([
+      leaveApiService.getAllLeaveRequests(),
+      leaveApiService.getLeaveBalances(1),
+      leaveApiService.getLeaveStatistics()
+    ]);
+
+    // Ensure data is in expected format before setting state
+    setLeaveRequests(Array.isArray(requestsData) ? requestsData : []);
+    setLeaveBalances(Array.isArray(balancesData) ? balancesData : []);
+    setStatistics(statsData);
+  } catch (err) {
+    setError('Failed to load leave management data');
+    console.error('Error loading leave data:', err);
+    setLeaveRequests([]);
+    setLeaveBalances([]);
+    setStatistics(null);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  const handleApproveRequest = async (requestId: string) => {
+    try {
+      await leaveApiService.approveLeaveRequest(requestId);
+      await loadData(); 
+    } catch (err) {
+      console.error('Error approving leave request:', err);
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      await leaveApiService.rejectLeaveRequest(requestId, 1, 'Request rejected');
+      await loadData(); 
+    } catch (err) {
+      console.error('Error rejecting leave request:', err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex-1 flex flex-col p-6 bg-background">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading leave management data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex-1 flex flex-col p-6 bg-background">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-destructive mb-4">{error}</p>
+            <Button onClick={loadData} variant="outline">
+              Retry
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex-1 flex flex-col p-6 bg-background">
@@ -83,51 +111,53 @@ export const LeaveManagement: React.FC = () => {
         </div>
 
         {/* Leave Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">8</div>
-              <p className="text-xs text-muted-foreground">Awaiting approval</p>
-            </CardContent>
-          </Card>
+        {statistics && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{statistics.pendingRequests}</div>
+                <p className="text-xs text-muted-foreground">Awaiting approval</p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Approved Today</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">3</div>
-              <p className="text-xs text-muted-foreground">Requests approved</p>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Approved Today</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{statistics.approvedToday}</div>
+                <p className="text-xs text-muted-foreground">Requests approved</p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Employees on Leave</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">12</div>
-              <p className="text-xs text-muted-foreground">Currently away</p>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Employees on Leave</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{statistics.employeesOnLeave}</div>
+                <p className="text-xs text-muted-foreground">Currently away</p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Average Leave Days</CardTitle>
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">18.5</div>
-              <p className="text-xs text-muted-foreground">Days per employee</p>
-            </CardContent>
-          </Card>
-        </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Average Leave Days</CardTitle>
+                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{statistics.averageLeaveDays}</div>
+                <p className="text-xs text-muted-foreground">Days per employee</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4">
@@ -157,31 +187,39 @@ export const LeaveManagement: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {leaveRequests.map((request) => (
+                  {(leaveRequests || []).map((request) => (
                       <TableRow key={request.id}>
-                        <TableCell className="font-medium">{request.employee}</TableCell>
-                        <TableCell>{request.type}</TableCell>
+                        <TableCell className="font-medium">Employee {request.userId}</TableCell>
+                        <TableCell>{request.leaveType?.name || 'Unknown'}</TableCell>
                         <TableCell>{request.startDate} to {request.endDate}</TableCell>
-                        <TableCell>{request.days}</TableCell>
-                        <TableCell>{request.reason}</TableCell>
+                        <TableCell>{request.totalDays}</TableCell>
+                        <TableCell>{request.reason || 'No reason provided'}</TableCell>
                         <TableCell>
-                          <Badge 
+                          <Badge
                             variant={
-                              request.status === 'Approved' ? 'default' : 
-                              request.status === 'Pending' ? 'secondary' : 'destructive'
+                              request.status === 'approved' ? 'default' :
+                              request.status === 'pending' ? 'secondary' : 'destructive'
                             }
                           >
-                            {request.status}
+                            {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            {request.status === 'Pending' && (
+                            {request.status === 'pending' && (
                               <>
-                                <Button variant="ghost" size="sm">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleApproveRequest(request.id)}
+                                >
                                   <CheckCircle className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRejectRequest(request.id)}
+                                >
                                   <XCircle className="h-4 w-4" />
                                 </Button>
                               </>
@@ -205,49 +243,25 @@ export const LeaveManagement: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {leaveBalances.map((balance, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <h3 className="font-medium mb-4">{balance.employee}</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
+                  <div className="border rounded-lg p-4">
+                    <h3 className="font-medium mb-4">Employee 1</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {(leaveBalances || []).map((balance) => (
+                        <div key={balance.leaveTypeId} className="space-y-2">
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Annual Leave</span>
-                            <span className="text-sm font-medium">{balance.annualLeave.remaining}/{balance.annualLeave.total}</span>
+                            <span className="text-sm text-muted-foreground">{balance.leaveTypeName}</span>
+                            <span className="text-sm font-medium">{balance.remainingDaysFormatted}</span>
                           </div>
                           <div className="w-full bg-muted rounded-full h-2">
                             <div
                               className="bg-primary h-2 rounded-full"
-                              style={{ width: `${(balance.annualLeave.remaining / balance.annualLeave.total) * 100}%` }}
+                              style={{ width: `${(balance.remainingDays / balance.allocatedDays) * 100}%` }}
                             />
                           </div>
                         </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Sick Leave</span>
-                            <span className="text-sm font-medium">{balance.sickLeave.remaining}/{balance.sickLeave.total}</span>
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-2">
-                            <div
-                              className="bg-secondary h-2 rounded-full"
-                              style={{ width: `${(balance.sickLeave.remaining / balance.sickLeave.total) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Personal Leave</span>
-                            <span className="text-sm font-medium">{balance.personalLeave.remaining}/{balance.personalLeave.total}</span>
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-2">
-                            <div
-                              className="bg-accent h-2 rounded-full"
-                              style={{ width: `${(balance.personalLeave.remaining / balance.personalLeave.total) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -277,20 +291,18 @@ export const LeaveManagement: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">Jane Smith</p>
-                        <p className="text-sm text-muted-foreground">Sick Leave - 2 days</p>
-                      </div>
-                      <Badge variant="secondary">Approved</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">Alex Johnson</p>
-                        <p className="text-sm text-muted-foreground">Annual Leave - 5 days</p>
-                      </div>
-                      <Badge variant="default">Approved</Badge>
-                    </div>
+                    {leaveRequests
+                      .filter(request => request.status === 'approved')
+                      .slice(0, 2)
+                      .map((request) => (
+                        <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">Employee {request.userId}</p>
+                            <p className="text-sm text-muted-foreground">{request.leaveType?.name} - {request.totalDays} days</p>
+                          </div>
+                          <Badge variant="default">Approved</Badge>
+                        </div>
+                      ))}
                   </div>
                 </CardContent>
               </Card>
