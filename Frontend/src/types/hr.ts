@@ -29,7 +29,7 @@ export interface Certification {
 }
 
 export interface Employee {
-  id: number;
+  id: string;
   tenantId: number;
   employeeId: string;
   email: string;
@@ -40,8 +40,8 @@ export interface Employee {
   address?: string;
   dateOfBirth?: string;
   hireDate?: string;
-  departmentId: number;
-  roleId: number;
+  departmentId: string;
+  roleId: string;
   managerId?: string;
   salary?: number;
   isActive: number;
@@ -55,4 +55,12 @@ export interface Employee {
   updatedAt: string;
   dateOfJoining?: string;
   employeeNumber?: string;
+  accountNumber?: string;
+  momoNumber?: string;
+  profilePictureUrl?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  role?: string;
+  department?: string;
+  hiredate?: string;
 }

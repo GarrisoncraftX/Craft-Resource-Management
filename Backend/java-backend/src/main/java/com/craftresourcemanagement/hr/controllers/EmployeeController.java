@@ -32,4 +32,24 @@ public class EmployeeController {
             return ResponseEntity.status(500).body(null);
         }
     }
+
+  
+
+    @GetMapping("/id/{id}")
+    public ResponseEntity<User> getEmployeeById(@PathVariable Long id) {
+        return employeeService.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/id/{id}")
+    public ResponseEntity<User> updateEmployee(@PathVariable Long id, @RequestBody User user) {
+        return employeeService.findById(id)
+                .map(existingUser -> {
+                    user.setId(existingUser.getId());
+                    User updatedUser = employeeService.registerEmployee(user);
+                    return ResponseEntity.ok(updatedUser);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
 }

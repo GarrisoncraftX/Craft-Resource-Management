@@ -71,6 +71,18 @@ export async function fetchEmployees(): Promise<Employee[]> {
   return apiClient.get('/hr/employees/list');
 }
 
+export async function fetchEmployeeByNumber(employeeNumber: string): Promise<Employee> {
+  return apiClient.get(`/hr/employees/${employeeNumber}`);
+}
+
+export async function fetchEmployeeById(id: string): Promise<Employee> {
+  return apiClient.get(`/hr/employees/id/${id}`);
+}
+
+export async function updateEmployeeById(id: string, employee: Partial<Employee>): Promise<Employee> {
+  return apiClient.put(`/hr/employees/id/${id}`, employee);
+}
+
 export async function createBudget(budget: BudgetItem): Promise<BudgetItem> {
   const backendBudget = mapToBackendBudget(budget);
   const response = await apiClient.post('/finance/budgets', backendBudget);

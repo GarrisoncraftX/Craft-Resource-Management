@@ -83,6 +83,15 @@ public class User {
     @Column(name = "employee_number")
     private String employeeNumber;
 
+    @Column(name = "account_number")
+    private String accountNumber;
+
+    @Column(name = "momo_number")
+    private String momoNumber;
+
+    @Column(name = "profile_picture_url")
+    private String profilePictureUrl;
+
     // Getters and Setters
 
     public Long getId() {
@@ -291,6 +300,30 @@ public class User {
 
     public void setEmployeeNumber(String employeeNumber) {
         this.employeeNumber = employeeNumber;
+    }
+
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+
+    public void setAccountNumber(String accountNumber) {
+        this.accountNumber = accountNumber;
+    }
+
+    public String getMomoNumber() {
+        return momoNumber;
+    }
+
+    public void setMomoNumber(String momoNumber) {
+        this.momoNumber = momoNumber;
+    }
+
+    public String getProfilePictureUrl() {
+        return profilePictureUrl;
+    }
+
+    public void setProfilePictureUrl(String profilePictureUrl) {
+        this.profilePictureUrl = profilePictureUrl;
     }
 
     @PrePersist

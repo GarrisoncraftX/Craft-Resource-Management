@@ -1,7 +1,8 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Eye, LogOut, Menu} from 'lucide-react';
+import { Eye, LogOut, Menu, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface NavbarProps {
   title: string;
@@ -12,8 +13,11 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ title, onViewDashboard, onLogout, toggleSidebar, isEmployeeDashboard }) => {
+  const navigate = useNavigate();
 
-
+  const handleAccountClick = () => {
+    navigate('/employee/info');
+  };
 
   return (
     <header className="bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-20">
@@ -25,15 +29,27 @@ const Navbar: React.FC<NavbarProps> = ({ title, onViewDashboard, onLogout, toggl
             </h1>
           </div>
           <div className="hidden md:flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onViewDashboard}
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              {isEmployeeDashboard ? 'View System' : 'View Dashboard'}
-            </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onViewDashboard}
+                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                {title === 'Employee Account' ? 'Back to Dashboard' : (isEmployeeDashboard ? 'View System' : 'View Dashboard')}
+              </Button>
+
+            {isEmployeeDashboard && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleAccountClick}
+                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+              >
+                <User className="h-4 w-4 mr-2" />
+                Account
+              </Button>
+            )}
 
             <Button
               variant="ghost"
@@ -57,6 +73,12 @@ const Navbar: React.FC<NavbarProps> = ({ title, onViewDashboard, onLogout, toggl
                   <Eye className="h-4 w-4 mr-2" />
                   {isEmployeeDashboard ? 'View System' : 'View Dashboard'}
                 </DropdownMenuItem>
+                {isEmployeeDashboard && (
+                  <DropdownMenuItem onClick={handleAccountClick}>
+                    <User className="h-4 w-4 mr-2" />
+                    Account
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={onLogout}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Logout

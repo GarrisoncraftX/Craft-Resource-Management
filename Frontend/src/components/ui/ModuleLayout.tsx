@@ -39,7 +39,7 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({ title, onViewDashboard, onL
                 </div>
                 <div className="hidden md:flex items-center space-x-4">
              {/* Back to Admin button for SUPER_ADMIN users */}
-                      {user?.roleCode === 'SUPER_ADMIN' && (
+                      {user?.roleCode === 'SUPER_ADMIN' && title !== 'Admin Dashboard' && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -78,7 +78,7 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({ title, onViewDashboard, onL
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         {/* Back to Admin button for SUPER_ADMIN users in mobile menu */}
-                      {user?.roleCode === 'SUPER_ADMIN' && (
+                      {user?.roleCode === 'SUPER_ADMIN' && title !== 'Admin Dashboard' && (
                         <DropdownMenuItem onClick={handleBackToAdmin}>
                           <Home className="h-4 w-4 mr-2" />
                           Back to Admin

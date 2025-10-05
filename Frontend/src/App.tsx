@@ -52,6 +52,8 @@ const BenefitsAdministration = lazy(() => import("@/components/modules/hr/Benefi
 const LeaveManagement = lazy(() => import("@/components/modules/hr/LeaveManagement").then(module => ({ default: module.LeaveManagement })));
 const TrainingDevelopment = lazy(() => import("@/components/modules/hr/TrainingDevelopment").then(module => ({ default: module.TrainingDevelopment })));
 const PerformanceManagement = lazy(() => import("@/components/modules/hr/PerformanceManagement").then(module => ({ default: module.PerformanceManagement })));
+const EmployeeAccount = lazy(() => import("@/components/EmployeeAccount").then(module => ({ default: module.EmployeeAccount })));
+const EmployeeInfoDisplay = lazy(() => import("@/components/EmployeeInfoDisplay"));
 
 const AssetRegister = lazy(() => import("@/components/modules/assets/AssetRegister").then(module => ({ default: module.AssetRegister })));
 const AssetAcquisition = lazy(() => import("@/components/modules/assets/AssetAcquisition").then(module => ({ default: module.AssetAcquisition })));
@@ -118,7 +120,7 @@ const AppRoutes = () => {
       {/* Admin Routes */}
       <Route path="/admin" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AdminDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/admin/audit-logs" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AuditLogs /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/admin/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AdminDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/admin/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AdminDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/admin/database" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><DatabaseManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/admin/monitoring" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SystemMonitoring /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/admin/notifications" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><Notifications /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
@@ -140,6 +142,8 @@ const AppRoutes = () => {
 
       {/* Employee Routes */}
       <Route path="/employee-dashboard" element={<ProtectedRoute><SuspenseWrapper><EmployeeDashboard /></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/employee/account" element={<ProtectedRoute><SuspenseWrapper><EmployeeAccount /></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/employee/info" element={<ProtectedRoute><SuspenseWrapper><EmployeeInfoDisplay /></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/kiosk-interface" element={<ProtectedRoute><SuspenseWrapper><KioskInterface /></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/reception-desk" element={<ProtectedRoute><SuspenseWrapper><KioskInterface /></SuspenseWrapper></ProtectedRoute>} />
 

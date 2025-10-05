@@ -11,6 +11,7 @@ export interface User {
   email: string;
   department: string;
   role: string;
+  employeeNumber?: string;
 }
 
 export interface AuthContextType {

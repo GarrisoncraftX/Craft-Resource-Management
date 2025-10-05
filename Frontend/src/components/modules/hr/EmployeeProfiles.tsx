@@ -9,6 +9,9 @@ import { Search, Edit, Eye, UserPlus } from 'lucide-react';
 import { fetchEmployees, fetchDepartments, fetchRoles } from '@/services/api';
 import type { Employee } from '@/types/hr';
 import type { Department, Role } from '@/types/api';
+import { EditEmployeeDialog } from './EditEmployeeDialog';
+import { ViewEmployeeDialog } from './ViewEmployeeDialog';
+import { AddEmployeeForm } from './forms/AddEmployeeForm';
 
 const mockEmployeeData = [
   { 
@@ -55,6 +58,10 @@ export const EmployeeProfiles: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -134,6 +141,21 @@ export const EmployeeProfiles: React.FC = () => {
     }
   }).length;
 
+  const handleViewEmployee = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setViewDialogOpen(true);
+  };
+
+  const handleEditEmployee = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEmployee = (updatedEmployee: Employee) => {
+    setEmployees(prev => 
+      prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp)
+    );
+  };
 
   return (
     <div className="min-h-screen flex-1 flex flex-col p-6 bg-background">
@@ -143,7 +165,10 @@ export const EmployeeProfiles: React.FC = () => {
             <h1 className="text-3xl font-bold tracking-tight">Employee Profiles</h1>
             <p className="text-muted-foreground">Manage employee information and profiles</p>
           </div>
-          <Button className="flex items-center gap-2 bg-green-500">
+          <Button 
+            className="flex items-center gap-2 bg-green-500"
+            onClick={() => setShowAddForm(true)}
+          >
             <UserPlus className="h-4 w-4 font-bold" />
             Add Employee
           </Button>
@@ -264,10 +289,20 @@ export const EmployeeProfiles: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button className='hover:bg-blue-300 hover:text-white' variant="ghost" size="sm">
+                        <Button 
+                          className='hover:bg-blue-300 hover:text-white' 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleViewEmployee(employee)}
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button className='hover:bg-purple-300 hover:text-white' variant="ghost" size="sm">
+                        <Button 
+                          className='hover:bg-purple-300 hover:text-white' 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleEditEmployee(employee)}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                       </div>
@@ -279,6 +314,27 @@ export const EmployeeProfiles: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Dialogs */}
+      <AddEmployeeForm 
+        open={showAddForm} 
+        onOpenChange={setShowAddForm}
+      />
+      
+      <ViewEmployeeDialog
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
+        employee={selectedEmployee}
+        departments={departments}
+        roles={roles}
+      />
+
+      <EditEmployeeDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        employee={selectedEmployee}
+        onSave={handleSaveEmployee}
+      />
     </div>
   );
 };

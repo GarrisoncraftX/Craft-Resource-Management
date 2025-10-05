@@ -446,6 +446,7 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
       role: user.Role ? user.Role.name : '',
       roleCode,
       permissions,
+      employeeNumber: user.employeeNumber,
     },
   };
 };
