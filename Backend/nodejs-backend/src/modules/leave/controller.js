@@ -79,6 +79,15 @@ class LeaveController {
     }
   }
 
+  async getAllLeaveBalances(req, res, next) {
+    try {
+      const balances = await this.leaveService.getAllLeaveBalances();
+      res.json({ success: true, data: balances });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async approveLeaveRequest(req, res, next) {
     try {
       const id = req.params.id;

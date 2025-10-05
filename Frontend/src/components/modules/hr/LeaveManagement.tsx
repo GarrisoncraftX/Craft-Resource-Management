@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarDays, Clock, CheckCircle, XCircle, Calendar as CalendarIcon, Users } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CalendarDays, Clock, CheckCircle, XCircle, Calendar as CalendarIcon, Filter } from 'lucide-react';
 import { leaveApiService } from '@/services/leaveApi';
 import type { LeaveRequest, LeaveBalance, LeaveStatistics, LeaveType } from '@/types/leave';
 
 export const LeaveManagement: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [activeTab, setActiveTab] = useState('requests');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
   const [statistics, setStatistics] = useState<LeaveStatistics | null>(null);
@@ -19,54 +21,60 @@ export const LeaveManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Filter leave requests based on status
+  const filteredLeaveRequests = (leaveRequests || []).filter(request => {
+    if (statusFilter === 'all') return true;
+    return request.status === statusFilter;
+  });
+
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-  try {
-    setLoading(true);
-    setError(null);
+    try {
+      setLoading(true);
+      setError(null);
 
-    // Load all data in parallel
-    const [requestsData, balancesData, statsData, typesData] = await Promise.all([
-      leaveApiService.getAllLeaveRequests(),
-      leaveApiService.getLeaveBalances(1),
-      leaveApiService.getLeaveStatistics(),
-      leaveApiService.getLeaveTypes()
-    ]);
+      // Load all data in parallel
+      const [requestsData, balancesData, statsData, typesData] = await Promise.all([
+        leaveApiService.getAllLeaveRequests(),
+        leaveApiService.getAllLeaveBalances(),
+        leaveApiService.getLeaveStatistics(),
+        leaveApiService.getLeaveTypes()
+      ]);
 
-    // Ensure data is in expected format before setting state
-    const requests = Array.isArray(requestsData) ? requestsData : [];
-    const types = Array.isArray(typesData) ? typesData : [];
+      // Ensure data is in expected format before setting state
+      const requests = Array.isArray(requestsData) ? requestsData : [];
+      const types = Array.isArray(typesData) ? typesData : [];
 
-    // Map leave types to requests based on leaveTypeId
-    const requestsWithTypes = requests.map(request => ({
-      ...request,
-      leaveType: types.find(type => type.id === request.leaveTypeId) || request.leaveType
-    }));
+      // Map leave types to requests based on leaveTypeId
+      const requestsWithTypes = requests.map(request => ({
+        ...request,
+        leaveType: types.find(type => type.id === request.leaveTypeId) || request.leaveType
+      }));
 
-    setLeaveRequests(requestsWithTypes);
-    setLeaveBalances(Array.isArray(balancesData) ? balancesData : []);
-    setStatistics(statsData);
-    setLeaveTypes(types);
-  } catch (err) {
-    setError('Failed to load leave management data');
-    console.error('Error loading leave data:', err);
-    setLeaveRequests([]);
-    setLeaveBalances([]);
-    setStatistics(null);
-    setLeaveTypes([]);
-  } finally {
-    setLoading(false);
-  }
-};
+      setLeaveRequests(requestsWithTypes);
+      setLeaveBalances(Array.isArray(balancesData) ? balancesData : []);
+      setStatistics(statsData);
+      setLeaveTypes(types);
+    } catch (err) {
+      setError('Failed to load leave management data');
+      console.error('Error loading leave data:', err);
+      setLeaveRequests([]);
+      setLeaveBalances([]);
+      setStatistics(null);
+      setLeaveTypes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   const handleApproveRequest = async (requestId: string) => {
     try {
       await leaveApiService.approveLeaveRequest(requestId);
-      await loadData(); 
+      await loadData();
     } catch (err) {
       console.error('Error approving leave request:', err);
     }
@@ -75,7 +83,7 @@ export const LeaveManagement: React.FC = () => {
   const handleRejectRequest = async (requestId: string) => {
     try {
       await leaveApiService.rejectLeaveRequest(requestId, 1, 'Request rejected');
-      await loadData(); 
+      await loadData();
     } catch (err) {
       console.error('Error rejecting leave request:', err);
     }
@@ -117,10 +125,22 @@ export const LeaveManagement: React.FC = () => {
             <h1 className="text-3xl font-bold tracking-tight">Leave Management</h1>
             <p className="text-muted-foreground">Manage employee leave requests and balances</p>
           </div>
-          <Button>
-            <CalendarDays className="h-4 w-4 mr-2" />
-            New Leave Request
-          </Button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Requests</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         {/* Leave Statistics */}
@@ -148,24 +168,24 @@ export const LeaveManagement: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card>
+              <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Employees on Leave</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Total Approved Leaves</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{statistics.employeesOnLeave}</div>
-                <p className="text-xs text-muted-foreground">Currently away</p>
+                <div className="text-2xl font-bold">{statistics.totalApprovedLeaves}</div>
+                <p className="text-xs text-muted-foreground">All time</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Average Leave Days</CardTitle>
+                <CardTitle className="text-sm font-medium">Avg Leave (This Month)</CardTitle>
                 <CalendarIcon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{statistics.averageLeaveDays}</div>
+                <div className="text-2xl font-bold">{statistics.averageLeaveDaysThisMonth}</div>
                 <p className="text-xs text-muted-foreground">Days per employee</p>
               </CardContent>
             </Card>
@@ -200,7 +220,7 @@ export const LeaveManagement: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                  {(leaveRequests || []).map((request) => (
+                    {filteredLeaveRequests.map((request) => (
                       <TableRow key={request.id}>
                         <TableCell className="font-medium">
                           {request.User ? `${request.User.firstName} ${request.User.lastName}` : `Employee ${request.userId}`}
@@ -213,7 +233,7 @@ export const LeaveManagement: React.FC = () => {
                           <Badge
                             variant={
                               request.status === 'approved' ? 'default' :
-                              request.status === 'pending' ? 'secondary' : 'destructive'
+                                request.status === 'pending' ? 'secondary' : 'destructive'
                             }
                           >
                             {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
@@ -251,35 +271,67 @@ export const LeaveManagement: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="balances" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Employee Leave Balances</CardTitle>
-                <CardDescription>Track remaining leave days for each employee</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="border rounded-lg p-4">
-                    <h3 className="font-medium mb-4">Employee</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {(leaveBalances || []).map((balance) => (
-                        <div key={balance.leaveTypeId} className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">{balance.leaveTypeName}</span>
-                            <span className="text-sm font-medium">{balance.remainingDaysFormatted}</span>
+            {leaveBalances && leaveBalances.length > 0 ? (
+              Object.entries(
+                leaveBalances.reduce((acc, balance) => {
+                  const employeeId = balance.userId || 'unknown';
+                  if (!acc[employeeId]) {
+                    acc[employeeId] = {
+                      firstName: balance.firstName,
+                      middleName: balance.middleName,
+                      lastName: balance.lastName,
+                      employeeName: balance.employeeName,
+                      balances: []
+                    };
+                  }
+                  acc[employeeId].balances.push(balance);
+                  return acc;
+                }, {} as Record<string, { firstName?: string; middleName?: string; lastName?: string; employeeName?: string; balances: LeaveBalance[] }>
+              )
+              ).map(([employeeId, employeeData]) => {
+                const displayName = employeeData.employeeName ||
+                  `${employeeData.firstName || ''} ${employeeData.middleName ? employeeData.middleName + ' ' : ''}${employeeData.lastName || ''}`.trim() ||
+                  `Employee ${employeeId}`;
+
+                return (
+                  <Card key={employeeId}>
+                    <CardHeader>
+                      <CardTitle>
+                        <h3 className="text-xl font-semibold">
+                          {displayName}
+                        </h3>
+                      </CardTitle>
+                      <CardDescription>Leave balances for {employeeData.firstName || displayName}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {employeeData.balances.map((balance) => (
+                          <div key={balance.leaveTypeId} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-muted-foreground">{balance.leaveTypeName}</span>
+                              <span className="text-lg font-bold">{balance.remainingDaysFormatted}</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                              <div
+                                className="bg-blue-500 h-2 rounded-full"
+                                style={{
+                                  width: `${balance.allocatedDays > 0 ? (balance.remainingDays / balance.allocatedDays) * 100 : 0}%`
+                                }}
+                              />
+                            </div>
+                            <div className="mt-2 text-xs text-muted-foreground">
+                              Used: {balance.usedDays} days
+                            </div>
                           </div>
-                          <div className="w-full bg-muted rounded-full h-2">
-                            <div
-                              className="bg-primary h-2 rounded-full"
-                              style={{ width: `${(balance.remainingDays / balance.allocatedDays) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            ) : (
+              <p>No leave balances found.</p>
+            )}
           </TabsContent>
 
           <TabsContent value="calendar" className="space-y-6">
@@ -308,7 +360,6 @@ export const LeaveManagement: React.FC = () => {
                   <div className="space-y-4">
                     {leaveRequests
                       .filter(request => request.status === 'approved')
-                      .slice(0, 2)
                       .map((request) => (
                         <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <div>

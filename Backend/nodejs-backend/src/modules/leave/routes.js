@@ -13,7 +13,9 @@ router.get("/requests/:userId", leaveController.getUserLeaveRequests.bind(leaveC
 router.get("/requests", leaveController.getAllLeaveRequests.bind(leaveController))
 router.put("/requests/:id/status", leaveController.updateLeaveRequestStatus.bind(leaveController))
 
+
 router.get("/balances/:userId", leaveController.getLeaveBalances.bind(leaveController))
+router.get("/balances", leaveController.getAllLeaveBalances.bind(leaveController))
 router.post("/requests/:id/approve", leaveController.approveLeaveRequest.bind(leaveController))
 router.post("/requests/:id/reject", leaveController.rejectLeaveRequest.bind(leaveController))
 router.get("/statistics", leaveController.getLeaveStatistics.bind(leaveController))

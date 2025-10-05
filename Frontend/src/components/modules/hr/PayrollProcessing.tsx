@@ -283,19 +283,7 @@ export const PayrollProcessing: React.FC = () => {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tax Calculations</CardTitle>
-              <CardDescription>Calculate and review tax deductions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full">
-                <Calculator className="h-4 w-4 mr-2" />
-                Calculate Taxes
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           <Card>
             <CardHeader>

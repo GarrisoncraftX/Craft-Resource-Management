@@ -40,7 +40,6 @@ const modules = [
     subItems: [
       { title: "Employee Profiles", url: "/hr/employees" },
       { title: "Payroll Processing", url: "/hr/payroll" },
-      { title: "Benefits Administration", url: "/hr/benefits" },
       { title: "Leave Management", url: "/hr/leave" },
       { title: "Training & Development", url: "/hr/training" },
       { title: "Performance Management", url: "/hr/performance" },

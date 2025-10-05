@@ -203,6 +203,23 @@ class LeaveApiService {
     );
   }
 
+  // Get all leave balances for all employees
+  async getAllLeaveBalances(): Promise<LeaveBalance[]> {
+    return this.handleApiError(
+      async () => {
+        const response = await apiClient.get('/api/leave/balances');
+        if (Array.isArray(response)) {
+          return response;
+        } else if (response?.success) {
+          return response.data;
+        } else {
+          return mockLeaveBalances;
+        }
+      },
+      mockLeaveBalances
+    );
+  }
+
   // Statistics
   async getLeaveStatistics(): Promise<typeof mockLeaveStatistics> {
     return this.handleApiError(

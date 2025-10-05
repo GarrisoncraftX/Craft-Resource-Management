@@ -252,7 +252,8 @@ LeaveApproval.belongsTo(LeaveRequest, { foreignKey: "leave_request_id" })
 LeaveType.hasMany(LeaveBalance, { foreignKey: "leave_type_id" })
 LeaveBalance.belongsTo(LeaveType, { foreignKey: "leave_type_id" })
 
-
+LeaveBalance.belongsTo(User, { foreignKey: "user_id" })
+User.hasMany(LeaveBalance, { foreignKey: "user_id" })
 
 LeaveRequest.belongsTo(User, { foreignKey: "user_id" })
 User.hasMany(LeaveRequest, { foreignKey: "user_id" })
