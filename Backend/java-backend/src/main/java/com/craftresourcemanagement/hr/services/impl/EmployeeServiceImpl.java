@@ -28,6 +28,11 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
+    public Optional<User> findByEmployeeNumber(String employeeNumber) {
+        return userRepository.findByEmployeeNumber(employeeNumber);
+    }
+
+    @Override
     public Optional<User> findById(Long id) {
         return userRepository.findById(id);
     }
