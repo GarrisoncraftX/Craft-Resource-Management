@@ -23,8 +23,8 @@ public class AttendanceController {
     }
 
     @PostMapping("/clock-in")
-    public ResponseEntity<?> clockIn(@RequestParam String employeeNumber) {
-        Optional<User> userOpt = employeeService.findByEmployeeNumber(employeeNumber);
+    public ResponseEntity<?> clockIn(@RequestParam String employeeId) {
+        Optional<User> userOpt = employeeService.findByEmployeeId(employeeId);
         if (userOpt.isEmpty()) {
             return ResponseEntity.badRequest().body("Invalid employee number");
         }
@@ -37,8 +37,8 @@ public class AttendanceController {
     }
 
     @PostMapping("/clock-out")
-    public ResponseEntity<?> clockOut(@RequestParam String employeeNumber) {
-        Optional<User> userOpt = employeeService.findByEmployeeNumber(employeeNumber);
+    public ResponseEntity<?> clockOut(@RequestParam String employeeId) {
+        Optional<User> userOpt = employeeService.findByEmployeeId(employeeId);
         if (userOpt.isEmpty()) {
             return ResponseEntity.badRequest().body("Invalid employee number");
         }
@@ -51,8 +51,8 @@ public class AttendanceController {
     }
 
     @PostMapping("/biometric-clock-in")
-    public ResponseEntity<?> biometricClockIn(@RequestParam String employeeNumber, @RequestBody BiometricData biometricData) {
-        Optional<User> userOpt = employeeService.findByEmployeeNumber(employeeNumber);
+    public ResponseEntity<?> biometricClockIn(@RequestParam String employeeId, @RequestBody BiometricData biometricData) {
+        Optional<User> userOpt = employeeService.findByEmployeeId(employeeId);
         if (userOpt.isEmpty()) {
             return ResponseEntity.badRequest().body("Invalid employee number");
         }
@@ -65,8 +65,8 @@ public class AttendanceController {
     }
 
     @PostMapping("/biometric-clock-out")
-    public ResponseEntity<?> biometricClockOut(@RequestParam String employeeNumber, @RequestBody BiometricData biometricData) {
-        Optional<User> userOpt = employeeService.findByEmployeeNumber(employeeNumber);
+    public ResponseEntity<?> biometricClockOut(@RequestParam String employeeId, @RequestBody BiometricData biometricData) {
+        Optional<User> userOpt = employeeService.findByEmployeeId(employeeId);
         if (userOpt.isEmpty()) {
             return ResponseEntity.badRequest().body("Invalid employee number");
         }

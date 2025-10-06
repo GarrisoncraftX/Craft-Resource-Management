@@ -2,6 +2,7 @@ package com.craftresourcemanagement.hr.entities;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "users")
@@ -19,6 +20,9 @@ public class User {
 
     @Column(nullable = false)
     private String email;
+
+    @Column(nullable = false)
+    private String password;
 
     @Column(name = "first_name", nullable = false)
     private String firstName;
@@ -80,9 +84,6 @@ public class User {
     @Column(name = "date_of_joining")
     private LocalDateTime dateOfJoining;
 
-    @Column(name = "employee_number")
-    private String employeeNumber;
-
     @Column(name = "account_number")
     private String accountNumber;
 
@@ -124,6 +125,15 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    @JsonIgnore
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public String getFirstName() {
@@ -294,14 +304,6 @@ public class User {
         this.dateOfJoining = dateOfJoining;
     }
 
-    public String getEmployeeNumber() {
-        return employeeNumber;
-    }
-
-    public void setEmployeeNumber(String employeeNumber) {
-        this.employeeNumber = employeeNumber;
-    }
-
     public String getAccountNumber() {
         return accountNumber;
     }
@@ -330,6 +332,9 @@ public class User {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (dateOfJoining == null) {
+            dateOfJoining = LocalDateTime.now();
+        }
     }
 
     @PreUpdate

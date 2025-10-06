@@ -54,7 +54,6 @@ export interface Employee {
   createdAt: string;
   updatedAt: string;
   dateOfJoining?: string;
-  employeeNumber?: string;
   accountNumber?: string;
   momoNumber?: string;
   profilePictureUrl?: string;
@@ -62,5 +61,4 @@ export interface Employee {
   emergencyContactPhone?: string;
   role?: string;
   department?: string;
-  hiredate?: string;
 }

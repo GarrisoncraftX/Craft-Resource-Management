@@ -83,7 +83,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         // Create request body with user info and biometric data
-        BiometricVerificationRequest request = new BiometricVerificationRequest(user.getEmployeeNumber(), biometricData);
+        BiometricVerificationRequest request = new BiometricVerificationRequest(user.getEmployeeId(), biometricData);
 
         HttpEntity<BiometricVerificationRequest> entity = new HttpEntity<>(request, headers);
 
@@ -99,16 +99,16 @@ public class AttendanceServiceImpl implements AttendanceService {
     // Inner class for biometric verification request payload
     @SuppressWarnings("unused")
     private static class BiometricVerificationRequest {
-        private String employeeNumber;
+        private String employeeId;
         private BiometricData biometricData;
 
-        public BiometricVerificationRequest(String employeeNumber, BiometricData biometricData) {
-            this.employeeNumber = employeeNumber;
+        public BiometricVerificationRequest(String employeeId, BiometricData biometricData) {
+            this.employeeId = employeeId;
             this.biometricData = biometricData;
         }
 
-        public String getEmployeeNumber() {
-            return employeeNumber;
+        public String getEmployeeId() {
+            return employeeId;
         }
 
         public BiometricData getBiometricData() {

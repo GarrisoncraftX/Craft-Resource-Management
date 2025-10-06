@@ -91,6 +91,10 @@ const User = sequelize.define('User', {
     type: DataTypes.DATE,
     field: 'account_locked_until',
   },
+  dateOfJoining: {
+    type: DataTypes.DATE,
+    field: 'date_of_joining',
+  },
 }, {
   tableName: 'users',
   timestamps: true,

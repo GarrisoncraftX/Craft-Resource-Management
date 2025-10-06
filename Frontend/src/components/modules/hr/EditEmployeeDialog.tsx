@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Employee } from '@/types/hr';
 import { Department, Role } from '@/types/api';
 import { toast } from 'sonner';
-import { apiClient } from '@/utils/apiClient';
+import { fetchDepartments, fetchRoles, updateEmployeeById } from '@/services/api';
 import { mockDepartments, mockRoles } from '@/services/mockData';
 
 interface EditEmployeeDialogProps {
@@ -37,10 +37,10 @@ export const EditEmployeeDialog: React.FC<EditEmployeeDialogProps> = ({
 
   // Fetch departments and roles from API
   useEffect(() => {
-    const fetchDepartments = async () => {
+    const loadDepartments = async () => {
       setIsDepartmentsLoading(true);
       try {
-        const response = await apiClient.get('/api/lookup/departments');
+        const response = await fetchDepartments();
         if (response?.length > 0) {
           setDepartments(response);
         } else {
@@ -54,10 +54,10 @@ export const EditEmployeeDialog: React.FC<EditEmployeeDialogProps> = ({
       }
     };
 
-    const fetchRoles = async () => {
+    const loadRoles = async () => {
       setIsRolesLoading(true);
       try {
-        const response = await apiClient.get('/api/lookup/roles');
+        const response = await fetchRoles();
         if (response?.length > 0) {
           setRoles(response);
         } else {
@@ -72,23 +72,22 @@ export const EditEmployeeDialog: React.FC<EditEmployeeDialogProps> = ({
     };
 
     if (open) {
-      fetchDepartments();
-      fetchRoles();
+      loadDepartments();
+      loadRoles();
     }
   }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.firstName || !formData.lastName || !formData.email) {
       toast.error('Please fill in all required fields');
       return;
     }
 
     try {
-      // TODO: Implement API call to update employee
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      onSave(formData as Employee);
+      const updatedEmployee = await updateEmployeeById(employee?.id ?? '', formData);
+      onSave(updatedEmployee);
       toast.success('Employee updated successfully');
       onOpenChange(false);
     } catch (error) {
@@ -96,8 +95,13 @@ export const EditEmployeeDialog: React.FC<EditEmployeeDialogProps> = ({
     }
   };
 
-  const handleChange = (field: keyof Employee, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleChange = (field: keyof Employee, value: string | number) => {
+    if (field === 'departmentId' || field === 'roleId' || field === 'isActive') {
+      const parsedValue = Number(value);
+      setFormData(prev => ({ ...prev, [field]: isNaN(parsedValue) ? 0 : parsedValue }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   return (

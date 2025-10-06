@@ -8,6 +8,6 @@ import java.util.Optional;
 public interface EmployeeService {
     User registerEmployee(User user);
     List<User> listAllEmployees();
-    Optional<User> findByEmployeeNumber(String employeeNumber);
+    Optional<User> findByEmployeeId(String employeeId);
     Optional<User> findById(Long id);
 }

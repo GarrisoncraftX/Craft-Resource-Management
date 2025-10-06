@@ -216,9 +216,7 @@ export interface Payslip {
     passwordResetExpires?: string;
     createdAt: string;
     updatedAt: string;
-    dateOfJoining?: string;
-    employeeNumber?: string;
-  };
+    dateOfJoining?: string;  };
 }
 
 export interface PayrollRun {

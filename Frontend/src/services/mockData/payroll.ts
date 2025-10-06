@@ -40,7 +40,6 @@ export const mockPayslips: Payslip[] = [
       createdAt: '2025-07-07T15:16:00',
       updatedAt: '2025-07-07T15:16:00',
       dateOfJoining: null,
-      employeeNumber: ''
     }
   },
   {
@@ -82,7 +81,6 @@ export const mockPayslips: Payslip[] = [
       createdAt: '2025-07-07T15:16:00',
       updatedAt: '2025-07-07T15:16:00',
       dateOfJoining: null,
-      employeeNumber: ''
     }
   },
   {
@@ -124,7 +122,6 @@ export const mockPayslips: Payslip[] = [
       createdAt: '2024-01-01T00:00:00',
       updatedAt: '2024-01-01T00:00:00',
       dateOfJoining: null,
-      employeeNumber: 'EMP002'
     }
   },
   {
@@ -166,7 +163,6 @@ export const mockPayslips: Payslip[] = [
       createdAt: '2024-01-01T00:00:00',
       updatedAt: '2024-01-01T00:00:00',
       dateOfJoining: null,
-      employeeNumber: 'EMP002'
     }
   },
   {
@@ -208,7 +204,6 @@ export const mockPayslips: Payslip[] = [
       createdAt: '2024-01-01T00:00:00',
       updatedAt: '2024-01-01T00:00:00',
       dateOfJoining: null,
-      employeeNumber: 'EMP003'
     }
   },
   {
@@ -250,7 +245,6 @@ export const mockPayslips: Payslip[] = [
       createdAt: '2024-01-01T00:00:00',
       updatedAt: '2024-01-01T00:00:00',
       dateOfJoining: null,
-      employeeNumber: 'EMP003'
     }
   },
   {
@@ -292,7 +286,6 @@ export const mockPayslips: Payslip[] = [
       createdAt: '2024-01-01T00:00:00',
       updatedAt: '2024-01-01T00:00:00',
       dateOfJoining: null,
-      employeeNumber: 'EMP004'
     }
   },
   {
@@ -334,7 +327,6 @@ export const mockPayslips: Payslip[] = [
       createdAt: '2024-01-01T00:00:00',
       updatedAt: '2024-01-01T00:00:00',
       dateOfJoining: null,
-      employeeNumber: 'EMP004'
     }
   },
   {
@@ -376,7 +368,6 @@ export const mockPayslips: Payslip[] = [
       createdAt: '2024-01-01T00:00:00',
       updatedAt: '2024-01-01T00:00:00',
       dateOfJoining: null,
-      employeeNumber: 'EMP005'
     }
   },
   {
@@ -418,7 +409,6 @@ export const mockPayslips: Payslip[] = [
       createdAt: '2024-01-01T00:00:00',
       updatedAt: '2024-01-01T00:00:00',
       dateOfJoining: null,
-      employeeNumber: 'EMP005'
     }
   },
 ]

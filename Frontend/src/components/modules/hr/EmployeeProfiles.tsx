@@ -76,9 +76,9 @@ export const EmployeeProfiles: React.FC = () => {
         setRoles(rolesData);
       } catch (error) {
         console.error('Failed to fetch data:', error);
-        // Fallback to mock data
+
         setEmployees(mockEmployeeData.map(e => ({ 
-          id: Number(e.id.replace('EMP', '')), 
+          id: e.id, 
           tenantId: 0, 
           employeeId: e.id, 
           firstName: e.name.split(' ')[0], 
@@ -86,8 +86,8 @@ export const EmployeeProfiles: React.FC = () => {
           email: e.email,
           phone: e.phone,
           hireDate: e.hireDate, 
-          departmentId: e.department_id,
-          roleId: e.role_id,
+          departmentId: e.department_id.toString(),
+          roleId: e.role_id.toString(),
           isActive: e.status === 'Active' ? 1: 0, 
           biometricEnrollmentStatus: 'NONE', 
           failedLoginAttempts: 0, 
@@ -106,13 +106,13 @@ export const EmployeeProfiles: React.FC = () => {
   console.log(departments);
   console.log(roles);
 
-  const getDepartmentName = (departmentId: number) => {
-    const department = departments.find(d => Number(d.id) === departmentId);
+  const getDepartmentName = (departmentId: string) => {
+    const department = departments.find(d => d.id === departmentId);
     return department ? department.name : 'N/A';
   };
 
-  const getRoleName = (roleId: number) => {
-    const role = roles.find(r => Number(r.id) === roleId);
+  const getRoleName = (roleId: string) => {
+    const role = roles.find(r => r.id === roleId);
     return role ? role.name : 'N/A';
   };
 

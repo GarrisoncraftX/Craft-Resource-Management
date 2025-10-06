@@ -36,7 +36,7 @@ const Navbar: React.FC<NavbarProps> = ({ title, onViewDashboard, onLogout, toggl
                 className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
               >
                 <Eye className="h-4 w-4 mr-2" />
-                {title === 'Employee Account' ? 'Back to Dashboard' : (isEmployeeDashboard ? 'View System' : 'View Dashboard')}
+                {title === 'Employee Account' || title === 'Employee Profile' ? 'Back to Dashboard' : (isEmployeeDashboard ? 'View System' : 'View Dashboard')}
               </Button>
 
             {isEmployeeDashboard && (

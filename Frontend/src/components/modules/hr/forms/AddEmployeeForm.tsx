@@ -5,10 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { apiClient } from '@/utils/apiClient';
+import { fetchDepartments, fetchRoles, createEmployee } from '@/services/api';
 import { mockDepartments, mockRoles } from '@/services/mockData';
 import type { Department, Role } from '@/types/api';
-import { Eye, EyeOff } from 'lucide-react';
+
 
 interface AddEmployeeFormProps {
   open: boolean;
@@ -27,8 +27,6 @@ export const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
     lastName: '',
     middleName: '',
     email: '',
-    password: '',
-    confirmPassword: '',
     departmentId: '',
     roleId: '',
     nationalId: '',
@@ -42,18 +40,16 @@ export const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
   });
 
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [isDepartmentsLoading, setIsDepartmentsLoading] = useState(false);
   const [isRolesLoading, setIsRolesLoading] = useState(false);
 
-  // Fetch departments and roles from API
   useEffect(() => {
-    const fetchDepartments = async () => {
+    const loadDepartments = async () => {
       setIsDepartmentsLoading(true);
       try {
-        const response = await apiClient.get('/api/lookup/departments');
+        const response = await fetchDepartments();
         if (response?.length > 0) {
           setDepartments(response);
         } else {
@@ -67,10 +63,10 @@ export const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
       }
     };
 
-    const fetchRoles = async () => {
+    const loadRoles = async () => {
       setIsRolesLoading(true);
       try {
-        const response = await apiClient.get('/api/lookup/roles');
+        const response = await fetchRoles();
         if (response?.length > 0) {
           setRoles(response);
         } else {
@@ -85,32 +81,13 @@ export const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
     };
 
     if (open) {
-      fetchDepartments();
-      fetchRoles();
+      loadDepartments();
+      loadRoles();
     }
   }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Passwords do not match",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters",
-        variant: "destructive"
-      });
-      return;
-    }
 
     setLoading(true);
 
@@ -121,9 +98,8 @@ export const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
         lastName: formData.lastName,
         middleName: formData.middleName,
         email: formData.email,
-        password: formData.password,
-        departmentId: Number(formData.departmentId),
-        roleId: Number(formData.roleId),
+        departmentId: formData.departmentId,
+        roleId: formData.roleId,
         nationalId: formData.nationalId,
         phoneNumber: formData.phoneNumber,
         phone: formData.phoneNumber,
@@ -135,16 +111,16 @@ export const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
         momoNumber: formData.momoNumber,
       };
 
-      await apiClient.post('/api/auth/register', payload);
-      
+      await createEmployee(payload);
+
       toast({
         title: "Success",
         description: "Employee added successfully!"
       });
-      
+
       onSuccess?.();
       onOpenChange(false);
-      
+
       // Reset form
       setFormData({
         employeeId: '',
@@ -152,8 +128,6 @@ export const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
         lastName: '',
         middleName: '',
         email: '',
-        password: '',
-        confirmPassword: '',
         departmentId: '',
         roleId: '',
         nationalId: '',
@@ -165,10 +139,11 @@ export const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
         bankAccountNumber: '',
         momoNumber: '',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       toast({
         title: "Error",
-        description: error.message || "Failed to add employee",
+        description: err.message || "Failed to add employee",
         variant: "destructive"
       });
     } finally {
@@ -372,42 +347,7 @@ export const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
             </div>
           </div>
 
-          {/* Password Fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="password">Password *</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Create password"
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="confirmPassword">Confirm Password *</Label>
-              <Input
-                id="confirmPassword"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                placeholder="Confirm password"
-                required
-              />
-            </div>
-          </div>
+
           
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

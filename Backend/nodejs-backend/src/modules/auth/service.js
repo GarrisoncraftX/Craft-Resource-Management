@@ -222,7 +222,6 @@ const register = async (userData) => {
       isActive: true,
       biometricEnrollmentStatus: 'NONE',
       dateOfJoining: new Date(),
-      employeeNumber: employeeId.toUpperCase(),
     });
 
     let biometricEnrollmentStatus = 'NONE';
@@ -381,74 +380,73 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
   user.lastLogin = new Date();
   await user.save();
 
-  const permissions = await getUserPermissions(user.roleId);
+    const permissions = await getUserPermissions(user.roleId);
 
-  // Map departmentId and roleId to codes for frontend routing
-  const departmentIdToCodeMap = {
-    1: 'HR',
-    2: 'FINANCE',
-    3: 'INFORMATION_TECHNOLOGY',
-    4: 'OPERATIONS',
-    5: 'LEGAL',
-    6: 'PROCUREMENT',
-    7: 'ASSETS',
-    8: 'PUBLIC_RELATIONS',
-    9: 'PLANNING',
-    10: 'TRANSPORTATION',
-    11: 'HEALTH_SAFETY',
-    12: 'REVENUE_TAX',
-  };
+    // Map departmentId and roleId to codes for frontend routing
+    const departmentIdToCodeMap = {
+      1: 'HR',
+      2: 'FINANCE',
+      3: 'INFORMATION_TECHNOLOGY',
+      4: 'OPERATIONS',
+      5: 'LEGAL',
+      6: 'PROCUREMENT',
+      7: 'ASSETS',
+      8: 'PUBLIC_RELATIONS',
+      9: 'PLANNING',
+      10: 'TRANSPORTATION',
+      11: 'HEALTH_SAFETY',
+      12: 'REVENUE_TAX',
+    };
 
-  const roleIdToCodeMap = {
-    1: 'SUPER_ADMIN',
-    2: 'DEPARTMENT_HEAD',
-    3: 'MANAGER',
-    4: 'SENIOR_OFFICER',
-    5: 'OFFICER',
-    6: 'JUNIOR_OFFICER',
-    7: 'INTERN',
-    8: 'CONTRACTOR',
-    9: 'HR_MANAGER',
-    10: 'FINANCE_MANAGER',
-    11: 'IT_MANAGER',
-    12: 'OPERATIONS_MANAGER',
-    13: 'FINANCE_OFFICER',
-  };
+    const roleIdToCodeMap = {
+      1: 'SUPER_ADMIN',
+      2: 'DEPARTMENT_HEAD',
+      3: 'MANAGER',
+      4: 'SENIOR_OFFICER',
+      5: 'OFFICER',
+      6: 'JUNIOR_OFFICER',
+      7: 'INTERN',
+      8: 'CONTRACTOR',
+      9: 'HR_MANAGER',
+      10: 'FINANCE_MANAGER',
+      11: 'IT_MANAGER',
+      12: 'OPERATIONS_MANAGER',
+      13: 'FINANCE_OFFICER',
+    };
 
-  const departmentCode = departmentIdToCodeMap[user.departmentId] || '';
-  const roleCode = roleIdToCodeMap[user.roleId] || '';
+    const departmentCode = departmentIdToCodeMap[user.departmentId] || '';
+    const roleCode = roleIdToCodeMap[user.roleId] || '';
 
-  const token = jwt.sign(
-    {
-      userId: user.id,
-      employeeId: user.employeeId,
-      departmentId: user.departmentId,
-      roleId: user.roleId,
-      permissions,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: '1h' }
-  );
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        employeeId: user.employeeId,
+        departmentId: user.departmentId,
+        roleId: user.roleId,
+        permissions,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
-  // Return token and full user details including codes
-  return {
-    token,
-    user: {
-      userId: user.id,
-      employeeId: user.employeeId,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      departmentId: user.departmentId,
-      department: user.Department ? user.Department.name : '',
-      departmentCode,
-      roleId: user.roleId,
-      role: user.Role ? user.Role.name : '',
-      roleCode,
-      permissions,
-      employeeNumber: user.employeeNumber,
-    },
-  };
+    // Return token and full user details including codes
+    return {
+      token,
+      user: {
+        userId: user.id,
+        employeeId: user.employeeId,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        departmentId: user.departmentId,
+        department: user.Department ? user.Department.name : '',
+        departmentCode,
+        roleId: user.roleId,
+        role: user.Role ? user.Role.name : '',
+        roleCode,
+        permissions,
+      },
+    };
 };
 
 module.exports = {

@@ -136,8 +136,7 @@ export const EmployeeDashboard: React.FC = () => {
 
     const roleOverrides: Record<string, string> = {
       'ADMIN': '/admin/dashboard',
-      'SYSTEM_ADMIN': '/admin/dashboard',
-      // SUPER_ADMIN removed from overrides to allow access to all departments
+      'SYSTEM_ADMIN': '/admin/dashboard', 
     };
 
     if (roleOverrides[roleCode]) {
