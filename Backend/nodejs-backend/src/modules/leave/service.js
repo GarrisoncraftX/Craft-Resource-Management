@@ -1,6 +1,7 @@
 const { Op } = require("sequelize")
 const { sequelize } = require("../../config/sequelize")
 const { LeaveType, LeaveRequest, LeaveBalance, LeaveApproval } = require("./model")
+const cloudinaryService = require('../../utils/cloudinary')
 const User = require("../auth/model")
 
 class LeaveService {
@@ -26,12 +27,17 @@ class LeaveService {
     return await LeaveType.findByPk(id)
   }
 
-  async createLeaveRequest(data) {
+  async createLeaveRequest(data, files = []) {
     // Calculate totalDays as difference between endDate and startDate inclusive
     const start = new Date(data.startDate)
     const end = new Date(data.endDate)
     const timeDiff = end.getTime() - start.getTime()
     const totalDays = Math.floor(timeDiff / (1000 * 3600 * 24)) + 1
+
+    let supportingDocumentsUrls = [];
+    if (files.length > 0) {
+      supportingDocumentsUrls = await cloudinaryService.uploadMultipleFiles(files);
+    }
 
     const leaveRequest = await LeaveRequest.create({
       id: `LR_${Date.now()}`,
@@ -41,6 +47,7 @@ class LeaveService {
       endDate: data.endDate,
       totalDays: totalDays,
       reason: data.reason,
+      supportingDocuments: supportingDocumentsUrls.length > 0 ? supportingDocumentsUrls : null,
       status: "pending",
       appliedAt: new Date(),
       createdAt: new Date(),
@@ -121,8 +128,10 @@ class LeaveService {
   }
 
   async getLeaveBalances(userId) {
+    const currentYear = new Date().getFullYear();
+
     const balances = await LeaveBalance.findAll({
-      where: { userId },
+      where: { userId, year: currentYear },
       include: [{ model: LeaveType }],
       attributes: [
         'leaveTypeId',
@@ -130,7 +139,6 @@ class LeaveService {
         'allocatedDays',
         'usedDays',
         'carriedForwardDays',
-        'remainingDays',
         'updatedAt',
       ],
       raw: true,
@@ -138,24 +146,30 @@ class LeaveService {
     });
 
     // Map to include calculated remaining balance and formatted strings
-    return balances.map(balance => ({
-      leaveTypeId: balance.leaveTypeId,
-      leaveTypeName: balance.leaveTypeName,
-      allocatedDays: balance.allocatedDays,
-      allocatedDaysFormatted: `${balance.allocatedDays} days`,
-      usedDays: balance.usedDays,
-      usedDaysFormatted: `${balance.usedDays} days`,
-      carriedForwardDays: balance.carriedForwardDays,
-      carriedForwardDaysFormatted: `${balance.carriedForwardDays} days`,
-      remainingDays: balance.remainingDays,
-      remainingDaysFormatted: `${balance.remainingDays} days`,
-      balance: balance.remainingDays,
-      updatedAt: balance.updatedAt,
-    }));
+    return balances.map(balance => {
+      const remainingDays = balance.allocatedDays - balance.usedDays + balance.carriedForwardDays;
+      return {
+        leaveTypeId: balance.leaveTypeId,
+        leaveTypeName: balance.leaveTypeName,
+        allocatedDays: balance.allocatedDays,
+        allocatedDaysFormatted: `${balance.allocatedDays} days`,
+        usedDays: balance.usedDays,
+        usedDaysFormatted: `${balance.usedDays} days`,
+        carriedForwardDays: balance.carriedForwardDays,
+        carriedForwardDaysFormatted: `${balance.carriedForwardDays} days`,
+        remainingDays: remainingDays,
+        remainingDaysFormatted: `${remainingDays} days`,
+        balance: remainingDays,
+        updatedAt: balance.updatedAt,
+      };
+    });
   }
 
   async getAllLeaveBalances() {
+    const currentYear = new Date().getFullYear();
+
     const balances = await LeaveBalance.findAll({
+      where: { year: currentYear },
       include: [
         { model: LeaveType },
         { model: User, attributes: ['id', 'firstName', 'lastName','middleName', 'employeeId'] }
@@ -166,7 +180,6 @@ class LeaveService {
         'allocatedDays',
         'usedDays',
         'carriedForwardDays',
-        'remainingDays',
         'updatedAt',
         [sequelize.col('User.id'), 'userId'],
         [sequelize.col('User.first_name'), 'firstName'],
@@ -179,24 +192,27 @@ class LeaveService {
     });
 
     // Map to include calculated remaining balance, formatted strings, and employee info
-    return balances.map(balance => ({
-      leaveTypeId: balance.leaveTypeId,
-      leaveTypeName: balance.leaveTypeName,
-      allocatedDays: balance.allocatedDays,
-      allocatedDaysFormatted: `${balance.allocatedDays} days`,
-      usedDays: balance.usedDays,
-      usedDaysFormatted: `${balance.usedDays} days`,
-      carriedForwardDays: balance.carriedForwardDays,
-      carriedForwardDaysFormatted: `${balance.carriedForwardDays} days`,
-      remainingDays: balance.remainingDays,
-      remainingDaysFormatted: `${balance.remainingDays} days`,
-      balance: balance.remainingDays,
-      updatedAt: balance.updatedAt,
-      userId: balance.userId,
-      employeeName: `${balance.firstName} ${balance.lastName}`,
-      firstName: balance.firstName,
-      lastName: balance.lastName,
-    }));
+    return balances.map(balance => {
+      const remainingDays = balance.allocatedDays - balance.usedDays + balance.carriedForwardDays;
+      return {
+        leaveTypeId: balance.leaveTypeId,
+        leaveTypeName: balance.leaveTypeName,
+        allocatedDays: balance.allocatedDays,
+        allocatedDaysFormatted: `${balance.allocatedDays} days`,
+        usedDays: balance.usedDays,
+        usedDaysFormatted: `${balance.usedDays} days`,
+        carriedForwardDays: balance.carriedForwardDays,
+        carriedForwardDaysFormatted: `${balance.carriedForwardDays} days`,
+        remainingDays: remainingDays,
+        remainingDaysFormatted: `${remainingDays} days`,
+        balance: remainingDays,
+        updatedAt: balance.updatedAt,
+        userId: balance.userId,
+        employeeName: `${balance.firstName} ${balance.lastName}`,
+        firstName: balance.firstName,
+        lastName: balance.lastName,
+      };
+    });
   }
 
   async approveLeaveRequest(leaveRequestId, approverId) {
@@ -351,6 +367,98 @@ async getLeaveStatistics() {
     throw new Error("Failed to calculate leave statistics");
   }
 }
+
+  // Initialize leave balances for a new user
+  async initializeLeaveBalancesForUser(userId) {
+    const currentYear = new Date().getFullYear();
+    const leaveTypes = await this.getLeaveTypes();
+
+    const balances = leaveTypes.map(leaveType => ({
+      userId,
+      leaveTypeId: leaveType.id,
+      year: currentYear,
+      allocatedDays: leaveType.maxDaysPerYear,
+      usedDays: 0,
+      carriedForwardDays: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    await LeaveBalance.bulkCreate(balances);
+    return balances;
+  }
+
+  // Scheduled job to reset leave balances annually on January 1st
+  async resetAnnualLeaveBalances() {
+    const currentYear = new Date().getFullYear();
+    const previousYear = currentYear - 1;
+
+    // Get all users
+    const users = await User.findAll({ attributes: ['id'] });
+
+    for (const user of users) {
+      const leaveTypes = await this.getLeaveTypes();
+
+      for (const leaveType of leaveTypes) {
+        // Get previous year's balance
+        const previousBalance = await LeaveBalance.findOne({
+          where: { userId: user.id, leaveTypeId: leaveType.id, year: previousYear }
+        });
+
+        let carriedForward = 0;
+        if (previousBalance && leaveType.carryForwardAllowed) {
+          const remaining = previousBalance.allocatedDays - previousBalance.usedDays + previousBalance.carriedForwardDays;
+          carriedForward = Math.min(remaining, leaveType.maxCarryForwardDays);
+        }
+
+        // Create new balance for current year
+        await LeaveBalance.create({
+          userId: user.id,
+          leaveTypeId: leaveType.id,
+          year: currentYear,
+          allocatedDays: leaveType.maxDaysPerYear,
+          usedDays: 0,
+          carriedForwardDays: carriedForward,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    }
+  }
+
+  // Update leave entitlement on milestone
+  async updateLeaveEntitlementOnMilestone(userId, milestone) {
+    const currentYear = new Date().getFullYear();
+    let additionalDays = 0;
+
+    // Define milestone increases (customize as needed)
+    switch (milestone) {
+      case '1_year':
+        additionalDays = 1; // Add 1 day for annual leave
+        break;
+      case '5_years':
+        additionalDays = 2;
+        break;
+      case '10_years':
+        additionalDays = 3;
+        break;
+      default:
+        return; // No change for unknown milestones
+    }
+
+    // Assuming annual leave type has id 1 (adjust based on actual data)
+    const annualLeaveTypeId = 1;
+
+    const balance = await LeaveBalance.findOne({
+      where: { userId, leaveTypeId: annualLeaveTypeId, year: currentYear }
+    });
+
+    if (balance) {
+      balance.allocatedDays += additionalDays;
+      balance.updatedAt = new Date();
+      await balance.save();
+    }
+  }
 }
 
 module.exports = LeaveService

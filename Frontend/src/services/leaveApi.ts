@@ -94,7 +94,7 @@ class LeaveApiService {
     );
   }
 
-  async createLeaveRequest(leaveRequest: LeaveRequestForm): Promise<LeaveRequest> {
+  async createLeaveRequest(leaveRequest: LeaveRequestForm | FormData): Promise<LeaveRequest> {
     return this.handleApiError(
       async () => {
         const response = await apiClient.post('/api/leave/requests', leaveRequest);
@@ -106,7 +106,7 @@ class LeaveApiService {
       },
       {
         ...mockLeaveRequests[0],
-        ...leaveRequest,
+        ...(leaveRequest instanceof FormData ? {} : leaveRequest),
         id: `LR${Date.now()}`,
         status: 'pending',
         appliedAt: new Date().toISOString(),
@@ -115,6 +115,7 @@ class LeaveApiService {
       }
     );
   }
+
 
   async updateLeaveRequestStatus(
     id: string,

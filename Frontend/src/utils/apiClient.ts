@@ -63,13 +63,19 @@ class ApiClient {
     return this.handleResponse(response);
   }
 
-  async put(endpoint: string, data: any) {
+  async put(endpoint: string, data: any, options?: { headers?: HeadersInit }) {
+    const headers = options?.headers ? { ...this.getHeaders(), ...options.headers } : this.getHeaders();
+    const body = data instanceof FormData ? data : JSON.stringify(data);
+    if (data instanceof FormData) {
+      delete headers['Content-Type'];
+    }
+
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify(data),
+      headers,
+      body,
     });
-    
+
     return this.handleResponse(response);
   }
 

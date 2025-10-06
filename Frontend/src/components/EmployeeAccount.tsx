@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import Navbar from '@/components/ui/Navbar';
 import { useNavigate } from 'react-router-dom';
-import { fetchEmployeeById, updateEmployeeById } from '@/services/api';
+import { fetchEmployeeById, updateEmployeeById, uploadProfilePicture } from '@/services/api';
 
 export const EmployeeAccount: React.FC = () => {
   const { user, logout } = useAuth();
@@ -26,6 +26,8 @@ export const EmployeeAccount: React.FC = () => {
     phone: '',
     address: '',
     dateOfBirth: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
   });
 
   const [bankingInfo, setBankingInfo] = useState({
@@ -47,6 +49,8 @@ export const EmployeeAccount: React.FC = () => {
             phone: employee.phone || '',
             address: employee.address || '',
             dateOfBirth: employee.dateOfBirth ? employee.dateOfBirth.split('T')[0] : '',
+            emergencyContactName: employee.emergencyContactName || '',
+            emergencyContactPhone: employee.emergencyContactPhone || '',
           });
           setBankingInfo({
             accountNumber: employee.accountNumber || '',
@@ -54,6 +58,7 @@ export const EmployeeAccount: React.FC = () => {
             momoNumber: employee.momoNumber || '',
             momoProvider: '',
           });
+          setProfileImage(employee.profilePictureUrl || '');
         })
         .catch((error) => {
           console.error('Failed to load employee information:', error);
@@ -78,6 +83,8 @@ export const EmployeeAccount: React.FC = () => {
         phone: personalInfo.phone,
         address: personalInfo.address,
         dateOfBirth: personalInfo.dateOfBirth,
+        emergencyContactName: personalInfo.emergencyContactName,
+        emergencyContactPhone: personalInfo.emergencyContactPhone,
         accountNumber: bankingInfo.accountNumber,
         momoNumber: bankingInfo.momoNumber,
       };
@@ -129,14 +136,20 @@ export const EmployeeAccount: React.FC = () => {
     setBankingInfo(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (file && user?.userId) {
+      setLoading(true);
+      try {
+        const updatedEmployee = await uploadProfilePicture(user.userId, file);
+        setProfileImage(updatedEmployee.profilePictureUrl || '');
+        toast.success('Profile picture updated successfully');
+      } catch (error) {
+        console.error('Failed to upload profile picture:', error);
+        toast.error('Failed to upload profile picture');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -257,6 +270,23 @@ export const EmployeeAccount: React.FC = () => {
                         id="address"
                         value={personalInfo.address}
                         onChange={(e) => handlePersonalInfoChange('address', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="emergencyContactName">Emergency Contact Name</Label>
+                      <Input
+                        id="emergencyContactName"
+                        value={personalInfo.emergencyContactName}
+                        onChange={(e) => handlePersonalInfoChange('emergencyContactName', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="emergencyContactPhone">Emergency Contact Phone</Label>
+                      <Input
+                        id="emergencyContactPhone"
+                        type="tel"
+                        value={personalInfo.emergencyContactPhone}
+                        onChange={(e) => handlePersonalInfoChange('emergencyContactPhone', e.target.value)}
                       />
                     </div>
                   </div>

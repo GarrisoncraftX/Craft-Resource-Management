@@ -141,6 +141,11 @@ const LeaveRequest = sequelize.define("LeaveRequest", {
     allowNull: true,
     field: "handover_notes",
   },
+  supportingDocuments: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    field: "supporting_documents",
+  },
   createdAt: {
     type: DataTypes.DATE,
     allowNull: false,
@@ -158,7 +163,8 @@ const LeaveRequest = sequelize.define("LeaveRequest", {
 
 const LeaveBalance = sequelize.define("LeaveBalance", {
   id: {
-    type: DataTypes.STRING(50),
+    type: DataTypes.INTEGER.UNSIGNED,
+    autoIncrement: true,
     primaryKey: true,
   },
   userId: {
@@ -170,6 +176,10 @@ const LeaveBalance = sequelize.define("LeaveBalance", {
     type: DataTypes.INTEGER.UNSIGNED,
     allowNull: false,
     field: "leave_type_id",
+  },
+  year: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
   },
   allocatedDays: {
     type: DataTypes.DECIMAL(4,1),
@@ -189,10 +199,10 @@ const LeaveBalance = sequelize.define("LeaveBalance", {
     defaultValue: 0.0,
     field: "carried_forward_days",
   },
-  remainingDays: {
-    type: DataTypes.DECIMAL(4,1),
+  createdAt: {
+    type: DataTypes.DATE,
     allowNull: false,
-    field: "remaining_days",
+    field: "created_at",
   },
   updatedAt: {
     type: DataTypes.DATE,

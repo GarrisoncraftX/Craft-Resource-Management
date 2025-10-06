@@ -79,6 +79,12 @@ export async function updateEmployeeById(id: string, employee: Partial<Employee>
   return apiClient.put(`/hr/employees/id/${id}`, employee);
 }
 
+export async function uploadProfilePicture(id: string, file: File): Promise<Employee> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiClient.put(`/hr/employees/id/${id}/profile-picture`, formData);
+}
+
 export async function createEmployee(employee: Partial<Employee>): Promise<Employee> {
   return apiClient.post('/hr/employees/register', employee);
 }

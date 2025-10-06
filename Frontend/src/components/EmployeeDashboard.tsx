@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
 import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign, } from 'lucide-react';
@@ -13,6 +14,7 @@ import { LeaveBalance, LeaveRequest } from '@/types/leave';
 import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData';
 import LeaveRequestForm from './modules/hr/LeaveRequestForm';
 import { DashboardKPIs } from '@/types/api';
+import { Employee, fetchEmployeeById } from '@/services/api';
 
 const calculateFormattedLeaveBalance = (totalDays: number): string => {
   if (totalDays >= 30) {
@@ -59,6 +61,7 @@ export const EmployeeDashboard: React.FC = () => {
   const [formattedLeaveBalance, setFormattedLeaveBalance] = useState<string>('');
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [isLeaveRequestFormOpen, setIsLeaveRequestFormOpen] = useState(false);
+  const [employeeData, setEmployeeData] = useState<Employee | null>(null);
   const toggleSidebar = () => { };
 
 
@@ -86,6 +89,10 @@ export const EmployeeDashboard: React.FC = () => {
       }
 
       try {
+        // Fetch employee data
+        const employee = await fetchEmployeeById(user.userId);
+        setEmployeeData(employee);
+
         const leaveBalanceResponse = await leaveApiService.getLeaveBalances(Number(user.userId));
         console.log('Fetched leave balance data:', leaveBalanceResponse);
         const leaveBalanceData = leaveBalanceResponse;
@@ -225,8 +232,17 @@ export const EmployeeDashboard: React.FC = () => {
              <span className="text-yellow-400 mr-2">{user.firstName} {user.lastName} </span> Profile
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-white">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <CardContent className="text-white flex items-center gap-6">
+            <Avatar className="h-20 w-20 ring-4 ring-yellow-400/50 hover:ring-yellow-400 transition-all cursor-pointer">
+              {employeeData?.profilePictureUrl ? (
+                <AvatarImage src={employeeData.profilePictureUrl} alt={`${user.firstName} ${user.lastName}`} />
+              ) : (
+                <AvatarFallback className="text-4xl font-extrabold bg-yellow-400 text-white">
+                  {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
+                </AvatarFallback>
+              )}
+            </Avatar>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 flex-1">
               <div>
                 <p className="text-blue-100 text-sm">Employee ID</p>
                 <p className="font-semibold text-sm sm:text-base">{user.employeeId}</p>
@@ -307,16 +323,16 @@ export const EmployeeDashboard: React.FC = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="attendance" className="flex items-center data-[state=active]:bg-blue-600">
+          <TabsList className="flex w-full overflow-x-auto justify-start border-b p-0 h-auto rounded-none bg-transparent">
+            <TabsTrigger value="attendance" className="whitespace-nowrap px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 font-semibold transition-colors">
               <Clock className="h-4 w-4 mr-2" />
               Attendance
             </TabsTrigger>
-            <TabsTrigger value="leave" className="flex items-center data-[state=active]:bg-green-600">
+            <TabsTrigger value="leave" className="whitespace-nowrap px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-green-600 font-semibold transition-colors">
               <Calendar className="h-4 w-4 mr-2" />
               Leave Management
             </TabsTrigger>
-            <TabsTrigger value="payroll" className="flex items-center data-[state=active]:bg-purple-600">
+            <TabsTrigger value="payroll" className="whitespace-nowrap px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-purple-600 font-semibold transition-colors">
               <DollarSign className="h-4 w-4 mr-2" />
               Payroll
             </TabsTrigger>
@@ -498,7 +514,7 @@ export const EmployeeDashboard: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <Button variant="outline" className="justify-start h-auto p-4">
                   <Plus className="h-4 w-4 mr-2" />
                   <div className="text-left">

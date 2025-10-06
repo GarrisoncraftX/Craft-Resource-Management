@@ -6,8 +6,9 @@ const Role = require('./models/role');
 const Department = require('../lookup/model');
 const Permission = require('./models/permission'); 
 const RolePermission = require('./models/rolePermission');
+const LeaveService = require('../leave/service');
 
-const BIOMETRIC_SERVICE_URL = process.env.PYTHON_BASE_URL || 'http://localhost:5000'; 
+const BIOMETRIC_SERVICE_URL = process.env.PYTHON_BASE_URL || 'http://localhost:5000';
 
 const validateRequiredFields = (userData) => {
   const requiredFields = ['employeeId', 'email', 'password', 'firstName', 'lastName', 'departmentId', 'roleId', 'dateOfBirth'];
@@ -184,8 +185,6 @@ const register = async (userData) => {
       raw_data_fingerprint,
     } = userData;
 
-    
-
     const existingUser = await User.findOne({ where: { employeeId: employeeId.toUpperCase() } });
     if (existingUser) {
       const error = new Error('Employee ID already exists');
@@ -268,6 +267,15 @@ const register = async (userData) => {
       throw saveError; 
     }
 
+    // Call leave balance initialization for new user
+    try {
+      const leaveService = new LeaveService();
+      await leaveService.initializeLeaveBalancesForUser(user.id);
+      console.log('Leave balances initialized for new user:', user.id);
+    } catch (leaveError) {
+      console.error('Error initializing leave balances for new user:', leaveError);
+    }
+
     return user;
   } catch (error) {
     console.error('Register error:', error.message, error.stack);
@@ -338,8 +346,8 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
 
     // Check if account is locked
     const now = new Date();
-    if (user.accountLockedUntil && user.accountLockedUntil > now) {
-      throw new Error(`Account is locked until ${user.accountLockedUntil.toISOString()}`);
+    if (user.accountLockedUntil && new Date(user.accountLockedUntil) > now) {
+      throw new Error(`Account is locked until ${new Date(user.accountLockedUntil).toISOString()}`);
     }
 
     const passwordMatch = await bcrypt.compare(password, user.passwordHash);
@@ -350,9 +358,9 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
       // Lock account logic
       if (user.failedLoginAttempts >= 5) {
         let lockDurationMinutes = 1;
-        if (user.accountLockedUntil && user.accountLockedUntil > now) {
+        if (user.accountLockedUntil && new Date(user.accountLockedUntil) > now) {
           // If already locked, increase lock duration
-          const previousLockDuration = (user.accountLockedUntil - now) / 60000; 
+          const previousLockDuration = (new Date(user.accountLockedUntil) - now) / 60000; 
           if (previousLockDuration <= 1) {
             lockDurationMinutes = 3;
           } else if (previousLockDuration <= 3) {
@@ -438,6 +446,16 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        middleName: user.middleName,
+        dateOfBirth: user.dateOfBirth,
+        phone: user.phone,
+        address: user.address,
+        hireDate: user.hireDate,
+        salary: user.salary,
+        isActive: user.isActive,
+        biometricEnrollmentStatus: user.biometricEnrollmentStatus,
+        lastLogin: user.lastLogin,
+        dateOfJoining: user.dateOfJoining,
         departmentId: user.departmentId,
         department: user.Department ? user.Department.name : '',
         departmentCode,
@@ -445,6 +463,8 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
         role: user.Role ? user.Role.name : '',
         roleCode,
         permissions,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at,
       },
     };
 };

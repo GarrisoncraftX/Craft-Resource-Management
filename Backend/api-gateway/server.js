@@ -27,8 +27,19 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Middleware to skip body parsing for multipart/form-data requests
+app.use((req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.startsWith('multipart/form-data')) {
+    // Skip body parsing for multipart requests
+    next();
+  } else {
+    express.json()(req, res, (err) => {
+      if (err) return next(err);
+      express.urlencoded({ extended: true })(req, res, next);
+    });
+  }
+});
 
 // Public routes that do not require JWT validation
 const publicRoutes = [
@@ -92,6 +103,12 @@ const proxyRequest = async (req, res, targetUrl) => {
     data: req.body,
     responseType: "stream",
   };
+
+  // For multipart/form-data requests, pipe the raw request stream
+  if (req.headers['content-type'] && req.headers['content-type'].startsWith('multipart/form-data')) {
+    axiosConfig.data = req;
+    axiosConfig.headers['transfer-encoding'] = 'chunked';
+  }
 
   const response = await axios(axiosConfig);
   res.status(response.status);

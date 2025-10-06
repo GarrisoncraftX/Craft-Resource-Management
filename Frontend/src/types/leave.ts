@@ -28,6 +28,7 @@ export interface LeaveRequest {
   emergencyContact?: string;
   emergencyPhone?: string;
   handoverNotes?: string;
+  supportingDocuments?: string[] | null;
   createdAt: string;
   updatedAt: string;
   leaveType?: LeaveType;

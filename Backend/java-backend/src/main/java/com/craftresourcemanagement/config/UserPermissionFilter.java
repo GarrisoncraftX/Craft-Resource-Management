@@ -43,6 +43,41 @@ public class UserPermissionFilter extends HttpFilter {
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
-        chain.doFilter(request, response);
+        if (isMultipartRequest(request)) {
+            chain.doFilter(new MultipartAwareHttpServletRequestWrapper(request), response);
+        } else {
+            chain.doFilter(request, response);
+        }
+    }
+
+    private boolean isMultipartRequest(HttpServletRequest request) {
+        String contentType = request.getContentType();
+        return contentType != null && contentType.toLowerCase().startsWith("multipart/");
+    }
+
+    private static class MultipartAwareHttpServletRequestWrapper extends jakarta.servlet.http.HttpServletRequestWrapper {
+        public MultipartAwareHttpServletRequestWrapper(HttpServletRequest request) {
+            super(request);
+        }
+
+        @Override
+        public String getParameter(String name) {
+            return null;
+        }
+
+        @Override
+        public java.util.Enumeration<String> getParameterNames() {
+            return java.util.Collections.emptyEnumeration();
+        }
+
+        @Override
+        public String[] getParameterValues(String name) {
+            return null;
+        }
+
+        @Override
+        public java.util.Map<String, String[]> getParameterMap() {
+            return java.util.Collections.emptyMap();
+        }
     }
 }
