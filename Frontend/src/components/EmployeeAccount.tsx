@@ -28,6 +28,8 @@ export const EmployeeAccount: React.FC = () => {
     dateOfBirth: '',
     emergencyContactName: '',
     emergencyContactPhone: '',
+    password: '',
+    confirmPassword: '',
   });
 
   const [bankingInfo, setBankingInfo] = useState({
@@ -51,6 +53,8 @@ export const EmployeeAccount: React.FC = () => {
             dateOfBirth: employee.dateOfBirth ? employee.dateOfBirth.split('T')[0] : '',
             emergencyContactName: employee.emergencyContactName || '',
             emergencyContactPhone: employee.emergencyContactPhone || '',
+            password: '',
+            confirmPassword: '',
           });
           setBankingInfo({
             accountNumber: employee.accountNumber || '',
@@ -72,10 +76,13 @@ export const EmployeeAccount: React.FC = () => {
       toast.error('User ID is missing');
       return;
     }
+    if (personalInfo.password && personalInfo.password !== personalInfo.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
     setLoading(true);
     try {
-      const updatedEmployee = {
-        ...user,
+      const updateRequest = {
         firstName: personalInfo.firstName,
         lastName: personalInfo.lastName,
         middleName: personalInfo.middleName,
@@ -87,8 +94,10 @@ export const EmployeeAccount: React.FC = () => {
         emergencyContactPhone: personalInfo.emergencyContactPhone,
         accountNumber: bankingInfo.accountNumber,
         momoNumber: bankingInfo.momoNumber,
+        password: personalInfo.password || undefined,
+        confirmPassword: personalInfo.confirmPassword || undefined,
       };
-      await updateEmployeeById(user.userId, updatedEmployee);
+      await updateEmployeeById(user.userId, updateRequest);
       toast.success('Personal information updated successfully');
     } catch (error) {
       console.error('Failed to update personal information:', error);
@@ -105,12 +114,11 @@ export const EmployeeAccount: React.FC = () => {
     }
     setLoading(true);
     try {
-      const updatedEmployee = {
-        ...user,
+      const updateRequest = {
         accountNumber: bankingInfo.accountNumber,
         momoNumber: bankingInfo.momoNumber,
       };
-      await updateEmployeeById(user.userId, updatedEmployee);
+      await updateEmployeeById(user.userId, updateRequest);
       toast.success('Banking information updated successfully');
     } catch (error) {
       toast.error('Failed to update banking information');
@@ -287,6 +295,24 @@ export const EmployeeAccount: React.FC = () => {
                         type="tel"
                         value={personalInfo.emergencyContactPhone}
                         onChange={(e) => handlePersonalInfoChange('emergencyContactPhone', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">New Password (leave blank to keep current)</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={personalInfo.password}
+                        onChange={(e) => handlePersonalInfoChange('password', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={personalInfo.confirmPassword}
+                        onChange={(e) => handlePersonalInfoChange('confirmPassword', e.target.value)}
                       />
                     </div>
                   </div>

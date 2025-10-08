@@ -42,7 +42,7 @@ public class User {
     private LocalDate dateOfBirth;
 
     @Column(name = "hire_date", nullable = true)
-    private LocalDateTime hireDate;
+    private LocalDate hireDate;
 
     @Column(name = "department_id", nullable = false)
     private Integer departmentId;
@@ -191,11 +191,11 @@ public class User {
         this.dateOfBirth = dateOfBirth;
     }
 
-    public LocalDateTime getHireDate() {
+    public LocalDate getHireDate() {
         return hireDate;
     }
 
-    public void setHireDate(LocalDateTime hireDate) {
+    public void setHireDate(LocalDate hireDate) {
         this.hireDate = hireDate;
     }
 

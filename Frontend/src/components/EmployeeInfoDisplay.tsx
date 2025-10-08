@@ -143,7 +143,7 @@ const EmployeeInfoDisplay: React.FC = () => {
                     </CardContent>
                 </Card>
                 
-                {/* 2. Main Content Area: Tabs Structure (FIXED) */}
+                {/* 2. Main Content Area: Tabs Structure */}
                 <Tabs 
                     value={selectedTab} 
                     onValueChange={setSelectedTab}
@@ -161,9 +161,6 @@ const EmployeeInfoDisplay: React.FC = () => {
                         </TabsTrigger>
                         <TabsTrigger value="payroll" className="justify-start py-2.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 font-semibold transition-colors rounded-md">
                             <DollarSign className="w-4 h-4 mr-3" /> Payroll & Payments
-                        </TabsTrigger>
-                        <TabsTrigger value="documents" className="justify-start py-2.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 font-semibold transition-colors rounded-md">
-                            <FileText className="w-4 h-4 mr-3" /> Documents
                         </TabsTrigger>
                     </TabsList>
 

@@ -1,25 +1,15 @@
-# TODO: Add Supporting Documents Upload with Cloudinary for Leave Requests
+# TODO: Fix Updating Employee Info Using Employee Accounts
 
-## Backend Setup
-- [x] Install Cloudinary SDK in Node.js backend (package.json)
-- [x] Create Cloudinary service (Backend/nodejs-backend/src/utils/cloudinary.js)
-- [x] Update LeaveRequest model to include supportingDocuments field (Backend/nodejs-backend/src/modules/leave/model.js)
-- [x] Modify LeaveService.createLeaveRequest to handle file uploads and store URLs (Backend/nodejs-backend/src/modules/leave/service.js)
-- [x] Update LeaveController.createLeaveRequest to use multer for multipart handling (Backend/nodejs-backend/src/modules/leave/controller.js)
-- [x] Update routes.js to add multer middleware for file uploads (Backend/nodejs-backend/src/modules/leave/routes.js)
+## Completed Tasks
+- [x] Analyzed the error: PropertyValueException due to null password in User entity during update.
+- [x] Identified root cause: In EmployeeController.updateEmployee, setting existingUser.setPassword(null) causes issues with JPA managed entities when fetching existing password.
+- [x] Created UpdateEmployeeRequest DTO in backend for proper request handling.
+- [x] Updated EmployeeController to use UpdateEmployeeRequest, validate password confirmation, and merge fields without setting password to null.
+- [x] Removed setPassword(null) from updateProfilePicture method.
+- [x] Added UpdateEmployeeRequest interface in frontend types.
+- [x] Updated frontend api.ts to use UpdateEmployeeRequest for updateEmployeeById.
 
-## Frontend Updates
-- [x] Update LeaveRequestForm interface to include supportingDocuments (File[]) (Frontend/src/types/leave.ts)
-- [] Modify LeaveRequestForm.tsx to add file input with multiple file selection (Frontend/src/components/modules/hr/LeaveRequestForm.tsx)
-- [] Update leaveApi.ts createLeaveRequest to send FormData with files (Frontend/src/services/leaveApi.ts)
-- [] Update LeaveRequest interface to include supportingDocuments (Frontend/src/types/leave.ts)
-
-## Testing
-- [ ] Test file upload to Cloudinary
-- [ ] Test leave request creation with documents
-- [ ] Verify stored URLs in database
-
-## Followup
-- [x] Install dependencies
-- [ ] Update database schema (migration if needed)
-- [ ] Verify end-to-end functionality
+## Remaining Tasks
+- [ ] Test the update functionality to ensure it works without errors.
+- [ ] If needed, update frontend components to use the new UpdateEmployeeRequest type for employee updates.
+- [ ] Verify password update works with confirmation.

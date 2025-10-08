@@ -1,6 +1,6 @@
 import { apiClient } from '../utils/apiClient';
 import type { Department, Role, BudgetItem, Payslip } from '../types/api';
-import type { Employee } from '../types/hr';
+import type { Employee, UpdateEmployeeRequest } from '../types/hr';
 
 function mapToBackendBudget(budget: BudgetItem) {
   return {
@@ -75,7 +75,7 @@ export async function fetchEmployeeById(id: string): Promise<Employee> {
   return apiClient.get(`/hr/employees/id/${id}`);
 }
 
-export async function updateEmployeeById(id: string, employee: Partial<Employee>): Promise<Employee> {
+export async function updateEmployeeById(id: string, employee: UpdateEmployeeRequest): Promise<Employee> {
   return apiClient.put(`/hr/employees/id/${id}`, employee);
 }
 
@@ -109,4 +109,4 @@ export async function fetchPayslips(): Promise<Payslip[]> {
   return apiClient.get('/hr/payroll/payslips');
 }
 
-export type { Department, Role, BudgetItem, Employee, Payslip };
+export type { Department, Role, BudgetItem, Employee, UpdateEmployeeRequest, Payslip };

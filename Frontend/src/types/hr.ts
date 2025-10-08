@@ -28,6 +28,27 @@ export interface Certification {
   status: string;
 }
 
+export interface UpdateEmployeeRequest {
+  firstName?: string;
+  lastName?: string;
+  middleName?: string;
+  phone?: string;
+  address?: string;
+  dateOfBirth?: string;
+  departmentId?: number;
+  roleId?: number;
+  managerId?: string;
+  salary?: number;
+  accountNumber?: string;
+  momoNumber?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  email?: string;
+  employeeId?: string;
+  password?: string;
+  confirmPassword?: string;
+}
+
 export interface Employee {
   id: string;
   tenantId: number;
