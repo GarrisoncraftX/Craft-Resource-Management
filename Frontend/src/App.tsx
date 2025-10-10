@@ -24,6 +24,7 @@ const AssetDashboard = lazy(() => import("@/components/modules/assets/AssetDashb
 const SecurityDashboard = lazy(() => import("@/components/modules/security/SecurityDashboard").then(module => ({ default: module.SecurityDashboard })));
 const ProcurementDashboard = lazy(() => import("@/components/modules/procurement/ProcurementDashboard").then(module => ({ default: module.ProcurementDashboard })));
 const LegalDashboard = lazy(() => import("@/components/modules/legal/LegalDashboard").then(module => ({ default: module.LegalDashboard })));
+const LegalManagement = lazy(() => import("@/components/modules/legal/LegalManagement").then(module => ({ default: module.LegalManagement })));
 const PublicRelationsDashboard = lazy(() => import("@/components/modules/public-relations/PublicRelationsDashboard").then(module => ({ default: module.PublicRelationsDashboard })));
 const PlanningDashboard = lazy(() => import("@/components/modules/planning/PlanningDashboard").then(module => ({ default: module.PlanningDashboard })));
 const AdminDashboard = lazy(() => import("@/components/modules/admin/AdminDashboard").then(module => ({ default: module.AdminDashboard })));
@@ -170,6 +171,8 @@ const AppRoutes = () => {
 
       {/* Legal Routes */}
       <Route path="/legal/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/legal/management" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      
 
       {/* Planning & Development Routes */}
       <Route path="/planning/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Planning Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PlanningDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
