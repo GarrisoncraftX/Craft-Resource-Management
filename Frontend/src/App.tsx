@@ -10,6 +10,7 @@ import { lazy, Suspense } from "react";
 import NotFound from "./pages/NotFound";
 import ModuleLayout from "@/components/ui/ModuleLayout";
 
+
 const AuthForm = lazy(() => import("@/components/AuthForm"));
 const EmployeeDashboard = lazy(() => import("@/components/EmployeeDashboard").then(module => ({ default: module.EmployeeDashboard })));
 const KioskInterface = lazy(() => import("@/components/KioskInterface").then(module => ({ default: module.KioskInterface })));
@@ -25,6 +26,8 @@ const SecurityDashboard = lazy(() => import("@/components/modules/security/Secur
 const ProcurementDashboard = lazy(() => import("@/components/modules/procurement/ProcurementDashboard").then(module => ({ default: module.ProcurementDashboard })));
 const LegalDashboard = lazy(() => import("@/components/modules/legal/LegalDashboard").then(module => ({ default: module.LegalDashboard })));
 const LegalManagement = lazy(() => import("@/components/modules/legal/LegalManagement").then(module => ({ default: module.LegalManagement })));
+const LegalCases = lazy(() => import("@/components/modules/legal/LegalCases").then(module => ({ default: module.LegalCases })));
+const ComplianceRecords = lazy(() => import("@/components/modules/legal/ComplianceMonitoring").then(module => ({ default: module.ComplianceMonitoring })));
 const PublicRelationsDashboard = lazy(() => import("@/components/modules/public-relations/PublicRelationsDashboard").then(module => ({ default: module.PublicRelationsDashboard })));
 const PlanningDashboard = lazy(() => import("@/components/modules/planning/PlanningDashboard").then(module => ({ default: module.PlanningDashboard })));
 const AdminDashboard = lazy(() => import("@/components/modules/admin/AdminDashboard").then(module => ({ default: module.AdminDashboard })));
@@ -64,6 +67,7 @@ const AssetValuation = lazy(() => import("@/components/modules/assets/AssetValua
 
 const ProcurementPlanning = lazy(() => import("@/components/modules/procurement/ProcurementPlanning").then(module => ({ default: module.ProcurementPlanning })));
 const Requisitioning = lazy(() => import("@/components/modules/procurement/Requisitioning").then(module => ({ default: module.Requisitioning })));
+const TaxManagement = lazy(() => import("@/components/modules/revenue/TaxManagement").then(module => ({ default: module.TaxManagement })));
 const Tendering = lazy(() => import("@/components/modules/procurement/Tendering").then(module => ({ default: module.Tendering })));
 const BidEvaluation = lazy(() => import("@/components/modules/procurement/BidEvaluation").then(module => ({ default: module.BidEvaluation })));
 const ContractManagement = lazy(() => import("@/components/modules/procurement/ContractManagement").then(module => ({ default: module.ContractManagement })));
@@ -172,8 +176,8 @@ const AppRoutes = () => {
       {/* Legal Routes */}
       <Route path="/legal/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/legal/management" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      
-
+      <Route path="/legal/cases" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Cases" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalCases /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/legal/compliance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Compliance" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ComplianceRecords /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       {/* Planning & Development Routes */}
       <Route path="/planning/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Planning Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PlanningDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/planning/projects" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Planning" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ProjectManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
@@ -199,7 +203,9 @@ const AppRoutes = () => {
 
       {/* Revenue & Tax Routes */}
       <Route path="/revenue" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Revenue" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><RevenueDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/revenue/assessment" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Revenue" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><TaxAssessment /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/revenue/tax-assessment" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Tax Assessment" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><TaxAssessment /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/revenue/tax-management" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Tax Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><TaxManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      
 
       {/* Security Routes */}
       <Route path="/security" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Security" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SecurityDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />

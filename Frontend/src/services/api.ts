@@ -1,6 +1,7 @@
 import { apiClient } from '../utils/apiClient';
 import type { Department, Role, BudgetItem, Payslip } from '../types/api';
 import type { Employee, UpdateEmployeeRequest } from '../types/hr';
+import type { Asset, AssetStatistics } from '@/types/asset';
 
 function mapToBackendBudget(budget: BudgetItem) {
   return {
@@ -108,5 +109,160 @@ export async function deleteBudget(id: string | number): Promise<void> {
 export async function fetchPayslips(): Promise<Payslip[]> {
   return apiClient.get('/hr/payroll/payslips');
 }
+
+// Integrate Asset endpoints implemented in Java AssetController (@RequestMapping("/assets")).
+// We call '/assets' so the API Gateway forwards to Java backend. Keep these functions alongside other services.
+
+// Fetch all assets from backend (GET /assets).
+// If gateway rewrites or expects /api prefix adjust accordingly (this project proxies non-/api by default to java backend).
+export async function fetchAssets(): Promise<Asset[]> {
+  return apiClient.get('/assets');
+}
+
+// Fetch single asset by id (GET /assets/{id})
+export async function fetchAssetById(id: number | string): Promise<Asset> {
+  return apiClient.get(`/assets/${id}`);
+}
+
+// Create / Update / Delete wrappers
+export async function createAsset(asset: Partial<Asset>): Promise<Asset> {
+  return apiClient.post('/assets', asset);
+}
+export async function updateAsset(id: number | string, asset: Partial<Asset>): Promise<Asset> {
+  return apiClient.put(`/assets/${id}`, asset);
+}
+export async function deleteAsset(id: number | string): Promise<void> {
+  await apiClient.delete(`/assets/${id}`);
+}
+
+// MaintenanceRecord endpoints (Java controller: /assets/maintenance-records)
+export async function fetchMaintenanceRecords() {
+  return apiClient.get('/assets/maintenance-records');
+}
+export async function createMaintenanceRecord(record: unknown) {
+  return apiClient.post('/assets/maintenance-records', record);
+}
+export async function updateMaintenanceRecord(id: number | string, record: unknown) {
+  return apiClient.put(`/assets/maintenance-records/${id}`, record);
+}
+export async function deleteMaintenanceRecord(id: number | string) {
+  return apiClient.delete(`/assets/maintenance-records/${id}`);
+}
+
+// DisposalRecord endpoints (Java controller: /assets/disposal-records)
+export async function fetchDisposalRecords() {
+  return apiClient.get('/assets/disposal-records');
+}
+export async function createDisposalRecord(record: unknown) {
+  return apiClient.post('/assets/disposal-records', record);
+}
+export async function updateDisposalRecord(id: number | string, record: unknown) {
+  return apiClient.put(`/assets/disposal-records/${id}`, record);
+}
+export async function deleteDisposalRecord(id: number | string) {
+  return apiClient.delete(`/assets/disposal-records/${id}`);
+}
+
+
+//LegalCase endpoints (Java controller: /legal/cases)
+export async function createLegalCase(record: any){
+  return apiClient.post('/legal/cases', record);
+}
+
+export async function fetchLegalCases() {
+  return apiClient.get('/legal/cases');
+}
+export async function updateLegalCase(id: number | string, record: any) {
+  return apiClient.put(`/legal/cases/${id}`, record);
+}
+export async function deleteLegalCase(id: number | string) {
+  return apiClient.delete(`/legal/cases/${id}`);
+}
+
+export async function fetchLegalCaseById(id: number | string) {
+  return apiClient.get(`/legal/cases/${id}`);
+}
+
+// ComplianceRecord endpoints (Java controller: /legal/compliance-records)
+export async function createComplianceRecord(record: any) {
+  return apiClient.post('/legal/compliance-records', record);
+}
+
+export async function fetchComplianceRecords() {
+  return apiClient.get('/legal/compliance-records');
+}
+export async function fetchComplianceRecordById(id: number | string) {
+  return apiClient.get(`/legal/compliance-records/${id}`);
+}
+
+export async function updateComplianceRecord(id: number | string, record: any) {
+  return apiClient.put(`/legal/compliance-records/${id}`, record);
+}
+
+export async function deleteComplianceRecord(id: number | string) {
+  return apiClient.delete(`/legal/compliance-records/${id}`);
+}
+
+//TaxAssessment endpoints (Java controller: /tax/assessments)
+export async function createTaxAssessment(record: any) {
+  return apiClient.post('/revenue/tax-assessments', record);
+}
+
+export async function fetchTaxAssessments() {
+  return apiClient.get('/revenue/tax-assessments');
+}
+
+export async function fetchTaxAssessmentById(id: number | string) {
+  return apiClient.get(`/revenue/tax-assessments/${id}`);
+}
+
+export async function updateTaxAssessment(id: number | string, record: any) {
+  return apiClient.put(`/revenue/tax-assessments/${id}`, record);
+}
+
+export async function deleteTaxAssessment(id: number | string) {
+  return apiClient.delete(`/revenue/tax-assessments/${id}`);
+}
+
+//RevenueCollection endpoints (Java controller: /revenue/revenue-collections)
+export async function createRevenueCollection(record: any) {
+  return apiClient.post('/revenue/revenue-collections', record);
+}
+
+export async function fetchRevenueCollections() {
+  return apiClient.get('/revenue/revenue-collections');
+}
+
+
+export async function fetchRevenueCollectionById(id: number | string) {
+  return apiClient.get(`/revenue/revenue-collections/${id}`);
+}
+export async function updateRevenueCollection(id: number | string, record: any) {
+  return apiClient.put(`/revenue/revenue-collections/${id}`, record);
+}
+export async function deleteRevenueCollection(id: number | string) {
+  return apiClient.delete(`/revenue/revenue-collections/${id}`);
+}
+
+
+  // SystemConfig endpoints
+export async function createSystem(record: any) {
+  return apiClient.post('/configs', record);
+}
+export async function fetchSystemByID(id: number | string) {
+  return apiClient.get(`/configs/${id}`);
+}
+
+export async function fetchSystem(){
+  return apiClient.get('/configs'); 
+}
+export async function updateSystem(id: number | string, record: any) {
+  return apiClient.put(`/configs/${id}`, record);
+}
+
+export async function deleteSystem(id: number | string) {
+  return apiClient.delete(`/configs/${id}`);
+}
+
 
 export type { Department, Role, BudgetItem, Employee, UpdateEmployeeRequest, Payslip };

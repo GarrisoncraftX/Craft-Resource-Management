@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,37 +11,72 @@ import { Calculator, Building, FileText, DollarSign, Plus, Search } from 'lucide
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 
+// CHANGED: import backend helper
+import { fetchTaxAssessments } from '@/services/api';
+
 export const TaxAssessment: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
 
-  const assessments = [
+  // fallback dummy data
+  const dummyAssessments = [
     { id: 'TA-001', property: '123 Main Street', owner: 'John Smith', type: 'Residential', landValue: 150000, improvementValue: 300000, totalValue: 450000, taxRate: 1.2, annualTax: 5400, status: 'Current' },
     { id: 'TA-002', property: '456 Business Ave', owner: 'ABC Corporation', type: 'Commercial', landValue: 500000, improvementValue: 700000, totalValue: 1200000, taxRate: 2.5, annualTax: 30000, status: 'Under Review' },
     { id: 'TA-003', property: '789 Industrial Road', owner: 'Manufacturing Inc', type: 'Industrial', landValue: 300000, improvementValue: 500000, totalValue: 800000, taxRate: 2.0, annualTax: 16000, status: 'Approved' },
     { id: 'TA-004', property: '321 Residential Lane', owner: 'Jane Doe', type: 'Residential', landValue: 120000, improvementValue: 280000, totalValue: 400000, taxRate: 1.2, annualTax: 4800, status: 'Appeal Filed' },
   ];
 
-  const assessmentTrends = [
-    { year: '2020', residential: 450000, commercial: 1100000, industrial: 750000 },
-    { year: '2021', residential: 465000, commercial: 1150000, industrial: 780000 },
-    { year: '2022', residential: 480000, commercial: 1200000, industrial: 800000 },
-    { year: '2023', residential: 495000, commercial: 1250000, industrial: 820000 },
-    { year: '2024', residential: 510000, commercial: 1300000, industrial: 850000 },
-  ];
+  const [assessments, setAssessments] = useState<unknown[]>(dummyAssessments);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const propertyDistribution = [
-    { type: 'Residential', count: 2845, value: 1420000000, color: '#8884d8' },
-    { type: 'Commercial', count: 486, value: 890000000, color: '#82ca9d' },
-    { type: 'Industrial', count: 124, value: 340000000, color: '#ffc658' },
-    { type: 'Agricultural', count: 89, value: 120000000, color: '#ff7300' },
-  ];
+  // load live data from backend
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const resp = await fetchTaxAssessments();
+        console.log('Fetched tax assessments:', resp);
+        if (!cancelled && Array.isArray(resp) && resp.length > 0) {
+          // map backend shape to UI shape (tolerant mapping)
+          const mapped = resp.map((r: any) => ({
+            id: r.id ?? r.assessmentId ?? r.reference ?? `TA-${Math.random().toString(36).slice(2,8)}`,
+            property: r.propertyAddress ?? r.address ?? r.property ?? 'Unknown',
+            owner: r.ownerName ?? r.owner ?? r.owner_name ?? '',
+            type: r.propertyType ?? r.type ?? 'Unknown',
+            landValue: Number(r.landValue ?? r.land_value ?? r.land ?? 0),
+            improvementValue: Number(r.improvementValue ?? r.improvement_value ?? r.improvement ?? 0),
+            totalValue: Number(r.totalValue ?? r.total_value ?? r.assessedValue ?? 0),
+            taxRate: Number(r.taxRate ?? r.tax_rate ?? r.rate ?? 0),
+            annualTax: Number(r.annualTax ?? r.annual_tax ?? r.annualTaxAmount ?? 0),
+            status: r.status ?? r.state ?? 'Unknown',
+          }));
+          setAssessments(mapped);
+        }
+      } catch (err) {
+        console.warn('TaxAssessment: failed to fetch assessments — using fallback data.', err?.message ?? err);
+        setError(err?.message ?? 'Failed to fetch tax assessments');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
-  const taxRates = [
-    { category: 'Residential', rate: 1.2, lastUpdated: '2024-01-01' },
-    { category: 'Commercial', rate: 2.5, lastUpdated: '2024-01-01' },
-    { category: 'Industrial', rate: 2.0, lastUpdated: '2024-01-01' },
-    { category: 'Agricultural', rate: 0.8, lastUpdated: '2024-01-01' },
-  ];
+  // quick computed metrics for the header cards
+  const totalProperties = assessments.length;
+  const totalValue = assessments.reduce((s, a) => s + (Number(a.totalValue) || 0), 0);
+  const totalAnnualTax = assessments.reduce((s, a) => s + (Number(a.annualTax) || 0), 0);
+  const pendingReviews = assessments.filter(a => (a.status ?? '').toString().toLowerCase().includes('review') || (a.status ?? '').toString().toLowerCase().includes('pending')).length;
+
+  // --- CHANGED: guard undefined external variables used by the UI (no new sample data added) ---
+  const assessmentTrendsData = (typeof assessmentTrends !== 'undefined' && Array.isArray(assessmentTrends)) ? assessmentTrends : [];
+  const propertyDistributionData = (typeof propertyDistribution !== 'undefined' && Array.isArray(propertyDistribution)) ? propertyDistribution : [];
+  const taxRatesData = (typeof taxRates !== 'undefined' && Array.isArray(taxRates)) ? taxRates : [];
+  // --- END CHANGED ---
+
+  if (loading) return <div className="p-6">Loading tax assessments…</div>;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -60,7 +95,7 @@ export const TaxAssessment: React.FC = () => {
               <Building className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3,544</div>
+              <div className="text-2xl font-bold">{totalProperties.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">Assessed properties</p>
             </CardContent>
           </Card>
@@ -71,7 +106,7 @@ export const TaxAssessment: React.FC = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$2.77B</div>
+              <div className="text-2xl font-bold">${(totalValue / 1_000_000).toFixed(2)}M</div>
               <p className="text-xs text-muted-foreground">Assessed value</p>
             </CardContent>
           </Card>
@@ -82,7 +117,7 @@ export const TaxAssessment: React.FC = () => {
               <Calculator className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$42.8M</div>
+              <div className="text-2xl font-bold">${totalAnnualTax.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">Projected revenue</p>
             </CardContent>
           </Card>
@@ -93,7 +128,7 @@ export const TaxAssessment: React.FC = () => {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">28</div>
+              <div className="text-2xl font-bold">{pendingReviews}</div>
               <p className="text-xs text-muted-foreground">Under assessment</p>
             </CardContent>
           </Card>
@@ -117,18 +152,22 @@ export const TaxAssessment: React.FC = () => {
                   <CardDescription>Average property values by type over time</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={assessmentTrends}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="year" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => `$${(value as number).toLocaleString()}`} />
-                      <Legend />
-                      <Line type="monotone" dataKey="residential" stroke="#8884d8" name="Residential" />
-                      <Line type="monotone" dataKey="commercial" stroke="#82ca9d" name="Commercial" />
-                      <Line type="monotone" dataKey="industrial" stroke="#ffc658" name="Industrial" />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  {assessmentTrendsData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={assessmentTrendsData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="year" />
+                        <YAxis />
+                        <Tooltip formatter={(value) => `$${(value as number).toLocaleString()}`} />
+                        <Legend />
+                        <Line type="monotone" dataKey="residential" stroke="#8884d8" name="Residential" />
+                        <Line type="monotone" dataKey="commercial" stroke="#82ca9d" name="Commercial" />
+                        <Line type="monotone" dataKey="industrial" stroke="#ffc658" name="Industrial" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="p-6 text-sm text-gray-600">No trend data available.</div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -138,25 +177,29 @@ export const TaxAssessment: React.FC = () => {
                   <CardDescription>Properties by type and total value</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={propertyDistribution}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ type, count }) => `${type}: ${count}`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="count"
-                      >
-                        {propertyDistribution.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {propertyDistributionData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={propertyDistributionData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ type, count }) => `${type}: ${count}`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="count"
+                        >
+                          {propertyDistributionData.map((entry: any, index: number) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="p-6 text-sm text-gray-600">No distribution data available.</div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -299,7 +342,7 @@ export const TaxAssessment: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {taxRates.map((rate, index) => (
+                  {taxRatesData.length > 0 ? taxRatesData.map((rate: any, index: number) => (
                     <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
                       <div>
                         <Label>Property Category</Label>
@@ -317,7 +360,9 @@ export const TaxAssessment: React.FC = () => {
                         <Button variant="outline" size="sm">Edit Rate</Button>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="p-6 text-sm text-gray-600">No tax rate data available.</div>
+                  )}
                 </div>
               </CardContent>
             </Card>

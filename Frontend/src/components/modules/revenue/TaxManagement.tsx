@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,6 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calculator, FileText, DollarSign, TrendingUp, BarChart3, Plus } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+
+// CHANGED: load live data from backend
+import { fetchTaxAssessments, fetchRevenueCollections } from '@/services/api';
 
 const taxRecords = [
   {
@@ -75,18 +78,75 @@ const complianceMetrics = [
 ];
 
 export const TaxManagement: React.FC = () => {
-  const [taxRecordsState, setTaxRecords] = useState(taxRecords);
+  // CHANGED: use state to hold live records and loading/error states
+  const [taxRecordsState, setTaxRecords] = useState<any[]>(taxRecords);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Prefer tax assessments for individual records, fallback to revenue collections if needed
+        const [assessmentsResp, collectionsResp] = await Promise.allSettled([fetchTaxAssessments(), fetchRevenueCollections()]);
+        console.log('TaxManagement: fetched data', { assessmentsResp, collectionsResp });
+
+        let mapped: any[] = [];
+        if (assessmentsResp.status === 'fulfilled' && Array.isArray(assessmentsResp.value) && assessmentsResp.value.length > 0) {
+          mapped = assessmentsResp.value.map((r: any, idx: number) => {
+            const assessedValue = Number(r.totalValue ?? r.assessedValue ?? r.total_value ?? r.assessed_value ?? 0);
+            const taxAmount = Number(r.taxAmount ?? r.tax_amount ?? Math.round(assessedValue * (Number(r.taxRate ?? r.tax_rate ?? 0) / 100)));
+            return {
+              id: r.id ?? r.assessmentId ?? `TA-${idx}`,
+              taxpayerId: r.taxpayerId ?? r.ownerTaxId ?? r.owner_id ?? '',
+              taxpayerName: r.ownerName ?? r.owner ?? r.taxpayerName ?? 'Unknown',
+              taxType: r.propertyType ?? r.taxType ?? r.type ?? 'Property Tax',
+              assessedValue,
+              taxAmount,
+              dueDate: r.dueDate ?? r.due_date ?? r.due ?? null,
+              status: r.status ?? r.state ?? 'Pending',
+              paymentDate: r.paymentDate ?? r.paidAt ?? null
+            };
+          });
+        } else if (collectionsResp.status === 'fulfilled' && Array.isArray(collectionsResp.value)) {
+          // Map revenue collections to the tax record shape as a fallback
+          mapped = collectionsResp.value.map((r: any, idx: number) => ({
+            id: r.id ?? `RC-${idx}`,
+            taxpayerId: r.payerId ?? r.taxpayerId ?? '',
+            taxpayerName: r.payerName ?? r.taxpayerName ?? 'Unknown',
+            taxType: r.taxType ?? r.type ?? 'General Tax',
+            assessedValue: Number(r.assessedValue ?? r.amount ?? 0),
+            taxAmount: Number(r.amount ?? r.taxAmount ?? 0),
+            dueDate: r.dueDate ?? r.due_date ?? null,
+            status: r.status ?? 'Unknown',
+            paymentDate: r.paidAt ?? r.paymentDate ?? null
+          }));
+        }
+
+        if (!cancelled && mapped.length > 0) setTaxRecords(mapped);
+      } catch (err: any) {
+        console.warn('TaxManagement: failed to load backend data', err?.message ?? err);
+        setError(err?.message ?? 'Failed to load tax records');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const filteredRecords = taxRecordsState.filter(record => {
     const matchesSearch = record.taxpayerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         record.taxpayerId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         record.taxType.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || record.status.toLowerCase() === statusFilter;
+                         (record.taxpayerId ?? '').toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (record.taxType ?? '').toString().toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || (record.status ?? '').toString().toLowerCase() === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
+  // keep existing helpers
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Paid': return 'bg-green-500';
@@ -105,6 +165,8 @@ export const TaxManagement: React.FC = () => {
       default: return 'bg-gray-600';
     }
   };
+
+  if (loading) return <div className="p-6">Loading tax records…</div>;
 
   return (
     <div className="min-h-screen flex-1 flex flex-col p-6 bg-background">
@@ -184,7 +246,9 @@ export const TaxManagement: React.FC = () => {
                   <DollarSign className="h-4 w-4" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">$1.89M</div>
+                  <div className="text-2xl font-bold">
+                    ${filteredRecords.reduce((s, r) => s + (Number(r.taxAmount) || 0), 0).toLocaleString()}
+                  </div>
                   <p className="text-xs opacity-80">+15% from last year</p>
                 </CardContent>
               </Card>
@@ -195,8 +259,10 @@ export const TaxManagement: React.FC = () => {
                   <Calculator className="h-4 w-4" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">$285K</div>
-                  <p className="text-xs opacity-80">125 records</p>
+                  <div className="text-2xl font-bold">
+                    ${filteredRecords.filter(r => (r.status ?? '').toString().toLowerCase().includes('pend')).reduce((s, r) => s + (Number(r.taxAmount) || 0), 0).toLocaleString()}
+                  </div>
+                  <p className="text-xs opacity-80">{filteredRecords.filter(r => (r.status ?? '').toString().toLowerCase().includes('pend')).length} records</p>
                 </CardContent>
               </Card>
 
@@ -206,8 +272,10 @@ export const TaxManagement: React.FC = () => {
                   <TrendingUp className="h-4 w-4" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">$195K</div>
-                  <p className="text-xs opacity-80">85 records</p>
+                  <div className="text-2xl font-bold">
+                    ${filteredRecords.filter(r => (r.status ?? '').toString().toLowerCase().includes('overdue')).reduce((s, r) => s + (Number(r.taxAmount) || 0), 0).toLocaleString()}
+                  </div>
+                  <p className="text-xs opacity-80">{filteredRecords.filter(r => (r.status ?? '').toString().toLowerCase().includes('overdue')).length} records</p>
                 </CardContent>
               </Card>
 
@@ -217,7 +285,14 @@ export const TaxManagement: React.FC = () => {
                   <BarChart3 className="h-4 w-4" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">92%</div>
+                  <div className="text-2xl font-bold">{
+                    // simple collection rate heuristic
+                    (() => {
+                      const collected = filteredRecords.filter(r => (r.status ?? '').toString().toLowerCase() === 'paid').reduce((s, r) => s + (Number(r.taxAmount) || 0), 0);
+                      const total = filteredRecords.reduce((s, r) => s + (Number(r.taxAmount) || 0), 0) || 1;
+                      return `${Math.round((collected/total) * 100)}%`;
+                    })()
+                  }</div>
                   <p className="text-xs opacity-80">Above target</p>
                 </CardContent>
               </Card>
@@ -256,9 +331,9 @@ export const TaxManagement: React.FC = () => {
                             {record.taxType}
                           </Badge>
                         </TableCell>
-                        <TableCell>${record.assessedValue.toLocaleString()}</TableCell>
-                        <TableCell className="font-medium">${record.taxAmount.toLocaleString()}</TableCell>
-                        <TableCell>{new Date(record.dueDate).toLocaleDateString()}</TableCell>
+                        <TableCell>${(Number(record.assessedValue) || 0).toLocaleString()}</TableCell>
+                        <TableCell className="font-medium">${(Number(record.taxAmount) || 0).toLocaleString()}</TableCell>
+                        <TableCell>{record.dueDate ? new Date(record.dueDate).toLocaleDateString() : '—'}</TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(record.status)}>
                             {record.status}
@@ -268,7 +343,7 @@ export const TaxManagement: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <Button variant="ghost" size="sm">View</Button>
                             <Button variant="ghost" size="sm">Edit</Button>
-                            {record.status === 'Overdue' && (
+                            {(record.status ?? '').toString().toLowerCase() === 'overdue' && (
                               <Button variant="ghost" size="sm" className="text-red-600">
                                 Send Notice
                               </Button>
