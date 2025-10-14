@@ -1,23 +1,23 @@
 # Node modules
-**/node_modules/
+/node_modules/
 
 # Java build output
-**/target/
+/target/
 
 # Java application properties
-**/src/main/resources/application.properties
+/src/main/resources/application.properties
 
 # Python bytecode and virtual environments
-**/__pycache__/
-**/*.py[cod]
-**/venv/
-**/ENV/
-**/.env
+/pycache/
+/*.py[cod]
+/venv/
+/ENV/
+/.env
 
 # Log files
 *.log
 logs/
-**/logs/
+/logs/
 
 # OS files
 .DS_Store
@@ -42,9 +42,9 @@ pnpm-debug.log*
 coverage/
 
 # Build output
-**/dist/
-**/dist-ssr/
-**/node_modules/.vite/
+/dist/
+/dist-ssr/
+/node_modules/.vite/
 
 # TypeScript build info
 *.tsbuildinfo

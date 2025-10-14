@@ -3,8 +3,8 @@ require("dotenv").config()
 
 const sequelize = new Sequelize(
   process.env.DB_NAME || "craft_resource_management",
-  process.env.DB_USER || "garrisonsayor",
-  process.env.DB_PASSWORD || "crafty079195538",
+  process.env.DB_USER || "gideondb",
+  process.env.DB_PASSWORD || "gyasigideon",
   {
     host: process.env.DB_HOST || "localhost",
     port: process.env.DB_PORT || 3306,

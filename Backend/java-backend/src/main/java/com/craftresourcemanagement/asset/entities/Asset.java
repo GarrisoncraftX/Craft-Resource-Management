@@ -20,7 +20,7 @@ public class Asset {
 
     private String description;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private LocalDate acquisitionDate;
 
     @Column(nullable = false)

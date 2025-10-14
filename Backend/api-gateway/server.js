@@ -119,7 +119,7 @@ const proxyRequest = async (req, res, targetUrl) => {
 app.use((req, res, next) => { 
   const path = req.path;
 
-  if (path.startsWith("/finance") || path.startsWith("/hr/attendance") || path.startsWith("/hr/employees") || path.startsWith("/security/visitors") ) {
+  if (path.startsWith("/finance") || path.startsWith("/hr/attendance") || path.startsWith("/hr/employees") || path.startsWith("/security/visitors") || path.startsWith("/assets")) {
     return proxyRequest(req, res, javaBackend);
   }
   if (path.startsWith("/api/biometric") || path.startsWith("/api/visitors") || path.startsWith("/api/dashboard") || path.startsWith("/api/health-safety") || path.startsWith("/api/reports") || path.startsWith("/api/analytics")) {
