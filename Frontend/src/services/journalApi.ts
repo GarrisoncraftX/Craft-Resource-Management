@@ -120,6 +120,69 @@ class EnhancedJournalApi {
     }
   }
 
+  // Transform flat data into JournalEntry objects
+  private transformFlatData(flatData: unknown[]): JournalEntry[] {
+    const grouped: { [key: string]: unknown[] } = {};
+
+    // Group by entryDate and base description (before '(')
+    flatData.forEach(item => {
+      if (typeof item === 'object' && item !== null && 'description' in item && 'entryDate' in item) {
+        const baseDesc = (item.description as string).split(' (')[0];
+        const key = `${item.entryDate}_${baseDesc}`;
+        if (!grouped[key]) {
+          grouped[key] = [];
+        }
+        grouped[key].push(item);
+      }
+    });
+
+    const entries: JournalEntry[] = [];
+    let idCounter = 1;
+
+    Object.values(grouped).forEach(group => {
+      if (group.length >= 2) {
+        const first = group[0] as { id: number; entryDate: string; description: string; amount: number; accountCode: string };
+        const second = group[1] as { id: number; entryDate: string; description: string; amount: number; accountCode: string };
+        const totalAmount = first.amount;
+
+        const entry: JournalEntry = {
+          id: idCounter.toString(),
+          entryDate: first.entryDate.split('T')[0], // Remove time part
+          reference: `JE-${first.entryDate.split('T')[0].replace(/-/g, '')}-${idCounter.toString().padStart(3, '0')}`,
+          description: first.description.split(' (')[0],
+          totalDebit: totalAmount,
+          totalCredit: totalAmount,
+          status: 'Posted',
+          createdBy: '1',
+          amount: totalAmount,
+          accountCode: first.accountCode,
+          entries: [
+            {
+              id: `${idCounter}-1`,
+              accountCode: first.accountCode,
+              accountName: first.accountCode, // Placeholder, could map to names
+              debit: totalAmount,
+              credit: 0,
+              description: first.description
+            },
+            {
+              id: `${idCounter}-2`,
+              accountCode: second.accountCode,
+              accountName: second.accountCode,
+              debit: 0,
+              credit: totalAmount,
+              description: second.description
+            }
+          ]
+        };
+        entries.push(entry);
+        idCounter++;
+      }
+    });
+
+    return entries;
+  }
+
   // Get all journal entries with fallback
   async getAll(): Promise<JournalEntry[]> {
     try {
@@ -127,7 +190,7 @@ class EnhancedJournalApi {
         const response = await apiClient.get('/api/journal-entries');
         // Ensure response is an array, fallback to mock if not
         if (Array.isArray(response)) {
-          return response;
+          return this.transformFlatData(response);
         } else {
           console.warn('API response is not an array, using mock data');
           this.isApiAvailable = false;

@@ -242,7 +242,7 @@ export const JournalEntries: React.FC = () => {
               <TableBody>
                 {filteredEntries.map((entry) => (
                   <TableRow key={entry.id}>
-                    <TableCell>{entry.entryDate}</TableCell>
+                    <TableCell>{new Date(entry.entryDate).toLocaleDateString()}</TableCell>
                     <TableCell className="font-mono">{entry.reference}</TableCell>
                     <TableCell>{entry.description}</TableCell>
                     <TableCell className="text-right font-mono">
@@ -297,7 +297,7 @@ export const JournalEntries: React.FC = () => {
             <DialogHeader>
               <DialogTitle>Journal Entry Details - {selectedEntry.reference}</DialogTitle>
               <DialogDescription>
-                Entry dated {selectedEntry.entryDate} created by {selectedEntry.createdBy}
+                Entry dated {new Date(selectedEntry.entryDate).toLocaleDateString()} created by {getCreatorName(selectedEntry.createdBy)}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">

@@ -23,7 +23,9 @@ class LeaveController {
 
   async createLeaveRequest(req, res, next) {
     try {
-      const leaveRequest = await this.leaveService.createLeaveRequest(req.body);
+      const data = { ...req.body };
+      const files = req.files || [];
+      const leaveRequest = await this.leaveService.createLeaveRequest(data, files);
       res.status(201).json({ success: true, data: leaveRequest });
     } catch (error) {
       next(error);
