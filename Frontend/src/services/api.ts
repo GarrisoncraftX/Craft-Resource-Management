@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { apiClient } from '../utils/apiClient';
+import { lookupApiService } from './lookupApi';
 import type { Department, Role, BudgetItem, Payslip } from '../types/api';
 import type { Employee, UpdateEmployeeRequest } from '../types/hr';
 import type { Asset, AssetStatistics } from '@/types/asset';
@@ -61,13 +62,7 @@ function mapToFrontendBudget(budget: BudgetItem): BudgetItem {
   };
 }
 
-export async function fetchDepartments(): Promise<Department[]> {
-  return apiClient.get('/api/lookup/departments');
-}
 
-export async function fetchRoles(): Promise<Role[]> {
-  return apiClient.get('/api/lookup/roles');
-}
 
 export async function fetchEmployees(): Promise<Employee[]> {
   return apiClient.get('/hr/employees/list');
@@ -297,5 +292,13 @@ export async function deleteSystem(id: number | string) {
   return apiClient.delete(`/configs/${id}`);
 }
 
+
+export async function fetchDepartments(): Promise<Department[]> {
+  return lookupApiService.getDepartments();
+}
+
+export async function fetchRoles(): Promise<Role[]> {
+  return lookupApiService.getRoles();
+}
 
 export type { Department, Role, BudgetItem, Employee, UpdateEmployeeRequest, Payslip };
