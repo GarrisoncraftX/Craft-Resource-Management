@@ -303,6 +303,11 @@ public class PayrollServiceImpl implements PayrollService {
         performanceReviewRepository.deleteById(id);
     }
 
+    @Override
+    public List<Payslip> getPayslipsByUser(User user) {
+        return payslipRepository.findByUserOrderByPayPeriodEndDesc(user);
+    }
+
     private void analyzePerformanceReview(Payslip payslip) {
         // Prepare prompt for NLP analysis
         String prompt = "Analyze the provided performance review text. Determine the overall sentiment (e.g., 'Positive', 'Neutral', 'Needs Improvement'), identify recurring themes, and pinpoint specific strengths and areas for development. Provide a concise summary of the analysis. If actionable insights or areas for growth are identified, present them in a supportive and constructive manner. Prioritize clarity, conciseness, and a humane tone in your response: "
@@ -314,7 +319,7 @@ public class PayrollServiceImpl implements PayrollService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new OpenAIClientException("Payroll processing interrupted unexpectedly.", e);
-            
+
         } catch (Exception e) {
             logger.error("Error during payroll processing: {}", e.getMessage());
         }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { apiClient } from '../utils/apiClient';
 import type { Department, Role, BudgetItem, Payslip } from '../types/api';
 import type { Employee, UpdateEmployeeRequest } from '../types/hr';
@@ -106,9 +107,41 @@ export async function deleteBudget(id: string | number): Promise<void> {
   return apiClient.delete(`/finance/budgets/${id}`);
 }
 
-export async function fetchPayslips(): Promise<Payslip[]> {
+export async function fetchPayslips(userId?: string): Promise<Payslip[]> {
+  if (userId) {
+    return apiClient.get(`/hr/payroll/payslips/user/${userId}`);
+  }
   return apiClient.get('/hr/payroll/payslips');
 }
+
+export async function fetchAttendance(userId: string): Promise<any[]> {
+  return apiClient.get(`/attendance/user/${userId}`);
+}
+
+// Helper functions to map backend data to UI format
+export const mapAttendanceToUI = (attendanceData: any[]) => {
+  return attendanceData.map((record: any) => ({
+    date: record.clockInTime ? new Date(record.clockInTime).toLocaleDateString() : 'N/A',
+    checkIn: record.clockInTime ? new Date(record.clockInTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
+    checkOut: record.clockOutTime ? new Date(record.clockOutTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
+    totalHours: record.clockInTime && record.clockOutTime
+      ? ((new Date(record.clockOutTime).getTime() - new Date(record.clockInTime).getTime()) / (1000 * 60 * 60)).toFixed(2)
+      : '0.00',
+    status: record.clockOutTime ? 'Present' : 'Incomplete'
+  }));
+};
+
+export const mapPayrollToUI = (payrollData: Payslip[]) => {
+  return payrollData.map((payslip: Payslip) => ({
+    period: `${new Date(payslip.payPeriodStart).toLocaleDateString()} - ${new Date(payslip.payPeriodEnd).toLocaleDateString()}`,
+    basicSalary: `$${(payslip.grossPay * 0.8).toFixed(2)}`, // Assuming 80% is basic salary
+    allowances: '$500.00', // Placeholder - can be calculated from actual allowances if available
+    overtime: '$156.25', // Placeholder - can be calculated from actual overtime if available
+    deductions: `$${(payslip.taxDeductions + payslip.otherDeductions).toFixed(2)}`,
+    netPay: `$${payslip.netPay.toFixed(2)}`,
+    status: payslip.payrollRun?.status === 'COMPLETED' ? 'Processed' : 'Pending'
+  }));
+};
 
 // Integrate Asset endpoints implemented in Java AssetController (@RequestMapping("/assets")).
 // We call '/assets' so the API Gateway forwards to Java backend. Keep these functions alongside other services.

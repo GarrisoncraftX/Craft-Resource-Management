@@ -11,7 +11,9 @@ import { Plus, Edit, Search } from 'lucide-react';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { JournalEntryForm } from './JournalEntryForm';
 import { journalApi } from '@/services/journalApi';
+import { fetchEmployees } from '@/services/api';
 import type { JournalEntry } from '@/types/journal';
+import type { Employee } from '@/types/hr';
 
 const getStatusBadgeVariant = (status: 'Draft' | 'Posted' | 'Approved'): 'default' | 'secondary' | 'outline' => {
   const statusMap: Record<'Draft' | 'Posted' | 'Approved', 'default' | 'secondary' | 'outline'> = {
@@ -25,6 +27,7 @@ const getStatusBadgeVariant = (status: 'Draft' | 'Posted' | 'Approved'): 'defaul
 
 export const JournalEntries: React.FC = () => {
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [isAddingEntry, setIsAddingEntry] = useState(false);
@@ -32,10 +35,20 @@ export const JournalEntries: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load journal entries on component mount
+  // Load journal entries and employees on component mount
   useEffect(() => {
     loadJournalEntries();
+    loadEmployees();
   }, []);
+
+  const loadEmployees = async () => {
+    try {
+      const employeeList = await fetchEmployees();
+      setEmployees(employeeList);
+    } catch (err) {
+      console.error('Error loading employees:', err);
+    }
+  };
 
   const loadJournalEntries = async () => {
     try {
@@ -98,7 +111,7 @@ export const JournalEntries: React.FC = () => {
   };
 
   const handleDeleteEntry = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this journal entry?')) {
+    if (globalThis.confirm('Are you sure you want to delete this journal entry?')) {
       try {
         setLoading(true);
         setError(null);
@@ -115,14 +128,20 @@ export const JournalEntries: React.FC = () => {
 
   const handleViewEntry = (entry: JournalEntry) => {
     setSelectedEntry(entry);
+    
   };
 
   const filteredEntries = journalEntries.filter(entry => {
-    const matchesSearch = entry.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         entry.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (entry.reference?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (entry.description?.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = selectedStatus === 'all' || entry.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
+
+  const getCreatorName = (createdBy: string) => {
+    const creator = employees.find(emp => emp.id == createdBy);
+    return creator ? `${creator.firstName} ${creator.lastName || ''}`.trim() : createdBy;
+  };
 
   return (
     <div className="space-y-6">
@@ -227,14 +246,14 @@ export const JournalEntries: React.FC = () => {
                     <TableCell className="font-mono">{entry.reference}</TableCell>
                     <TableCell>{entry.description}</TableCell>
                     <TableCell className="text-right font-mono">
-                      ${entry.totalDebit.toLocaleString()}
+                      ${entry.totalDebit?.toLocaleString() || '0'}
                     </TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(entry.status)}>
                         {entry.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{entry.createdBy}</TableCell>
+                    <TableCell>{getCreatorName(entry.createdBy)}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button 
@@ -296,7 +315,7 @@ export const JournalEntries: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {selectedEntry.entries.map((line) => (
+                  {(selectedEntry.entries || []).map((line) => (
                     <TableRow key={line.id}>
                       <TableCell>
                         <div>
@@ -316,10 +335,10 @@ export const JournalEntries: React.FC = () => {
                   <TableRow className="border-t-2">
                     <TableCell colSpan={2} className="font-medium">Totals</TableCell>
                     <TableCell className="text-right font-mono font-medium">
-                      ${selectedEntry.totalDebit.toFixed(2)}
+                      ${selectedEntry.totalDebit?.toFixed(2) || '0.00'}
                     </TableCell>
                     <TableCell className="text-right font-mono font-medium">
-                      ${selectedEntry.totalCredit.toFixed(2)}
+                      ${selectedEntry.totalCredit?.toFixed(2) || '0.00'}
                     </TableCell>
                   </TableRow>
                 </TableBody>

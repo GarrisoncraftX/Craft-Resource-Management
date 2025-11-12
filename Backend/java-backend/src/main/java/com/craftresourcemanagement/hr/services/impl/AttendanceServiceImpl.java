@@ -16,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -94,6 +95,11 @@ public class AttendanceServiceImpl implements AttendanceService {
             // Log error if logger is available
             return false;
         }
+    }
+
+    @Override
+    public List<Attendance> getAttendanceByUser(User user) {
+        return attendanceRepository.findByUserOrderByClockInTimeDesc(user);
     }
 
     // Inner class for biometric verification request payload

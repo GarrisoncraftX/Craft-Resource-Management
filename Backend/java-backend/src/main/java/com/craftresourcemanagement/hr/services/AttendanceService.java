@@ -4,6 +4,7 @@ import com.craftresourcemanagement.hr.entities.Attendance;
 import com.craftresourcemanagement.hr.entities.User;
 import com.craftresourcemanagement.hr.models.BiometricData;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface AttendanceService {
@@ -13,4 +14,6 @@ public interface AttendanceService {
 
     Attendance biometricClockIn(User user, BiometricData biometricData) throws IllegalStateException;
     Attendance biometricClockOut(User user, BiometricData biometricData) throws IllegalStateException;
+
+    List<Attendance> getAttendanceByUser(User user);
 }

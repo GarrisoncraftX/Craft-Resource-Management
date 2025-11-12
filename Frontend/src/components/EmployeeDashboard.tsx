@@ -12,9 +12,9 @@ import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign, } from 'l
 import { leaveApiService } from '@/services/leaveApi';
 import { LeaveBalance, LeaveRequest } from '@/types/leave';
 import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData';
+import { fetchAttendance, fetchPayslips, mapAttendanceToUI, mapPayrollToUI, Employee, fetchEmployeeById } from '@/services/api';
 import LeaveRequestForm from './modules/hr/LeaveRequestForm';
-import { DashboardKPIs } from '@/types/api';
-import { Employee, fetchEmployeeById } from '@/services/api';
+import { AttendancePayload, DashboardKPIs, Payslip } from '@/types/api';
 
 const calculateFormattedLeaveBalance = (totalDays: number): string => {
   if (totalDays >= 30) {
@@ -45,8 +45,8 @@ const processLeaveBalances = (data: LeaveBalance[]): { totalLeaveBalance: number
 
   const totalLeaveBalance = mostRecentBalances.length > 0
     ? mostRecentBalances.reduce((sum, item) => {
-      const parsedRemainingDays = parseFloat(item.remainingDays.toString().split('.')[0]);
-      return sum + (isNaN(parsedRemainingDays) ? 0 : parsedRemainingDays);
+      const parsedRemainingDays = Number.parseFloat(item.remainingDays.toString().split('.')[0]);
+      return sum + (Number.isNaN(parsedRemainingDays) ? 0 : parsedRemainingDays);
     }, 0)
     : 0;
 
@@ -62,6 +62,8 @@ export const EmployeeDashboard: React.FC = () => {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [isLeaveRequestFormOpen, setIsLeaveRequestFormOpen] = useState(false);
   const [employeeData, setEmployeeData] = useState<Employee | null>(null);
+  const [attendanceData, setAttendanceData] = useState<AttendancePayload[]>([]);
+  const [payrollData, setPayrollData] = useState<Payslip[]>([]);
   const toggleSidebar = () => { };
 
 
@@ -194,11 +196,23 @@ export const EmployeeDashboard: React.FC = () => {
         console.log("Fetch leave requests: ", leaveRequestsResponse)
         setLeaveRequests(leaveRequestsResponse);
 
+        // Fetch attendance data
+        const attendanceResponse = await fetchAttendance(user.userId);
+        console.log("Attendace records", attendanceResponse)
+        setAttendanceData(attendanceResponse);
+
+        // Fetch payroll data
+        const payrollResponse = await fetchPayslips(user.userId);
+        console.log("Payroll response", payrollResponse)
+        setPayrollData(payrollResponse);
+
       } catch (error) {
         console.error('Failed to fetch dashboard data, using mock data fallback.', error);
         setDashboardKPIs(mockDashboardKPIs);
         setFormattedLeaveBalance(calculateFormattedLeaveBalance(mockDashboardKPIs.leaveBalance));
         setLeaveRequests([]);
+        setAttendanceData([]);
+        setPayrollData([]);
       }
 
     };
@@ -370,7 +384,7 @@ export const EmployeeDashboard: React.FC = () => {
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>{mockAttendanceHistory.map((record) => (
+                  <TableBody>{(attendanceData.length > 0 ? mapAttendanceToUI(attendanceData) : mockAttendanceHistory).map((record) => (
                     <TableRow key={record.date}>
                       <TableCell>{record.date}</TableCell>
                       <TableCell>{record.checkIn}</TableCell>
@@ -474,7 +488,7 @@ export const EmployeeDashboard: React.FC = () => {
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>{mockPayrollHistory.map((payroll) => (
+                  <TableBody>{(payrollData.length > 0 ? mapPayrollToUI(payrollData) : mockPayrollHistory).map((payroll) => (
                     <TableRow key={payroll.period}>
                       <TableCell>{payroll.period}</TableCell>
                       <TableCell>{payroll.basicSalary}</TableCell>

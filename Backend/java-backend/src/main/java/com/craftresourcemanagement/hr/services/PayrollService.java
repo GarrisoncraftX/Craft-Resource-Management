@@ -54,4 +54,7 @@ public interface PayrollService {
     PerformanceReview getPerformanceReviewById(Long id);
     PerformanceReview updatePerformanceReview(Long id, PerformanceReview performanceReview);
     void deletePerformanceReview(Long id);
+
+    // Payslip by user
+    List<Payslip> getPayslipsByUser(User user);
 }

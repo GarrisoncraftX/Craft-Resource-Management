@@ -10,7 +10,7 @@ export const mockJournalEntries: JournalEntry[] = [
     totalDebit: 5000,
     totalCredit: 5000,
     status: 'Posted',
-    createdBy: 'System',
+    createdBy: '1',
     amount: 5000,
     accountCode: '1120',
     entries: [
@@ -26,7 +26,7 @@ export const mockJournalEntries: JournalEntry[] = [
     totalDebit: 5000,
     totalCredit: 5000,
     status: 'Posted',
-    createdBy: 'System',
+    createdBy: '1',
     amount: 5000,
     accountCode: '4100',
     entries: [
@@ -42,7 +42,7 @@ export const mockJournalEntries: JournalEntry[] = [
     totalDebit: 750,
     totalCredit: 750,
     status: 'Posted',
-    createdBy: 'System',
+    createdBy: '1',
     amount: 750,
     accountCode: '6100',
     entries: [
@@ -58,7 +58,7 @@ export const mockJournalEntries: JournalEntry[] = [
     totalDebit: 750,
     totalCredit: 750,
     status: 'Posted',
-    createdBy: 'System',
+    createdBy: '1',
     amount: 750,
     accountCode: '1120',
     entries: [
@@ -74,7 +74,7 @@ export const mockJournalEntries: JournalEntry[] = [
     totalDebit: 2500,
     totalCredit: 2500,
     status: 'Posted',
-    createdBy: 'System',
+    createdBy: '1',
     amount: 2500,
     accountCode: '2100',
     entries: [
@@ -90,7 +90,7 @@ export const mockJournalEntries: JournalEntry[] = [
     totalDebit: 2500,
     totalCredit: 2500,
     status: 'Posted',
-    createdBy: 'System',
+    createdBy: '1',
     amount: 2500,
     accountCode: '1120',
     entries: [
@@ -105,7 +105,7 @@ export const mockJournalEntries: JournalEntry[] = [
 class EnhancedJournalApi {
   private isApiAvailable = true;
   private mockData = [...mockJournalEntries];
-  private nextId = Math.max(...mockJournalEntries.map(e => parseInt(e.id))) + 1;
+  private nextId = Math.max(...mockJournalEntries.map(e => Number.parseInt(e.id))) + 1;
 
   // Check if API is available
   private async checkApiHealth(): Promise<boolean> {
@@ -125,7 +125,13 @@ class EnhancedJournalApi {
     try {
       if (this.isApiAvailable) {
         const response = await apiClient.get('/api/journal-entries');
-        return response;
+        // Ensure response is an array, fallback to mock if not
+        if (Array.isArray(response)) {
+          return response;
+        } else {
+          console.warn('API response is not an array, using mock data');
+          this.isApiAvailable = false;
+        }
       }
     } catch (error) {
       console.warn('Failed to fetch from API, using mock data:', error);
@@ -174,7 +180,7 @@ class EnhancedJournalApi {
       totalDebit: entry.amount,
       totalCredit: entry.amount,
       status: 'Draft',
-      createdBy: 'System',
+      createdBy: '1',
       entries: [
         {
           id: `${this.nextId}-1`,
@@ -250,7 +256,7 @@ class EnhancedJournalApi {
   // Reset mock data
   resetMockData(): void {
     this.mockData = [...mockJournalEntries];
-    this.nextId = Math.max(...mockJournalEntries.map(e => parseInt(e.id))) + 1;
+    this.nextId = Math.max(...mockJournalEntries.map(e => Number.parseInt(e.id))) + 1;
   }
 }
 
