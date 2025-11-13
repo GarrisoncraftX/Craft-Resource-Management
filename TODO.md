@@ -1,13 +1,24 @@
-# TODO: Fix Journal Entries Display
+# TODO: Implement Recent Activities for Employee Dashboard using Audit Log
 
-## Tasks
-- [x] Transform flat journal data into proper JournalEntry objects in journalApi.ts
-- [x] Format dates for display in JournalEntries.tsx
-- [x] Ensure reference, total amount, and created by are displayed correctly
+## Backend Changes (Java Backend)
 
-## Details
-- Group flat line items by entryDate and base description
-- Generate reference IDs for each entry
-- Calculate totalDebit and totalCredit
-- Set status to 'Posted' and createdBy to '1'
-- Format entryDate to readable format (e.g., MM/DD/YYYY)
+### 1. Update AuditLogRepository
+- [ ] Fix missing import for `List` in `AuditLogRepository.java`
+
+### 2. SystemService and SystemController
+- [x] Methods and endpoint already implemented
+
+## Frontend Changes
+
+### 3. Update types/api.ts
+- [ ] Add `AuditLog` interface
+
+### 4. Update api.ts
+- [ ] Add `fetchRecentActivities` function
+
+### 5. Update EmployeeDashboard.tsx
+- [ ] Replace recent activities logic with API call to audit logs
+
+## Testing and Followup
+- [ ] Test the dashboard to ensure recent activities display correctly from audit logs
+- [ ] Verify audit logs are being created in relevant controllers (attendance, leave, payroll, auth)

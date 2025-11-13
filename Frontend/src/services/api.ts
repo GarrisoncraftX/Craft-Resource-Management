@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { apiClient } from '../utils/apiClient';
 import { lookupApiService } from './lookupApi';
-import type { Department, Role, BudgetItem, Payslip } from '../types/api';
+import type { Department, Role, BudgetItem, Payslip, AuditLog } from '../types/api';
 import type { Employee, UpdateEmployeeRequest } from '../types/hr';
 import type { Asset, AssetStatistics } from '@/types/asset';
 
@@ -301,4 +301,8 @@ export async function fetchRoles(): Promise<Role[]> {
   return lookupApiService.getRoles();
 }
 
-export type { Department, Role, BudgetItem, Employee, UpdateEmployeeRequest, Payslip };
+export async function fetchRecentActivities(userId: string): Promise<AuditLog[]> {
+  return apiClient.get(`/system/audit-logs/user/${userId}/recent`);
+}
+
+export type { Department, Role, BudgetItem, Employee, UpdateEmployeeRequest, Payslip, AuditLog };

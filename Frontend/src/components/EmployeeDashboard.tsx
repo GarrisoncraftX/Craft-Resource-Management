@@ -12,7 +12,8 @@ import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign, } from 'l
 import { leaveApiService } from '@/services/leaveApi';
 import { LeaveBalance, LeaveRequest } from '@/types/leave';
 import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData';
-import { fetchAttendance, fetchPayslips, mapAttendanceToUI, mapPayrollToUI, Employee, fetchEmployeeById } from '@/services/api';
+import { fetchAttendance, fetchPayslips, mapAttendanceToUI, mapPayrollToUI, Employee, fetchEmployeeById, fetchRecentActivities } from '@/services/api';
+import { AuditLog } from '@/types/api';
 import LeaveRequestForm from './modules/hr/LeaveRequestForm';
 import { ITSupportForm } from './modules/hr/ITSupportForm';
 import { AttendancePayload, DashboardKPIs, Payslip } from '@/types/api';
@@ -209,37 +210,15 @@ export const EmployeeDashboard: React.FC = () => {
         console.log("Payroll response", payrollResponse)
         setPayrollData(payrollResponse);
 
-        // Generate recent activities
-        const activities = [];
-        if (attendanceResponse.length > 0) {
-          const latestAttendance = attendanceResponse.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-          activities.push({
-            id: `attendance-${latestAttendance.id}`,
-            message: `Clocked ${latestAttendance.checkIn ? 'in' : 'out'} successfully`,
-            timestamp: latestAttendance.date,
-            color: 'bg-green-500'
-          });
-        }
-        if (leaveRequestsResponse.length > 0) {
-          const latestLeave = leaveRequestsResponse.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-          activities.push({
-            id: `leave-${latestLeave.id}`,
-            message: `Leave request ${latestLeave.status.toLowerCase()}`,
-            timestamp: latestLeave.createdAt,
-            color: 'bg-blue-500'
-          });
-        }
-        if (payrollResponse.length > 0) {
-          const latestPayroll = payrollResponse.sort((a, b) => new Date(b.payPeriodEnd).getTime() - new Date(a.payPeriodEnd).getTime())[0];
-          activities.push({
-            id: `payroll-${latestPayroll.id}`,
-            message: 'Payslip generated',
-            timestamp: latestPayroll.payPeriodEnd,
-            color: 'bg-purple-500'
-          });
-        }
-        // Sort activities by timestamp descending
-        activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        // Fetch recent activities from audit logs
+        const auditLogsResponse = await fetchRecentActivities(user.userId);
+        console.log("Audit logs response", auditLogsResponse);
+        const activities = auditLogsResponse.map((log: AuditLog) => ({
+          id: `audit-${log.id}`,
+          message: log.action,
+          timestamp: log.timestamp,
+          color: 'bg-green-500' // Default color, can be customized based on action
+        }));
         setRecentActivities(activities.slice(0, 4)); // Limit to 4 recent activities
 
       } catch (error) {

@@ -18,6 +18,7 @@ public interface SystemService {
     AuditLog createAuditLog(AuditLog auditLog);
     List<AuditLog> getAllAuditLogs();
     AuditLog getAuditLogById(Long id);
+    List<AuditLog> getRecentAuditLogsForUser(String performedBy);
     AuditLog updateAuditLog(Long id, AuditLog auditLog);
     void deleteAuditLog(Long id);
 }
