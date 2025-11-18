@@ -1,17 +1,17 @@
-import { apiClient } from '../utils/apiClient';
+import { apiClient } from '@/utils/apiClient';
 import type {
   LeaveType,
   LeaveRequest,
   LeaveBalance,
   LeaveRequestForm,
   LeaveApprovalAction
-} from '../types/leave';
+} from '@/types/leave';
 import {
   mockLeaveTypes,
   mockLeaveRequests,
   mockLeaveBalances,
   mockLeaveStatistics
-} from '../types/leave';
+} from '@/types/leave';
 
 class LeaveApiService {
   private useMockData = false;
