@@ -1,6 +1,7 @@
 const express = require("express")
 const cors = require("cors")
 const dotenv  = require("dotenv")
+const multer = require("multer")
 const { errorHandler } = require("./src/middleware/errorHandler")
 
 // Import route modules
@@ -20,6 +21,9 @@ const PORT = process.env.PORT || 5001
 
 // Security middleware
 app.use(cors())
+
+// Configure multer for file uploads
+const upload = multer({ dest: 'uploads/' })
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))

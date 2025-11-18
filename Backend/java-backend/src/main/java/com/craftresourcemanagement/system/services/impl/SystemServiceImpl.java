@@ -73,6 +73,11 @@ public class SystemServiceImpl implements SystemService {
     }
 
     @Override
+    public List<AuditLog> getRecentAuditLogsForUser(String performedBy) {
+        return auditLogRepository.findTop4ByPerformedByOrderByTimestampDesc(performedBy);
+    }
+
+    @Override
     public AuditLog updateAuditLog(Long id, AuditLog auditLog) {
         Optional<AuditLog> existing = auditLogRepository.findById(id);
         if (existing.isPresent()) {

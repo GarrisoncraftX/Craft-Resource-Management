@@ -8,6 +8,7 @@ import com.craftresourcemanagement.hr.services.EmployeeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -75,6 +76,20 @@ public class AttendanceController {
             return ResponseEntity.ok(attendance);
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<?> getAttendanceByUser(@PathVariable Long userId) {
+        Optional<User> userOpt = employeeService.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("Invalid user ID");
+        }
+        try {
+            List<Attendance> attendances = attendanceService.getAttendanceByUser(userOpt.get());
+            return ResponseEntity.ok(attendances);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error fetching attendance records");
         }
     }
 }

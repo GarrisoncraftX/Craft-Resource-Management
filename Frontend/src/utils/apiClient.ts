@@ -2,7 +2,7 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5003';
 
-class ApiClient {
+export class ApiClient {
   private readonly baseURL: string;
 
   constructor(baseURL: string) {

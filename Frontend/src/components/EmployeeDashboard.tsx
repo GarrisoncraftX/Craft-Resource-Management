@@ -9,12 +9,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
 import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign, } from 'lucide-react';
-import { leaveApiService } from '@/services/leaveApi';
+import { leaveApiService } from '@/services/nodejsbackendapi/leaveApi';
 import { LeaveBalance, LeaveRequest } from '@/types/leave';
 import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData';
+import { fetchAttendance, fetchPayslips, mapAttendanceToUI, mapPayrollToUI, Employee, fetchEmployeeById, fetchRecentActivities } from '@/services/api';
+import { AuditLog } from '@/types/api';
 import LeaveRequestForm from './modules/hr/LeaveRequestForm';
-import { DashboardKPIs } from '@/types/api';
-import { Employee, fetchEmployeeById } from '@/services/api';
+import { ITSupportForm } from './modules/hr/ITSupportForm';
+import { AttendancePayload, DashboardKPIs, Payslip } from '@/types/api';
 
 const calculateFormattedLeaveBalance = (totalDays: number): string => {
   if (totalDays >= 30) {
@@ -45,8 +47,8 @@ const processLeaveBalances = (data: LeaveBalance[]): { totalLeaveBalance: number
 
   const totalLeaveBalance = mostRecentBalances.length > 0
     ? mostRecentBalances.reduce((sum, item) => {
-      const parsedRemainingDays = parseFloat(item.remainingDays.toString().split('.')[0]);
-      return sum + (isNaN(parsedRemainingDays) ? 0 : parsedRemainingDays);
+      const parsedRemainingDays = Number.parseFloat(item.remainingDays.toString().split('.')[0]);
+      return sum + (Number.isNaN(parsedRemainingDays) ? 0 : parsedRemainingDays);
     }, 0)
     : 0;
 
@@ -61,7 +63,11 @@ export const EmployeeDashboard: React.FC = () => {
   const [formattedLeaveBalance, setFormattedLeaveBalance] = useState<string>('');
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [isLeaveRequestFormOpen, setIsLeaveRequestFormOpen] = useState(false);
+  const [isITSupportFormOpen, setIsITSupportFormOpen] = useState(false);
   const [employeeData, setEmployeeData] = useState<Employee | null>(null);
+  const [attendanceData, setAttendanceData] = useState<AttendancePayload[]>([]);
+  const [payrollData, setPayrollData] = useState<Payslip[]>([]);
+  const [recentActivities, setRecentActivities] = useState<{ id: string; message: string; timestamp: string; color: string }[]>([]);
   const toggleSidebar = () => { };
 
 
@@ -194,11 +200,35 @@ export const EmployeeDashboard: React.FC = () => {
         console.log("Fetch leave requests: ", leaveRequestsResponse)
         setLeaveRequests(leaveRequestsResponse);
 
+        // Fetch attendance data
+        const attendanceResponse = await fetchAttendance(user.userId);
+        console.log("Attendace records", attendanceResponse)
+        setAttendanceData(attendanceResponse);
+
+        // Fetch payroll data
+        const payrollResponse = await fetchPayslips(user.userId);
+        console.log("Payroll response", payrollResponse)
+        setPayrollData(payrollResponse);
+
+        // Fetch recent activities from audit logs
+        const auditLogsResponse = await fetchRecentActivities(user.userId);
+        console.log("Audit logs response", auditLogsResponse);
+        const activities = auditLogsResponse.map((log: AuditLog) => ({
+          id: `audit-${log.id}`,
+          message: log.action,
+          timestamp: log.timestamp,
+          color: 'bg-green-500' // Default color, can be customized based on action
+        }));
+        setRecentActivities(activities.slice(0, 4)); // Limit to 4 recent activities
+
       } catch (error) {
         console.error('Failed to fetch dashboard data, using mock data fallback.', error);
         setDashboardKPIs(mockDashboardKPIs);
         setFormattedLeaveBalance(calculateFormattedLeaveBalance(mockDashboardKPIs.leaveBalance));
         setLeaveRequests([]);
+        setAttendanceData([]);
+        setPayrollData([]);
+        setRecentActivities([]);
       }
 
     };
@@ -370,7 +400,7 @@ export const EmployeeDashboard: React.FC = () => {
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>{mockAttendanceHistory.map((record) => (
+                  <TableBody>{(attendanceData.length > 0 ? mapAttendanceToUI(attendanceData) : mockAttendanceHistory).map((record) => (
                     <TableRow key={record.date}>
                       <TableCell>{record.date}</TableCell>
                       <TableCell>{record.checkIn}</TableCell>
@@ -474,7 +504,7 @@ export const EmployeeDashboard: React.FC = () => {
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>{mockPayrollHistory.map((payroll) => (
+                  <TableBody>{(payrollData.length > 0 ? mapPayrollToUI(payrollData) : mockPayrollHistory).map((payroll) => (
                     <TableRow key={payroll.period}>
                       <TableCell>{payroll.period}</TableCell>
                       <TableCell>{payroll.basicSalary}</TableCell>
@@ -515,28 +545,28 @@ export const EmployeeDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <Button variant="outline" className="justify-start h-auto p-4">
+                <Button variant="outline" className="justify-start h-auto p-4" onClick={() => setIsLeaveRequestFormOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   <div className="text-left">
                     <div className="font-medium">Submit Leave</div>
                     <div className="text-xs text-muted-foreground">Request time off</div>
                   </div>
                 </Button>
-                <Button variant="outline" className="justify-start h-auto p-4">
+                <Button variant="outline" className="justify-start h-auto p-4" onClick={() => setActiveTab('payroll')}>
                   <FileText className="h-4 w-4 mr-2" />
                   <div className="text-left">
                     <div className="font-medium">View Payslips</div>
                     <div className="text-xs text-muted-foreground">Download payslips</div>
                   </div>
                 </Button>
-                <Button variant="outline" className="justify-start h-auto p-4">
+                <Button variant="outline" className="justify-start h-auto p-4" onClick={() => navigate('/profile')}>
                   <Users className="h-4 w-4 mr-2" />
                   <div className="text-left">
                     <div className="font-medium">Update Profile</div>
                     <div className="text-xs text-muted-foreground">Edit personal info</div>
                   </div>
                 </Button>
-                <Button variant="outline" className="justify-start h-auto p-4">
+                <Button variant="outline" className="justify-start h-auto p-4" onClick={() => setIsITSupportFormOpen(true)}>
                   <Clock className="h-4 w-4 mr-2" />
                   <div className="text-left">
                     <div className="font-medium">IT Support</div>
@@ -559,34 +589,17 @@ export const EmployeeDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Clocked in successfully</p>
-                    <p className="text-xs text-muted-foreground">Today at 8:30 AM</p>
+                {recentActivities.length > 0 ? recentActivities.map((activity) => (
+                  <div key={activity.id} className="flex items-start space-x-3">
+                    <div className={`w-2 h-2 ${activity.color} rounded-full mt-2`}></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{activity.message}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(activity.timestamp).toLocaleString()}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Leave request approved</p>
-                    <p className="text-xs text-muted-foreground">Yesterday at 2:15 PM</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Payslip generated</p>
-                    <p className="text-xs text-muted-foreground">3 days ago at 10:00 AM</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Profile updated</p>
-                    <p className="text-xs text-muted-foreground">1 week ago at 4:45 PM</p>
-                  </div>
-                </div>
+                )) : (
+                  <p className="text-sm text-muted-foreground">No recent activities</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -600,6 +613,11 @@ export const EmployeeDashboard: React.FC = () => {
           setIsLeaveRequestFormOpen(false);
           refreshLeaveRequests();
         }}
+      />
+      <ITSupportForm
+        isOpen={isITSupportFormOpen}
+        onClose={() => setIsITSupportFormOpen(false)}
+        onSuccess={() => setIsITSupportFormOpen(false)}
       />
     </div>
   );

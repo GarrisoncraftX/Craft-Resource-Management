@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, Edit, Eye, UserPlus } from 'lucide-react';
-import { fetchEmployees, fetchDepartments, fetchRoles } from '@/services/api';
+import { fetchEmployees } from '@/services/api';
+import { lookupApiService } from '@/services/lookupApi';
 import type { Employee } from '@/types/hr';
 import type { Department, Role } from '@/types/api';
 import { EditEmployeeDialog } from './EditEmployeeDialog';
@@ -68,8 +69,8 @@ export const EmployeeProfiles: React.FC = () => {
       try {
         const [employeesData, departmentsData, rolesData] = await Promise.all([
           fetchEmployees(),
-          fetchDepartments(),
-          fetchRoles()
+          lookupApiService.getDepartments(),
+          lookupApiService.getRoles()
         ]);
         setEmployees(employeesData);
         setDepartments(departmentsData);

@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BudgetItem, Department } from '@/types/api';
-import { fetchDepartments } from '@/services/api';
+import { lookupApiService } from '@/services/lookupApi';
 
 interface BudgetFormProps {
   budget?: BudgetItem;
@@ -52,7 +52,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ budget, onSubmit, onCanc
   useEffect(() => {
     const fetchDepartmentsData = async () => {
       try {
-        const departmentsData = await fetchDepartments();
+        const departmentsData = await lookupApiService.getDepartments();
         setDepartments(departmentsData);
       } catch (error) {
         console.error("Failed to fetch departments", error);

@@ -23,7 +23,39 @@ class LeaveController {
 
   async createLeaveRequest(req, res, next) {
     try {
-      const leaveRequest = await this.leaveService.createLeaveRequest(req.body);
+      const data = { ...req.body };
+      const files = req.files || [];
+
+      // Validate required fields
+      const requiredFields = ['userId', 'leaveTypeId', 'startDate', 'endDate'];
+      const missingFields = requiredFields.filter(field => !data[field]);
+
+      if (missingFields.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Missing required fields: ${missingFields.join(', ')}`
+        });
+      }
+
+      // Validate date format and logic
+      const startDate = new Date(data.startDate);
+      const endDate = new Date(data.endDate);
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid date format for startDate or endDate'
+        });
+      }
+
+      if (startDate > endDate) {
+        return res.status(400).json({
+          success: false,
+          message: 'Start date cannot be after end date'
+        });
+      }
+
+      const leaveRequest = await this.leaveService.createLeaveRequest(data, files);
       res.status(201).json({ success: true, data: leaveRequest });
     } catch (error) {
       next(error);

@@ -87,4 +87,9 @@ public class SystemController {
         systemService.deleteAuditLog(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/audit-logs/user/{performedBy}/recent")
+    public ResponseEntity<List<AuditLog>> getRecentAuditLogsForUser(@PathVariable String performedBy) {
+        return ResponseEntity.ok(systemService.getRecentAuditLogsForUser(performedBy));
+    }
 }

@@ -2,19 +2,23 @@ package com.craftresourcemanagement.hr.controllers;
 
 import com.craftresourcemanagement.hr.entities.*;
 import com.craftresourcemanagement.hr.services.PayrollService;
+import com.craftresourcemanagement.hr.services.EmployeeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/hr/payroll")
 public class PayrollController {
 
     private final PayrollService payrollService;
+    private final EmployeeService employeeService;
 
-    public PayrollController(PayrollService payrollService) {
+    public PayrollController(PayrollService payrollService, EmployeeService employeeService) {
         this.payrollService = payrollService;
+        this.employeeService = employeeService;
     }
 
     // PayrollRun endpoints
@@ -260,5 +264,19 @@ public class PayrollController {
     public ResponseEntity<Void> deletePerformanceReview(@PathVariable Long id) {
         payrollService.deletePerformanceReview(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/payslips/user/{userId}")
+    public ResponseEntity<List<Payslip>> getPayslipsByUser(@PathVariable Long userId) {
+        Optional<User> userOpt = employeeService.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(null);
+        }
+        try {
+            List<Payslip> payslips = payrollService.getPayslipsByUser(userOpt.get());
+            return ResponseEntity.ok(payslips);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(null);
+        }
     }
 }
