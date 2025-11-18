@@ -130,6 +130,99 @@ class BiometricModel:
         except Exception as e:
             logger.error(f"Error logging biometric access: {e}")
             # Don't raise here as this is just logging
+
+    def log_attendance(self, user_id: str, action: str, method: str, success: bool, details: Optional[Dict] = None):
+        """Log attendance transactions for audit purposes"""
+        try:
+            query = """
+                INSERT INTO attendance_audit_logs (user_id, action, method, success, details, timestamp)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """
+
+            self.db.execute_query(
+                query,
+                (user_id, action, method, success, json.dumps(details) if details else None, datetime.now()),
+                fetch=False
+            )
+
+        except Exception as e:
+            logger.error(f"Error logging attendance: {e}")
+            # Don't raise here as this is just logging
+
+    def get_employee_last_attendance(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get employee's last attendance record to determine check-in/out action"""
+        try:
+            query = """
+                SELECT clock_in_time, clock_out_time, status
+                FROM attendance_records
+                WHERE user_id = %s
+                ORDER BY clock_in_time DESC
+                LIMIT 1
+            """
+
+            result = self.db.execute_query(query, (user_id,))
+
+            if result:
+                record = result[0]
+                return {
+                    'clock_in_time': record['clock_in_time'],
+                    'clock_out_time': record['clock_out_time'],
+                    'status': record.get('status', 'unknown')
+                }
+            return None
+
+        except Exception as e:
+            logger.error(f"Error getting last attendance for user {user_id}: {e}")
+            raise e
+
+    def record_attendance(self, user_id: str, action: str, method: str, location: Optional[str] = None) -> Dict[str, Any]:
+        """Record attendance check-in or check-out"""
+        try:
+            now = datetime.now()
+
+            if action == 'clock_in':
+                # Insert new attendance record
+                query = """
+                    INSERT INTO attendance_records (user_id, clock_in_time, clock_in_method, status, created_at, updated_at)
+                    VALUES (%s, %s, %s, 'present', %s, %s)
+                """
+                params = (user_id, now, method, now, now)
+                record_id = self.db.execute_query(query, params, fetch=False)
+
+                return {
+                    'record_id': record_id,
+                    'action': 'clock_in',
+                    'timestamp': now.isoformat(),
+                    'method': method
+                }
+
+            elif action == 'clock_out':
+                # Update existing attendance record with clock out time
+                query = """
+                    UPDATE attendance_records
+                    SET clock_out_time = %s, clock_out_method = %s, total_hours = TIMESTAMPDIFF(HOUR, clock_in_time, %s), updated_at = %s
+                    WHERE user_id = %s AND clock_out_time IS NULL
+                    ORDER BY clock_in_time DESC
+                    LIMIT 1
+                """
+                params = (now, method, now, now, user_id)
+                affected_rows = self.db.execute_query(query, params, fetch=False)
+
+                if affected_rows == 0:
+                    raise Exception("No open attendance record found for clock out")
+
+                return {
+                    'action': 'clock_out',
+                    'timestamp': now.isoformat(),
+                    'method': method
+                }
+
+            else:
+                raise Exception(f"Invalid action: {action}")
+
+        except Exception as e:
+            logger.error(f"Error recording attendance for user {user_id}: {e}")
+            raise e
     
     def get_biometric_statistics(self, filters: Optional[Dict] = None) -> Dict[str, Any]:
         """Get biometric system statistics"""

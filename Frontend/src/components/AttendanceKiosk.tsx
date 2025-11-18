@@ -7,8 +7,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WebcamCapture } from './WebcamCapture';
+import { QRCodeScanner } from './QRCodeScanner';
 import { QRCodeDisplay } from './QRCodeDisplay';
-import { Clock, Scan, Camera, KeyRound, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Clock, Scan, Camera, KeyRound, CheckCircle, Loader2, QrCode } from 'lucide-react';
 import { apiClient } from '@/utils/apiClient';
 import { useToast } from '@/hooks/use-toast';
 
@@ -40,14 +41,24 @@ export const AttendanceKiosk: React.FC = () => {
 
   const handleQRScan = async (qrData: string) => {
     try {
-      const parsedData = JSON.parse(qrData);
-      if (parsedData.type === 'attendance' && parsedData.employeeId) {
-        await processAttendance('qr', { employeeId: parsedData.employeeId });
+      const response = await apiClient.post('/biometric/verify', {
+        qrData,
+        verificationMethod: 'qr',
+      });
+
+      if (response.valid) {
+        await processAttendance('qr', { employeeId: response.employeeId });
+      } else {
+        toast({
+          title: 'Invalid QR Code',
+          description: 'Please scan a valid attendance QR code',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       toast({
-        title: 'Invalid QR Code',
-        description: 'Please scan a valid attendance QR code',
+        title: 'QR Code Validation Failed',
+        description: error instanceof Error ? error.message : 'Please try again',
         variant: 'destructive',
       });
     }
@@ -67,30 +78,62 @@ export const AttendanceKiosk: React.FC = () => {
 
   const processAttendance = async (
     method: 'face' | 'qr' | 'manual',
-    payload: any
+    payload: Record<string, unknown>
   ) => {
     setIsProcessing(true);
 
     try {
-      // First, check employee's last attendance status to auto-determine action
       let action: 'clock-in' | 'clock-out' = 'clock-in';
-      
-      // Make API call to attendance endpoint
-      const endpoint = `/hr/attendance/${action}`;
-      const response = await apiClient.post(endpoint, {
-        ...payload,
-        verificationMethod: method,
-      });
 
-      // Determine if it was clock-in or clock-out from response
-      action = response.action || action;
-      setLastAction(action);
-      setEmployeeName(response.employeeName || 'Employee');
+      if (method === 'face') {
+        const endpoint = `/biometric/verify`;
+        const response = await apiClient.post(endpoint, {
+          faceData: payload.faceData,
+          verificationMethod: 'face',
+        });
 
-      toast({
-        title: 'Success!',
-        description: `Successfully ${action === 'clock-in' ? 'clocked in' : 'clocked out'}`,
-      });
+        // Determine action based on response
+        action = response.action || 'clock-in';
+        setLastAction(action);
+        setEmployeeName(response.employeeName || 'Employee');
+
+        toast({
+          title: 'Success!',
+          description: `Successfully ${action === 'clock-in' ? 'clocked in' : 'clocked out'}`,
+        });
+      } else if (method === 'qr') {
+        // Handle QR code attendance
+        const endpoint = `/hr/attendance/${action}`;
+        const response = await apiClient.post(endpoint, {
+          ...payload,
+          verificationMethod: 'qr',
+        });
+
+        action = response.action || action;
+        setLastAction(action);
+        setEmployeeName(response.employeeName || 'Employee');
+
+        toast({
+          title: 'Success!',
+          description: `Successfully ${action === 'clock-in' ? 'clocked in' : 'clocked out'}`,
+        });
+      } else {
+        // Manual entry
+        const endpoint = `/hr/attendance/${action}`;
+        const response = await apiClient.post(endpoint, {
+          ...payload,
+          verificationMethod: 'manual',
+        });
+
+        action = response.action || action;
+        setLastAction(action);
+        setEmployeeName(response.employeeName || 'Employee');
+
+        toast({
+          title: 'Success!',
+          description: `Successfully ${action === 'clock-in' ? 'clocked in' : 'clocked out'}`,
+        });
+      }
 
       // Reset form
       setTimeout(() => {
@@ -177,8 +220,8 @@ export const AttendanceKiosk: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
-            <Tabs value={activeMethod} onValueChange={(v) => setActiveMethod(v as any)}>
-              <TabsList className="grid w-full grid-cols-3 mb-6">
+            <Tabs value={activeMethod} onValueChange={(v) => setActiveMethod(v as 'face' | 'qr' | 'manual')}>
+              <TabsList className="grid w-full grid-cols-4 mb-6">
                 <TabsTrigger value="face" className="text-base">
                   <Camera className="mr-2 h-5 w-5" />
                   Face ID
@@ -186,6 +229,10 @@ export const AttendanceKiosk: React.FC = () => {
                 <TabsTrigger value="qr" className="text-base">
                   <Scan className="mr-2 h-5 w-5" />
                   QR Code
+                </TabsTrigger>
+                <TabsTrigger value="qr-display" className="text-base">
+                  <QrCode className="mr-2 h-5 w-5" />
+                  Show QR
                 </TabsTrigger>
                 <TabsTrigger value="manual" className="text-base">
                   <KeyRound className="mr-2 h-5 w-5" />
@@ -234,19 +281,26 @@ export const AttendanceKiosk: React.FC = () => {
                 <Alert>
                   <Scan className="h-4 w-4" />
                   <AlertDescription>
-                    Scan the QR code on your mobile app to mark attendance.
+                    Scan your QR code to mark attendance.
                   </AlertDescription>
                 </Alert>
-                
+
                 <div className="flex justify-center">
-                  <div className="text-center space-y-4">
-                    <p className="text-lg font-semibold text-muted-foreground">
-                      Scan with your mobile app
-                    </p>
-                    <div className="text-sm text-muted-foreground">
-                      Open your employee app → Scan QR Code → Point at this kiosk
-                    </div>
-                  </div>
+                  <QRCodeScanner onScan={handleQRScan} isActive={true} />
+                </div>
+              </TabsContent>
+
+              {/* QR Display Method */}
+              <TabsContent value="qr-display" className="space-y-6">
+                <Alert>
+                  <QrCode className="h-4 w-4" />
+                  <AlertDescription>
+                    Display your personal QR code for attendance scanning.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="flex justify-center">
+                  <QRCodeDisplay />
                 </div>
               </TabsContent>
 

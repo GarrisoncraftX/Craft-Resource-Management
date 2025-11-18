@@ -54,3 +54,35 @@ def card_lookup():
 def biometric_statistics():
     response, status_code = biometric_controller.get_biometric_statistics()
     return jsonify(response), status_code
+
+@biometric_bp.route('/biometric/kiosk/qr-display', methods=['GET'])
+@auth_required
+def kiosk_qr_display():
+    """Generate QR code for kiosk display"""
+    response, status_code = biometric_controller.generate_kiosk_qr()
+    return jsonify(response), status_code
+
+# Attendance endpoints
+@biometric_bp.route('/attendance/clock-in', methods=['POST'])
+@optional_auth
+def attendance_clock_in():
+    response, status_code = biometric_controller.attendance_clock_in()
+    return jsonify(response), status_code
+
+@biometric_bp.route('/attendance/clock-out', methods=['POST'])
+@auth_required
+def attendance_clock_out():
+    response, status_code = biometric_controller.attendance_clock_out()
+    return jsonify(response), status_code
+
+@biometric_bp.route('/attendance/status', methods=['GET'])
+@auth_required
+def attendance_status():
+    response, status_code = biometric_controller.get_attendance_status()
+    return jsonify(response), status_code
+
+@biometric_bp.route('/biometric/attendance/qr-scan', methods=['POST'])
+@auth_required
+def qr_attendance_scan():
+    response, status_code = biometric_controller.scan_kiosk_qr()
+    return jsonify(response), status_code

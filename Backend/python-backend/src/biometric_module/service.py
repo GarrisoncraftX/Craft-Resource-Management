@@ -11,6 +11,10 @@ from src.config.app import Config
 import os
 import time
 import platform
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import padding
+import secrets
 
 # Replacing placeholder MobileFaceNet with a more complete MobileFaceNet architecture
 # This is a simplified MobileFaceNet implementation for demonstration purposes
@@ -352,6 +356,8 @@ class BiometricService:
         self.face_detector = None
         self.face_recognition_threshold = Config.FACE_RECOGNITION_THRESHOLD
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # AES-256 encryption key (should be from environment variable in production)
+        self.encryption_key = os.getenv('BIOMETRIC_ENCRYPTION_KEY', secrets.token_bytes(32))
         self._initialize_face_detection()
         self._initialize_face_recognition_model()
     
@@ -474,12 +480,20 @@ class BiometricService:
     def process_face_image(self, base64_image: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         """Process base64 face image and extract features using lightweight model"""
         try:
+            # Perform liveness detection first
+            is_live, liveness_error = self.detect_liveness(base64_image)
+            if not is_live:
+                return None, f"Liveness detection failed: {liveness_error}"
+
             image, error = self._decode_base64_image(base64_image)
             if error:
                 return None, error
 
             if self.face_detector is None or self.face_recognition_model is None:
-                return self._create_fallback_template(base64.b64decode(base64_image.split(',')[1] if ',' in base64_image else base64_image)), None
+                fallback_template = self._create_fallback_template(base64.b64decode(base64_image.split(',')[1] if ',' in base64_image else base64_image))
+                # Encrypt fallback template
+                fallback_template['template_data'] = self.encrypt_template(fallback_template['template_data'])
+                return fallback_template, None
 
             box, error = self._detect_face(image)
             if error:
@@ -495,9 +509,12 @@ class BiometricService:
             template_hash = hashlib.sha256(features_np.tobytes()).hexdigest()
             template_data = base64.b64encode(features_np.tobytes()).decode('utf-8')
 
+            # Encrypt the template data
+            encrypted_template_data = self.encrypt_template(template_data)
+
             return {
                 'template_hash': template_hash,
-                'template_data': template_data,
+                'template_data': encrypted_template_data,  # Store encrypted data
                 'method': 'lightweight_dnn',
                 'face_coordinates': {'x': int(x1), 'y': int(y1), 'width': int(x2 - x1), 'height': int(y2 - y1)}
             }, None
@@ -509,24 +526,27 @@ class BiometricService:
     def compare_face_templates(self, template1_data: str, template2_data: str) -> float:
         """Compare two face templates and return similarity score"""
         try:
+            # Decrypt templates first
+            decrypted_template1 = self.decrypt_template(template1_data)
+            decrypted_template2 = self.decrypt_template(template2_data)
+
             # Ensure inputs are strings
-            if isinstance(template1_data, bytes):
-                # Instead of decoding to utf-8, treat as base64 bytes directly
-                template1_data = template1_data.decode('latin1')
-                logger.debug(f"Converted template1 from bytes to string, length: {len(template1_data)}")
-            if isinstance(template2_data, bytes):
-                template2_data = template2_data.decode('latin1')
-                logger.debug(f"Converted template2 from bytes to string, length: {len(template2_data)}")
+            if isinstance(decrypted_template1, bytes):
+                decrypted_template1 = decrypted_template1.decode('latin1')
+                logger.debug(f"Converted template1 from bytes to string, length: {len(decrypted_template1)}")
+            if isinstance(decrypted_template2, bytes):
+                decrypted_template2 = decrypted_template2.decode('latin1')
+                logger.debug(f"Converted template2 from bytes to string, length: {len(decrypted_template2)}")
 
             # First, try to decode as base64
             try:
-                decoded1 = base64.b64decode(template1_data)
-                decoded2 = base64.b64decode(template2_data)
+                decoded1 = base64.b64decode(decrypted_template1)
+                decoded2 = base64.b64decode(decrypted_template2)
                 logger.debug(f"Successfully decoded base64 - Template1: {len(decoded1)} bytes, Template2: {len(decoded2)} bytes")
             except Exception as decode_error:
                 logger.debug(f"Base64 decode failed: {decode_error}. Assuming hash-based templates.")
                 # If not base64, treat as hash strings
-                return 1.0 if template1_data == template2_data else 0.0
+                return 1.0 if decrypted_template1 == decrypted_template2 else 0.0
 
             logger.debug(f"Template 1 size: {len(decoded1)}, Template 2 size: {len(decoded2)}")
 
@@ -645,38 +665,156 @@ class BiometricService:
                 image_data = base64.b64decode(base64_image.split(',')[1])
             else:
                 image_data = base64.b64decode(base64_image)
-            
+
             nparr = np.frombuffer(image_data, np.uint8)
             image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            
+
             if image is None:
                 return False, "Invalid image format"
-            
+
             # Check image dimensions
             height, width = image.shape[:2]
             if width < 100 or height < 100:
                 return False, "Image too small (minimum 100x100 pixels)"
-            
+
             if width > 2000 or height > 2000:
                 return False, "Image too large (maximum 2000x2000 pixels)"
-            
+
             # Check image brightness
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             mean_brightness = np.mean(gray)
-            
+
             if mean_brightness < 50:
                 return False, "Image too dark"
-            
+
             if mean_brightness > 200:
                 return False, "Image too bright"
-            
+
             # Check image blur (using Laplacian variance)
             laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
             if laplacian_var < 100:
                 return False, "Image too blurry"
-            
+
             return True, None
-            
+
         except Exception as e:
             logger.error(f"Error validating image quality: {e}")
             return False, f"Error validating image: {str(e)}"
+
+    def encrypt_template(self, template_data: str) -> str:
+        """Encrypt biometric template using AES-256"""
+        try:
+            # Generate a random IV for each encryption
+            iv = secrets.token_bytes(16)
+
+            # Create cipher
+            cipher = Cipher(algorithms.AES(self.encryption_key), modes.CBC(iv), backend=default_backend())
+            encryptor = cipher.encryptor()
+
+            # Pad the data
+            padder = padding.PKCS7(algorithms.AES.block_size).padder()
+            padded_data = padder.update(template_data.encode()) + padder.finalize()
+
+            # Encrypt
+            encrypted_data = encryptor.update(padded_data) + encryptor.finalize()
+
+            # Combine IV and encrypted data
+            encrypted_blob = iv + encrypted_data
+
+            # Return as base64
+            return base64.b64encode(encrypted_blob).decode('utf-8')
+
+        except Exception as e:
+            logger.error(f"Error encrypting template: {e}")
+            raise e
+
+    def decrypt_template(self, encrypted_template: str) -> str:
+        """Decrypt biometric template using AES-256"""
+        try:
+            # Decode from base64
+            encrypted_blob = base64.b64decode(encrypted_template)
+
+            # Extract IV and encrypted data
+            iv = encrypted_blob[:16]
+            encrypted_data = encrypted_blob[16:]
+
+            # Create cipher
+            cipher = Cipher(algorithms.AES(self.encryption_key), modes.CBC(iv), backend=default_backend())
+            decryptor = cipher.decryptor()
+
+            # Decrypt
+            padded_data = decryptor.update(encrypted_data) + decryptor.finalize()
+
+            # Unpad
+            unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
+            data = unpadder.update(padded_data) + unpadder.finalize()
+
+            return data.decode('utf-8')
+
+        except Exception as e:
+            logger.error(f"Error decrypting template: {e}")
+            raise e
+
+    def detect_liveness(self, base64_image: str) -> Tuple[bool, Optional[str]]:
+        """Perform liveness detection to prevent spoofing attacks"""
+        try:
+            # Decode base64 image
+            if ',' in base64_image:
+                image_data = base64.b64decode(base64_image.split(',')[1])
+            else:
+                image_data = base64.b64decode(base64_image)
+
+            nparr = np.frombuffer(image_data, np.uint8)
+            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+            if image is None:
+                return False, "Invalid image format"
+
+            # Convert to grayscale for analysis
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+            # Method 1: Check for texture patterns (simple heuristic)
+            # Real faces have more complex texture patterns than printed photos
+            laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+            if laplacian_var < 50:  # Too smooth, might be printed
+                return False, "Image appears to be a printed photo (low texture variance)"
+
+            # Method 2: Check for color distribution (simple heuristic)
+            # Real faces have more natural color distribution
+            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+            hist = cv2.calcHist([hsv], [0, 1, 2], None, [8, 8, 8], [0, 180, 0, 256, 0, 256])
+            hist = cv2.normalize(hist, hist).flatten()
+
+            # Check entropy of color distribution
+            entropy = -np.sum(hist * np.log2(hist + 1e-10))
+            if entropy < 2.0:  # Too low entropy, might be artificial
+                return False, "Image appears artificial (low color entropy)"
+
+            # Method 3: Check for motion blur or unnatural blur patterns
+            # This is a simple check - in production, you'd use more sophisticated methods
+            sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+            sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+            sobel_combined = np.sqrt(sobelx**2 + sobely**2)
+
+            edge_density = np.mean(sobel_combined > 50)
+            if edge_density < 0.05:  # Too few edges, might be heavily blurred
+                return False, "Image appears heavily blurred or artificial"
+
+            # Method 4: Check for specular highlights (screen reflections)
+            # Convert to LAB color space for better specular detection
+            lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+            l_channel = lab[:, :, 0]
+
+            # Look for bright spots that might indicate screen reflections
+            bright_pixels = np.sum(l_channel > 220)
+            total_pixels = l_channel.size
+            bright_ratio = bright_pixels / total_pixels
+
+            if bright_ratio > 0.1:  # Too many bright pixels, might be screen reflection
+                return False, "Image appears to have screen reflections"
+
+            return True, None
+
+        except Exception as e:
+            logger.error(f"Error in liveness detection: {e}")
+            return False, f"Error performing liveness detection: {str(e)}"

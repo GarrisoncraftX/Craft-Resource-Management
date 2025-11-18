@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, Loader2, AlertTriangle, UserCheck } from 'lucide-react';
 import { visitorApiService } from '@/services/visitorApi';
-import { apiClient } from '@/utils/apiClient';
+import { hrApiService } from '@/services/javabackendapi/hrApi';
 
 export const VisitorCheckIn: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -60,8 +60,8 @@ export const VisitorCheckIn: React.FC = () => {
 
   const loadEmployees = async () => {
     try {
-      const response = await apiClient.get('/hr/employees/list');
-      const employeeList = response.map((emp: any) => ({
+      const response = await hrApiService.listEmployees();
+      const employeeList = response.map((emp) => ({
         id: emp.id,
         name: `${emp.firstName} ${emp.lastName}`,
       }));
@@ -95,7 +95,7 @@ export const VisitorCheckIn: React.FC = () => {
     try {
       await visitorApiService.checkInVisitor({
         ...formData,
-        visiting_employee_id: parseInt(formData.visiting_employee_id),
+        visiting_employee_id: Number.parseInt(formData.visiting_employee_id),
         qr_token: token,
       });
 
