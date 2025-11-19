@@ -3,6 +3,8 @@ const cors = require("cors");
 const morgan = require("morgan");
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
+const http = require("http");
+const https = require("https");
 
 require("dotenv").config();
 
@@ -13,12 +15,12 @@ const PORT = process.env.PORT || 5003;
 app.use(morgan("combined"));
 
 // Enable CORS for frontend domain
-const allowedOrigins = [process.env.FRONTEND_URL || "http://localhost:5173"];
+const allowedOrigins = [process.env.FRONTEND_URL || "http://localhost:5173", "*"]; 
 app.use(cors({
   origin: function(origin, callback){
-    // allow requests with no origin 
+    // allow requests with no origin
     if(!origin) return callback(null, true);
-    if(allowedOrigins.indexOf(origin) === -1){
+    if(allowedOrigins.indexOf(origin) === -1 && allowedOrigins.indexOf("*") === -1){
       const msg = "The policy for this site does not allow access from the specified Origin.";
       return callback(new Error(msg), false);
     }
@@ -91,24 +93,45 @@ const nodeBackend = process.env.NODE_BACKEND_URL || "http://localhost:5001";
 const pythonBackend = process.env.PYTHON_BACKEND_URL || "http://localhost:5000";
 
 const proxyRequest = async (req, res, targetUrl) => {
-  const url = targetUrl + req.originalUrl;
-  const method = req.method.toLowerCase();
+  const url = new URL(targetUrl + req.originalUrl);
   const headers = { ...req.headers };
   delete headers.host;
 
+  // For multipart/form-data requests, use native http to properly pipe the stream
+  if (req.headers['content-type'] && req.headers['content-type'].startsWith('multipart/form-data')) {
+    const options = {
+      hostname: url.hostname,
+      port: url.port,
+      path: url.pathname + url.search,
+      method: req.method,
+      headers: headers,
+    };
+
+    const proxyReq = (url.protocol === 'https:' ? https : http).request(options, (proxyRes) => {
+      res.status(proxyRes.statusCode);
+      Object.keys(proxyRes.headers).forEach(key => {
+        res.setHeader(key, proxyRes.headers[key]);
+      });
+      proxyRes.pipe(res);
+    });
+
+    proxyReq.on('error', (err) => {
+      console.error('Proxy request error:', err);
+      res.status(500).json({ error: 'Proxy error' });
+    });
+
+    req.pipe(proxyReq);
+    return;
+  }
+
+  // For other requests, use axios
   const axiosConfig = {
-    url,
-    method,
+    url: url.toString(),
+    method: req.method,
     headers,
     data: req.body,
     responseType: "stream",
   };
-
-  // For multipart/form-data requests, pipe the raw request stream
-  if (req.headers['content-type'] && req.headers['content-type'].startsWith('multipart/form-data')) {
-    axiosConfig.data = req;
-    axiosConfig.headers['transfer-encoding'] = 'chunked';
-  }
 
   const response = await axios(axiosConfig);
   res.status(response.status);

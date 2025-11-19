@@ -15,7 +15,7 @@ class LeaveService {
   async createLeaveType(data) {
     const leaveType = await LeaveType.create({
       name: data.name,
-      daysAllowed: data.daysAllowed,
+     daysAllowed: data.daysAllowed, 
       description: data.description,
       isActive: true,
       createdAt: new Date(),
@@ -35,8 +35,13 @@ class LeaveService {
     const totalDays = Math.floor(timeDiff / (1000 * 3600 * 24)) + 1
 
     let supportingDocumentsUrls = [];
-    if (files.length > 0) {
-      supportingDocumentsUrls = await cloudinaryService.uploadMultipleFiles(files);
+    if (files && files.length > 0) {
+      try {
+        supportingDocumentsUrls = await cloudinaryService.uploadMultipleFiles(files);
+      } catch (uploadError) {
+        console.error('File upload error:', uploadError);
+        // Continue without files if upload fails
+      }
     }
 
     const leaveRequest = await LeaveRequest.create({
@@ -216,27 +221,51 @@ class LeaveService {
   }
 
   async approveLeaveRequest(leaveRequestId, approverId) {
-    const leaveRequest = await LeaveRequest.findByPk(leaveRequestId)
-    if (!leaveRequest) throw new Error("Leave request not found")
-    if (leaveRequest.status !== "pending") throw new Error("Only pending leave requests can be approved")
+    const transaction = await this.sequelize.transaction();
+    try {
+      const leaveRequest = await LeaveRequest.findByPk(leaveRequestId, { transaction });
+      if (!leaveRequest) {
+        throw new Error('Leave request not found');
+      }
+      if (leaveRequest.status !== 'pending') {
+        throw new Error('Leave request is not in pending status');
+      }
 
-    leaveRequest.status = "approved"
-    leaveRequest.reviewedBy = approverId
-    leaveRequest.reviewedAt = new Date()
-    leaveRequest.updatedAt = new Date()
-    await leaveRequest.save()
+      // Update leave request status
+      leaveRequest.status = 'approved';
+      leaveRequest.approvedAt = new Date();
+      leaveRequest.approvedBy = approverId;
+      await leaveRequest.save({ transaction });
 
-    const approvalId = `LA_${Date.now()}`
-    await LeaveApproval.create({
-      id: approvalId,
-      leaveRequestId,
-      approverId,
-      approvalLevel: 1,
-      status: "approved",
-      createdAt: new Date(),
-    })
+      // Update leave balance
+      const leaveBalance = await LeaveBalance.findOne({
+        where: { userId: leaveRequest.userId, leaveTypeId: leaveRequest.leaveTypeId },
+        transaction
+      });
 
-    return leaveRequest
+      if (leaveBalance) {
+        const daysUsed = leaveRequest.totalDays;
+        leaveBalance.usedDays += daysUsed;
+        leaveBalance.remainingDays = leaveBalance.allocatedDays - leaveBalance.usedDays + leaveBalance.carriedForwardDays;
+        await leaveBalance.save({ transaction });
+      }
+
+      const approvalId = `LA_${Date.now()}`;
+      await LeaveApproval.create({
+        id: approvalId,
+        leaveRequestId,
+        approverId,
+        approvalLevel: 1,
+        status: "approved",
+        createdAt: new Date(),
+      }, { transaction });
+
+      await transaction.commit();
+      return leaveRequest;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   }
 
   async rejectLeaveRequest(leaveRequestId, approverId, reason) {

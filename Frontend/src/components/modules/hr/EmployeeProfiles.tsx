@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, Edit, Eye, UserPlus } from 'lucide-react';
 import { fetchEmployees } from '@/services/api';
-import { lookupApiService } from '@/services/lookupApi';
+import { lookupApiService } from '@/services/nodejsbackendapi/lookupApi';
 import type { Employee } from '@/types/hr';
 import type { Department, Role } from '@/types/api';
 import { EditEmployeeDialog } from './EditEmployeeDialog';

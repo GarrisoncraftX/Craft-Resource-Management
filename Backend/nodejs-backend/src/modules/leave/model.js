@@ -253,20 +253,20 @@ const LeaveApproval = sequelize.define("LeaveApproval", {
   timestamps: false,
 })
 
-LeaveType.hasMany(LeaveRequest, { foreignKey: "leave_type_id" })
-LeaveRequest.belongsTo(LeaveType, { foreignKey: "leave_type_id" })
+LeaveType.hasMany(LeaveRequest, { foreignKey: "leaveTypeId" })
+LeaveRequest.belongsTo(LeaveType, { foreignKey: "leaveTypeId" })
 
-LeaveRequest.hasMany(LeaveApproval, { foreignKey: "leave_request_id" })
-LeaveApproval.belongsTo(LeaveRequest, { foreignKey: "leave_request_id" })
+LeaveRequest.hasMany(LeaveApproval, { foreignKey: "leaveRequestId" })
+LeaveApproval.belongsTo(LeaveRequest, { foreignKey: "leaveRequestId" })
 
-LeaveType.hasMany(LeaveBalance, { foreignKey: "leave_type_id" })
-LeaveBalance.belongsTo(LeaveType, { foreignKey: "leave_type_id" })
+LeaveType.hasMany(LeaveBalance, { foreignKey: "leaveTypeId" })
+LeaveBalance.belongsTo(LeaveType, { foreignKey: "leaveTypeId" })
 
-LeaveBalance.belongsTo(User, { foreignKey: "user_id" })
-User.hasMany(LeaveBalance, { foreignKey: "user_id" })
+LeaveBalance.belongsTo(User, { foreignKey: "userId" })
+User.hasMany(LeaveBalance, { foreignKey: "userId" })
 
-LeaveRequest.belongsTo(User, { foreignKey: "user_id" })
-User.hasMany(LeaveRequest, { foreignKey: "user_id" })
+LeaveRequest.belongsTo(User, { foreignKey: "userId" })
+User.hasMany(LeaveRequest, { foreignKey: "userId" })
 
 module.exports = {
   LeaveType,

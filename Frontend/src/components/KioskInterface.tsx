@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { WebcamCapture } from './WebcamCapture';
+import { QRCodeScanner } from './QRCodeScanner';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Clock, Users, UserCheck, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Clock, Users, UserCheck, CheckCircle, Scan } from 'lucide-react';
 import { mockEmployees } from '@/services/mockData';
 import type { AttendancePayload, ApiResponse } from '@/types/api';
 import { apiClient } from '@/utils/apiClient';
@@ -21,9 +22,10 @@ export const KioskInterface: React.FC = () => {
   const { user } = useAuth();
 
   const [activeSection, setActiveSection] = useState<'attendance' | 'visitor'>('attendance');
-  const [attendanceMethod, setAttendanceMethod] = useState<'face' | 'manual'>('face');
+  const [attendanceMethod, setAttendanceMethod] = useState<'face' | 'manual' | 'qr'>('face');
   const [visitorMethod, setVisitorMethod] = useState<'face' | 'manual' | 'card'>('face');
   const [showWebcam, setShowWebcam] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -62,6 +64,28 @@ export const KioskInterface: React.FC = () => {
   }, [location.search, location.state, canAccessVisitorSection]);
 
 
+  const handleQRScan = useCallback(async (qrData: string) => {
+    try {
+      const decodedData = JSON.parse(atob(qrData));
+
+      if (decodedData.type === 'attendance_kiosk') {
+        const response = await apiClient.post('/biometric/attendance/qr-scan', {
+          session_token: decodedData.session_token,
+          user_id: user?.userId
+        });
+
+        if (response.success) {
+          setFeedback(`✅ Successfully ${response.action.replace('_', ' ')}`);
+        } else {
+          setFeedback(`❌ Scan Failed: ${response.message || 'Failed to record attendance'}`);
+        }
+      }
+    } catch (error) {
+      console.error('QR scan error:', error);
+      setFeedback('❌ Scan Failed: Invalid QR code or session expired');
+    }
+  }, [user?.userId]);
+
   const handleAttendanceAction = async (action: 'clock-in' | 'clock-out'): Promise<void> => {
     setIsLoading(true);
     setFeedback('');
@@ -70,7 +94,7 @@ export const KioskInterface: React.FC = () => {
       if (attendanceMethod === 'face' && faceData) {
         return { faceData };
       }
-  
+
       if (attendanceMethod === 'manual') {
         return {
           employeeId: attendanceData.employeeId,
@@ -88,7 +112,7 @@ export const KioskInterface: React.FC = () => {
         return;
       }
 
-      const endpoint = action === 'clock-in' ? '/hr/attendance/clock-in' : '/hr/attendance/clock-out';
+      const endpoint = action === 'clock-in' ? '/api/attendance/clock-in' : '/api/attendance/clock-out';
 
       const response: ApiResponse = await apiClient.post(endpoint, payload);
 
@@ -101,6 +125,7 @@ export const KioskInterface: React.FC = () => {
       setAttendanceData({ employeeId: '', password: '' });
       setFaceData('');
       setShowWebcam(false);
+      setShowQRScanner(false);
     } catch (error) {
       if (error instanceof Error) {
         setFeedback(`❌ Error: ${error.message}`);
@@ -236,15 +261,28 @@ export const KioskInterface: React.FC = () => {
                       onClick={() => {
                         setAttendanceMethod('face');
                         setShowWebcam(true);
+                        setShowQRScanner(false);
                       }}
                     >
                       Face ID
+                    </Button>
+                    <Button
+                      variant={attendanceMethod === 'qr' ? 'default' : 'outline'}
+                      onClick={() => {
+                        setAttendanceMethod('qr');
+                        setShowQRScanner(true);
+                        setShowWebcam(false);
+                      }}
+                    >
+                      <Scan className="h-4 w-4 mr-2" />
+                      QR Code
                     </Button>
                     <Button
                       variant={attendanceMethod === 'manual' ? 'default' : 'outline'}
                       onClick={() => {
                         setAttendanceMethod('manual');
                         setShowWebcam(false);
+                        setShowQRScanner(false);
                       }}
                     >
                       Manual Entry
@@ -268,6 +306,15 @@ export const KioskInterface: React.FC = () => {
                             </Badge>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {attendanceMethod === 'qr' && (
+                      <div>
+                        <QRCodeScanner
+                          onScan={handleQRScan}
+                          isActive={showQRScanner}
+                        />
                       </div>
                     )}
 

@@ -1,4 +1,5 @@
 const cloudinary = require('cloudinary').v2;
+const fs = require('fs');
 const { logger } = require('./logger');
 
 cloudinary.config({
@@ -8,23 +9,11 @@ cloudinary.config({
 });
 
 class CloudinaryService {
-  async uploadFile(fileBuffer, options = {}) {
+  async uploadFile(filePath, options = {}) {
     try {
-      const result = await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            resource_type: 'auto',
-            ...options,
-          },
-          (error, result) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(result);
-            }
-          }
-        );
-        uploadStream.end(fileBuffer);
+      const result = await cloudinary.uploader.upload(filePath, {
+        resource_type: 'auto',
+        ...options,
       });
 
       logger.info(`File uploaded to Cloudinary: ${result.secure_url}`);
@@ -36,8 +25,19 @@ class CloudinaryService {
   }
 
   async uploadMultipleFiles(files) {
-    const uploadPromises = files.map(file => this.uploadFile(file.buffer));
-    return Promise.all(uploadPromises);
+    const uploadPromises = files.map(file => this.uploadFile(file.path));
+    const results = await Promise.all(uploadPromises);
+
+    // Clean up uploaded files from local storage
+    files.forEach(file => {
+      try {
+        fs.unlinkSync(file.path);
+      } catch (err) {
+        logger.error('Failed to delete local file:', err);
+      }
+    });
+
+    return results;
   }
 }
 

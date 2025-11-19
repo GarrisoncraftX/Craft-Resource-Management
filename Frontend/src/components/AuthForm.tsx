@@ -10,12 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { WebcamCapture } from './WebcamCapture';
-import { IdCardScanner } from './IdCardScanner';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/utils/apiClient';
-import { Eye, EyeOff, AlertCircle, CheckCircle, CreditCard } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, CheckCircle} from 'lucide-react';
 import { mockDepartments, mockRoles } from '@/services/mockData';
-import type { Department, Role, IdCardData } from '@/types/api';
+import type { Department, Role} from '@/types/api';
 
 
 const AuthForm: React.FC = () => {
@@ -31,9 +30,7 @@ const AuthForm: React.FC = () => {
 
   // Biometric states
   const [showWebcam, setShowWebcam] = useState(false);
-  const [showIdCard, setShowIdCard] = useState(false);
   const [faceData, setFaceData] = useState('');
-  const [idCardData, setIdCardData] = useState<IdCardData | null>(null);
 
   // Form states
   const [signinData, setSigninData] = useState({
@@ -109,25 +106,7 @@ const AuthForm: React.FC = () => {
     fetchRoles();
   }, [isAuthenticated]);
 
-  const handleIdCardScanned = (cardData: IdCardData) => {
-    setIdCardData(cardData);
-
-    // Auto-populate registration form with card data
-    setRegisterData(prev => ({
-      ...prev,
-      employeeId: cardData.employeeId || prev.employeeId,
-      firstName: cardData.firstName || prev.firstName,
-      lastName: cardData.lastName || prev.lastName,
-      email: cardData.email || prev.email,
-      nationalId: cardData.nationalId || prev.nationalId,
-      phoneNumber: cardData.phoneNumber || prev.phoneNumber,
-      departmentId: Number(cardData.department) || prev.departmentId,
-    }));
-
-    // Show success message
-    setSuccess('ID card scanned successfully! Please fill in any missing information and set your password.');
-  };
-
+ 
   const handleSignin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -232,10 +211,7 @@ const AuthForm: React.FC = () => {
         dateOfBirth: '',
       });
       setFaceData(''); 
-      setIdCardData(null);
       setShowWebcam(false);
-      setShowIdCard(false);
-
     } catch (err) {
       setError(err.message ?? 'Registration failed. Please try again.');
     }
@@ -243,10 +219,7 @@ const AuthForm: React.FC = () => {
     setIsLoading(false);
   };
 
-  const resetBiometricSelections = () => {
-    setShowWebcam(false);
-    setShowIdCard(false);
-  };
+
 
   const handleBiometricEnrollmentComplete = () => {
     setSuccess('Biometric enrollment complete! You can now sign in.');
@@ -374,39 +347,7 @@ const AuthForm: React.FC = () => {
             <TabsContent value="register" className="space-y-4">
               {!registrationSuccessful ? (
                 <form onSubmit={handleRegister} className="space-y-4">
-                  {/* ID Card Scanner Section */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Quick Registration with ID Card</Label>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant={showIdCard ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => {
-                          setShowIdCard(!showIdCard);
-                          if (!showIdCard) resetBiometricSelections();
-                          setShowIdCard(true);
-                        }}
-                      >
-                        <CreditCard className="h-4 w-4 mr-1" />
-                        {showIdCard ? 'Hide' : 'Scan'} ID Card
-                      </Button>
-                      {idCardData && (
-                        <Badge className="bg-green-100 text-green-800">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Card: {idCardData.cardId}
-                        </Badge>
-                      )}
-                    </div>
-
-                    {showIdCard && (
-                      <IdCardScanner
-                        onCardScanned={handleIdCardScanned}
-                        isActive={showIdCard}
-                      />
-                    )}
-                  </div>
-
+              
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="firstName">First Name *</Label>

@@ -19,8 +19,10 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({ userId, isOpen, onC
   const [reason, setReason] = useState<string>('');
   const [supportingDocuments, setSupportingDocuments] = useState<File[]>([]);
   const [daysRequested, setDaysRequested] = useState<number>(0);
+  const [daysAllowed, setDaysAllowed] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [maxDaysPerYear, setMaxDaysPerYear] = useState<number>(0);
 
   useEffect(() => {
     const fetchLeaveTypes = async () => {
@@ -36,6 +38,17 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({ userId, isOpen, onC
       resetForm();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (leaveTypeId) {
+      const selectedLeaveType = leaveTypes.find(type => type.id === leaveTypeId);
+      setDaysAllowed(selectedLeaveType?.daysAllowed || 0);
+      setMaxDaysPerYear(selectedLeaveType?.maxDaysPerYear || 0);
+    } else {
+      setDaysAllowed(0);
+      setMaxDaysPerYear(0);
+    }
+  }, [leaveTypeId, leaveTypes]);
 
   useEffect(() => {
     if (startDate && endDate) {
@@ -56,6 +69,7 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({ userId, isOpen, onC
     setReason('');
     setSupportingDocuments([]);
     setDaysRequested(0);
+    setMaxDaysPerYear(0);
     setError(null);
   };
 
@@ -81,17 +95,27 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({ userId, isOpen, onC
     setIsSubmitting(true);
     setError(null);
     try {
-      const formData = new FormData();
-      formData.append('userId', userId.toString());
-      formData.append('leaveTypeId', leaveTypeId.toString());
-      formData.append('startDate', startDate);
-      formData.append('endDate', endDate);
-      formData.append('reason', reason);
-      supportingDocuments.forEach((file) => {
-        formData.append('supportingDocuments', file);
-      });
-
-      await leaveApiService.createLeaveRequest(formData);
+      if (supportingDocuments.length === 0) {
+        const data = {
+          userId,
+          leaveTypeId,
+          startDate,
+          endDate,
+          reason
+        };
+        await leaveApiService.createLeaveRequest(data);
+      } else {
+        const formData = new FormData();
+        formData.append('userId', userId.toString());
+        formData.append('leaveTypeId', leaveTypeId.toString());
+        formData.append('startDate', startDate);
+        formData.append('endDate', endDate);
+        formData.append('reason', reason);
+        supportingDocuments.forEach((file) => {
+          formData.append('supportingDocuments', file);
+        });
+        await leaveApiService.createLeaveRequest(formData);
+      }
       onSuccess();
       onClose();
     } catch (err) {
@@ -124,7 +148,7 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({ userId, isOpen, onC
               </option>
               {leaveTypes.map((type) => (
                 <option key={type.id} value={type.id}>
-                  {type.name}
+                  {type.name} 
                 </option>
               ))}
             </select>
@@ -180,6 +204,12 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({ userId, isOpen, onC
           <div>
             <p className="text-sm text-gray-600">Days Requested: {daysRequested}</p>
           </div>
+          {Boolean(leaveTypeId) && (
+            <div>
+              <p className="text-sm text-gray-600">Max Days Per Year: {maxDaysPerYear}</p>
+            </div>
+          )}
+
           {error && <p className="text-sm text-red-600">{error}</p>}
         </div>
         <DialogFooter>

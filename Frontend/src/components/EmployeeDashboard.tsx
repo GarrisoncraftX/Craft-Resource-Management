@@ -8,17 +8,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
-import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign, Scan } from 'lucide-react';
+import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign} from 'lucide-react';
 import { leaveApiService } from '@/services/nodejsbackendapi/leaveApi';
-import { LeaveBalance, LeaveRequest } from '@/types/leave';
+import { LeaveBalance, LeaveRequest, LeaveType } from '@/types/leave';
 import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData';
 import { fetchAttendance, fetchPayslips, mapAttendanceToUI, mapPayrollToUI, Employee, fetchEmployeeById, fetchRecentActivities } from '@/services/api';
 import LeaveRequestForm from './modules/hr/LeaveRequestForm';
 import { ITSupportForm } from './modules/hr/ITSupportForm';
 import { AttendancePayload, DashboardKPIs, Payslip, AuditLog } from '@/types/api';
-import { QRCodeScanner } from './QRCodeScanner';
-import { apiClient } from '@/utils/apiClient';
-import { useToast } from '@/hooks/use-toast';
+
 
 const calculateFormattedLeaveBalance = (totalDays: number): string => {
   if (totalDays >= 30) {
@@ -60,7 +58,6 @@ const processLeaveBalances = (data: LeaveBalance[]): { totalLeaveBalance: number
 export const EmployeeDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('attendance');
   const [dashboardKPIs, setDashboardKPIs] = useState<DashboardKPIs | null>(null);
   const [formattedLeaveBalance, setFormattedLeaveBalance] = useState<string>('');
@@ -71,49 +68,12 @@ export const EmployeeDashboard: React.FC = () => {
   const [attendanceData, setAttendanceData] = useState<AttendancePayload[]>([]);
   const [payrollData, setPayrollData] = useState<Payslip[]>([]);
   const [recentActivities, setRecentActivities] = useState<{ id: string; message: string; timestamp: string; color: string }[]>([]);
-  const [isScanningQR, setIsScanningQR] = useState(false);
   const toggleSidebar = () => { };
 
 
   const handleCheckIn = useCallback(() => {
     navigate('/kiosk-interface', { state: { activeSection: 'attendance' } });
   }, [navigate]);
-
-  const handleQRScan = useCallback(async (qrData: string) => {
-    try {
-      const decodedData = JSON.parse(atob(qrData));
-
-      if (decodedData.type === 'attendance_kiosk') {
-        const response = await apiClient.post('/biometric/attendance/qr-scan', {
-          session_token: decodedData.session_token,
-          user_id: user?.userId
-        });
-
-        if (response.success) {
-          toast({
-            title: 'Attendance Recorded',
-            description: `Successfully ${response.action.replace('_', ' ')}`,
-          });
-          // Refresh attendance data
-          const attendanceResponse = await fetchAttendance(user?.userId || '');
-          setAttendanceData(attendanceResponse);
-        } else {
-          toast({
-            title: 'Scan Failed',
-            description: response.message || 'Failed to record attendance',
-            variant: 'destructive',
-          });
-        }
-      }
-    } catch (error) {
-      console.error('QR scan error:', error);
-      toast({
-        title: 'Scan Failed',
-        description: 'Invalid QR code or session expired',
-        variant: 'destructive',
-      });
-    }
-  }, [user?.userId, toast]);
 
   const refreshLeaveRequests = useCallback(async () => {
     if (!user?.userId) return;
@@ -393,7 +353,7 @@ export const EmployeeDashboard: React.FC = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="flex w-full overflow-x-auto justify-start border-b p-0 h-auto rounded-none bg-transparent">
+          <TabsList className="flex w-full overflow-x-auto justify-between border-b p-0 h-auto rounded-none bg-transparent">
             <TabsTrigger value="attendance" className="whitespace-nowrap px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 font-semibold transition-colors">
               <Clock className="h-4 w-4 mr-2" />
               Attendance
@@ -409,7 +369,6 @@ export const EmployeeDashboard: React.FC = () => {
           </TabsList>
 
           <TabsContent value="attendance">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <Card className="bg-blue-600 text-white mb-4">
                   <CardHeader>
@@ -429,10 +388,6 @@ export const EmployeeDashboard: React.FC = () => {
                         </Button>
                         <Button onClick={handleCheckOut} variant="outline">
                           Check Out
-                        </Button>
-                        <Button onClick={() => setIsScanningQR(true)} variant="outline" className="bg-blue-600 text-white hover:bg-blue-700">
-                          <Scan className="h-4 w-4 mr-2" />
-                          Scan QR
                         </Button>
                       </div>
                     </div>
@@ -470,37 +425,9 @@ export const EmployeeDashboard: React.FC = () => {
                   </CardContent>
                 </Card>
               </div>
-              <div>
-                <Card className="bg-green-600 text-white mb-4">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-white">
-                      <Scan className="h-5 w-5 mr-2" />
-                      Quick Attendance
-                    </CardTitle>
-                    <CardDescription className="text-green-100">
-                      Scan kiosk QR code to mark attendance
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-                <Card>
-                  <CardContent>
-                    <QRCodeScanner
-                      onScan={handleQRScan}
-                      isActive={true}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
           </TabsContent>
 
           <TabsContent value="leave">
-            <div className="flex justify-end mb-4">
-              <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsLeaveRequestFormOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Apply for Leave
-              </Button>
-            </div>
             <Card className="bg-green-600 text-white mb-4">
               <CardHeader>
                 <CardTitle className="flex items-center text-white">
@@ -510,26 +437,30 @@ export const EmployeeDashboard: React.FC = () => {
               </CardHeader>
             </Card>
             <Card>
-              <CardContent className="p-0">
+          <CardContent className="p-0">
+            <div className="flex justify-end p-4">
+              <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsLeaveRequestFormOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Apply for Leave
+              </Button>
+            </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Leave ID</TableHead>
                       <TableHead>Leave Type</TableHead>
                       <TableHead>Start Date</TableHead>
                       <TableHead>End Date</TableHead>
-                      <TableHead>Days</TableHead>
+                      <TableHead>Days Requested</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Response</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>{leaveRequests.map((leave) => (
                     <TableRow key={leave.id}>
-                      <TableCell>{leave.id}</TableCell>
                       <TableCell>{leave.leaveType?.name || 'N/A'}</TableCell>
                       <TableCell>{leave.startDate}</TableCell>
                       <TableCell>{leave.endDate}</TableCell>
-                      <TableCell>{leave.totalDays}</TableCell>
+                      <TableCell>{leave.totalDays} days</TableCell>
                       <TableCell>
                         <Badge variant="default" className="bg-gray-800">
                           {leave.status}
@@ -687,10 +618,6 @@ export const EmployeeDashboard: React.FC = () => {
         isOpen={isITSupportFormOpen}
         onClose={() => setIsITSupportFormOpen(false)}
         onSuccess={() => setIsITSupportFormOpen(false)}
-      />
-      <QRCodeScanner
-        onScan={handleQRScan}
-        isActive={isScanningQR}
       />
     </div>
   );

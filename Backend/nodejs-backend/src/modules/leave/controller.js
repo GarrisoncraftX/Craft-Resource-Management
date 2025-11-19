@@ -55,9 +55,14 @@ class LeaveController {
         });
       }
 
+      // Ensure userId is a number
+      data.userId = parseInt(data.userId, 10);
+      data.leaveTypeId = parseInt(data.leaveTypeId, 10);
+
       const leaveRequest = await this.leaveService.createLeaveRequest(data, files);
       res.status(201).json({ success: true, data: leaveRequest });
     } catch (error) {
+      console.error('Error creating leave request:', error);
       next(error);
     }
   }

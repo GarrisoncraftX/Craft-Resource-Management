@@ -65,13 +65,20 @@ class LeaveApiService {
     return this.handleApiError(
       async () => {
         const response = await apiClient.get(`/api/leave/requests/${userId}`);
+        let leaveRequests: LeaveRequest[];
         if (Array.isArray(response)) {
-          return response;
+          leaveRequests = response;
         } else if (response?.success) {
-          return response.data;
+          leaveRequests = response.data;
         } else {
           return mockLeaveRequests;
         }
+        // Populate leaveType if missing
+        const leaveTypes = await this.getLeaveTypes();
+        return leaveRequests.map(req => ({
+          ...req,
+          leaveType: req.leaveType || leaveTypes.find(lt => lt.id === req.leaveTypeId)
+        }));
       },
       mockLeaveRequests
     );
@@ -111,7 +118,8 @@ class LeaveApiService {
         status: 'pending',
         appliedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        leaveType: mockLeaveTypes.find(lt => lt.id === (leaveRequest instanceof FormData ? 1 : leaveRequest.leaveTypeId))
       }
     );
   }

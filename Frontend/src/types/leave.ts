@@ -2,6 +2,7 @@ export interface LeaveType {
   id: number;
   name: string;
   description?: string;
+  daysAllowed?: number;
   maxDaysPerYear: number;
   carryForwardAllowed: boolean;
   maxCarryForwardDays: number;
@@ -142,6 +143,7 @@ export const mockLeaveRequests: LeaveRequest[] = [
     reviewedAt: '2024-12-01 10:00:00',
     createdAt: '2025-07-07 15:16:01',
     updatedAt: '2025-07-07 15:16:01',
+    leaveType: mockLeaveTypes.find(lt => lt.id === 1),
     User: {
       firstName: 'John',
       lastName: 'Doe',
@@ -163,6 +165,7 @@ export const mockLeaveRequests: LeaveRequest[] = [
     reviewedAt: '2024-12-01 11:00:00',
     createdAt: '2025-07-07 15:16:01',
     updatedAt: '2025-07-07 15:16:01',
+    leaveType: mockLeaveTypes.find(lt => lt.id === 2),
     User: {
       firstName: 'Jane',
       lastName: 'Smith',
@@ -182,6 +185,7 @@ export const mockLeaveRequests: LeaveRequest[] = [
     appliedAt: '2025-07-07 15:16:01',
     createdAt: '2025-07-07 15:16:01',
     updatedAt: '2025-07-07 15:16:01',
+    leaveType: mockLeaveTypes.find(lt => lt.id === 1),
     User: {
       firstName: 'Robert',
       lastName: 'Johnson',

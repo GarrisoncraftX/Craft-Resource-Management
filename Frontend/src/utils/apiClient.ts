@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5003';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `https://witty-rice-smell.loca.lt`;
 
 export class ApiClient {
   private readonly baseURL: string;
@@ -35,7 +35,7 @@ export class ApiClient {
       if (response.status === 401) {
         localStorage.removeItem('craft_token');
         localStorage.removeItem('craft_user');
-        window.location.href = '/signin'; 
+        globalThis.location.href = '/signin'; 
       }
       
       throw new Error(errorMessage);
@@ -54,12 +54,18 @@ export class ApiClient {
   }
 
   async post(endpoint: string, data: any) {
+    const headers = this.getHeaders();
+    const body = data instanceof FormData ? data : JSON.stringify(data);
+    if (data instanceof FormData) {
+      delete headers['Content-Type'];
+    }
+
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(data),
+      headers,
+      body,
     });
-    
+
     return this.handleResponse(response);
   }
 
