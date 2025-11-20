@@ -1,4 +1,5 @@
 const { PressRelease, MediaContact, PublicEvent } = require("./model")
+const auditService = require("../audit/service")
 
 class PublicRelationsService {
   async getPressReleases() {
@@ -17,6 +18,10 @@ class PublicRelationsService {
       isActive: true,
       createdAt: new Date(),
     })
+    await auditService.logAction(data.userId, "CREATE_PRESS_RELEASE", {
+      pressReleaseId: pressRelease.id,
+      title: data.title
+    })
     return pressRelease
   }
 
@@ -32,6 +37,10 @@ class PublicRelationsService {
     pressRelease.author = data.author
     pressRelease.publishedDate = data.publishedDate
     await pressRelease.save()
+    await auditService.logAction(data.userId, "UPDATE_PRESS_RELEASE", {
+      pressReleaseId: id,
+      title: data.title
+    })
     return pressRelease
   }
 
@@ -40,6 +49,9 @@ class PublicRelationsService {
     if (!pressRelease) return null
     pressRelease.isActive = false
     await pressRelease.save()
+    await auditService.logAction(null, "DELETE_PRESS_RELEASE", {
+      pressReleaseId: id
+    })
   }
 
   async getMediaContacts() {
@@ -57,6 +69,10 @@ class PublicRelationsService {
       isActive: true,
       createdAt: new Date(),
     })
+    await auditService.logAction(data.userId, "CREATE_MEDIA_CONTACT", {
+      mediaContactId: mediaContact.id,
+      name: data.name
+    })
     return mediaContact
   }
 
@@ -71,14 +87,21 @@ class PublicRelationsService {
     mediaContact.contactInfo = data.contactInfo
     mediaContact.organization = data.organization
     await mediaContact.save()
+    await auditService.logAction(data.userId, "UPDATE_MEDIA_CONTACT", {
+      mediaContactId: id,
+      name: data.name
+    })
     return mediaContact
   }
 
-  async deleteMediaContact(id) {
+  async deleteMediaContact(id, userId) {
     const mediaContact = await MediaContact.findByPk(id)
     if (!mediaContact) return null
     mediaContact.isActive = false
     await mediaContact.save()
+    await auditService.logAction(userId, "DELETE_MEDIA_CONTACT", {
+      mediaContactId: id
+    })
   }
 
   async getPublicEvents() {
@@ -97,6 +120,10 @@ class PublicRelationsService {
       isActive: true,
       createdAt: new Date(),
     })
+    await auditService.logAction(data.userId, "CREATE_PUBLIC_EVENT", {
+      publicEventId: publicEvent.id,
+      title: data.title
+    })
     return publicEvent
   }
 
@@ -112,6 +139,10 @@ class PublicRelationsService {
     publicEvent.eventDate = data.eventDate
     publicEvent.location = data.location
     await publicEvent.save()
+    await auditService.logAction(data.userId, "UPDATE_PUBLIC_EVENT", {
+      publicEventId: id,
+      title: data.title
+    })
     return publicEvent
   }
 
@@ -120,6 +151,9 @@ class PublicRelationsService {
     if (!publicEvent) return null
     publicEvent.isActive = false
     await publicEvent.save()
+    await auditService.logAction(null, "DELETE_PUBLIC_EVENT", {
+      publicEventId: id
+    })
   }
 }
 

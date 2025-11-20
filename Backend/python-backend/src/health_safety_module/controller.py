@@ -1,4 +1,4 @@
-from flask import request
+from flask import request, g
 from src.health_safety_module.service import HealthSafetyService
 from src.utils.logger import logger
 from src.config.app import config
@@ -37,7 +37,8 @@ class HealthSafetyController:
     def create_incident(self):
         try:
             incident_data = request.get_json()
-            success = self.service.add_incident(incident_data)
+            user_id = g.user_id
+            success = self.service.add_incident(incident_data, user_id)
             if success:
                 return {'success': True, 'message': 'Incident created'}, 201
             else:
@@ -57,7 +58,8 @@ class HealthSafetyController:
     def create_inspection(self):
         try:
             inspection_data = request.get_json()
-            success = self.service.add_inspection(inspection_data)
+            user_id = g.user_id
+            success = self.service.add_inspection(inspection_data, user_id)
             if success:
                 return {'success': True, 'message': 'Inspection created'}, 201
             else:
@@ -77,7 +79,8 @@ class HealthSafetyController:
     def create_training(self):
         try:
             training_data = request.get_json()
-            success = self.service.add_training(training_data)
+            user_id = g.user_id
+            success = self.service.add_training(training_data, user_id)
             if success:
                 return {'success': True, 'message': 'Training created'}, 201
             else:
@@ -89,7 +92,8 @@ class HealthSafetyController:
     def update_training(self, training_id):
         try:
             training_data = request.get_json()
-            success = self.service.update_training(training_id, training_data)
+            user_id = g.user_id
+            success = self.service.update_training(training_id, training_data, user_id)
             if success:
                 return {'success': True, 'message': 'Training updated'}, 200
             else:
@@ -100,7 +104,8 @@ class HealthSafetyController:
 
     def delete_training(self, training_id):
         try:
-            success = self.service.delete_training(training_id)
+            user_id = g.user_id
+            success = self.service.delete_training(training_id, user_id)
             if success:
                 return {'success': True, 'message': 'Training deleted'}, 200
             else:
@@ -120,7 +125,8 @@ class HealthSafetyController:
     def create_environmental_health_record(self):
         try:
             record_data = request.get_json()
-            success = self.service.add_environmental_health_record(record_data)
+            user_id = g.user_id
+            success = self.service.add_environmental_health_record(record_data, user_id)
             if success:
                 return {'success': True, 'message': 'Environmental health record created'}, 201
             else:
@@ -132,7 +138,8 @@ class HealthSafetyController:
     def update_environmental_health_record(self, record_id):
         try:
             record_data = request.get_json()
-            success = self.service.update_environmental_health_record(record_id, record_data)
+            user_id = g.user_id
+            success = self.service.update_environmental_health_record(record_id, record_data, user_id)
             if success:
                 return {'success': True, 'message': 'Environmental health record updated'}, 200
             else:
@@ -143,7 +150,8 @@ class HealthSafetyController:
 
     def delete_environmental_health_record(self, record_id):
         try:
-            success = self.service.delete_environmental_health_record(record_id)
+            user_id = g.user_id
+            success = self.service.delete_environmental_health_record(record_id, user_id)
             if success:
                 return {'success': True, 'message': 'Environmental health record deleted'}, 200
             else:

@@ -2,8 +2,8 @@ const authService = require('./service');
 
 const register = async (req, res) => {
   try {
-    const { biometric_type, raw_data, biometric_type_face, raw_data_face, biometric_type_fingerprint, raw_data_fingerprint, ...userData } = req.body; 
-    const user = await authService.register({ ...userData, biometric_type, raw_data, biometric_type_face, raw_data_face, biometric_type_fingerprint, raw_data_fingerprint }); 
+    const { biometric_type, raw_data, biometric_type_face, raw_data_face, biometric_type_fingerprint, raw_data_fingerprint, ...userData } = req.body;
+    const user = await authService.register({ ...userData, biometric_type, raw_data, biometric_type_face, raw_data_face, biometric_type_fingerprint, raw_data_fingerprint });
     // Exclude passwordHash from response
     const { passwordHash, ...responseUserData } = user.toJSON();
     res.status(201).json(responseUserData);
@@ -15,8 +15,8 @@ const register = async (req, res) => {
 
 const signin = async (req, res) => {
   try {
-    const { employeeId, password, biometric_type, raw_data } = req.body; // Extract biometric data
-    const result = await authService.signin(employeeId, password, biometric_type, raw_data); // Pass to service
+    const { employeeId, password, biometric_type, raw_data } = req.body; 
+    const result = await authService.signin(employeeId, password, biometric_type, raw_data);
     res.json(result);
   } catch (error) {
     console.error('Signin error:', error);

@@ -39,7 +39,7 @@ class HealthSafetyService:
             logger.error(f"Error fetching incidents from DB: {e}")
             raise e
 
-    def add_incident(self, incident_data):
+    def add_incident(self, incident_data, user_id):
         try:
             query = """
                 INSERT INTO IncidentReport (reporter_name, incident_date, description, severity)
@@ -52,6 +52,7 @@ class HealthSafetyService:
                 incident_data.get('severity')
             )
             self.db.execute_query(query, params, fetch=False)
+            audit_service.log_action(user_id, 'CREATE_INCIDENT', {'entity': 'incident', 'data': incident_data})
             return True
         except Exception as e:
             logger.error(f"Error adding incident to DB: {e}")
@@ -75,7 +76,7 @@ class HealthSafetyService:
             logger.error(f"Error fetching inspections from DB: {e}")
             raise e
 
-    def add_inspection(self, inspection_data):
+    def add_inspection(self, inspection_data, user_id):
         try:
             query = """
                 INSERT INTO SafetyInspection (inspector_name, inspection_date, location, notes)
@@ -88,6 +89,7 @@ class HealthSafetyService:
                 inspection_data.get('notes')
             )
             self.db.execute_query(query, params, fetch=False)
+            audit_service.log_action(user_id, 'CREATE_INSPECTION', {'entity': 'inspection', 'data': inspection_data})
             return True
         except Exception as e:
             logger.error(f"Error adding inspection to DB: {e}")
@@ -111,7 +113,7 @@ class HealthSafetyService:
             logger.error(f"Error fetching trainings from DB: {e}")
             raise e
 
-    def add_training(self, training_data):
+    def add_training(self, training_data, user_id):
         try:
             query = """
                 INSERT INTO SafetyTraining (training_name, trainer_name, training_date, description)
@@ -124,12 +126,13 @@ class HealthSafetyService:
                 training_data.get('description')
             )
             self.db.execute_query(query, params, fetch=False)
+            audit_service.log_action(user_id, 'CREATE_TRAINING', {'entity': 'training', 'data': training_data})
             return True
         except Exception as e:
             logger.error(f"Error adding training to DB: {e}")
             return False
 
-    def update_training(self, training_id, training_data):
+    def update_training(self, training_id, training_data, user_id):
         try:
             query = """
                 UPDATE SafetyTraining
@@ -144,16 +147,18 @@ class HealthSafetyService:
                 training_id
             )
             self.db.execute_query(query, params, fetch=False)
+            audit_service.log_action(user_id, 'UPDATE_TRAINING', {'entity': 'training', 'id': training_id, 'data': training_data})
             return True
         except Exception as e:
             logger.error(f"Error updating training in DB: {e}")
             return False
 
-    def delete_training(self, training_id):
+    def delete_training(self, training_id, user_id):
         try:
             query = "DELETE FROM SafetyTraining WHERE id = %s"
             params = (training_id,)
             self.db.execute_query(query, params, fetch=False)
+            audit_service.log_action(user_id, 'DELETE_TRAINING', {'entity': 'training', 'id': training_id})
             return True
         except Exception as e:
             logger.error(f"Error deleting training from DB: {e}")
@@ -176,7 +181,7 @@ class HealthSafetyService:
             logger.error(f"Error fetching environmental health records from DB: {e}")
             raise e
 
-    def add_environmental_health_record(self, record_data):
+    def add_environmental_health_record(self, record_data, user_id):
         try:
             query = """
                 INSERT INTO EnvironmentalHealthRecord (record_type, record_date, details)
@@ -188,12 +193,13 @@ class HealthSafetyService:
                 record_data.get('details')
             )
             self.db.execute_query(query, params, fetch=False)
+            audit_service.log_action(user_id, 'CREATE_ENVIRONMENTAL_HEALTH_RECORD', {'entity': 'environmental_health_record', 'data': record_data})
             return True
         except Exception as e:
             logger.error(f"Error adding environmental health record to DB: {e}")
             return False
 
-    def update_environmental_health_record(self, record_id, record_data):
+    def update_environmental_health_record(self, record_id, record_data, user_id):
         try:
             query = """
                 UPDATE EnvironmentalHealthRecord
@@ -207,16 +213,18 @@ class HealthSafetyService:
                 record_id
             )
             self.db.execute_query(query, params, fetch=False)
+            audit_service.log_action(user_id, 'UPDATE_ENVIRONMENTAL_HEALTH_RECORD', {'entity': 'environmental_health_record', 'id': record_id, 'data': record_data})
             return True
         except Exception as e:
             logger.error(f"Error updating environmental health record in DB: {e}")
             return False
 
-    def delete_environmental_health_record(self, record_id):
+    def delete_environmental_health_record(self, record_id, user_id):
         try:
             query = "DELETE FROM EnvironmentalHealthRecord WHERE id = %s"
             params = (record_id,)
             self.db.execute_query(query, params, fetch=False)
+            audit_service.log_action(user_id, 'DELETE_ENVIRONMENTAL_HEALTH_RECORD', {'entity': 'environmental_health_record', 'id': record_id})
             return True
         except Exception as e:
             logger.error(f"Error deleting environmental health record from DB: {e}")

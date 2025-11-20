@@ -9,7 +9,8 @@ class ReportsController:
     def generate_report(self):
         try:
             report_params = request.get_json()
-            result = self.reports_service.generate_report(report_params)
+            user_id = g.user_id
+            result = self.reports_service.generate_report(report_params, user_id)
             return {'success': True, 'message': 'Report generated successfully', 'data': result}, 200
         except Exception as e:
             logger.error(f"Error generating report: {e}")

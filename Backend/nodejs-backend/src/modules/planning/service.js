@@ -5,6 +5,7 @@ const {
   StrategicGoal,
   DevelopmentPermit,
 } = require("./model")
+const auditService = require("../audit/service")
 
 class PlanningService {
   async getUrbanPlans() {
@@ -24,6 +25,10 @@ class PlanningService {
       isActive: true,
       createdAt: new Date(),
     })
+    await auditService.logAction(data.userId, "CREATE_URBAN_PLAN", {
+      urbanPlanId: urbanPlan.id,
+      name: data.name
+    })
     return urbanPlan
   }
 
@@ -40,6 +45,10 @@ class PlanningService {
     urbanPlan.endDate = data.endDate
     urbanPlan.status = data.status
     await urbanPlan.save()
+    await auditService.logAction(data.userId, "UPDATE_URBAN_PLAN", {
+      urbanPlanId: id,
+      name: data.name
+    })
     return urbanPlan
   }
 
@@ -48,6 +57,9 @@ class PlanningService {
     if (!urbanPlan) return null
     urbanPlan.isActive = false
     await urbanPlan.save()
+    await auditService.logAction(null, "DELETE_URBAN_PLAN", {
+      urbanPlanId: id
+    })
   }
 
   async getProjects() {
@@ -67,6 +79,10 @@ class PlanningService {
       isActive: true,
       createdAt: new Date(),
     })
+    await auditService.logAction(data.userId, "CREATE_PROJECT", {
+      projectId: project.id,
+      name: data.name
+    })
     return project
   }
 
@@ -83,6 +99,10 @@ class PlanningService {
     project.endDate = data.endDate
     project.status = data.status
     await project.save()
+    await auditService.logAction(data.userId, "UPDATE_PROJECT", {
+      projectId: id,
+      name: data.name
+    })
     return project
   }
 
@@ -91,6 +111,9 @@ class PlanningService {
     if (!project) return null
     project.isActive = false
     await project.save()
+    await auditService.logAction(null, "DELETE_PROJECT", {
+      projectId: id
+    })
   }
 
   async getPolicies() {
@@ -108,6 +131,10 @@ class PlanningService {
       isActive: true,
       createdAt: new Date(),
     })
+    await auditService.logAction(data.userId, "CREATE_POLICY", {
+      policyId: policy.id,
+      title: data.title
+    })
     return policy
   }
 
@@ -122,6 +149,10 @@ class PlanningService {
     policy.description = data.description
     policy.effectiveDate = data.effectiveDate
     await policy.save()
+    await auditService.logAction(data.userId, "UPDATE_POLICY", {
+      policyId: id,
+      title: data.title
+    })
     return policy
   }
 
@@ -130,6 +161,9 @@ class PlanningService {
     if (!policy) return null
     policy.isActive = false
     await policy.save()
+    await auditService.logAction(null, "DELETE_POLICY", {
+      policyId: id
+    })
   }
 
   async getStrategicGoals() {
@@ -147,6 +181,10 @@ class PlanningService {
       isActive: true,
       createdAt: new Date(),
     })
+    await auditService.logAction(data.userId, "CREATE_STRATEGIC_GOAL", {
+      strategicGoalId: strategicGoal.id,
+      goal: data.goal
+    })
     return strategicGoal
   }
 
@@ -161,6 +199,10 @@ class PlanningService {
     strategicGoal.description = data.description
     strategicGoal.targetDate = data.targetDate
     await strategicGoal.save()
+    await auditService.logAction(data.userId, "UPDATE_STRATEGIC_GOAL", {
+      strategicGoalId: id,
+      goal: data.goal
+    })
     return strategicGoal
   }
 
@@ -188,6 +230,10 @@ class PlanningService {
       isActive: true,
       createdAt: new Date(),
     })
+    await auditService.logAction(data.userId, "CREATE_DEVELOPMENT_PERMIT", {
+      developmentPermitId: developmentPermit.id,
+      permitNumber: data.permitNumber
+    })
     return developmentPermit
   }
 
@@ -204,6 +250,10 @@ class PlanningService {
     developmentPermit.expiryDate = data.expiryDate
     developmentPermit.status = data.status
     await developmentPermit.save()
+    await auditService.logAction(data.userId, "UPDATE_DEVELOPMENT_PERMIT", {
+      developmentPermitId: id,
+      permitNumber: data.permitNumber
+    })
     return developmentPermit
   }
 
@@ -212,6 +262,9 @@ class PlanningService {
     if (!developmentPermit) return null
     developmentPermit.isActive = false
     await developmentPermit.save()
+    await auditService.logAction(null, "DELETE_DEVELOPMENT_PERMIT", {
+      developmentPermitId: id
+    })
   }
 }
 

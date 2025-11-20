@@ -72,7 +72,7 @@ class VisitorService:
             logger.error(f"Error validating QR token: {e}")
             return {'valid': False, 'message': 'Error validating token'}
 
-    def check_in_visitor(self, visitor_data):
+    def check_in_visitor(self, visitor_data, user_id):
         """Check in a visitor using the new visitors table structure"""
         try:
             # Extract data from payload
@@ -120,13 +120,14 @@ class VisitorService:
                 update_token_query = "UPDATE qr_tokens SET is_used = 1 WHERE token = %s"
                 self.db.execute_query(update_token_query, (qr_token,), fetch=False)
 
+            audit_service.log_action(user_id, 'CHECK_IN_VISITOR', {'entity': 'visitor', 'id': visitor_id, 'data': visitor_data})
             logger.info(f"Visitor {full_name} checked in successfully with ID {visitor_id}")
             return True, visitor_id
         except Exception as e:
             logger.error(f"Error checking in visitor: {e}")
             return False, str(e)
 
-    def check_out_visitor(self, visitor_id):
+    def check_out_visitor(self, visitor_id, user_id):
         """Check out a visitor"""
         try:
             # Update visitor record to mark checked out and set check_out_time
@@ -149,6 +150,7 @@ class VisitorService:
             """
             self.db.execute_query(query_update_checkin, (visitor_id,), fetch=False)
 
+            audit_service.log_action(user_id, 'CHECK_OUT_VISITOR', {'entity': 'visitor', 'id': visitor_id})
             logger.info(f"Visitor {visitor_id} checked out successfully")
             return True, None
         except Exception as e:

@@ -2,6 +2,7 @@ const { Op } = require("sequelize")
 const { sequelize } = require("../../config/sequelize")
 const { LeaveType, LeaveRequest, LeaveBalance, LeaveApproval } = require("./model")
 const cloudinaryService = require('../../utils/cloudinary')
+const auditService = require("../audit/service")
 const User = require("../auth/model")
 
 class LeaveService {
@@ -15,49 +16,23 @@ class LeaveService {
   async createLeaveType(data) {
     const leaveType = await LeaveType.create({
       name: data.name,
-     daysAllowed: data.daysAllowed, 
+     daysAllowed: data.daysAllowed,
       description: data.description,
       isActive: true,
       createdAt: new Date(),
     })
+
+    // Audit Log
+    auditService.logAction(data.actorId, "CREATE_LEAVE_TYPE", {
+      leaveTypeId: leaveType.id,
+      name: leaveType.name,
+    })
+
     return leaveType
   }
 
   async getLeaveTypeById(id) {
     return await LeaveType.findByPk(id)
-  }
-
-  async createLeaveRequest(data, files = []) {
-    // Calculate totalDays as difference between endDate and startDate inclusive
-    const start = new Date(data.startDate)
-    const end = new Date(data.endDate)
-    const timeDiff = end.getTime() - start.getTime()
-    const totalDays = Math.floor(timeDiff / (1000 * 3600 * 24)) + 1
-
-    let supportingDocumentsUrls = [];
-    if (files && files.length > 0) {
-      try {
-        supportingDocumentsUrls = await cloudinaryService.uploadMultipleFiles(files);
-      } catch (uploadError) {
-        console.error('File upload error:', uploadError);
-        // Continue without files if upload fails
-      }
-    }
-
-    const leaveRequest = await LeaveRequest.create({
-      id: `LR_${Date.now()}`,
-      userId: data.userId,
-      leaveTypeId: data.leaveTypeId,
-      startDate: data.startDate,
-      endDate: data.endDate,
-      totalDays: totalDays,
-      reason: data.reason,
-      supportingDocuments: supportingDocumentsUrls.length > 0 ? supportingDocumentsUrls : null,
-      status: "pending",
-      appliedAt: new Date(),
-      createdAt: new Date(),
-    })
-    return leaveRequest
   }
 
   async getLeaveRequestById(id) {
@@ -86,7 +61,7 @@ class LeaveService {
       where,
       include: [{ model: LeaveType }],
       order: [["createdAt", "DESC"]],
-      limit: filters.limit ? parseInt(filters.limit) : undefined,
+      limit: filters.limit ? Number.parseInt(filters.limit) : undefined,
     })
   }
 
@@ -114,7 +89,7 @@ class LeaveService {
         { model: User, attributes: ['firstName', 'lastName', 'employeeId'] }
       ],
       order: [["createdAt", "DESC"]],
-      limit: filters && filters.limit ? parseInt(filters.limit) : undefined,
+      limit: filters && filters.limit ? Number.parseInt(filters.limit) : undefined,
     });
 
     return result;
@@ -129,6 +104,14 @@ class LeaveService {
     leaveRequest.reviewedAt = new Date()
     leaveRequest.updatedAt = new Date()
     await leaveRequest.save()
+
+    // Audit Log
+    auditService.logAction(reviewedBy, "UPDATE_LEAVE_REQUEST_STATUS", {
+      leaveRequestId: id,
+      newStatus: status,
+      comments,
+    })
+
     return leaveRequest
   }
 
@@ -221,7 +204,7 @@ class LeaveService {
   }
 
   async approveLeaveRequest(leaveRequestId, approverId) {
-    const transaction = await this.sequelize.transaction();
+    const transaction = await sequelize.transaction();
     try {
       const leaveRequest = await LeaveRequest.findByPk(leaveRequestId, { transaction });
       if (!leaveRequest) {
@@ -261,6 +244,20 @@ class LeaveService {
       }, { transaction });
 
       await transaction.commit();
+
+      // Audit Log for approver
+      auditService.logAction(approverId, "APPROVE_LEAVE_REQUEST", {
+        leaveRequestId,
+        status: "approved"
+      });
+
+      // Audit Log for employee (the one whose request was approved)
+      auditService.logAction(leaveRequest.userId, "LEAVE_REQUEST_APPROVED", {
+        leaveRequestId,
+        status: "approved",
+        approvedBy: approverId
+      });
+
       return leaveRequest;
     } catch (error) {
       await transaction.rollback();
@@ -291,9 +288,62 @@ class LeaveService {
       createdAt: new Date(),
     })
 
+    // Audit Log for approver
+    auditService.logAction(approverId, "REJECT_LEAVE_REQUEST", {
+      leaveRequestId,
+      status: "rejected",
+      reason
+    });
+
+    // Audit Log for employee (the one whose request was rejected)
+    auditService.logAction(leaveRequest.userId, "LEAVE_REQUEST_REJECTED", {
+      leaveRequestId,
+      status: "rejected",
+      rejectedBy: approverId,
+      reason
+    });
+
     return leaveRequest
   }
 
+  async createLeaveRequest(data, files = []) {
+    // Calculate totalDays as difference between endDate and startDate inclusive
+    const start = new Date(data.startDate)
+    const end = new Date(data.endDate)
+    const timeDiff = end.getTime() - start.getTime()
+    const totalDays = Math.floor(timeDiff / (1000 * 3600 * 24)) + 1
+
+    let supportingDocumentsUrls = [];
+    if (files && files.length > 0) {
+      try {
+        supportingDocumentsUrls = await cloudinaryService.uploadMultipleFiles(files);
+      } catch (uploadError) {
+        console.error('File upload error:', uploadError);
+      }
+    }
+
+    const leaveRequest = await LeaveRequest.create({
+      id: `LR_${Date.now()}`,
+      userId: data.userId,
+      leaveTypeId: data.leaveTypeId,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      totalDays: totalDays,
+      reason: data.reason,
+      supportingDocuments: supportingDocumentsUrls.length > 0 ? supportingDocumentsUrls : null,
+      status: "pending",
+      appliedAt: new Date(),
+      createdAt: new Date(),
+    })
+
+    // Audit Log
+    auditService.logAction(data.userId, "CREATE_LEAVE_REQUEST", {
+      leaveRequestId: leaveRequest.id,
+      status: "pending",
+    })
+
+    return leaveRequest
+  }
 
 async getLeaveStatistics() {
   try {
@@ -463,7 +513,7 @@ async getLeaveStatistics() {
     // Define milestone increases (customize as needed)
     switch (milestone) {
       case '1_year':
-        additionalDays = 1; // Add 1 day for annual leave
+        additionalDays = 1; 
         break;
       case '5_years':
         additionalDays = 2;
@@ -472,10 +522,10 @@ async getLeaveStatistics() {
         additionalDays = 3;
         break;
       default:
-        return; // No change for unknown milestones
+        return; 
     }
 
-    // Assuming annual leave type has id 1 (adjust based on actual data)
+    // Assuming annual leave type has id 1 
     const annualLeaveTypeId = 1;
 
     const balance = await LeaveBalance.findOne({

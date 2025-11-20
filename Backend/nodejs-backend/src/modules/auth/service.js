@@ -4,9 +4,10 @@ const axios = require('axios');
 const User = require('./model');
 const Role = require('./models/role');
 const Department = require('../lookup/model');
-const Permission = require('./models/permission'); 
+const Permission = require('./models/permission');
 const RolePermission = require('./models/rolePermission');
 const LeaveService = require('../leave/service');
+const auditService = require('../audit/service');
 
 const BIOMETRIC_SERVICE_URL = process.env.PYTHON_BASE_URL || 'http://localhost:5000';
 
@@ -276,6 +277,20 @@ const register = async (userData) => {
       console.error('Error initializing leave balances for new user:', leaveError);
     }
 
+    // Log audit activity for user registration
+    try {
+      await auditService.logAction(null, 'REGISTER', {
+        userId: user.id,
+        employeeId: user.employeeId,
+        email: user.email,
+        departmentId: user.departmentId,
+        roleId: user.roleId
+      });
+    } catch (auditError) {
+      console.error('Audit logging failed for registration:', auditError.message);
+      // Don't throw here to avoid blocking registration
+    }
+
     return user;
   } catch (error) {
     console.error('Register error:', error.message, error.stack);
@@ -388,7 +403,18 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
   user.lastLogin = new Date();
   await user.save();
 
-    const permissions = await getUserPermissions(user.roleId);
+  // Log audit activity for signin
+  try {
+    await auditService.logAction(user.id, 'SIGNIN', {
+      employeeId: user.employeeId,
+      method: biometric_type ? 'biometric' : 'password'
+    });
+  } catch (auditError) {
+    console.error('Audit logging failed for signin:', auditError.message);
+    // Don't throw here to avoid blocking signin
+  }
+
+  const permissions = await getUserPermissions(user.roleId);
 
     // Map departmentId and roleId to codes for frontend routing
     const departmentIdToCodeMap = {

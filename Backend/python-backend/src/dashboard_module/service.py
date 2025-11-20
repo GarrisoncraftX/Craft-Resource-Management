@@ -2,6 +2,7 @@ from src.dashboard_module.models import DashboardData, DashboardWidget
 from src.database.connection import DatabaseManager
 from src.utils.logger import logger
 from src.config.app import config
+from src.audit_service import audit_service
 import os
 
 env = os.getenv('FLASK_ENV', 'development')
@@ -23,7 +24,7 @@ class DashboardService:
     def __init__(self):
         self.db = DatabaseManager(config_dict)
 
-    def get_dashboard_data(self):
+    def get_dashboard_data(self, user_id):
         try:
             query = "SELECT id, data_key, data_value FROM DashboardData"
             results = self.db.execute_query(query)
@@ -34,12 +35,13 @@ class DashboardService:
                     'data_key': row['data_key'],
                     'data_value': row['data_value']
                 })
+            audit_service.log_action(user_id, 'VIEW_DASHBOARD_DATA', {'count': len(data)})
             return data
         except Exception as e:
             logger.error(f"Error fetching dashboard data: {e}")
             raise e
 
-    def get_dashboard_widgets(self):
+    def get_dashboard_widgets(self, user_id):
         try:
             query = "SELECT id, widget_name, widget_config FROM DashboardWidget"
             results = self.db.execute_query(query)
@@ -50,6 +52,7 @@ class DashboardService:
                     'widget_name': row['widget_name'],
                     'widget_config': row['widget_config']
                 })
+            audit_service.log_action(user_id, 'VIEW_DASHBOARD_WIDGETS', {'count': len(widgets)})
             return widgets
         except Exception as e:
             logger.error(f"Error fetching dashboard widgets: {e}")

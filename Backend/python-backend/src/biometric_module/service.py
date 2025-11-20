@@ -7,6 +7,7 @@ import torch.nn as nn
 from typing import Optional, Dict, Any, Tuple
 from sklearn.metrics.pairwise import cosine_similarity
 from src.utils.logger import logger
+from src.audit_service import audit_service
 from src.config.app import Config
 import os
 import time
@@ -477,26 +478,30 @@ class BiometricService:
         except Exception as e:
             return None, f"Error extracting features: {str(e)}"
 
-    def process_face_image(self, base64_image: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    def process_face_image(self, base64_image: str, user_id: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         """Process base64 face image and extract features using lightweight model"""
         try:
             # Perform liveness detection first
             is_live, liveness_error = self.detect_liveness(base64_image)
             if not is_live:
+                audit_service.log_action(user_id, 'PROCESS_FACE_IMAGE_FAILED', {'reason': 'liveness_detection', 'error': liveness_error})
                 return None, f"Liveness detection failed: {liveness_error}"
 
             image, error = self._decode_base64_image(base64_image)
             if error:
+                audit_service.log_action(user_id, 'PROCESS_FACE_IMAGE_FAILED', {'reason': 'decode_error', 'error': error})
                 return None, error
 
             if self.face_detector is None or self.face_recognition_model is None:
                 fallback_template = self._create_fallback_template(base64.b64decode(base64_image.split(',')[1] if ',' in base64_image else base64_image))
                 # Encrypt fallback template
                 fallback_template['template_data'] = self.encrypt_template(fallback_template['template_data'])
+                audit_service.log_action(user_id, 'PROCESS_FACE_IMAGE', {'method': 'fallback_hash'})
                 return fallback_template, None
 
             box, error = self._detect_face(image)
             if error:
+                audit_service.log_action(user_id, 'PROCESS_FACE_IMAGE_FAILED', {'reason': 'face_detection', 'error': error})
                 return None, error
 
             x1, y1, x2, y2 = box
@@ -504,6 +509,7 @@ class BiometricService:
 
             features_np, error = self._extract_face_features(face_roi)
             if error:
+                audit_service.log_action(user_id, 'PROCESS_FACE_IMAGE_FAILED', {'reason': 'feature_extraction', 'error': error})
                 return None, error
 
             template_hash = hashlib.sha256(features_np.tobytes()).hexdigest()
@@ -512,6 +518,7 @@ class BiometricService:
             # Encrypt the template data
             encrypted_template_data = self.encrypt_template(template_data)
 
+            audit_service.log_action(user_id, 'PROCESS_FACE_IMAGE', {'method': 'lightweight_dnn', 'template_hash': template_hash})
             return {
                 'template_hash': template_hash,
                 'template_data': encrypted_template_data,  # Store encrypted data
@@ -521,9 +528,10 @@ class BiometricService:
 
         except Exception as e:
             logger.error(f"Error processing face image: {e}")
+            audit_service.log_action(user_id, 'PROCESS_FACE_IMAGE_FAILED', {'reason': 'exception', 'error': str(e)})
             return None, f"Error processing face image: {str(e)}"
     
-    def compare_face_templates(self, template1_data: str, template2_data: str) -> float:
+    def compare_face_templates(self, template1_data: str, template2_data: str, user_id: str) -> float:
         """Compare two face templates and return similarity score"""
         try:
             # Decrypt templates first
@@ -546,12 +554,15 @@ class BiometricService:
             except Exception as decode_error:
                 logger.debug(f"Base64 decode failed: {decode_error}. Assuming hash-based templates.")
                 # If not base64, treat as hash strings
-                return 1.0 if decrypted_template1 == decrypted_template2 else 0.0
+                similarity = 1.0 if decrypted_template1 == decrypted_template2 else 0.0
+                audit_service.log_action(user_id, 'COMPARE_FACE_TEMPLATES', {'method': 'hash_comparison', 'similarity': similarity})
+                return similarity
 
             logger.debug(f"Template 1 size: {len(decoded1)}, Template 2 size: {len(decoded2)}")
 
             if len(decoded1) == 0 or len(decoded2) == 0:
                 logger.warning("Empty template data received")
+                audit_service.log_action(user_id, 'COMPARE_FACE_TEMPLATES_FAILED', {'reason': 'empty_template_data'})
                 return 0.0
 
             # Check if buffer sizes are valid for float32 arrays (should be multiple of 4)
@@ -563,9 +574,12 @@ class BiometricService:
                     str1 = decoded1.decode('latin1')
                     str2 = decoded2.decode('latin1')
                     logger.debug("Templates appear to be hash-based strings, comparing as strings")
-                    return 1.0 if str1 == str2 else 0.0
+                    similarity = 1.0 if str1 == str2 else 0.0
+                    audit_service.log_action(user_id, 'COMPARE_FACE_TEMPLATES', {'method': 'string_comparison', 'similarity': similarity})
+                    return similarity
                 except UnicodeDecodeError:
                     logger.error("Unable to decode templates as strings or float arrays")
+                    audit_service.log_action(user_id, 'COMPARE_FACE_TEMPLATES_FAILED', {'reason': 'decode_error'})
                     return 0.0
 
             # Convert to float32 arrays
@@ -574,32 +588,38 @@ class BiometricService:
                 features2 = np.frombuffer(decoded2, dtype=np.float32)
             except ValueError as e:
                 logger.error(f"Failed to convert buffer to float32 array: {e}")
+                audit_service.log_action(user_id, 'COMPARE_FACE_TEMPLATES_FAILED', {'reason': 'conversion_error', 'error': str(e)})
                 return 0.0
 
             if features1.size == 0 or features2.size == 0:
                 logger.warning("Empty feature arrays after conversion")
+                audit_service.log_action(user_id, 'COMPARE_FACE_TEMPLATES_FAILED', {'reason': 'empty_feature_arrays'})
                 return 0.0
 
             if features1.shape != features2.shape:
                 logger.warning(f"Feature shape mismatch: {features1.shape} vs {features2.shape}")
+                audit_service.log_action(user_id, 'COMPARE_FACE_TEMPLATES_FAILED', {'reason': 'shape_mismatch', 'shape1': features1.shape, 'shape2': features2.shape})
                 return 0.0
 
             similarity = cosine_similarity([features1], [features2])[0][0]
+            audit_service.log_action(user_id, 'COMPARE_FACE_TEMPLATES', {'method': 'cosine_similarity', 'similarity': float(similarity)})
             return float(similarity)
         except Exception as e:
             logger.error(f"Error comparing face templates: {e}")
+            audit_service.log_action(user_id, 'COMPARE_FACE_TEMPLATES_FAILED', {'reason': 'exception', 'error': str(e)})
             # Fallback: return 0.0 for any comparison error
             return 0.0
 
     
     
-    def process_card_data(self, card_data: str) -> Dict[str, str]:
+    def process_card_data(self, card_data: str, user_id: str) -> Dict[str, str]:
         """Process card data (mock implementation)"""
         try:
             # Mock card processing
             template_hash = hashlib.sha256(card_data.encode()).hexdigest()
             template_data = base64.b64encode(card_data.encode()).decode('utf-8')
-            
+
+            audit_service.log_action(user_id, 'PROCESS_CARD_DATA', {'method': 'mock_card', 'template_hash': template_hash})
             return {
                 'template_hash': template_hash,
                 'template_data': template_data,
@@ -607,10 +627,12 @@ class BiometricService:
             }
         except Exception as e:
             logger.error(f"Error processing card data: {e}")
+            audit_service.log_action(user_id, 'PROCESS_CARD_DATA_FAILED', {'reason': 'exception', 'error': str(e)})
             raise e
     
-    def verify_biometric(self, live_template: str, stored_template: str, biometric_type: str) -> Dict[str, Any]:
+    def verify_biometric(self, live_template: str, stored_template: str, biometric_type: str, user_id: str) -> Dict[str, Any]:
         """Verify biometric data against stored template (1:1 verification)"""
+        audit_service.log_action(user_id, 'VERIFY_BIOMETRIC', {'biometric_type': biometric_type})
         try:
             if biometric_type == 'face':
                 similarity = self.compare_face_templates(live_template, stored_template)
@@ -619,7 +641,9 @@ class BiometricService:
             else: # card
                 is_match = live_template == stored_template
                 similarity_score = 1.0 if is_match else 0.0
-               
+
+            audit_service.log_action(user_id, 'VERIFY_BIOMETRIC', {'entity': 'biometric', 'type': biometric_type, 'is_match': is_match})
+
             return {
                 'is_match': is_match,
                 'similarity_score': similarity_score,

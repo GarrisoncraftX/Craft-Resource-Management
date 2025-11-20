@@ -18,6 +18,10 @@ class TransportationService {
       status: "active",
       createdAt: new Date(),
     })
+    await auditService.logAction(data.userId, "CREATE_VEHICLE", {
+      vehicleId: vehicle.id,
+      licensePlate: data.licensePlate
+    })
     return vehicle
   }
 
@@ -33,6 +37,10 @@ class TransportationService {
     vehicle.year = data.year
     vehicle.licensePlate = data.licensePlate
     await vehicle.save()
+    await auditService.logAction(data.userId, "UPDATE_VEHICLE", {
+      vehicleId: id,
+      licensePlate: data.licensePlate
+    })
     return vehicle
   }
 
@@ -41,6 +49,9 @@ class TransportationService {
     if (!vehicle) return null
     vehicle.status = "inactive"
     await vehicle.save()
+    await auditService.logAction(null, "DELETE_VEHICLE", {
+      vehicleId: id
+    })
   }
 
   async getDrivers() {
@@ -60,6 +71,10 @@ class TransportationService {
       status: "active",
       createdAt: new Date(),
     })
+    await auditService.logAction(data.userId, "CREATE_DRIVER", {
+      driverId: driver.id,
+      licenseNumber: data.licenseNumber
+    })
     return driver
   }
 
@@ -75,6 +90,10 @@ class TransportationService {
     driver.licenseNumber = data.licenseNumber
     driver.phone = data.phone
     await driver.save()
+    await auditService.logAction(data.userId, "UPDATE_DRIVER", {
+      driverId: id,
+      licenseNumber: data.licenseNumber
+    })
     return driver
   }
 
@@ -83,6 +102,9 @@ class TransportationService {
     if (!driver) return null
     driver.status = "inactive"
     await driver.save()
+    await auditService.logAction(null, "DELETE_DRIVER", {
+      driverId: id
+    })
   }
 
   async getTrips() {
@@ -103,6 +125,10 @@ class TransportationService {
       endTime: data.endTime,
       status: "scheduled",
       createdAt: new Date(),
+    })
+    await auditService.logAction(data.userId, "CREATE_TRIP", {
+      tripId: trip.id,
+      startLocation: data.startLocation
     })
     return trip
   }
@@ -132,6 +158,9 @@ class TransportationService {
     if (!trip) return null
     trip.status = "cancelled"
     await trip.save()
+    await auditService.logAction(null, "DELETE_TRIP", {
+      tripId: id
+    })
   }
 }
 

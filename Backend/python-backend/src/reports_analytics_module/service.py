@@ -2,6 +2,7 @@ import requests
 from src.reports_analytics_module.models import Report, AnalyticsData
 from src.database.connection import DatabaseManager
 from src.utils.logger import logger
+from src.audit_service import audit_service
 from src.config.app import config
 import os
 import json
@@ -24,7 +25,7 @@ class ReportsAnalyticsService:
         self.db = DatabaseManager(config_dict)
 
     # Report related methods
-    def generate_report(self, report_params):
+    def generate_report(self, report_params, user_id):
         try:
             report_name = report_params.get('name', 'Unnamed Report')
             description = report_params.get('description', '')
@@ -34,13 +35,14 @@ class ReportsAnalyticsService:
             """
             params = (report_name, description)
             self.db.execute_query(query, params, fetch=False)
+            audit_service.log_action(user_id, 'CREATE_REPORT', {'entity': 'report', 'data': report_params})
             # Assuming lastrowid is returned for new report id
             return {'report_id': None, 'status': 'generated'}
         except Exception as e:
             logger.error(f"Error generating report: {e}")
             raise e
 
-    def list_reports(self):
+    def list_reports(self, user_id):
         try:
             query = "SELECT id, name, description FROM Report"
             results = self.db.execute_query(query)
@@ -51,6 +53,7 @@ class ReportsAnalyticsService:
                     'name': row['name'],
                     'description': row['description']
                 })
+            audit_service.log_action(user_id, 'LIST_REPORTS', {'count': len(reports)})
             return reports
         except Exception as e:
             logger.error(f"Error listing reports: {e}")

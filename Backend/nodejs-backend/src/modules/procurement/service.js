@@ -1,5 +1,6 @@
 const { Op } = require("sequelize");
 const { ProcurementRequest, ProcurementRequestItem, ProcurementApproval, Vendor, Tender, Bid, Contract, BidEvaluationCommittee, BidEvaluation, ContractAmendment, AuditLog } = require("./model");
+const auditService = require("../audit/service");
 
 class ProcurementService {
     async createProcurementRequest(data) {
@@ -61,7 +62,10 @@ class ProcurementService {
         request.updatedAt = new Date();
         await request.save();
 
-        await this.recordAuditLog("ProcurementRequest", requestId, "approve", userId, `Request approved`);
+        await auditService.logAction(userId, "APPROVE_PROCUREMENT_REQUEST", {
+            requestId,
+            status: "approved"
+        });
 
         return request;
     }
@@ -77,7 +81,11 @@ class ProcurementService {
         request.updatedAt = new Date();
         await request.save();
 
-        await this.recordAuditLog("ProcurementRequest", requestId, "reject", userId, `Request rejected: ${reason}`);
+        await auditService.logAction(userId, "REJECT_PROCUREMENT_REQUEST", {
+            requestId,
+            status: "rejected",
+            reason
+        });
 
         return request;
     }
@@ -406,15 +414,10 @@ class ProcurementService {
     }
 
     async recordAuditLog(entityType, entityId, action, userId, details) {
-        const logId = `AL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        await AuditLog.create({
-            id: logId,
+        await auditService.logAction(userId, action, {
             entityType,
             entityId,
-            action,
-            userId,
-            timestamp: new Date(),
-            details,
+            details
         });
     }
 
