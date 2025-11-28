@@ -8,6 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { fetchDepartments, fetchRoles, createEmployee } from '@/services/api';
 import { mockDepartments, mockRoles } from '@/services/mockData';
 import type { Department, Role } from '@/types/api';
+import type { Employee } from '@/types/hr';
 
 
 interface AddEmployeeFormProps {
@@ -92,22 +93,20 @@ export const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
     setLoading(true);
 
     try {
-      const payload = {
+      const payload: Partial<Employee> = {
         employeeId: formData.employeeId,
         firstName: formData.firstName,
         lastName: formData.lastName,
         middleName: formData.middleName,
         email: formData.email,
-        departmentId: formData.departmentId,
-        roleId: formData.roleId,
-        nationalId: formData.nationalId,
-        phoneNumber: formData.phoneNumber,
+        departmentId: Number(formData.departmentId),
+        roleId: Number(formData.roleId),
         phone: formData.phoneNumber,
         address: formData.address,
         dateOfBirth: formData.dateOfBirth,
         hireDate: formData.hireDate,
         salary: formData.salary ? Number(formData.salary) : undefined,
-        bankAccountNumber: formData.bankAccountNumber,
+        accountNumber: formData.bankAccountNumber,
         momoNumber: formData.momoNumber,
       };
 

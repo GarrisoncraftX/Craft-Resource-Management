@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BudgetItem, Department } from '@/types/api';
-import { lookupApiService } from '@/services/lookupApi';
+import { lookupApiService } from '@/services/nodejsbackendapi/lookupApi';
 
 interface BudgetFormProps {
   budget?: BudgetItem;

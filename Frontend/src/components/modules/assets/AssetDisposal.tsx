@@ -5,14 +5,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { fetchDisposalRecords } from '@/services/api';
+import type { DisposalRecord } from '@/types/asset';
 
-const disposalDummies = [
-  { id: 'DP-001', asset: 'Old Printer', method: 'Auction', date: '2024-01-28', status: 'Pending Approval', proceeds: 0 },
-  { id: 'DP-002', asset: 'Damaged Chair', method: 'Scrap', date: '2024-01-18', status: 'Completed', proceeds: 10 },
+const disposalDummies: DisposalRecord[] = [
+  { id: 1, asset: 'Old Printer', method: 'Auction', disposalDate: '2024-01-28', status: 'Pending Approval', proceeds: 0 },
+  { id: 2, asset: 'Damaged Chair', method: 'Scrap', disposalDate: '2024-01-18', status: 'Completed', proceeds: 10 },
 ];
 
 export const AssetDisposal: React.FC = () => {
-  const [disposals, setDisposals] = useState<typeof disposalDummies>(disposalDummies);
+  const [disposals, setDisposals] = useState<DisposalRecord[]>(disposalDummies);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,19 +25,18 @@ export const AssetDisposal: React.FC = () => {
       try {
         const resp = await fetchDisposalRecords();
         console.log('Fetched disposal records:', resp);
-        // map backend shape to UI shape
         if (!cancelled && Array.isArray(resp) && resp.length > 0) {
-          const mapped = resp.map((r: unknown) => ({
-            id: r.id ?? `DP-${Math.random().toString(36).slice(2, 8)}`,
+          const mapped: DisposalRecord[] = resp.map((r: any) => ({
+            id: r.id ?? Math.floor(Math.random() * 100000),
             asset: r.asset?.assetName ?? r.asset?.assetTag ?? r.asset ?? r.assetName ?? 'Unknown Asset',
             method: r.method ?? r.disposalMethod ?? '',
-            date: r.disposalDate ?? r.date ?? r.disposedAt ?? '',
+            disposalDate: r.disposalDate ?? r.date ?? r.disposedAt ?? '',
             status: r.status ?? r.state ?? '',
             proceeds: Number(r.proceeds ?? r.amount ?? 0),
           }));
           setDisposals(mapped);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('AssetDisposal: failed to load disposal records — using fallback dummies.', err?.message ?? err);
         setError(err?.message ?? 'Failed to fetch disposal records');
       } finally {
@@ -98,7 +98,7 @@ export const AssetDisposal: React.FC = () => {
                   <TableCell className="font-medium">{d.id}</TableCell>
                   <TableCell>{d.asset}</TableCell>
                   <TableCell>{d.method}</TableCell>
-                  <TableCell>{d.date ? new Date(d.date).toLocaleDateString() : '—'}</TableCell>
+                  <TableCell>{d.disposalDate ? new Date(d.disposalDate).toLocaleDateString() : '—'}</TableCell>
                   <TableCell>{d.status}</TableCell>
                   <TableCell>${Number(d.proceeds ?? 0).toLocaleString()}</TableCell>
                 </TableRow>

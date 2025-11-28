@@ -8,24 +8,12 @@ import { Search, Plus, Edit, Eye, Package } from 'lucide-react';
 
 // Use the service that calls the Java controller (/assets)
 import { fetchAssets } from '@/services/api';
-
-/* 
-  IMPORTANT: Java Asset entity fields:
-    - id (Long)
-    - assetTag (String)         -> unique tag / ID
-    - assetName (String)        -> name/title
-    - description (String)      -> description (no 'category' field in entity)
-    - acquisitionDate (LocalDate)
-    - acquisitionCost (BigDecimal)
-    - currentValue (BigDecimal)
-    - location (String)
-    - status (String)
-*/
+import type { Asset } from '@/types/asset';
 
 // Dummy data (kept as fallback)
-const assetData = [
+const assetData: Asset[] = [
   {
-    id: 'AST001',
+    id: 1,
     assetTag: 'AST001',
     assetName: 'Dell Laptop OptiPlex 7090',
     description: 'IT Equipment',
@@ -33,10 +21,11 @@ const assetData = [
     status: 'Active',
     acquisitionDate: '2023-06-15',
     acquisitionCost: 1200,
-    currentValue: 1100
+    currentValue: 1100,
+    condition: 'Good'
   },
   {
-    id: 'AST002',
+    id: 2,
     assetTag: 'AST002',
     assetName: 'Conference Room Table',
     description: 'Furniture',
@@ -44,10 +33,11 @@ const assetData = [
     status: 'Active',
     acquisitionDate: '2022-03-20',
     acquisitionCost: 800,
-    currentValue: 650
+    currentValue: 650,
+    condition: 'Good'
   },
   {
-    id: 'AST003',
+    id: 3,
     assetTag: 'AST003',
     assetName: 'Industrial Printer HP LaserJet',
     description: 'Office Equipment',
@@ -55,7 +45,8 @@ const assetData = [
     status: 'Maintenance',
     acquisitionDate: '2023-01-10',
     acquisitionCost: 1500,
-    currentValue: 1200
+    currentValue: 1200,
+    condition: 'Fair'
   },
 ];
 
@@ -63,7 +54,7 @@ export const AssetRegister: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   // start with dummies so UI works offline
-  const [assets, setAssets] = useState<typeof assetData>(assetData);
+  const [assets, setAssets] = useState<Asset[]>(assetData);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,7 +70,7 @@ export const AssetRegister: React.FC = () => {
         if (!cancelled && Array.isArray(list) && list.length > 0) {
           setAssets(list);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Failed to fetch assets — using fallback dummies.', err?.message ?? err);
         setError(err?.message ?? 'Failed to fetch assets');
       } finally {
@@ -89,25 +80,21 @@ export const AssetRegister: React.FC = () => {
     return () => { cancelled = true; };
   }, []);
 
-  // Accessor helpers that use the Java entity field names (with small fallbacks)
-  const getId = (a: unknown) => (a.assetTag ?? a.tag ?? a.id ?? '');
-  const getName = (a: unknown) => (a.assetName ?? a.name ?? a.asset_name ?? '');
-  // Entity has no 'category' field -> use description as closest mapping
-  const getCategory = (a: unknown) => (a.description ?? a.category ?? 'Uncategorized');
-  const getLocation = (a: unknown) => (a.location ?? a.site ?? '');
-  // Prefer currentValue if present, otherwise acquisitionCost (both BigDecimal on backend)
-  const getValue = (a: unknown) => Number(a.currentValue ?? a.acquisitionCost ?? a.value ?? 0);
-  const getAcquisitionDate = (a: unknown) => (a.acquisitionDate ?? a.acquisition_date ?? a.purchaseDate ?? '');
-
   const filteredAssets = assets.filter((asset) =>
-    getName(asset).toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-    getCategory(asset).toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-    getLocation(asset).toString().toLowerCase().includes(searchTerm.toLowerCase())
+    asset.assetName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    asset.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    asset.location?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) return <div className="p-6">Loading assets…</div>;
-  // show minimal notice but keep UI usable with fallback data
   if (error) console.info('AssetRegister warning:', error);
+
+  const stats = {
+    total: filteredAssets.length,
+    totalValue: filteredAssets.reduce((sum, a) => sum + (a.currentValue || a.acquisitionCost || 0), 0),
+    maintenance: filteredAssets.filter(a => a.status === 'Maintenance').length,
+    depreciation: filteredAssets.reduce((sum, a) => sum + ((a.currentValue || a.acquisitionCost || 0) * 0.075), 0),
+  };
 
   return (
     <div className="min-h-screen flex-1 flex flex-col p-6 bg-background">
@@ -149,7 +136,7 @@ export const AssetRegister: React.FC = () => {
               <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{filteredAssets.length}</div>
+              <div className="text-2xl font-bold">{stats.total}</div>
               <p className="text-xs text-muted-foreground">+23 this month</p>
             </CardContent>
           </Card>
@@ -159,7 +146,7 @@ export const AssetRegister: React.FC = () => {
               <CardTitle className="text-sm font-medium">Total Value</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${filteredAssets.reduce((sum, asset) => sum + getValue(asset), 0).toLocaleString()}</div>
+              <div className="text-2xl font-bold">${stats.totalValue.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">Asset portfolio value</p>
             </CardContent>
           </Card>
@@ -169,7 +156,7 @@ export const AssetRegister: React.FC = () => {
               <CardTitle className="text-sm font-medium">Under Maintenance</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{filteredAssets.filter(asset => asset.status === 'Maintenance').length}</div>
+              <div className="text-2xl font-bold">{stats.maintenance}</div>
               <p className="text-xs text-muted-foreground">1.4% of total assets</p>
             </CardContent>
           </Card>
@@ -179,7 +166,7 @@ export const AssetRegister: React.FC = () => {
               <CardTitle className="text-sm font-medium">Depreciation (YTD)</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${(filteredAssets.reduce((sum, asset) => sum + (getValue(asset) * 0.075), 0)).toLocaleString()}</div>
+              <div className="text-2xl font-bold">${stats.depreciation.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">7.5% depreciation rate</p>
             </CardContent>
           </Card>
@@ -206,12 +193,12 @@ export const AssetRegister: React.FC = () => {
               </TableHeader>
               <TableBody>
                 {filteredAssets.map((asset) => (
-                  <TableRow key={getId(asset) || Math.random()}>
-                    <TableCell className="font-mono">{getId(asset)}</TableCell>
-                    <TableCell className="font-medium">{getName(asset)}</TableCell>
-                    <TableCell>{getCategory(asset)}</TableCell>
-                    <TableCell>{getLocation(asset)}</TableCell>
-                    <TableCell>${getValue(asset).toLocaleString()}</TableCell>
+                  <TableRow key={asset.assetTag || asset.id}>
+                    <TableCell className="font-mono">{asset.assetTag || asset.id}</TableCell>
+                    <TableCell className="font-medium">{asset.assetName}</TableCell>
+                    <TableCell>{asset.description}</TableCell>
+                    <TableCell>{asset.location}</TableCell>
+                    <TableCell>${(asset.currentValue || asset.acquisitionCost || 0).toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge variant={
                         (asset.status ?? '').toLowerCase() === 'active' ? 'default' :

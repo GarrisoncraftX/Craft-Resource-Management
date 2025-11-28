@@ -191,6 +191,15 @@ export async function deleteDisposalRecord(id: number | string) {
   return apiClient.delete(`/assets/disposal-records/${id}`);
 }
 
+// Acquisition endpoints (placeholder - add actual backend when ready)
+export async function fetchAcquisitionRequests() {
+  return apiClient.get('/assets/acquisition-requests');
+}
+
+export async function submitAcquisitionRequest(request: unknown) {
+  return apiClient.post('/assets/acquisition-requests', request);
+}
+
 
 //LegalCase endpoints (Java controller: /legal/cases)
 export async function createLegalCase(record: any){

@@ -29,8 +29,8 @@ const EmployeeInfoDisplay: React.FC = () => {
     const [employeeData, setEmployeeData] = useState<Employee | null>(user ? {
         id: user.userId, tenantId: 0, employeeId: user.employeeId, email: user.email,
         firstName: user.firstName, lastName: user.lastName, middleName: '', phone: '',
-        address: '', dateOfBirth: '', hireDate: '', departmentId: user.departmentId,
-        roleId: user.roleId, managerId: '', salary: 0, isActive: 1,
+        address: '', dateOfBirth: '', hireDate: '', departmentId: Number(user.departmentId),
+        roleId: Number(user.roleId), managerId: '', salary: 0, isActive: 1,
         biometricEnrollmentStatus: '', lastLogin: '', failedLoginAttempts: 0,
         accountLockedUntil: '', passwordResetToken: '', passwordResetExpires: '',
         createdAt: '', updatedAt: '', dateOfJoining: '',

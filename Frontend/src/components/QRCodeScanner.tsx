@@ -43,7 +43,6 @@ export const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, isActive }
         },
         {
           onDecodeError: (err) => {
-            // Ignore decode errors, they're normal
           },
           highlightScanRegion: true,
           highlightCodeOutline: true,

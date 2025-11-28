@@ -30,7 +30,7 @@ export const VisitorKiosk: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
-            <QRCodeDisplay type="visitor" refreshInterval={30000} />
+            <QRCodeDisplay type="visitor" refreshInterval={10000} />
             
             <div className="mt-8 p-6 bg-blue-50 rounded-lg">
               <h3 className="font-semibold text-blue-900 mb-3 text-center">

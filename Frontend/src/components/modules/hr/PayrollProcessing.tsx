@@ -54,7 +54,7 @@ export const PayrollProcessing: React.FC = () => {
         setError("Failed to load payroll data. Using mock data as fallback.");
         setPayslips(mockPayslips);
         // For mock data, we don't have employee names, so we'll use placeholders
-        setEmployees(mockPayslips.map(p => ({ id: p.user_id, firstName: `Employee ${p.user_id}`, lastName: '', tenantId: 0, employeeId: `EMP${p.user_id}`, email: `employee${p.user_id}@example.com`, departmentId: 1, roleId: 1, isActive: 1, biometricEnrollmentStatus: 'NONE', failedLoginAttempts: 0, createdAt: '', updatedAt: '' } as Employee)));
+        setEmployees(mockPayslips.map(p => ({ id: String(p.user_id), firstName: `Employee ${p.user_id}`, lastName: '', tenantId: 0, employeeId: `EMP${p.user_id}`, email: `employee${p.user_id}@example.com`, departmentId: 1, roleId: 1, isActive: 1, biometricEnrollmentStatus: 'NONE', failedLoginAttempts: 0, createdAt: '', updatedAt: '' } as Employee)));
 
         // Set initial selected period for mock data
         if (mockPayslips.length > 0) {
@@ -74,9 +74,9 @@ export const PayrollProcessing: React.FC = () => {
     fetchData();
   }, []);
 
-  const getEmployeeName = useCallback((userId: number) => {
-    if (!userId) return 'Unknown Employee';
-    const employee = employees.find(emp => emp.id === userId);
+  const getEmployeeName = useCallback((userId: number | string) => {
+    const id = String(userId);
+    const employee = employees.find(emp => emp.id === id);
     return employee ? `${employee.firstName} ${employee.lastName}` : `Unknown Employee (${userId})`;
   }, [employees]);
 

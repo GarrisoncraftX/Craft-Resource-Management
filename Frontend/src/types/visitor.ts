@@ -31,6 +31,7 @@ export interface QRToken {
   token: string;
   expires_at: string;
   created_at: string;
+  check_in_url: string;
 }
 
 export interface AttendanceRecord {

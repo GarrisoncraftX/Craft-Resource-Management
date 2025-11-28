@@ -61,8 +61,8 @@ export interface Employee {
   address?: string;
   dateOfBirth?: string;
   hireDate?: string;
-  departmentId: string;
-  roleId: string;
+  departmentId: number;
+  roleId: number;
   managerId?: string;
   salary?: number;
   isActive: number;

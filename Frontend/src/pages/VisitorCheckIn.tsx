@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, Loader2, AlertTriangle, UserCheck } from 'lucide-react';
+import { CheckCircle, Loader2, AlertTriangle, UserCheck, Search } from 'lucide-react';
 import { visitorApiService } from '@/services/visitorApi';
 import { hrApiService } from '@/services/javabackendapi/hrApi';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 export const VisitorCheckIn: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -22,6 +23,8 @@ export const VisitorCheckIn: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [employees, setEmployees] = useState<Array<{ id: number; name: string }>>([]);
+  const [employeeSearchOpen, setEmployeeSearchOpen] = useState(false);
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState('');
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -74,6 +77,17 @@ export const VisitorCheckIn: React.FC = () => {
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+
+  const filteredEmployees = useMemo(() => {
+    if (!employeeSearchQuery) return employees;
+    return employees.filter((emp) =>
+      emp.name.toLowerCase().includes(employeeSearchQuery.toLowerCase())
+    );
+  }, [employees, employeeSearchQuery]);
+
+  const selectedEmployee = employees.find(
+    (emp) => emp.id.toString() === formData.visiting_employee_id
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,21 +250,46 @@ export const VisitorCheckIn: React.FC = () => {
               <Label htmlFor="visiting_employee_id">
                 Who are you visiting? <span className="text-destructive">*</span>
               </Label>
-              <Select
-                value={formData.visiting_employee_id}
-                onValueChange={(value) => handleInputChange('visiting_employee_id', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select employee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id.toString()}>
-                      {emp.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={employeeSearchOpen} onOpenChange={setEmployeeSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={employeeSearchOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedEmployee ? selectedEmployee.name : "Search employee..."}
+                    <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Search employee by name..." 
+                      value={employeeSearchQuery}
+                      onValueChange={setEmployeeSearchQuery}
+                    />
+                    <CommandList>
+                      <CommandEmpty>No employee found.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredEmployees.map((emp) => (
+                          <CommandItem
+                            key={emp.id}
+                            value={emp.name}
+                            onSelect={() => {
+                              handleInputChange('visiting_employee_id', emp.id.toString());
+                              setEmployeeSearchOpen(false);
+                              setEmployeeSearchQuery('');
+                            }}
+                          >
+                            {emp.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">

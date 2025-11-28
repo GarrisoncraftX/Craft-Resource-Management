@@ -87,12 +87,12 @@ export const EmployeeProfiles: React.FC = () => {
           email: e.email,
           phone: e.phone,
           hireDate: e.hireDate, 
-          departmentId: e.department_id.toString(),
-          roleId: e.role_id.toString(),
+          departmentId: Number(e.department_id),
+          roleId: Number(e.role_id),
           isActive: e.status === 'Active' ? 1: 0, 
           biometricEnrollmentStatus: 'NONE', 
           failedLoginAttempts: 0, 
-          createdAt: new Date().toISOString(), 
+          createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString() 
         })));
       } finally {
@@ -107,13 +107,13 @@ export const EmployeeProfiles: React.FC = () => {
   console.log(departments);
   console.log(roles);
 
-  const getDepartmentName = (departmentId: string) => {
-    const department = departments.find(d => d.id === departmentId);
-    return department ? department.name : 'N/A';
+  const getDepartmentName = (departmentId: number | string) => {
+    const dept = departments.find(d => d.id === Number(departmentId));
+    return dept ? dept.name : 'N/A';
   };
 
-  const getRoleName = (roleId: string) => {
-    const role = roles.find(r => r.id === roleId);
+  const getRoleName = (roleId: number | string) => {
+    const role = roles.find(r => r.id === Number(roleId));
     return role ? role.name : 'N/A';
   };
 

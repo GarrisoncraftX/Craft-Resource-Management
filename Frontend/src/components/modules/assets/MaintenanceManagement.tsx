@@ -6,35 +6,33 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Wrench } from 'lucide-react';
 
-// use existing service API functions (already in api.ts)
 import { fetchMaintenanceRecords, createMaintenanceRecord } from '@/services/api';
+import type { MaintenanceRecord } from '@/types/asset';
 
 /* Fallback dummy schedule data (preserved as UI fallback) */
-const dummySchedules = [
+const dummySchedules: MaintenanceRecord[] = [
 	{
-		id: 'MT-001',
-		assetName: 'Generator',
-		assetId: null,
+		id: 1,
+		asset: 'Generator',
 		type: 'Inspection',
-		date: '2024-02-05',
-		technician: 'Power Systems',
+		maintenanceDate: '2024-02-05',
+		performedBy: 'Power Systems',
 		status: 'Scheduled',
 		description: '',
 	},
 	{
-		id: 'MT-002',
-		assetName: 'AC Unit',
-		assetId: null,
+		id: 2,
+		asset: 'AC Unit',
 		type: 'Repair',
-		date: '2024-01-25',
-		technician: 'HVAC Services',
+		maintenanceDate: '2024-01-25',
+		performedBy: 'HVAC Services',
 		status: 'In Progress',
 		description: '',
 	},
 ];
 
 export const MaintenanceManagement: React.FC = () => {
-	const [schedules, setSchedules] = useState<typeof dummySchedules>(dummySchedules);
+	const [schedules, setSchedules] = useState<MaintenanceRecord[]>(dummySchedules);
 	const [loading, setLoading] = useState<boolean>(true);
 	const [error, setError] = useState<string | null>(null);
 
@@ -53,21 +51,19 @@ export const MaintenanceManagement: React.FC = () => {
 			try {
 				const resp = await fetchMaintenanceRecords();
 				console.log('Fetched maintenance records:', resp);
-				// Expecting array of MaintenanceRecord { id, asset: {id, assetName, assetTag, ...}, maintenanceDate, description, performedBy }
 				if (!cancelled && Array.isArray(resp) && resp.length > 0) {
-					const mapped = resp.map((r: unknown) => ({
+					const mapped: MaintenanceRecord[] = resp.map((r: any) => ({
 						id: r.id,
-						assetName: r.asset?.assetName ?? r.asset?.assetTag ?? 'Unknown Asset',
-						assetId: r.asset?.id ?? null,
-						type: r.type ?? r.taskType ?? '', // any extra fields
-						date: r.maintenanceDate ?? r.maintenance_date ?? r.date ?? '',
-						technician: r.performedBy ?? r.performed_by ?? '',
+						asset: r.asset?.assetName ?? r.asset?.assetTag ?? 'Unknown Asset',
+						type: r.type ?? r.taskType ?? '',
+						maintenanceDate: r.maintenanceDate ?? r.maintenance_date ?? r.date ?? '',
+						performedBy: r.performedBy ?? r.performed_by ?? '',
 						description: r.description ?? '',
 						status: r.status ?? 'Scheduled',
 					}));
 					setSchedules(mapped);
 				}
-			} catch (err) {
+			} catch (err: any) {
 				console.warn('MaintenanceManagement: failed to fetch maintenance records — using fallback dummies.', err?.message ?? err);
 				setError(err?.message ?? 'Failed to fetch maintenance records');
 			} finally {
@@ -96,32 +92,30 @@ export const MaintenanceManagement: React.FC = () => {
 		try {
 			const created = await createMaintenanceRecord(payload);
 			// Map created response to UI shape (backend may return full MaintenanceRecord)
-			const item = {
-				id: created?.id ?? `MT-${Date.now()}`,
-				assetName: created?.asset?.assetName ?? created?.asset?.assetTag ?? `Asset ${payload.asset.id}`,
-				assetId: created?.asset?.id ?? payload.asset.id,
-				type: created?.type ?? type,
-				date: created?.maintenanceDate ?? payload.maintenanceDate,
-				technician: created?.performedBy ?? payload.performedBy ?? technician,
-				description: created?.description ?? description,
-				status: created?.status ?? 'Scheduled',
-			};
-			setSchedules(prev => [item, ...prev]);
-			setError(null);
-		} catch (err) {
-			console.warn('MaintenanceManagement: create failed; adding locally as fallback.', err?.message ?? err);
-			// Optimistic local add on failure
-			const local = {
-				id: `MT-${Date.now()}`,
-				assetName: `Asset ${assetId}`,
-				assetId: assetId ? Number(assetId) : null,
-				type,
-				date,
-				technician,
-				description,
-				status: 'Scheduled',
-			};
-			setSchedules(prev => [local, ...prev]);
+		const item: MaintenanceRecord = {
+			id: created?.id ?? Math.floor(Math.random() * 100000),
+			asset: created?.asset?.assetName ?? created?.asset?.assetTag ?? `Asset ${payload.asset.id}`,
+			type: created?.type ?? type,
+			maintenanceDate: created?.maintenanceDate ?? payload.maintenanceDate,
+			performedBy: created?.performedBy ?? payload.performedBy ?? technician,
+			description: created?.description ?? description,
+			status: created?.status ?? 'Scheduled',
+		};
+		setSchedules(prev => [item, ...prev]);
+		setError(null);
+	} catch (err: any) {
+		console.warn('MaintenanceManagement: create failed; adding locally as fallback.', err?.message ?? err);
+		// Optimistic local add on failure
+		const local: MaintenanceRecord = {
+			id: Math.floor(Math.random() * 100000),
+			asset: `Asset ${assetId}`,
+			type,
+			maintenanceDate: date,
+			performedBy: technician,
+			description,
+			status: 'Scheduled',
+		};
+		setSchedules(prev => [local, ...prev]);
 			setError(err?.message ?? 'Failed to create maintenance record (saved locally)');
 		} finally {
 			// reset form
@@ -194,14 +188,14 @@ export const MaintenanceManagement: React.FC = () => {
 						</TableHeader>
 						<TableBody>
 							{schedules.map((m) => (
-								<TableRow key={m.id}>
-									<TableCell className="font-medium">{m.id}</TableCell>
-									<TableCell>{m.assetName}</TableCell>
-									<TableCell>{m.type}</TableCell>
-									<TableCell>{m.date ? new Date(m.date).toLocaleDateString() : '—'}</TableCell>
-									<TableCell>{m.technician}</TableCell>
-									<TableCell>{m.status}</TableCell>
-								</TableRow>
+					<TableRow key={m.id}>
+						<TableCell className="font-medium">{m.id}</TableCell>
+						<TableCell>{m.asset}</TableCell>
+						<TableCell>{m.type}</TableCell>
+						<TableCell>{m.maintenanceDate ? new Date(m.maintenanceDate).toLocaleDateString() : '—'}</TableCell>
+						<TableCell>{m.performedBy}</TableCell>
+						<TableCell>{m.status}</TableCell>
+					</TableRow>
 							))}
 						</TableBody>
 					</Table>

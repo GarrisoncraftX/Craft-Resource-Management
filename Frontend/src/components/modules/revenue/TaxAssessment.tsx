@@ -66,15 +66,14 @@ export const TaxAssessment: React.FC = () => {
 
   // quick computed metrics for the header cards
   const totalProperties = assessments.length;
-  const totalValue = assessments.reduce((s, a) => s + (Number(a.totalValue) || 0), 0);
-  const totalAnnualTax = assessments.reduce((s, a) => s + (Number(a.annualTax) || 0), 0);
-  const pendingReviews = assessments.filter(a => (a.status ?? '').toString().toLowerCase().includes('review') || (a.status ?? '').toString().toLowerCase().includes('pending')).length;
+  const totalValue = assessments.reduce((s, a: any) => s + (Number(a.totalValue) || 0), 0);
+  const totalAnnualTax = assessments.reduce((s, a: any) => s + (Number(a.annualTax) || 0), 0);
+  const pendingReviews = assessments.filter((a: any) => (a.status ?? '').toString().toLowerCase().includes('review') || (a.status ?? '').toString().toLowerCase().includes('pending')).length;
 
-  // --- CHANGED: guard undefined external variables used by the UI (no new sample data added) ---
-  const assessmentTrendsData = (typeof assessmentTrends !== 'undefined' && Array.isArray(assessmentTrends)) ? assessmentTrends : [];
-  const propertyDistributionData = (typeof propertyDistribution !== 'undefined' && Array.isArray(propertyDistribution)) ? propertyDistribution : [];
-  const taxRatesData = (typeof taxRates !== 'undefined' && Array.isArray(taxRates)) ? taxRates : [];
-  // --- END CHANGED ---
+  // Sample chart data (placeholder)
+  const assessmentTrendsData: any[] = [];
+  const propertyDistributionData: any[] = [];
+  const taxRatesData: any[] = [];
 
   if (loading) return <div className="p-6">Loading tax assessments…</div>;
 
@@ -305,15 +304,15 @@ export const TaxAssessment: React.FC = () => {
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
-                    {assessments.map((assessment) => (
+                   <TableBody>
+                    {assessments.map((assessment: any) => (
                       <TableRow key={assessment.id}>
                         <TableCell className="font-medium">{assessment.id}</TableCell>
                         <TableCell>{assessment.property}</TableCell>
                         <TableCell>{assessment.owner}</TableCell>
                         <TableCell>{assessment.type}</TableCell>
-                        <TableCell>${assessment.totalValue.toLocaleString()}</TableCell>
-                        <TableCell>${assessment.annualTax.toLocaleString()}</TableCell>
+                        <TableCell>${Number(assessment.totalValue || 0).toLocaleString()}</TableCell>
+                        <TableCell>${Number(assessment.annualTax || 0).toLocaleString()}</TableCell>
                         <TableCell>
                           <Badge variant={
                             assessment.status === 'Current' ? 'default' : 

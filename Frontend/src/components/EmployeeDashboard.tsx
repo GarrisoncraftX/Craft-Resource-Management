@@ -8,9 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
-import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign} from 'lucide-react';
+import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign, HelpCircle} from 'lucide-react';
 import { leaveApiService } from '@/services/nodejsbackendapi/leaveApi';
-import { LeaveBalance, LeaveRequest, LeaveType } from '@/types/leave';
+import { LeaveBalance, LeaveRequest } from '@/types/leave';
 import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData';
 import { fetchAttendance, fetchPayslips, mapAttendanceToUI, mapPayrollToUI, Employee, fetchEmployeeById, fetchRecentActivities } from '@/services/api';
 import LeaveRequestForm from './modules/hr/LeaveRequestForm';
@@ -217,9 +217,9 @@ export const EmployeeDashboard: React.FC = () => {
           id: `audit-${log.id}`,
           message: log.action,
           timestamp: log.timestamp,
-          color: 'bg-green-500' // Default color, can be customized based on action
+          color: 'bg-green-500'
         }));
-        setRecentActivities(activities.slice(0, 4)); // Limit to 4 recent activities
+        setRecentActivities(activities.slice(0, 4));
 
       } catch (error) {
         console.error('Failed to fetch dashboard data, using mock data fallback.', error);
@@ -567,7 +567,7 @@ export const EmployeeDashboard: React.FC = () => {
                   </div>
                 </Button>
                 <Button variant="outline" className="justify-start h-auto p-4" onClick={() => setIsITSupportFormOpen(true)}>
-                  <Clock className="h-4 w-4 mr-2" />
+                  <HelpCircle className="h-4 w-4 mr-2" />
                   <div className="text-left">
                     <div className="font-medium">IT Support</div>
                     <div className="text-xs text-muted-foreground">Request assistance</div>
