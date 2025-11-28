@@ -35,11 +35,23 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
         const secondsUntilExpiry = Math.floor((expiresAtTime - nowTime) / 1000);
         setExpiresIn(secondsUntilExpiry);
       } else {
-        // Attendance QR code logic (placeholder for backend)
-        const fakeToken = Math.random().toString(36).substring(2, 15);
-        setQrData(`attendance:${fakeToken}`);
-        setSessionToken(fakeToken);
-        setExpiresIn(refreshInterval / 1000);
+        // Attendance QR code logic - call backend API
+        const response = await fetch('/api/biometric/kiosk/qr-display', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate attendance QR code');
+        }
+
+        const qrResult = await response.json();
+        setQrData(qrResult.qr_data);
+        setSessionToken(qrResult.session_token);
+        setExpiresIn(qrResult.expires_in);
       }
 
       toast({

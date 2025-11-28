@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 import uuid
 import hashlib
+import base64
+import json
 from src.utils.logger import logger
 from src.config.app import config as app_config_dict
 import os
@@ -120,12 +122,92 @@ class VisitorService:
                 update_token_query = "UPDATE qr_tokens SET is_used = 1 WHERE token = %s"
                 self.db.execute_query(update_token_query, (qr_token,), fetch=False)
 
+            # Send notification to host employee
+            self._send_host_notification(visitor_id, visitor_data)
+
             audit_service.log_action(user_id, 'CHECK_IN_VISITOR', {'entity': 'visitor', 'id': visitor_id, 'data': visitor_data})
             logger.info(f"Visitor {full_name} checked in successfully with ID {visitor_id}")
             return True, visitor_id
         except Exception as e:
             logger.error(f"Error checking in visitor: {e}")
             return False, str(e)
+
+    def _send_host_notification(self, visitor_id, visitor_data):
+        """Send notification to the host employee about visitor arrival"""
+        try:
+            # Get host employee details
+            host_query = """
+                SELECT first_name, last_name, email FROM users
+                WHERE id = %s
+            """
+            host_result = self.db.execute_query(host_query, (visitor_data['visiting_employee_id'],))
+
+            if host_result:
+                host = host_result[0]
+                host_name = f"{host['first_name']} {host['last_name']}"
+                host_email = host['email']
+
+                # In a real implementation, you would send an email or push notification
+                # For now, we'll log the notification
+                notification_message = f"""
+                Visitor Notification:
+                Visitor: {visitor_data['full_name']}
+                Contact: {visitor_data['contact_number']}
+                Purpose: {visitor_data['purpose_of_visit']}
+                Check-in Time: {datetime.utcnow().isoformat()}
+                """
+
+                logger.info(f"Host notification for {host_name} ({host_email}): {notification_message}")
+
+                # You could integrate with email service here
+                # self._send_email(host_email, "Visitor Check-in Notification", notification_message)
+
+        except Exception as e:
+            logger.error(f"Error sending host notification: {e}")
+
+    def generate_visitor_entry_pass(self, visitor_id):
+        """Generate an entry pass for the visitor"""
+        try:
+            # Get visitor details
+            visitor_query = """
+                SELECT full_name, check_in_time, purpose_of_visit,
+                       u.first_name as host_first_name, u.last_name as host_last_name
+                FROM visitors v
+                LEFT JOIN users u ON v.visiting_employee_id = u.id
+                WHERE v.visitor_id = %s
+            """
+            visitor_result = self.db.execute_query(visitor_query, (visitor_id,))
+
+            if not visitor_result:
+                return None
+
+            visitor = visitor_result[0]
+
+            # Generate entry pass data
+            entry_pass = {
+                'visitor_id': visitor_id,
+                'visitor_name': visitor['full_name'],
+                'host_name': f"{visitor['host_first_name']} {visitor['host_last_name']}",
+                'purpose': visitor['purpose_of_visit'],
+                'check_in_time': visitor['check_in_time'].isoformat() if visitor['check_in_time'] else None,
+                'valid_until': (datetime.utcnow() + timedelta(hours=8)).isoformat(),  # Valid for 8 hours
+                'issued_at': datetime.utcnow().isoformat()
+            }
+
+            # Generate QR code data for entry pass
+            qr_data = base64.b64encode(json.dumps({
+                'type': 'visitor_entry_pass',
+                'visitor_id': visitor_id,
+                'valid_until': entry_pass['valid_until']
+            }).encode()).decode()
+
+            entry_pass['qr_code'] = qr_data
+
+            return entry_pass
+
+        except Exception as e:
+            logger.error(f"Error generating visitor entry pass: {e}")
+            return None
 
     def check_out_visitor(self, visitor_id, user_id):
         """Check out a visitor"""

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,11 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, Loader2, AlertTriangle, UserCheck, Search } from 'lucide-react';
+import { CheckCircle, Loader2, AlertTriangle, UserCheck } from 'lucide-react';
 import { visitorApiService } from '@/services/visitorApi';
 import { hrApiService } from '@/services/javabackendapi/hrApi';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import type { EntryPass } from '@/types/visitor';
 
 export const VisitorCheckIn: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -22,9 +21,8 @@ export const VisitorCheckIn: React.FC = () => {
   const [tokenValid, setTokenValid] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [entryPass, setEntryPass] = useState<EntryPass | null>(null);
   const [employees, setEmployees] = useState<Array<{ id: number; name: string }>>([]);
-  const [employeeSearchOpen, setEmployeeSearchOpen] = useState(false);
-  const [employeeSearchQuery, setEmployeeSearchQuery] = useState('');
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -78,13 +76,6 @@ export const VisitorCheckIn: React.FC = () => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const filteredEmployees = useMemo(() => {
-    if (!employeeSearchQuery) return employees;
-    return employees.filter((emp) =>
-      emp.name.toLowerCase().includes(employeeSearchQuery.toLowerCase())
-    );
-  }, [employees, employeeSearchQuery]);
-
   const selectedEmployee = employees.find(
     (emp) => emp.id.toString() === formData.visiting_employee_id
   );
@@ -107,18 +98,27 @@ export const VisitorCheckIn: React.FC = () => {
     setError('');
 
     try {
-      await visitorApiService.checkInVisitor({
+      const checkInResult = await visitorApiService.checkInVisitor({
         ...formData,
         visiting_employee_id: Number.parseInt(formData.visiting_employee_id),
         qr_token: token,
       });
 
+      // Generate entry pass
+      try {
+        const entryPassData = await visitorApiService.generateEntryPass(checkInResult.visitor_id);
+        setEntryPass(entryPassData);
+      } catch (error_) {
+        console.error('Failed to generate entry pass:', error_);
+        // Continue with success even if entry pass fails
+      }
+
       setSuccess(true);
-      
-      // Redirect to success page after 3 seconds
+
+      // Redirect to success page after 5 seconds (longer to show entry pass)
       setTimeout(() => {
         navigate('/');
-      }, 3000);
+      }, 5000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to check in');
     } finally {
@@ -175,8 +175,28 @@ export const VisitorCheckIn: React.FC = () => {
               Your host has been notified of your arrival.
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-center">
+          <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground mb-4">Welcome, {formData.full_name}!</p>
+
+            {entryPass && (
+              <div className="bg-white p-4 rounded-lg border-2 border-green-200">
+                <h3 className="font-semibold text-lg mb-2">Your Entry Pass</h3>
+                <div className="text-sm space-y-1">
+                  <p><strong>Visitor:</strong> {entryPass.visitor_name}</p>
+                  <p><strong>Host:</strong> {entryPass.host_name}</p>
+                  <p><strong>Purpose:</strong> {entryPass.purpose}</p>
+                  <p><strong>Valid Until:</strong> {new Date(entryPass.valid_until).toLocaleString()}</p>
+                </div>
+                <div className="mt-3">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(entryPass.qr_code)}`}
+                    alt="Entry Pass QR Code"
+                    className="mx-auto"
+                  />
+                </div>
+              </div>
+            )}
+
             <p className="text-sm text-muted-foreground">
               Redirecting you shortly...
             </p>
@@ -250,46 +270,23 @@ export const VisitorCheckIn: React.FC = () => {
               <Label htmlFor="visiting_employee_id">
                 Who are you visiting? <span className="text-destructive">*</span>
               </Label>
-              <Popover open={employeeSearchOpen} onOpenChange={setEmployeeSearchOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={employeeSearchOpen}
-                    className="w-full justify-between"
-                  >
-                    {selectedEmployee ? selectedEmployee.name : "Search employee..."}
-                    <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0" align="start">
-                  <Command>
-                    <CommandInput 
-                      placeholder="Search employee by name..." 
-                      value={employeeSearchQuery}
-                      onValueChange={setEmployeeSearchQuery}
-                    />
-                    <CommandList>
-                      <CommandEmpty>No employee found.</CommandEmpty>
-                      <CommandGroup>
-                        {filteredEmployees.map((emp) => (
-                          <CommandItem
-                            key={emp.id}
-                            value={emp.name}
-                            onSelect={() => {
-                              handleInputChange('visiting_employee_id', emp.id.toString());
-                              setEmployeeSearchOpen(false);
-                              setEmployeeSearchQuery('');
-                            }}
-                          >
-                            {emp.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <Input
+                id="visiting_employee_id"
+                list="employees"
+                placeholder="Search employee..."
+                value={selectedEmployee ? selectedEmployee.name : ''}
+                onChange={(e) => {
+                  const selectedName = e.target.value;
+                  const emp = employees.find(emp => emp.name === selectedName);
+                  handleInputChange('visiting_employee_id', emp ? emp.id.toString() : '');
+                }}
+                required
+              />
+              <datalist id="employees">
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.name} />
+                ))}
+              </datalist>
             </div>
 
             <div className="space-y-2">

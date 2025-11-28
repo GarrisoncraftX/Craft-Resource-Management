@@ -46,3 +46,14 @@ export interface AttendanceRecord {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface EntryPass {
+  visitor_id: number;
+  visitor_name: string;
+  host_name: string;
+  purpose: string;
+  check_in_time: string;
+  valid_until: string;
+  issued_at: string;
+  qr_code: string;
+}

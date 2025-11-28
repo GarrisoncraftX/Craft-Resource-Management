@@ -1,5 +1,5 @@
 import { apiClient } from '@/utils/apiClient';
-import type { Visitor, VisitorCheckInPayload, VisitorCheckOutPayload, QRToken } from '@/types/visitor';
+import type { Visitor, VisitorCheckInPayload, VisitorCheckOutPayload, QRToken, EntryPass } from '@/types/visitor';
 
 class VisitorApiService {
   // Generate dynamic QR token for kiosk
@@ -47,8 +47,13 @@ class VisitorApiService {
     if (params.name) queryParams.append('name', params.name);
     if (params.host) queryParams.append('host', params.host);
     if (params.date) queryParams.append('date', params.date);
-    
+
     return apiClient.get(`/api/visitors/search?${queryParams.toString()}`);
+  }
+
+  // Generate entry pass for visitor
+  async generateEntryPass(visitorId: number): Promise<EntryPass> {
+    return apiClient.post('/api/visitors/entry-pass', { visitor_id: visitorId });
   }
 }
 
