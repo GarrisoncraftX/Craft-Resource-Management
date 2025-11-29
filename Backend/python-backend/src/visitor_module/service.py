@@ -1,10 +1,12 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import uuid
 import hashlib
 import base64
 import json
 from src.utils.logger import logger
 from src.config.app import config as app_config_dict
+from src.communication_service import communication_service
+from src.audit_service import audit_service
 import os
 
 class VisitorService:
@@ -28,10 +30,10 @@ class VisitorService:
         self.db = DatabaseManager(db_config)
 
     def generate_qr_token(self):
-        """Generate a dynamic QR token that expires in 30 seconds"""
+        """Generate a dynamic QR token that expires in 10 seconds"""
         try:
             token = str(uuid.uuid4())
-            expires_at = datetime.utcnow() + timedelta(seconds=30)
+            expires_at = datetime.now(timezone.utc) + timedelta(seconds=10)
 
             query = """
                 INSERT INTO qr_tokens (token, expires_at, is_used)
@@ -39,10 +41,14 @@ class VisitorService:
             """
             self.db.execute_query(query, (token, expires_at), fetch=False)
 
+            # Generate check-in URL for the QR code
+            check_in_url = f"/visitor-checkin?token={token}"
+
             return {
                 'token': token,
                 'expires_at': expires_at.isoformat(),
-                'created_at': datetime.utcnow().isoformat()
+                'created_at': datetime.now(timezone.utc).isoformat(),
+                'check_in_url': check_in_url
             }
         except Exception as e:
             logger.error(f"Error generating QR token: {e}")
@@ -61,7 +67,7 @@ class VisitorService:
                 return {'valid': False, 'message': 'Token not found'}
 
             token_data = result[0]
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
 
             if token_data['is_used']:
                 return {'valid': False, 'message': 'Token has already been used'}
@@ -103,6 +109,9 @@ class VisitorService:
             visitor_params = (full_name, contact_number, email, visiting_employee_id, purpose_of_visit)
             visitor_result = self.db.execute_query(visitor_query, visitor_params, fetch=False)
 
+            # Log the visitor insertion result for audit purposes
+            logger.info(f"Visitor record inserted successfully, result: {visitor_result}")
+
             # Get the inserted visitor ID
             visitor_id_query = "SELECT LAST_INSERT_ID() as visitor_id"
             visitor_id_result = self.db.execute_query(visitor_id_query)
@@ -125,7 +134,12 @@ class VisitorService:
             # Send notification to host employee
             self._send_host_notification(visitor_id, visitor_data)
 
-            audit_service.log_action(user_id, 'CHECK_IN_VISITOR', {'entity': 'visitor', 'id': visitor_id, 'data': visitor_data})
+            # Send notification to visitor if email provided
+            if email:
+                self._send_visitor_notification(visitor_id, visitor_data)
+
+            if user_id:
+                audit_service.log_action(user_id, 'CHECK_IN_VISITOR', {'entity': 'visitor', 'id': visitor_id, 'data': visitor_data})
             logger.info(f"Visitor {full_name} checked in successfully with ID {visitor_id}")
             return True, visitor_id
         except Exception as e:
@@ -147,23 +161,62 @@ class VisitorService:
                 host_name = f"{host['first_name']} {host['last_name']}"
                 host_email = host['email']
 
-                # In a real implementation, you would send an email or push notification
-                # For now, we'll log the notification
-                notification_message = f"""
-                Visitor Notification:
-                Visitor: {visitor_data['full_name']}
-                Contact: {visitor_data['contact_number']}
-                Purpose: {visitor_data['purpose_of_visit']}
-                Check-in Time: {datetime.utcnow().isoformat()}
+                # Send email notification to host
+                subject = "Visitor Check-in Notification"
+                message = f"""
+                Dear {host_name},
+
+                A visitor has checked in and is waiting for you.
+
+                Visitor Details:
+                - Name: {visitor_data['full_name']}
+                - Contact: {visitor_data['contact_number']}
+                - Email: {visitor_data.get('email', 'Not provided')}
+                - Purpose: {visitor_data['purpose_of_visit']}
+                - Check-in Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}
+
+                Please meet your visitor at the reception area.
+
+                Best regards,
+                Visitor Management System
                 """
 
-                logger.info(f"Host notification for {host_name} ({host_email}): {notification_message}")
+                communication_service.send_email(host_email, subject, message)
 
-                # You could integrate with email service here
-                # self._send_email(host_email, "Visitor Check-in Notification", notification_message)
+                logger.info(f"Host notification sent to {host_name} ({host_email})")
 
         except Exception as e:
             logger.error(f"Error sending host notification: {e}")
+
+    def _send_visitor_notification(self, visitor_id, visitor_data):
+        """Send notification to the visitor about successful check-in"""
+        try:
+            # Send email notification to visitor
+            subject = "Visitor Check-in Confirmation"
+            message = f"""
+            Dear {visitor_data['full_name']},
+
+            Your check-in has been completed successfully.
+
+            Check-in Details:
+            - Check-in Time: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}
+            - Purpose: {visitor_data['purpose_of_visit']}
+            - Contact: {visitor_data['contact_number']}
+
+            Your host has been notified and will meet you shortly.
+
+            Please show your entry pass QR code at security checkpoints.
+
+            Best regards,
+            Visitor Management System
+            """
+
+            communication_service.send_email(visitor_data['email'], subject, message)
+
+            logger.info(f"Visitor notification sent to {visitor_data['full_name']} ({visitor_data['email']})")
+
+        except Exception as e:
+            logger.error(f"Error sending visitor notification: {e}")
 
     def generate_visitor_entry_pass(self, visitor_id):
         """Generate an entry pass for the visitor"""
@@ -212,7 +265,7 @@ class VisitorService:
     def check_out_visitor(self, visitor_id, user_id):
         """Check out a visitor"""
         try:
-            # Update visitor record to mark checked out and set check_out_time
+
             query_update = """
                 UPDATE visitors
                 SET status = 'Checked Out', check_out_time = NOW(), updated_at = NOW()

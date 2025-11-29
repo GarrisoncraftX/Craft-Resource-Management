@@ -12,8 +12,6 @@ import ModuleLayout from "@/components/ui/ModuleLayout";
 
 
 const AuthForm = lazy(() => import("@/components/AuthForm"));
-const EmployeeDashboard = lazy(() => import("@/components/EmployeeDashboard").then(module => ({ default: module.EmployeeDashboard })));
-const KioskInterface = lazy(() => import("@/components/KioskInterface").then(module => ({ default: module.KioskInterface })));
 const FinanceDashboard = lazy(() => import("@/components/modules/finance/FinanceDashboard").then(module => ({ default: module.FinanceDashboard })));
 const ChartOfAccounts = lazy(() => import("@/components/modules/finance/ChartOfAccounts").then(module => ({ default: module.ChartOfAccounts })));
 const JournalEntries = lazy(() => import("@/components/modules/finance/JournalEntries").then(module => ({ default: module.JournalEntries })));
@@ -22,14 +20,8 @@ const AccountsReceivable = lazy(() => import("@/components/modules/finance/Accou
 const BudgetManagement = lazy(() => import("@/components/modules/finance/BudgetManagement").then(module => ({ default: module.BudgetManagement })));
 const HRDashboard = lazy(() => import("@/components/modules/hr/HRDashboard").then(module => ({ default: module.HRDashboard })));
 const AssetDashboard = lazy(() => import("@/components/modules/assets/AssetDashboard").then(module => ({ default: module.AssetDashboard })));
-const SecurityDashboard = lazy(() => import("@/components/modules/security/SecurityDashboard").then(module => ({ default: module.SecurityDashboard })));
-const ProcurementDashboard = lazy(() => import("@/components/modules/procurement/ProcurementDashboard").then(module => ({ default: module.ProcurementDashboard })));
-const LegalDashboard = lazy(() => import("@/components/modules/legal/LegalDashboard").then(module => ({ default: module.LegalDashboard })));
-const LegalManagement = lazy(() => import("@/components/modules/legal/LegalManagement").then(module => ({ default: module.LegalManagement })));
-const LegalCases = lazy(() => import("@/components/modules/legal/LegalCases").then(module => ({ default: module.LegalCases })));
-const ComplianceRecords = lazy(() => import("@/components/modules/legal/ComplianceMonitoring").then(module => ({ default: module.ComplianceMonitoring })));
-const PublicRelationsDashboard = lazy(() => import("@/components/modules/public-relations/PublicRelationsDashboard").then(module => ({ default: module.PublicRelationsDashboard })));
-const PlanningDashboard = lazy(() => import("@/components/modules/planning/PlanningDashboard").then(module => ({ default: module.PlanningDashboard })));
+
+//Admin Modules
 const AdminDashboard = lazy(() => import("@/components/modules/admin/AdminDashboard").then(module => ({ default: module.AdminDashboard })));
 const UserManagement = lazy(() => import("@/components/modules/admin/UserManagement").then(module => ({ default: module.UserManagement })));
 const SystemSettings = lazy(() => import("@/components/modules/admin/SystemSettings").then(module => ({ default: module.SystemSettings })));
@@ -38,6 +30,39 @@ const DatabaseManagement = lazy(() => import("@/components/modules/admin/Databas
 const SystemMonitoring = lazy(() => import("@/components/modules/admin/SystemMonitoring").then(module => ({ default: module.SystemMonitoring })));
 const Notifications = lazy(() => import("@/components/modules/admin/Notifications").then(module => ({ default: module.Notifications })));
 const AuditLogs = lazy(() => import("@/components/modules/admin/AuditLogs").then(module => ({ default: module.AuditLogs })));
+
+//Assets Modules
+const AssetRegister = lazy(() => import("@/components/modules/assets/AssetRegister").then(module => ({ default: module.AssetRegister })));
+const AssetAcquisition = lazy(() => import("@/components/modules/assets/AssetAcquisition").then(module => ({ default: module.AssetAcquisition })));
+const MaintenanceManagement = lazy(() => import("@/components/modules/assets/MaintenanceManagement").then(module => ({ default: module.MaintenanceManagement })));
+const AssetDisposal = lazy(() => import("@/components/modules/assets/AssetDisposal").then(module => ({ default: module.AssetDisposal })));
+const AssetValuation = lazy(() => import("@/components/modules/assets/AssetValuation").then(module => ({ default: module.AssetValuation })));
+
+//Employee Modules
+const EmployeeAccount = lazy(() => import("@/components/EmployeeAccount").then(module => ({ default: module.EmployeeAccount })));
+const EmployeeInfoDisplay = lazy(() => import("@/components/EmployeeInfoDisplay"));
+const EmployeeDashboard = lazy(() => import("@/components/EmployeeDashboard").then(module => ({ default: module.EmployeeDashboard })));
+const AttendanceKiosk = lazy(() => import("@/components/AttendanceKiosk").then(module => ({ default: module.AttendanceKiosk })));
+
+
+//Security Modules
+const SecurityDashboard = lazy(() => import("@/components/modules/security/SecurityDashboard").then(module => ({ default: module.SecurityDashboard })));
+const SecurityManagement = lazy(() => import("@/components/modules/security/SecurityManagement").then(module => ({ default: module.SecurityManagement })));
+const VisitorManagement = lazy(() => import("@/components/modules/security/VisitorManagement").then(module => ({ default: module.VisitorManagement })));
+const VisitorKiosk = lazy(() => import("@/components/modules/security/VisitorKiosk").then(module => ({ default: module.VisitorKiosk })));
+const AccessControl = lazy(() => import("@/components/modules/security/AccessControl").then(module => ({ default: module.AccessControl })));
+const SecurityIncidents = lazy(() => import("@/components/modules/security/SecurityIncidents").then(module => ({ default: module.SecurityIncidents })));
+const IdCardManagement = lazy(() => import("@/components/modules/security/IdCardManagement").then(module => ({ default: module.IdCardManagement })));
+
+const ProcurementDashboard = lazy(() => import("@/components/modules/procurement/ProcurementDashboard").then(module => ({ default: module.ProcurementDashboard })));
+const LegalDashboard = lazy(() => import("@/components/modules/legal/LegalDashboard").then(module => ({ default: module.LegalDashboard })));
+const LegalManagement = lazy(() => import("@/components/modules/legal/LegalManagement").then(module => ({ default: module.LegalManagement })));
+const LegalCases = lazy(() => import("@/components/modules/legal/LegalCases").then(module => ({ default: module.LegalCases })));
+const ComplianceRecords = lazy(() => import("@/components/modules/legal/ComplianceMonitoring").then(module => ({ default: module.ComplianceMonitoring })));
+const PublicRelationsDashboard = lazy(() => import("@/components/modules/public-relations/PublicRelationsDashboard").then(module => ({ default: module.PublicRelationsDashboard })));
+const PlanningDashboard = lazy(() => import("@/components/modules/planning/PlanningDashboard").then(module => ({ default: module.PlanningDashboard })));
+
+
 const RevenueDashboard = lazy(() => import("@/components/modules/revenue/RevenueDashboard").then(module => ({ default: module.RevenueDashboard })));
 const UrbanPlanning = lazy(() => import("@/components/modules/planning/UrbanPlanning").then(module => ({ default: module.UrbanPlanning })));
 const ProjectManagement = lazy(() => import("@/components/modules/planning/ProjectManagement").then(module => ({ default: module.ProjectManagement })));
@@ -56,14 +81,9 @@ const BenefitsAdministration = lazy(() => import("@/components/modules/hr/Benefi
 const LeaveManagement = lazy(() => import("@/components/modules/hr/LeaveManagement").then(module => ({ default: module.LeaveManagement })));
 const TrainingDevelopment = lazy(() => import("@/components/modules/hr/TrainingDevelopment").then(module => ({ default: module.TrainingDevelopment })));
 const PerformanceManagement = lazy(() => import("@/components/modules/hr/PerformanceManagement").then(module => ({ default: module.PerformanceManagement })));
-const EmployeeAccount = lazy(() => import("@/components/EmployeeAccount").then(module => ({ default: module.EmployeeAccount })));
-const EmployeeInfoDisplay = lazy(() => import("@/components/EmployeeInfoDisplay"));
 
-const AssetRegister = lazy(() => import("@/components/modules/assets/AssetRegister").then(module => ({ default: module.AssetRegister })));
-const AssetAcquisition = lazy(() => import("@/components/modules/assets/AssetAcquisition").then(module => ({ default: module.AssetAcquisition })));
-const MaintenanceManagement = lazy(() => import("@/components/modules/assets/MaintenanceManagement").then(module => ({ default: module.MaintenanceManagement })));
-const AssetDisposal = lazy(() => import("@/components/modules/assets/AssetDisposal").then(module => ({ default: module.AssetDisposal })));
-const AssetValuation = lazy(() => import("@/components/modules/assets/AssetValuation").then(module => ({ default: module.AssetValuation })));
+
+
 
 const ProcurementPlanning = lazy(() => import("@/components/modules/procurement/ProcurementPlanning").then(module => ({ default: module.ProcurementPlanning })));
 const Requisitioning = lazy(() => import("@/components/modules/procurement/Requisitioning").then(module => ({ default: module.Requisitioning })));
@@ -149,8 +169,8 @@ const AppRoutes = () => {
       <Route path="/employee-dashboard" element={<ProtectedRoute><SuspenseWrapper><EmployeeDashboard /></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/employee/account" element={<ProtectedRoute><SuspenseWrapper><EmployeeAccount /></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/employee/info" element={<ProtectedRoute><SuspenseWrapper><EmployeeInfoDisplay /></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/kiosk-interface" element={<ProtectedRoute><SuspenseWrapper><KioskInterface /></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/reception-desk" element={<ProtectedRoute><SuspenseWrapper><KioskInterface /></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/kiosk-interface" element={<ProtectedRoute><SuspenseWrapper><AttendanceKiosk /></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/reception-desk" element={<ProtectedRoute><SuspenseWrapper><AttendanceKiosk /></SuspenseWrapper></ProtectedRoute>} />
 
       {/* Finance Routes */}
       <Route path="/finance/accounts" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Finance Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ChartOfAccounts /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
@@ -209,6 +229,13 @@ const AppRoutes = () => {
 
       {/* Security Routes */}
       <Route path="/security" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Security" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SecurityDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/security/access-control" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Access Control" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AccessControl /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/security/incidents" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Security Incidents" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SecurityIncidents /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/security/id-cards" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="ID Card Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><IdCardManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/security/management" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Security Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SecurityManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/security/visitors" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Visitor Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><VisitorManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/security/visitor-kiosk" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Visitor Kiosk" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><VisitorKiosk /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+
 
       {/* Transportation Routes */}
       <Route path="/transportation" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><TransportationDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />

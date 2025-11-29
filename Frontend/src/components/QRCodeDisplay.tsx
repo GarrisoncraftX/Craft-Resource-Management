@@ -36,7 +36,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
         setExpiresIn(secondsUntilExpiry);
       } else {
         // Attendance QR code logic - call backend API
-        const response = await fetch('/api/biometric/kiosk/qr-display', {
+        const response = await fetch('/api/biometric/attendance/qr-display', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,

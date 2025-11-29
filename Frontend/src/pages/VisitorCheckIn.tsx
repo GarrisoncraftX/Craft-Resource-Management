@@ -23,6 +23,7 @@ export const VisitorCheckIn: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [entryPass, setEntryPass] = useState<EntryPass | null>(null);
   const [employees, setEmployees] = useState<Array<{ id: number; name: string }>>([]);
+  const [employeeSearch, setEmployeeSearch] = useState('');
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -76,9 +77,17 @@ export const VisitorCheckIn: React.FC = () => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const selectedEmployee = employees.find(
-    (emp) => emp.id.toString() === formData.visiting_employee_id
-  );
+
+
+  const handleEmployeeSearchChange = (searchValue: string) => {
+    setEmployeeSearch(searchValue);
+    const emp = employees.find(emp => emp.name === searchValue);
+    if (emp) {
+      handleInputChange('visiting_employee_id', emp.id.toString());
+    } else {
+      handleInputChange('visiting_employee_id', '');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -274,12 +283,8 @@ export const VisitorCheckIn: React.FC = () => {
                 id="visiting_employee_id"
                 list="employees"
                 placeholder="Search employee..."
-                value={selectedEmployee ? selectedEmployee.name : ''}
-                onChange={(e) => {
-                  const selectedName = e.target.value;
-                  const emp = employees.find(emp => emp.name === selectedName);
-                  handleInputChange('visiting_employee_id', emp ? emp.id.toString() : '');
-                }}
+                value={employeeSearch}
+                onChange={(e) => handleEmployeeSearchChange(e.target.value)}
                 required
               />
               <datalist id="employees">

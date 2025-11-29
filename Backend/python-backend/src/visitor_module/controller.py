@@ -9,7 +9,8 @@ class VisitorController:
     def check_in_visitor(self):
         try:
             visitor_data = request.get_json()
-            success, result = self.service.check_in_visitor(visitor_data)
+            # For visitor check-in, we don't have authenticated user, so pass None or default
+            success, result = self.service.check_in_visitor(visitor_data, user_id=None)
             if success:
                 return {
                     'success': True,
@@ -29,7 +30,8 @@ class VisitorController:
             visitor_id = data.get('visitor_id')
             if not visitor_id:
                 return {'success': False, 'message': 'visitor_id is required'}, 400
-            success, message = self.service.check_out_visitor(visitor_id)
+            user_id = getattr(request, 'user_id', None)
+            success, message = self.service.check_out_visitor(visitor_id, user_id)
             if success:
                 return {'success': True, 'message': 'Visitor checked out successfully'}, 200
             else:
@@ -45,7 +47,8 @@ class VisitorController:
                 'success': True,
                 'token': token_data['token'],
                 'expires_at': token_data['expires_at'],
-                'created_at': token_data['created_at']
+                'created_at': token_data['created_at'],
+                'check_in_url': token_data.get('check_in_url')
             }, 201
         except Exception as e:
             logger.error(f"Error generating QR token: {e}")
@@ -79,3 +82,19 @@ class VisitorController:
         except Exception as e:
             logger.error(f"Error fetching visitor logs: {e}")
             return {'success': False, 'message': 'Error fetching visitor logs'}, 500
+
+    def generate_entry_pass(self):
+        try:
+            data = request.get_json()
+            visitor_id = data.get('visitor_id')
+            if not visitor_id:
+                return {'success': False, 'message': 'visitor_id is required'}, 400
+
+            entry_pass = self.service.generate_visitor_entry_pass(visitor_id)
+            if entry_pass:
+                return {'success': True, 'entry_pass': entry_pass}, 200
+            else:
+                return {'success': False, 'message': 'Failed to generate entry pass'}, 404
+        except Exception as e:
+            logger.error(f"Error generating entry pass: {e}")
+            return {'success': False, 'message': 'Error generating entry pass'}, 500

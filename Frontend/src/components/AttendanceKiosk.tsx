@@ -41,7 +41,7 @@ export const AttendanceKiosk: React.FC = () => {
 
   const handleQRScan = async (qrData: string) => {
     try {
-      const response = await apiClient.post('/biometric/verify', {
+      const response = await apiClient.post('/api/biometric/verify', {
         qrData,
         verificationMethod: 'qr',
       });
@@ -86,7 +86,7 @@ export const AttendanceKiosk: React.FC = () => {
       let action: 'clock-in' | 'clock-out' = 'clock-in';
 
       if (method === 'face') {
-        const endpoint = `/biometric/verify`;
+        const endpoint = `/api/biometric/verify`;
         const response = await apiClient.post(endpoint, {
           faceData: payload.faceData,
           verificationMethod: 'face',
@@ -103,7 +103,7 @@ export const AttendanceKiosk: React.FC = () => {
         });
       } else if (method === 'qr') {
         // Handle QR code attendance
-        const endpoint = `/hr/attendance/${action}`;
+        const endpoint = `/api/biometric/attendance/qr-scan/${action}`;
         const response = await apiClient.post(endpoint, {
           ...payload,
           verificationMethod: 'qr',
@@ -119,7 +119,7 @@ export const AttendanceKiosk: React.FC = () => {
         });
       } else {
         // Manual entry
-        const endpoint = `/hr/attendance/${action}`;
+        const endpoint = `/api/biometric/attendance/${action}`;
         const response = await apiClient.post(endpoint, {
           ...payload,
           verificationMethod: 'manual',
