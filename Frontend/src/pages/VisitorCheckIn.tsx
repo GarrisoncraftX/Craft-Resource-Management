@@ -46,6 +46,7 @@ export const VisitorCheckIn: React.FC = () => {
         if (result.valid) {
           setTokenValid(true);
           // Load employees for dropdown
+          setIsValidating(true); 
           await loadEmployees();
         } else {
           setError(result.message || 'QR code has expired or is invalid');

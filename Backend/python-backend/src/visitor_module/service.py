@@ -29,11 +29,11 @@ class VisitorService:
         from src.database.connection import DatabaseManager
         self.db = DatabaseManager(db_config)
 
-    def generate_qr_token(self):
-        """Generate a dynamic QR token that expires in 30 seconds"""
+    def generate_qr_token(self, frontend_url=None):
+        """Generate a dynamic QR token that expires in 5 minutes"""
         try:
             token = str(uuid.uuid4())
-            expires_at = datetime.now(timezone.utc) + timedelta(seconds=30)
+            expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
 
             query = """
                 INSERT INTO qr_tokens (token, expires_at, is_used)
@@ -42,7 +42,8 @@ class VisitorService:
             self.db.execute_query(query, (token, expires_at), fetch=False)
 
             # Generate check-in URL for the QR code
-            frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+            if not frontend_url:
+                frontend_url = os.getenv('FRONTEND_URL', 'http://192.168.1.101:5173')
             check_in_url = f"{frontend_url}/visitor-checkin?token={token}"
 
             return {

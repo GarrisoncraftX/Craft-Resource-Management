@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `https://witty-rice-smell.loca.lt`;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `http://localhost:5003`;
 
 export class ApiClient {
   private readonly baseURL: string;

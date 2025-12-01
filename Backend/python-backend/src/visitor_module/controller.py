@@ -42,7 +42,10 @@ class VisitorController:
 
     def generate_qr_token(self):
         try:
-            token_data = self.service.generate_qr_token()
+          
+            frontend_url = os.getenv('FRONTEND_URL', 'http://192.168.1.101:5173')
+
+            token_data = self.service.generate_qr_token(frontend_url)
             return {
                 'success': True,
                 'token': token_data['token'],

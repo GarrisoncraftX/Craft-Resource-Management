@@ -11,9 +11,9 @@ interface QRCodeDisplayProps {
   refreshInterval?: number;
 }
 
-export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ 
-  type = 'attendance', 
-  refreshInterval = 30000 
+export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
+  type = 'attendance',
+  refreshInterval = 300000
 }) => {
   const { toast } = useToast();
   const [qrData, setQrData] = useState<string>('');

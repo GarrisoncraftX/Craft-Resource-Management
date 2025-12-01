@@ -50,7 +50,11 @@ const publicRoutes = [
   "/api/lookup",
   "/api/biometric/enroll",
   "/api/biometric/identify",
-  "/api/leave"
+  "/api/leave",
+  "/api/visitors/generate-token",
+  "/api/visitors/validate-token",
+  "/api/visitors/checkin",
+  "/api/visitors/entry-pass"
 ];
 
 // JWT validation middleware

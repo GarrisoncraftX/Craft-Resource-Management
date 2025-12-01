@@ -28,6 +28,12 @@ def validate_qr_token():
     response, status_code = visitor_controller.validate_qr_token()
     return jsonify(response), status_code
 
+# Visitor entry pass endpoint (public for visitors)
+@visitor_bp.route('/visitors/entry-pass', methods=['POST'])
+def generate_entry_pass():
+    response, status_code = visitor_controller.generate_entry_pass()
+    return jsonify(response), status_code
+
 # Visitor listing endpoints
 @visitor_bp.route('/visitors/active', methods=['GET'])
 @require_auth
@@ -69,9 +75,4 @@ def get_current_visitors_legacy():
 @require_auth
 def get_visitor_logs_legacy():
     response, status_code = visitor_controller.get_visitor_logs()
-    return jsonify(response), status_code
-
-@visitor_bp.route('/visitors/entry-pass', methods=['POST'])
-def generate_entry_pass():
-    response, status_code = visitor_controller.generate_entry_pass()
     return jsonify(response), status_code
