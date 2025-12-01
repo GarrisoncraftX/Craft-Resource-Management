@@ -30,10 +30,10 @@ class VisitorService:
         self.db = DatabaseManager(db_config)
 
     def generate_qr_token(self):
-        """Generate a dynamic QR token that expires in 10 seconds"""
+        """Generate a dynamic QR token that expires in 30 seconds"""
         try:
             token = str(uuid.uuid4())
-            expires_at = datetime.now(timezone.utc) + timedelta(seconds=10)
+            expires_at = datetime.now(timezone.utc) + timedelta(seconds=30)
 
             query = """
                 INSERT INTO qr_tokens (token, expires_at, is_used)
@@ -84,15 +84,17 @@ class VisitorService:
         """Check in a visitor using the new visitors table structure"""
         try:
             # Extract data from payload
-            full_name = visitor_data.get('full_name')
-            contact_number = visitor_data.get('contact_number')
+            first_name = visitor_data.get('first_name')
+            last_name = visitor_data.get('last_name')
+            company = visitor_data.get('company')
             email = visitor_data.get('email')
+            phone = visitor_data.get('phone')
             visiting_employee_id = visitor_data.get('visiting_employee_id')
             purpose_of_visit = visitor_data.get('purpose_of_visit')
             qr_token = visitor_data.get('qr_token')
 
             # Validate required fields
-            if not all([full_name, contact_number, visiting_employee_id, purpose_of_visit]):
+            if not all([first_name, last_name, visiting_employee_id, purpose_of_visit]):
                 return False, "Missing required fields"
 
             # Validate QR token if provided
@@ -101,16 +103,13 @@ class VisitorService:
                 if not token_valid['valid']:
                     return False, token_valid['message']
 
-            # Insert visitor record with check-in time
+            # Insert visitor record
             visitor_query = """
-                INSERT INTO visitors (full_name, contact_number, email, visiting_employee_id, purpose_of_visit, check_in_time, status, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, NOW(), 'Checked In', NOW(), NOW())
+                INSERT INTO visitors (tenant_id, visitor_id, first_name, last_name, company, email, phone, purpose_of_visit, employee_to_visit, is_active, created_at, updated_at)
+                VALUES (0, CONCAT('VIS', LPAD(LAST_INSERT_ID() + 1, 3, '0')), %s, %s, %s, %s, %s, %s, %s, 1, NOW(), NOW())
             """
-            visitor_params = (full_name, contact_number, email, visiting_employee_id, purpose_of_visit)
+            visitor_params = (first_name, last_name, company, email, phone, purpose_of_visit, visiting_employee_id)
             visitor_result = self.db.execute_query(visitor_query, visitor_params, fetch=False)
-
-            # Log the visitor insertion result for audit purposes
-            logger.info(f"Visitor record inserted successfully, result: {visitor_result}")
 
             # Get the inserted visitor ID
             visitor_id_query = "SELECT LAST_INSERT_ID() as visitor_id"
@@ -119,8 +118,8 @@ class VisitorService:
 
             # Insert check-in record
             checkin_query = """
-                INSERT INTO visitor_checkins (visitor_id, check_in_time, check_in_method, purpose, host_employee_id, status, created_at, updated_at)
-                VALUES (%s, NOW(), %s, %s, %s, 'checked_in', NOW(), NOW())
+                INSERT INTO visitor_checkins (visitor_id, check_in_time, check_in_method, location, purpose, host_employee_id, status, created_at, updated_at)
+                VALUES (%s, NOW(), %s, 'Main Lobby', %s, %s, 'checked_in', NOW(), NOW())
             """
             checkin_method = 'qr' if qr_token else 'manual'
             checkin_params = (visitor_id, checkin_method, purpose_of_visit, visiting_employee_id)
@@ -140,7 +139,7 @@ class VisitorService:
 
             if user_id:
                 audit_service.log_action(user_id, 'CHECK_IN_VISITOR', {'entity': 'visitor', 'id': visitor_id, 'data': visitor_data})
-            logger.info(f"Visitor {full_name} checked in successfully with ID {visitor_id}")
+            logger.info(f"Visitor {first_name} {last_name} checked in successfully with ID {visitor_id}")
             return True, visitor_id
         except Exception as e:
             logger.error(f"Error checking in visitor: {e}")
@@ -161,6 +160,8 @@ class VisitorService:
                 host_name = f"{host['first_name']} {host['last_name']}"
                 host_email = host['email']
 
+                visitor_name = f"{visitor_data['first_name']} {visitor_data['last_name']}"
+
                 # Send email notification to host
                 subject = "Visitor Check-in Notification"
                 message = f"""
@@ -169,11 +170,11 @@ class VisitorService:
                 A visitor has checked in and is waiting for you.
 
                 Visitor Details:
-                - Name: {visitor_data['full_name']}
-                - Contact: {visitor_data['contact_number']}
+                - Name: {visitor_name}
+                - Contact: {visitor_data.get('phone', 'Not provided')}
                 - Email: {visitor_data.get('email', 'Not provided')}
                 - Purpose: {visitor_data['purpose_of_visit']}
-                - Check-in Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}
+                - Check-in Time: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}
 
                 Please meet your visitor at the reception area.
 
@@ -191,17 +192,19 @@ class VisitorService:
     def _send_visitor_notification(self, visitor_id, visitor_data):
         """Send notification to the visitor about successful check-in"""
         try:
+            visitor_name = f"{visitor_data['first_name']} {visitor_data['last_name']}"
+
             # Send email notification to visitor
             subject = "Visitor Check-in Confirmation"
             message = f"""
-            Dear {visitor_data['full_name']},
+            Dear {visitor_name},
 
             Your check-in has been completed successfully.
 
             Check-in Details:
             - Check-in Time: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}
             - Purpose: {visitor_data['purpose_of_visit']}
-            - Contact: {visitor_data['contact_number']}
+            - Contact: {visitor_data.get('phone', 'Not provided')}
 
             Your host has been notified and will meet you shortly.
 
@@ -213,7 +216,7 @@ class VisitorService:
 
             communication_service.send_email(visitor_data['email'], subject, message)
 
-            logger.info(f"Visitor notification sent to {visitor_data['full_name']} ({visitor_data['email']})")
+            logger.info(f"Visitor notification sent to {visitor_name} ({visitor_data['email']})")
 
         except Exception as e:
             logger.error(f"Error sending visitor notification: {e}")
@@ -223,11 +226,13 @@ class VisitorService:
         try:
             # Get visitor details
             visitor_query = """
-                SELECT full_name, check_in_time, purpose_of_visit,
+                SELECT CONCAT(v.first_name, ' ', v.last_name) as full_name, vc.check_in_time, v.purpose_of_visit,
                        u.first_name as host_first_name, u.last_name as host_last_name
                 FROM visitors v
-                LEFT JOIN users u ON v.visiting_employee_id = u.id
-                WHERE v.visitor_id = %s
+                LEFT JOIN visitor_checkins vc ON v.visitor_id = vc.visitor_id
+                LEFT JOIN users u ON v.employee_to_visit = u.id
+                WHERE v.visitor_id = %s AND vc.status = 'checked_in'
+                ORDER BY vc.check_in_time DESC LIMIT 1
             """
             visitor_result = self.db.execute_query(visitor_query, (visitor_id,))
 
@@ -265,25 +270,17 @@ class VisitorService:
     def check_out_visitor(self, visitor_id, user_id):
         """Check out a visitor"""
         try:
-
-            query_update = """
-                UPDATE visitors
-                SET status = 'Checked Out', check_out_time = NOW(), updated_at = NOW()
-                WHERE visitor_id = %s AND status = 'Checked In'
-            """
-            params_update = (visitor_id,)
-            affected_rows = self.db.execute_query(query_update, params_update, fetch=False)
-
-            if affected_rows == 0:
-                return False, "Visitor not found or already checked out"
-
-            # Also update the check-in record for audit purposes
+            # Update the check-in record to checked_out status
             query_update_checkin = """
                 UPDATE visitor_checkins
                 SET status = 'checked_out', check_out_time = NOW(), check_out_method = 'manual', updated_at = NOW()
                 WHERE visitor_id = %s AND status = 'checked_in'
             """
-            self.db.execute_query(query_update_checkin, (visitor_id,), fetch=False)
+            params_update = (visitor_id,)
+            affected_rows = self.db.execute_query(query_update_checkin, params_update, fetch=False)
+
+            if affected_rows == 0:
+                return False, "Visitor not found or already checked out"
 
             audit_service.log_action(user_id, 'CHECK_OUT_VISITOR', {'entity': 'visitor', 'id': visitor_id})
             logger.info(f"Visitor {visitor_id} checked out successfully")
@@ -298,17 +295,18 @@ class VisitorService:
             query = """
                 SELECT
                     v.visitor_id as id,
-                    v.full_name as visitor_name,
+                    CONCAT(v.first_name, ' ', v.last_name) as visitor_name,
                     v.email,
-                    v.contact_number as phone,
-                    v.check_in_time,
+                    v.phone,
+                    vc.check_in_time,
                     v.purpose_of_visit as purpose,
                     u.first_name as host_first_name,
                     u.last_name as host_last_name
                 FROM visitors v
-                LEFT JOIN users u ON v.visiting_employee_id = u.id
-                WHERE v.status = 'Checked In'
-                ORDER BY v.check_in_time DESC
+                LEFT JOIN visitor_checkins vc ON v.visitor_id = vc.visitor_id
+                LEFT JOIN users u ON v.employee_to_visit = u.id
+                WHERE vc.status = 'checked_in'
+                ORDER BY vc.check_in_time DESC
             """
             results = self.db.execute_query(query)
             visitors = []
@@ -333,18 +331,21 @@ class VisitorService:
             query = """
                 SELECT
                     v.visitor_id as id,
-                    v.full_name as visitor_name,
+                    CONCAT(v.first_name, ' ', v.last_name) as visitor_name,
                     v.email,
-                    v.contact_number as phone,
-                    v.check_in_time,
-                    v.check_out_time,
+                    v.phone,
+                    vc.check_in_time,
+                    vc.check_out_time,
+                    vc.check_in_method,
+                    vc.check_out_method,
                     v.purpose_of_visit as purpose,
                     u.first_name as host_first_name,
                     u.last_name as host_last_name,
-                    v.status
+                    vc.status
                 FROM visitors v
-                LEFT JOIN users u ON v.visiting_employee_id = u.id
-                ORDER BY v.check_in_time DESC
+                LEFT JOIN visitor_checkins vc ON v.visitor_id = vc.visitor_id
+                LEFT JOIN users u ON v.employee_to_visit = u.id
+                ORDER BY vc.check_in_time DESC
             """
             results = self.db.execute_query(query)
             logs = []
@@ -356,8 +357,8 @@ class VisitorService:
                     'phone': row['phone'],
                     'check_in_time': row['check_in_time'].isoformat() if row['check_in_time'] else None,
                     'check_out_time': row['check_out_time'].isoformat() if row['check_out_time'] else None,
-                    'check_in_method': 'qr' if row.get('check_in_method') == 'qr' else 'manual',
-                    'check_out_method': 'manual',
+                    'check_in_method': row['check_in_method'] or 'manual',
+                    'check_out_method': row['check_out_method'] or 'manual',
                     'purpose': row['purpose'],
                     'host_name': f"{row['host_first_name']} {row['host_last_name']}" if row['host_first_name'] else None,
                     'status': row['status']

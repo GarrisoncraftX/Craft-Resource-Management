@@ -27,17 +27,43 @@ def auth_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            # Get token from header
+            # First, check if user context headers are present (from API Gateway)
+            user_id_header = request.headers.get('x-user-id')
+            department_id_header = request.headers.get('x-department-id')
+            role_id_header = request.headers.get('x-role-id')
+            permissions_header = request.headers.get('x-permissions')
+
+            if user_id_header and department_id_header and role_id_header and permissions_header:
+                # Use user context from API Gateway
+                try:
+                    request.user_id = int(user_id_header)
+                    request.employee_id = None  
+                    request.department_id = int(department_id_header)
+                    request.role_id = int(role_id_header)
+                    request.permissions = json.loads(permissions_header)
+
+                    logger.debug(f"Authenticated user via API Gateway context: {request.user_id}")
+                    return f(*args, **kwargs)
+                except (ValueError, json.JSONDecodeError) as e:
+                    logger.error(f"Invalid user context headers: {e}")
+                    return jsonify({
+                        'success': False,
+                        'message': 'Invalid user context'
+                    }), 401
+
+            # Fallback to JWT validation if no user context headers
             auth_header = request.headers.get('Authorization')
-            
+            logger.debug(f"Authorization header: {auth_header}")
+
             if not auth_header or not auth_header.startswith('Bearer '):
+                logger.warning("No valid Authorization header found")
                 return jsonify({
                     'success': False,
                     'message': 'Access token is required'
                 }), 401
-            
-            token = auth_header[7:]  # Remove 'Bearer ' prefix
-            
+
+            token = auth_header[7:]
+
             # Verify token
             try:
                 decoded = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
@@ -51,25 +77,25 @@ def auth_required(f):
                     'success': False,
                     'message': 'Invalid access token'
                 }), 401
-            
-            # Add user information to request headers
+
+            # Add user information to request
             request.user_id = decoded.get('userId')
             request.employee_id = decoded.get('employeeId')
             request.department_id = decoded.get('departmentId')
             request.role_id = decoded.get('roleId')
             request.permissions = decoded.get('permissions', [])
-            
-            logger.debug(f"Authenticated user: {request.employee_id} (ID: {request.user_id})")
-            
+
+            logger.debug(f"Authenticated user via JWT: {request.employee_id} (ID: {request.user_id})")
+
             return f(*args, **kwargs)
-            
+
         except Exception as e:
             logger.error(f"Authentication error: {e}")
             return jsonify({
                 'success': False,
                 'message': 'Authentication failed'
             }), 500
-    
+
     return decorated_function
 
 def require_permission(permission):

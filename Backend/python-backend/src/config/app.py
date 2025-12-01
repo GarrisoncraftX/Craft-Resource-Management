@@ -64,6 +64,20 @@ class Config:
     # External API configuration
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4')
+
+    # AWS configuration for SMS
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_REGION = os.getenv('AWS_REGION', 'af-south-1')
+
+    # Email configuration
+    MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+    MAIL_PORT = int(os.getenv('MAIL_PORT', 587))
+    MAIL_USE_TLS = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
+    MAIL_USE_SSL = os.getenv('MAIL_USE_SSL', 'False').lower() == 'true'
+    MAIL_USERNAME = os.getenv('MAIL_USERNAME')
+    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
+    MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@gmail.com')
     
     # Logging configuration
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')

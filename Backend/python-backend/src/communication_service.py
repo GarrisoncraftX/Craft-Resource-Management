@@ -2,6 +2,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
+import boto3
 from src.utils.logger import logger
 from src.config.app import config as app_config_dict
 
@@ -19,10 +20,10 @@ class CommunicationService:
         self.mail_password = app_config.MAIL_PASSWORD
         self.mail_default_sender = app_config.MAIL_DEFAULT_SENDER
 
-        # SMS configuration
-        self.twilio_account_sid = app_config.TWILIO_ACCOUNT_SID
-        self.twilio_auth_token = app_config.TWILIO_AUTH_TOKEN
-        self.twilio_phone_number = app_config.TWILIO_PHONE_NUMBER
+        # SMS configuration (AWS SNS)
+        self.aws_access_key_id = app_config.AWS_ACCESS_KEY_ID
+        self.aws_secret_access_key = app_config.AWS_SECRET_ACCESS_KEY
+        self.aws_region = app_config.AWS_REGION
 
     def send_email(self, to_email, subject, message):
         """Send an email using SMTP"""
@@ -66,30 +67,34 @@ class CommunicationService:
             return False
 
     def send_sms(self, to_phone, message):
-        """Send an SMS using Twilio"""
+        """Send an SMS using AWS SNS"""
         try:
-            if not self.twilio_account_sid or not self.twilio_auth_token or not self.twilio_phone_number:
-                logger.warning("Twilio credentials not configured, SMS not sent")
+            if not self.aws_access_key_id or not self.aws_secret_access_key or not self.aws_region:
+                logger.warning("AWS credentials not configured, SMS not sent")
                 if os.getenv('FLASK_ENV') == 'development':
                     logger.info(f"Development mode: SMS would be sent to {to_phone} with message: {message}")
                     return True
                 return False
 
-            # Import Twilio here to avoid dependency issues if not installed
-            from twilio.rest import Client
+            # Import boto3 here to avoid dependency issues if not installed
 
-            client = Client(self.twilio_account_sid, self.twilio_auth_token)
-            client.messages.create(
-                body=message,
-                from_=self.twilio_phone_number,
-                to=to_phone
+            sns_client = boto3.client(
+                'sns',
+                aws_access_key_id=self.aws_access_key_id,
+                aws_secret_access_key=self.aws_secret_access_key,
+                region_name=self.aws_region
+            )
+
+            sns_client.publish(
+                PhoneNumber=to_phone,
+                Message=message
             )
 
             logger.info(f"SMS sent successfully to {to_phone}")
             return True
 
         except ImportError:
-            logger.warning("Twilio not installed, SMS functionality disabled")
+            logger.warning("boto3 not installed, SMS functionality disabled")
             if os.getenv('FLASK_ENV') == 'development':
                 logger.info(f"Development mode: SMS would be sent to {to_phone} with message: {message}")
                 return True

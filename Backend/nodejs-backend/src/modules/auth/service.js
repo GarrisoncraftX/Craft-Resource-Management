@@ -459,8 +459,8 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
         roleId: user.roleId,
         permissions,
       },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '24h' }
     );
 
     // Return token and full user details including codes
