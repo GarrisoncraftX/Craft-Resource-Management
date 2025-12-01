@@ -92,6 +92,7 @@ const Tendering = lazy(() => import("@/components/modules/procurement/Tendering"
 const BidEvaluation = lazy(() => import("@/components/modules/procurement/BidEvaluation").then(module => ({ default: module.BidEvaluation })));
 const ContractManagement = lazy(() => import("@/components/modules/procurement/ContractManagement").then(module => ({ default: module.ContractManagement })));
 const VendorManagement = lazy(() => import("@/components/modules/procurement/VendorManagement").then(module => ({ default: module.VendorManagement })));
+const VisitorCheckIn = lazy(() => import("@/pages/VisitorCheckIn").then(module => ({ default: module.VisitorCheckIn })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -164,6 +165,9 @@ const AppRoutes = () => {
       {/* Authentication Routes */}
       <Route path="/register" element={<PublicRoute><SuspenseWrapper><AuthForm /></SuspenseWrapper></PublicRoute>} />
       <Route path="/signin" element={<PublicRoute><SuspenseWrapper><AuthForm /></SuspenseWrapper></PublicRoute>} />
+
+      {/* Visitor Check-in Route (Public) */}
+      <Route path="/visitor-checkin" element={<PublicRoute><SuspenseWrapper><VisitorCheckIn /></SuspenseWrapper></PublicRoute>} />
 
       {/* Employee Routes */}
       <Route path="/employee-dashboard" element={<ProtectedRoute><SuspenseWrapper><EmployeeDashboard /></SuspenseWrapper></ProtectedRoute>} />

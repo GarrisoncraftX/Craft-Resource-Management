@@ -42,7 +42,8 @@ class VisitorService:
             self.db.execute_query(query, (token, expires_at), fetch=False)
 
             # Generate check-in URL for the QR code
-            check_in_url = f"/visitor-checkin?token={token}"
+            frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+            check_in_url = f"{frontend_url}/visitor-checkin?token={token}"
 
             return {
                 'token': token,
