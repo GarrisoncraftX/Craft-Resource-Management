@@ -24,12 +24,35 @@ class VisitorApiService {
 
   // Get all visitors
   async getAllVisitors(): Promise<Visitor[]> {
-    return apiClient.get('/api/visitors/list');
+    const response = await apiClient.get('/api/visitors/list');
+    const logs = response.visitor_logs || [];
+    return logs.map(log => ({
+      visitor_id: log.id,
+      full_name: log.visitor_name || '',
+      contact_number: log.phone || '',
+      email: log.email || '',
+      visiting_employee_name: log.host_name,
+      purpose_of_visit: log.purpose || '',
+      check_in_time: log.check_in_time || '',
+      check_out_time: log.check_out_time,
+      status: log.status === 'checked_in' ? 'Checked In' as const : 'Checked Out' as const
+    }));
   }
 
   // Get active visitors (currently checked in)
   async getActiveVisitors(): Promise<Visitor[]> {
-    return apiClient.get('/api/visitors/active');
+    const response = await apiClient.get('/api/visitors/active');
+    const visitors = response.active_visitors || [];
+    return visitors.map(visitor => ({
+      visitor_id: visitor.id,
+      full_name: visitor.visitor_name || '',
+      contact_number: visitor.phone || '',
+      email: visitor.email || '',
+      visiting_employee_name: visitor.host_name,
+      purpose_of_visit: visitor.purpose || '',
+      check_in_time: visitor.check_in_time || '',
+      status: 'Checked In' as const
+    }));
   }
 
   // Get visitor by ID
@@ -48,7 +71,19 @@ class VisitorApiService {
     if (params.host) queryParams.append('host', params.host);
     if (params.date) queryParams.append('date', params.date);
 
-    return apiClient.get(`/api/visitors/search?${queryParams.toString()}`);
+    const response = await apiClient.get(`/api/visitors/search?${queryParams.toString()}`);
+    const logs = response.visitor_logs || [];
+    return logs.map(log => ({
+      visitor_id: log.id,
+      full_name: log.visitor_name || '',
+      contact_number: log.phone || '',
+      email: log.email || '',
+      visiting_employee_name: log.host_name,
+      purpose_of_visit: log.purpose || '',
+      check_in_time: log.check_in_time || '',
+      check_out_time: log.check_out_time,
+      status: log.status === 'checked_in' ? 'Checked In' as const : 'Checked Out' as const
+    }));
   }
 
   // Generate entry pass for visitor

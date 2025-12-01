@@ -368,3 +368,62 @@ class VisitorService:
         except Exception as e:
             logger.error(f"Error fetching visitor logs: {e}")
             raise e
+
+    def search_visitors(self, name=None, host=None, date=None):
+        """Search visitors by name, host, or date"""
+        try:
+            query = """
+                SELECT
+                    v.visitor_id as id,
+                    CONCAT(v.first_name, ' ', v.last_name) as visitor_name,
+                    v.email,
+                    v.phone,
+                    vc.check_in_time,
+                    vc.check_out_time,
+                    vc.check_in_method,
+                    vc.check_out_method,
+                    v.purpose_of_visit as purpose,
+                    u.first_name as host_first_name,
+                    u.last_name as host_last_name,
+                    vc.status
+                FROM visitors v
+                LEFT JOIN visitor_checkins vc ON v.visitor_id = vc.visitor_id
+                LEFT JOIN users u ON v.employee_to_visit = u.id
+                WHERE 1=1
+            """
+            params = []
+
+            if name:
+                query += " AND (v.first_name LIKE %s OR v.last_name LIKE %s)"
+                params.extend([f'%{name}%', f'%{name}%'])
+
+            if host:
+                query += " AND (u.first_name LIKE %s OR u.last_name LIKE %s)"
+                params.extend([f'%{host}%', f'%{host}%'])
+
+            if date:
+                query += " AND DATE(vc.check_in_time) = %s"
+                params.append(date)
+
+            query += " ORDER BY vc.check_in_time DESC"
+
+            results = self.db.execute_query(query, params)
+            logs = []
+            for row in results:
+                logs.append({
+                    'id': row['id'],
+                    'visitor_name': row['visitor_name'],
+                    'email': row['email'],
+                    'phone': row['phone'],
+                    'check_in_time': row['check_in_time'].isoformat() if row['check_in_time'] else None,
+                    'check_out_time': row['check_out_time'].isoformat() if row['check_out_time'] else None,
+                    'check_in_method': row['check_in_method'] or 'manual',
+                    'check_out_method': row['check_out_method'] or 'manual',
+                    'purpose': row['purpose'],
+                    'host_name': f"{row['host_first_name']} {row['host_last_name']}" if row['host_first_name'] else None,
+                    'status': row['status']
+                })
+            return logs
+        except Exception as e:
+            logger.error(f"Error searching visitors: {e}")
+            raise e

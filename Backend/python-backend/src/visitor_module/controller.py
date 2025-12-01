@@ -83,6 +83,18 @@ class VisitorController:
             logger.error(f"Error fetching visitor logs: {e}")
             return {'success': False, 'message': 'Error fetching visitor logs'}, 500
 
+    def search_visitors(self):
+        try:
+            name = request.args.get('name')
+            host = request.args.get('host')
+            date = request.args.get('date')
+
+            visitors = self.service.search_visitors(name=name, host=host, date=date)
+            return {'success': True, 'visitor_logs': visitors}, 200
+        except Exception as e:
+            logger.error(f"Error searching visitors: {e}")
+            return {'success': False, 'message': 'Error searching visitors'}, 500
+
     def generate_entry_pass(self):
         try:
             data = request.get_json()

@@ -41,6 +41,12 @@ def get_visitor_list():
     response, status_code = visitor_controller.get_visitor_logs()
     return jsonify(response), status_code
 
+@visitor_bp.route('/visitors/search', methods=['GET'])
+@require_auth
+def search_visitors():
+    response, status_code = visitor_controller.search_visitors()
+    return jsonify(response), status_code
+
 # Legacy endpoints for backward compatibility
 @visitor_bp.route('/visitors/check-in', methods=['POST'])
 def check_in_visitor_legacy():

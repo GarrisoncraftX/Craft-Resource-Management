@@ -3,8 +3,8 @@ const cors = require("cors");
 const morgan = require("morgan");
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
-const http = require("http");
-const https = require("https");
+const http = require("node:http");
+const https = require("node:https");
 
 require("dotenv").config();
 
@@ -15,12 +15,12 @@ const PORT = process.env.PORT || 5003;
 app.use(morgan("combined"));
 
 // Enable CORS for frontend domain
-const allowedOrigins = [process.env.FRONTEND_URL || "http://localhost:5173", "*"]; 
+const allowedOrigins= [process.env.FRONTEND_URL || "http://localhost:5173", "*"]; 
 app.use(cors({
   origin: function(origin, callback){
     // allow requests with no origin
     if(!origin) return callback(null, true);
-    if(allowedOrigins.indexOf(origin) === -1 && allowedOrigins.indexOf("*") === -1){
+    if(allowedOrigins.includes(origin) === -1 && allowedOrigins.includes("*") === -1){
       const msg = "The policy for this site does not allow access from the specified Origin.";
       return callback(new Error(msg), false);
     }
