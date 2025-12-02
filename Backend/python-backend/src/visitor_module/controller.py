@@ -1,3 +1,4 @@
+import os
 from flask import request, jsonify
 from src.visitor_module.service import VisitorService
 from src.utils.logger import logger

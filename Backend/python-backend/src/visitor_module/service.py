@@ -69,7 +69,11 @@ class VisitorService:
                 return {'valid': False, 'message': 'Token not found'}
 
             token_data = result[0]
-            now = datetime.now(timezone.utc)
+            now = datetime.utcnow()
+
+            # Ensure expires_at is a datetime object
+            if isinstance(token_data['expires_at'], str):
+                token_data['expires_at'] = datetime.fromisoformat(token_data['expires_at'])
 
             if token_data['is_used']:
                 return {'valid': False, 'message': 'Token has already been used'}

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, RefreshCw, QrCode } from 'lucide-react';
 import { visitorApiService } from '@/services/visitorApi';
+import { apiClient } from '@/utils/apiClient';
 import { useToast } from '@/hooks/use-toast';
 
 interface QRCodeDisplayProps {
@@ -36,19 +37,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
         setExpiresIn(secondsUntilExpiry);
       } else {
         // Attendance QR code logic - call backend API
-        const response = await fetch('/api/biometric/attendance/qr-display', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to generate attendance QR code');
-        }
-
-        const qrResult = await response.json();
+        const qrResult = await apiClient.get('/api/biometric/attendance/qr-display');
         setQrData(qrResult.qr_data);
         setSessionToken(qrResult.session_token);
         setExpiresIn(qrResult.expires_in);

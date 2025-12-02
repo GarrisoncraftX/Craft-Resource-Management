@@ -71,7 +71,7 @@ The root `docker-compose.yml` file orchestrates all backend services and the fro
 4. Backend services will be available at their respective ports:
    - API Gateway: `http://localhost:5003`
    - Java Backend: `http://localhost:5002`
-   - Node.js Backend: `http://localhost:3000`
+   - Node.js Backend: `http://localhost:5001`
    - Python Backend: `http://localhost:5000`
 
 ## Kubernetes

@@ -9,7 +9,7 @@ const RolePermission = require('./models/rolePermission');
 const LeaveService = require('../leave/service');
 const auditService = require('../audit/service');
 
-const BIOMETRIC_SERVICE_URL = process.env.PYTHON_BASE_URL || 'http://localhost:5000';
+const BIOMETRIC_SERVICE_URL = process.env.PYTHON_BASE_URL || 'http://192.168.1.101:5000';
 
 const validateRequiredFields = (userData) => {
   const requiredFields = ['employeeId', 'email', 'password', 'firstName', 'lastName', 'departmentId', 'roleId', 'dateOfBirth'];

@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 5003;
 app.use(morgan("combined"));
 
 // Enable CORS for frontend domain
-const allowedOrigins= [process.env.FRONTEND_URL || "http://localhost:5173", "*"]; 
+const allowedOrigins= [process.env.FRONTEND_URL || "http://192.168.1.101:5173", "*"]; 
 app.use(cors({
   origin: function(origin, callback){
     // allow requests with no origin
@@ -92,9 +92,9 @@ app.use((req, res, next) => {
 });
 
 // Routing rules to backend services
-const javaBackend = process.env.JAVA_BACKEND_URL || "http://localhost:5002";
-const nodeBackend = process.env.NODE_BACKEND_URL || "http://localhost:5001";
-const pythonBackend = process.env.PYTHON_BACKEND_URL || "http://localhost:5000";
+const javaBackend = process.env.JAVA_BACKEND_URL || "http://192.168.1.101:5002";
+const nodeBackend = process.env.NODE_BACKEND_URL || "http://192.168.1.101:5001";
+const pythonBackend = process.env.PYTHON_BACKEND_URL || "http://192.168.1.101:5000";
 
 const proxyRequest = async (req, res, targetUrl) => {
   const url = new URL(targetUrl + req.originalUrl);
