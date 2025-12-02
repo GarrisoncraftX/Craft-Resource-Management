@@ -1,10 +1,11 @@
 import requests
+import os
 import json
 from datetime import datetime
 
 class AuditClient:
     def __init__(self):
-        self.java_backend_url = 'http://localhost:5002' 
+        self.java_backend_url = os.getenv('JAVA_BACKEND_URL', 'http://192.168.1.101:5002')
 
     def log_action(self, user_id, action, details=None):
         """
