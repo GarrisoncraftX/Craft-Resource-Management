@@ -19,7 +19,7 @@ public class SecurityConfig {
         http
             .csrf().disable()
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/api/auth/**", "/api/lookup/**").permitAll()
+                .requestMatchers("/api/auth/**", "/api/lookup/**", "/hr/employees/list").permitAll()
                 .requestMatchers("/finance/accounts/**").hasAuthority("finance.view_dashboard")
                 .anyRequest().authenticated()
             )

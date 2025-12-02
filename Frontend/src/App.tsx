@@ -167,7 +167,7 @@ const AppRoutes = () => {
       <Route path="/signin" element={<PublicRoute><SuspenseWrapper><AuthForm /></SuspenseWrapper></PublicRoute>} />
 
       {/* Visitor Check-in Route (Public) */}
-      <Route path="/visitor-checkin" element={<PublicRoute><SuspenseWrapper><VisitorCheckIn /></SuspenseWrapper></PublicRoute>} />
+      <Route path="/visitor-checkin" element={<SuspenseWrapper><VisitorCheckIn /></SuspenseWrapper>} />
 
       {/* Employee Routes */}
       <Route path="/employee-dashboard" element={<ProtectedRoute><SuspenseWrapper><EmployeeDashboard /></SuspenseWrapper></ProtectedRoute>} />
