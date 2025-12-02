@@ -43,7 +43,7 @@ class VisitorService:
 
             # Generate check-in URL for the QR code
             if not frontend_url:
-                frontend_url = os.getenv('FRONTEND_URL', 'http://192.168.1.101:5173')
+                frontend_url = os.getenv('FRONTEND_URL', 'http://192.168.1.67:5173')
             check_in_url = f"{frontend_url}/visitor-checkin?token={token}"
 
             return {

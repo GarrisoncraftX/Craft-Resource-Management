@@ -2,7 +2,7 @@ const axios = require('axios');
 
 class AuditService {
     constructor() {
-        this.javaBackendUrl = process.env.JAVA_BACKEND_URL || 'http://192.168.1.101:5002';
+        this.javaBackendUrl = process.env.JAVA_BACKEND_URL || 'http://192.168.1.67:5002';
     }
 
     async logAction(userId, action, details = {}) {

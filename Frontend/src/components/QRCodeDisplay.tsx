@@ -6,6 +6,7 @@ import { Loader2, RefreshCw, QrCode } from 'lucide-react';
 import { visitorApiService } from '@/services/visitorApi';
 import { apiClient } from '@/utils/apiClient';
 import { useToast } from '@/hooks/use-toast';
+import QRCode from 'qrcode';
 
 interface QRCodeDisplayProps {
   type?: 'attendance' | 'visitor';
@@ -18,6 +19,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
 }) => {
   const { toast } = useToast();
   const [qrData, setQrData] = useState<string>('');
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [expiresIn, setExpiresIn] = useState<number>(0);
   const [sessionToken, setSessionToken] = useState<string>('');
@@ -91,6 +93,23 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
     }
   }, [expiresIn, toast]);
 
+  useEffect(() => {
+    if (qrData) {
+      QRCode.toDataURL(qrData, { width: 200, margin: 2 })
+        .then((url) => {
+          setQrCodeUrl(url);
+        })
+        .catch((err) => {
+          console.error('Error generating QR code:', err);
+          toast({
+            title: 'QR Code Generation Error',
+            description: 'Failed to generate QR code image',
+            variant: 'destructive',
+          });
+        });
+    }
+  }, [qrData, toast]);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -149,8 +168,8 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
         <CardContent className="text-center space-y-4">
           <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300">
             <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`}
-              alt="Attendance QR Code"
+              src={qrCodeUrl}
+              alt="QR Code"
               className="mx-auto"
             />
           </div>
