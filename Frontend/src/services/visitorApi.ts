@@ -56,7 +56,7 @@ class VisitorApiService {
   }
 
   // Get visitor by ID
-  async getVisitorById(visitorId: number): Promise<Visitor> {
+  async getVisitorById(visitorId: string): Promise<Visitor> {
     return apiClient.get(`/api/visitors/${visitorId}`);
   }
 
@@ -87,8 +87,9 @@ class VisitorApiService {
   }
 
   // Generate entry pass for visitor
-  async generateEntryPass(visitorId: number): Promise<EntryPass> {
-    return apiClient.post('/api/visitors/entry-pass', { visitor_id: visitorId });
+  async generateEntryPass(visitorId: string): Promise<EntryPass> {
+    const response = await apiClient.post('/api/visitors/entry-pass', { visitor_id: visitorId });
+    return response.entry_pass;
   }
 }
 

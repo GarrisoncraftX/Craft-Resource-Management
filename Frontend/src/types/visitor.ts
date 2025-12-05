@@ -1,5 +1,5 @@
 export interface Visitor {
-  visitor_id?: number;
+  visitor_id?: string;
   full_name: string;
   contact_number: string;
   email: string;
@@ -26,7 +26,7 @@ export interface VisitorCheckInPayload {
 }
 
 export interface VisitorCheckOutPayload {
-  visitor_id: number;
+  visitor_id: string;
 }
 
 export interface QRToken {
@@ -50,7 +50,7 @@ export interface AttendanceRecord {
 }
 
 export interface EntryPass {
-  visitor_id: number;
+  visitor_id: string;
   visitor_name: string;
   host_name: string;
   purpose: string;
