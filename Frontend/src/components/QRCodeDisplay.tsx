@@ -62,14 +62,31 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
 
   useEffect(() => {
     generateQR();
-    
+
     // Auto-refresh QR code based on refreshInterval
     const autoRefreshTimer = setInterval(() => {
       generateQR();
     }, refreshInterval);
-    
-    return () => clearInterval(autoRefreshTimer);
-  }, [type, refreshInterval]);
+
+    let pollTimer: NodeJS.Timeout | null = null;
+    if (type === 'visitor' && sessionToken) {
+      pollTimer = setInterval(async () => {
+        try {
+          const result = await visitorApiService.validateQRToken(sessionToken);
+          if (!result.valid && result.message === 'Token has already been used') {
+            generateQR();
+          }
+        } catch (error) {
+          generateQR();
+        }
+      }, 2000); 
+    }
+
+    return () => {
+      clearInterval(autoRefreshTimer);
+      if (pollTimer) clearInterval(pollTimer);
+    };
+  }, [type, refreshInterval, sessionToken]);
 
   useEffect(() => {
     if (expiresIn > 0) {

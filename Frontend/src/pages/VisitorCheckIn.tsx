@@ -8,13 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, Loader2, AlertTriangle, UserCheck } from 'lucide-react';
 import { visitorApiService } from '@/services/visitorApi';
-import { hrApiService } from '@/services/javabackendapi/hrApi';
+import { useAuth } from '@/contexts/AuthContext';
 import type { EntryPass } from '@/types/visitor';
 
 export const VisitorCheckIn: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
+  const { isAuthenticated } = useAuth();
 
   const [isValidating, setIsValidating] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,6 +35,12 @@ export const VisitorCheckIn: React.FC = () => {
   });
 
   useEffect(() => {
+    // If user is authenticated, redirect to employee dashboard
+    if (isAuthenticated) {
+      navigate('/employee-dashboard');
+      return;
+    }
+
     const validateToken = async () => {
       if (!token) {
         setError('Invalid or missing QR code token');
@@ -46,7 +53,7 @@ export const VisitorCheckIn: React.FC = () => {
         if (result.valid) {
           setTokenValid(true);
           // Load employees for dropdown
-          setIsValidating(true); 
+          setIsValidating(true);
           await loadEmployees();
         } else {
           setError(result.message || 'QR code has expired or is invalid');
@@ -59,12 +66,23 @@ export const VisitorCheckIn: React.FC = () => {
     };
 
     validateToken();
-  }, [token]);
+  }, [token, isAuthenticated, navigate]);
 
   const loadEmployees = async () => {
     try {
-      const response = await hrApiService.listEmployees();
-      const employeeList = response.map((emp) => ({
+      // Use direct fetch without Authorization header for public endpoint
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `http://172.20.10.5:5003`;
+      const response = await fetch(`${API_BASE_URL}/hr/employees/list`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      const employeeList = data.map((emp: { id: number; firstName: string; lastName: string }) => ({
         id: emp.id,
         name: `${emp.firstName} ${emp.lastName}`,
       }));
@@ -120,15 +138,9 @@ export const VisitorCheckIn: React.FC = () => {
         setEntryPass(entryPassData);
       } catch (error_) {
         console.error('Failed to generate entry pass:', error_);
-        // Continue with success even if entry pass fails
       }
 
       setSuccess(true);
-
-      // Redirect to success page after 5 seconds (longer to show entry pass)
-      setTimeout(() => {
-        navigate('/');
-      }, 5000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to check in');
     } finally {
@@ -208,7 +220,7 @@ export const VisitorCheckIn: React.FC = () => {
             )}
 
             <p className="text-sm text-muted-foreground">
-              Redirecting you shortly...
+              Please show this entry pass at security checkpoints.
             </p>
           </CardContent>
         </Card>

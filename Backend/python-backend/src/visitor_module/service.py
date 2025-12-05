@@ -43,7 +43,7 @@ class VisitorService:
 
             # Generate check-in URL for the QR code
             if not frontend_url:
-                frontend_url = os.getenv('FRONTEND_URL', 'http://192.168.1.67:5173')
+                frontend_url = os.getenv('FRONTEND_URL', 'http://172.20.10.5:5173')
             check_in_url = f"{frontend_url}/visitor-checkin?token={token}"
 
             return {
@@ -80,6 +80,10 @@ class VisitorService:
 
             if now > token_data['expires_at']:
                 return {'valid': False, 'message': 'Token has expired'}
+
+            # Mark token as used immediately after validation to prevent reuse
+            update_query = "UPDATE qr_tokens SET is_used = 1 WHERE token = %s"
+            self.db.execute_query(update_query, (token,), fetch=False)
 
             return {'valid': True}
         except Exception as e:
