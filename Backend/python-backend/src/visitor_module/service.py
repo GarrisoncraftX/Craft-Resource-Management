@@ -69,7 +69,7 @@ class VisitorService:
                 return {'valid': False, 'message': 'Token not found'}
 
             token_data = result[0]
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
 
             # Ensure expires_at is a datetime object
             if isinstance(token_data['expires_at'], str):
@@ -160,7 +160,7 @@ class VisitorService:
         try:
             # Get host employee details
             host_query = """
-                SELECT first_name, last_name, email FROM users
+                SELECT first_name, last_name, email, phone FROM users
                 WHERE id = %s
             """
             host_result = self.db.execute_query(host_query, (visitor_data['visiting_employee_id'],))
@@ -169,6 +169,7 @@ class VisitorService:
                 host = host_result[0]
                 host_name = f"{host['first_name']} {host['last_name']}"
                 host_email = host['email']
+                host_phone = host['phone']
 
                 visitor_name = f"{visitor_data['first_name']} {visitor_data['last_name']}"
 
@@ -194,7 +195,12 @@ class VisitorService:
 
                 communication_service.send_email(host_email, subject, message)
 
-                logger.info(f"Host notification sent to {host_name} ({host_email})")
+                # Send SMS notification to host if phone number available
+                if host_phone:
+                    sms_message = f"Visitor Alert: {visitor_name} has checked in for {visitor_data['purpose_of_visit']}. Please meet at reception."
+                    communication_service.send_sms(host_phone, sms_message)
+
+                logger.info(f"Host notification sent to {host_name} ({host_email}, {host_phone or 'no phone'})")
 
         except Exception as e:
             logger.error(f"Error sending host notification: {e}")
@@ -258,8 +264,8 @@ class VisitorService:
                 'host_name': f"{visitor['host_first_name']} {visitor['host_last_name']}",
                 'purpose': visitor['purpose_of_visit'],
                 'check_in_time': visitor['check_in_time'].isoformat() if visitor['check_in_time'] else None,
-                'valid_until': (datetime.utcnow() + timedelta(hours=8)).isoformat(),  # Valid for 8 hours
-                'issued_at': datetime.utcnow().isoformat()
+                'valid_until': (datetime.now(timezone.utc) + timedelta(hours=8)).isoformat(),  # Valid for 8 hours
+                'issued_at': datetime.now(timezone.utc).isoformat()
             }
 
             # Generate QR code data for entry pass

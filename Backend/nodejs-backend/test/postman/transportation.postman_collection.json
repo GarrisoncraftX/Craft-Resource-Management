@@ -12,7 +12,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3002/api/transportation/vehicles",
+          "raw": "http://localhost:5001/api/transportation/vehicles",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -33,7 +33,7 @@
           }
         ],
         "url": {
-          "raw": "http://localhost:3002/api/transportation/vehicles",
+          "raw": "http://localhost:5001/api/transportation/vehicles",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -52,7 +52,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3002/api/transportation/maintenance-records",
+          "raw": "http://localhost:5001/api/transportation/maintenance-records",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -73,7 +73,7 @@
           }
         ],
         "url": {
-          "raw": "http://localhost:3002/api/transportation/maintenance-records",
+          "raw": "http://localhost:5001/api/transportation/maintenance-records",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -92,7 +92,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3002/api/transportation/drivers",
+          "raw": "http://localhost:5001/api/transportation/drivers",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -113,7 +113,7 @@
           }
         ],
         "url": {
-          "raw": "http://localhost:3002/api/transportation/drivers",
+          "raw": "http://localhost:5001/api/transportation/drivers",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -132,7 +132,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3002/api/transportation/fuel-logs",
+          "raw": "http://localhost:5001/api/transportation/fuel-logs",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -153,7 +153,7 @@
           }
         ],
         "url": {
-          "raw": "http://localhost:3002/api/transportation/fuel-logs",
+          "raw": "http://localhost:5001/api/transportation/fuel-logs",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",

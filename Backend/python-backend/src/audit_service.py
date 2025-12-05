@@ -1,6 +1,6 @@
 import requests
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 class AuditService:
     def __init__(self):
@@ -11,7 +11,7 @@ class AuditService:
             audit_log = {
                 'action': action,
                 'performedBy': str(user_id) if user_id else None,
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': datetime.now(timezone.utc).isoformat(),
                 'details': str(details) if details else '{}'
             }
             response = requests.post(f"{self.java_backend_url}/system/audit-logs", json=audit_log)

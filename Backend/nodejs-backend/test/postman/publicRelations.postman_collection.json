@@ -12,7 +12,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3002/api/public-relations/press-releases",
+          "raw": "http://localhost:5001/api/public-relations/press-releases",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -33,7 +33,7 @@
           }
         ],
         "url": {
-          "raw": "http://localhost:3002/api/public-relations/press-releases",
+          "raw": "http://localhost:5001/api/public-relations/press-releases",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -52,7 +52,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3002/api/public-relations/media-contacts",
+          "raw": "http://localhost:5001/api/public-relations/media-contacts",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -73,7 +73,7 @@
           }
         ],
         "url": {
-          "raw": "http://localhost:3002/api/public-relations/media-contacts",
+          "raw": "http://localhost:5001/api/public-relations/media-contacts",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -92,7 +92,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3002/api/public-relations/public-events",
+          "raw": "http://localhost:5001/api/public-relations/public-events",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -113,7 +113,7 @@
           }
         ],
         "url": {
-          "raw": "http://localhost:3002/api/public-relations/public-events",
+          "raw": "http://localhost:5001/api/public-relations/public-events",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",

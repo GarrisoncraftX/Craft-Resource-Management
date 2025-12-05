@@ -13,6 +13,7 @@ const transportationRoutes = require("./src/modules/transportation/routes")
 const authRoutes = require("./src/modules/auth/routes")
 const lookupRoutes = require("./src/modules/lookup/routes")
 const payrollRoutes = require("./src/modules/payroll/routes")
+const communicationRoutes = require("./src/modules/communication/routes")
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use("/api/transportation", transportationRoutes)
 app.use("/api/auth", authRoutes)
 app.use("/api/lookup", lookupRoutes)
 app.use("/api/payroll", payrollRoutes)
+app.use("/api/communication", communicationRoutes)
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -46,7 +48,7 @@ app.get("/health", (req, res) => {
     success: true,
     message: "Node.js Backend Service is running",
     timestamp: new Date().toISOString(),
-    modules: ["Leave Management", "Procurement", "Public Relations", "Planning & Development", "Transportation", "Payroll"],
+    modules: ["Leave Management", "Procurement", "Public Relations", "Planning & Development", "Transportation", "Payroll", "Communication"],
   })
 })
 

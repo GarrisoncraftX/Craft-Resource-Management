@@ -33,7 +33,7 @@
           }
         ],
         "url": {
-          "raw": "http://localhost:3002/api/leave/types",
+          "raw": "http://localhost:5001/api/leave/types",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -74,7 +74,7 @@
           }
         ],
         "url": {
-          "raw": "http://localhost:3002/api/leave/request",
+          "raw": "http://localhost:5001/api/leave/request",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -114,7 +114,7 @@
           }
         ],
         "url": {
-          "raw": "http://localhost:3002/api/leave/my-requests",
+          "raw": "http://localhost:5001/api/leave/my-requests",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -150,7 +150,7 @@
           }
         ],
         "url": {
-          "raw": "http://localhost:3002/api/leave/department-requests",
+          "raw": "http://localhost:5001/api/leave/department-requests",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -191,7 +191,7 @@
           }
         ],
         "url": {
-          "raw": "http://localhost:3002/api/leave/request/123456/status",
+          "raw": "http://localhost:5001/api/leave/request/123456/status",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -231,7 +231,7 @@
           }
         ],
         "url": {
-          "raw": "http://localhost:3002/api/leave/balance/1",
+          "raw": "http://localhost:5001/api/leave/balance/1",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
@@ -267,7 +267,7 @@
           }
         ],
         "url": {
-          "raw": "http://localhost:3002/api/leave/statistics?startDate=2024-01-01&endDate=2024-12-31",
+          "raw": "http://localhost:5001/api/leave/statistics?startDate=2024-01-01&endDate=2024-12-31",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3002",
