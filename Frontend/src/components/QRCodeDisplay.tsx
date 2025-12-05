@@ -73,20 +73,25 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
       pollTimer = setInterval(async () => {
         try {
           const result = await visitorApiService.validateQRToken(sessionToken);
-          if (!result.valid && result.message === 'Token has already been used') {
-            generateQR();
+          if (!result.valid) {
+            if (result.message === 'Token has already been used') {
+              generateQR();
+            } else {
+              console.log('Token no longer valid:', result.message);
+            }
           }
         } catch (error) {
-          generateQR();
+          // Network error, stop polling to avoid spam
+          console.error('Error polling QR token:', error);
         }
-      }, 2000); 
+      }, 2000);
     }
 
     return () => {
       clearInterval(autoRefreshTimer);
       if (pollTimer) clearInterval(pollTimer);
     };
-  }, [type, refreshInterval, sessionToken]);
+  }, [type, refreshInterval]);
 
   useEffect(() => {
     if (expiresIn > 0) {

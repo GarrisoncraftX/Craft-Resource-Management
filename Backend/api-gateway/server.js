@@ -54,7 +54,8 @@ const publicRoutes = [
   "/api/visitors/generate-token",
   "/api/visitors/validate-token",
   "/api/visitors/checkin",
-  "/api/visitors/entry-pass"
+  "/api/visitors/entry-pass",
+  "/hr/employees/list"
 ];
 
 // JWT validation middleware
