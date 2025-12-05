@@ -368,7 +368,7 @@ class VisitorService:
                     'check_in_time': row['check_in_time'].isoformat() if row['check_in_time'] else None,
                     'check_out_time': row['check_out_time'].isoformat() if row['check_out_time'] else None,
                     'check_in_method': row['check_in_method'] or 'manual',
-                    'check_out_method': row['check_out_method'] or 'manual',
+                    'check_out_method': row['check_out_method'],
                     'purpose': row['purpose'],
                     'host_name': f"{row['host_first_name']} {row['host_last_name']}" if row['host_first_name'] else None,
                     'status': row['status']
@@ -427,7 +427,7 @@ class VisitorService:
                     'check_in_time': row['check_in_time'].isoformat() if row['check_in_time'] else None,
                     'check_out_time': row['check_out_time'].isoformat() if row['check_out_time'] else None,
                     'check_in_method': row['check_in_method'] or 'manual',
-                    'check_out_method': row['check_out_method'] or 'manual',
+                    'check_out_method': row['check_out_method'],
                     'purpose': row['purpose'],
                     'host_name': f"{row['host_first_name']} {row['host_last_name']}" if row['host_first_name'] else None,
                     'status': row['status']

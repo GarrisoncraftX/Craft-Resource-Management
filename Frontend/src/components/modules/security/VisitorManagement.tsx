@@ -17,7 +17,7 @@ export const VisitorManagement: React.FC = () => {
   const { toast } = useToast();
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCheckingOut, setIsCheckingOut] = useState<number | null>(null);
+  const [isCheckingOut, setIsCheckingOut] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useState({
     name: '',
     host: '',
@@ -60,7 +60,7 @@ export const VisitorManagement: React.FC = () => {
     }
   };
 
-  const handleCheckOut = async (visitorId: number) => {
+  const handleCheckOut = async (visitorId: string) => {
     try {
       setIsCheckingOut(visitorId);
       await visitorApiService.checkOutVisitor({ visitor_id: visitorId });
