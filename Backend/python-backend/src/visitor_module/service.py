@@ -33,7 +33,7 @@ class VisitorService:
         """Generate a dynamic QR token that expires in 5 minutes"""
         try:
             token = str(uuid.uuid4())
-            expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+            expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
 
             query = """
                 INSERT INTO qr_tokens (token, expires_at, is_used)
@@ -81,10 +81,6 @@ class VisitorService:
             if now > token_data['expires_at']:
                 return {'valid': False, 'message': 'Token has expired'}
 
-            # Mark token as used immediately after validation to prevent reuse
-            update_query = "UPDATE qr_tokens SET is_used = 1 WHERE token = %s"
-            self.db.execute_query(update_query, (token,), fetch=False)
-
             return {'valid': True}
         except Exception as e:
             logger.error(f"Error validating QR token: {e}")
@@ -110,26 +106,30 @@ class VisitorService:
             # Validate QR token if provided
             if qr_token:
                 token_valid = self.validate_qr_token(qr_token)
+                logger.info(f"QR token validation result for {qr_token}: {token_valid}")
                 if not token_valid['valid']:
                     return False, token_valid['message']
 
-            # Insert visitor record
-            visitor_query = """
-                INSERT INTO visitors (tenant_id, visitor_id, first_name, last_name, company, email, phone, purpose_of_visit, employee_to_visit, is_active, created_at, updated_at)
-                VALUES (0, CONCAT('VIS', LPAD(LAST_INSERT_ID() + 1, 3, '0')), %s, %s, %s, %s, %s, %s, %s, 1, NOW(), NOW())
-            """
-            visitor_params = (first_name, last_name, company, email, phone, purpose_of_visit, visiting_employee_id)
-            visitor_result = self.db.execute_query(visitor_query, visitor_params, fetch=False)
+            # Get the next auto-increment ID for visitors table
+            next_id_query = "SELECT AUTO_INCREMENT FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'visitors'"
+            next_id_result = self.db.execute_query(next_id_query)
+            next_auto_id = next_id_result[0]['AUTO_INCREMENT']
 
-            # Get the inserted visitor ID
-            visitor_id_query = "SELECT LAST_INSERT_ID() as visitor_id"
-            visitor_id_result = self.db.execute_query(visitor_id_query)
-            visitor_id = visitor_id_result[0]['visitor_id']
+            # Generate visitor_id string
+            visitor_id = f'CrmsVisitor{next_auto_id:03d}'
+
+            # Insert visitor record with visitor_id
+            visitor_query = """
+                INSERT INTO visitors (visitor_id, first_name, last_name, company, email, phone, purpose_of_visit, employee_to_visit, is_active, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1, NOW(), NOW())
+            """
+            visitor_params = (visitor_id, first_name, last_name, company, email, phone, purpose_of_visit, visiting_employee_id)
+            self.db.execute_query(visitor_query, visitor_params, fetch=False)
 
             # Insert check-in record
             checkin_query = """
-                INSERT INTO visitor_checkins (visitor_id, check_in_time, check_in_method, location, purpose, host_employee_id, status, created_at, updated_at)
-                VALUES (%s, NOW(), %s, 'Main Lobby', %s, %s, 'checked_in', NOW(), NOW())
+                INSERT INTO visitor_checkins (visitor_id, check_in_time, check_in_method, purpose, host_employee_id, status, created_at, updated_at)
+                VALUES (%s, NOW(), %s, %s, %s, 'checked_in', NOW(), NOW())
             """
             checkin_method = 'qr' if qr_token else 'manual'
             checkin_params = (visitor_id, checkin_method, purpose_of_visit, visiting_employee_id)

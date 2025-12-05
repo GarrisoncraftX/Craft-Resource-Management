@@ -15,12 +15,14 @@ export interface Visitor {
 }
 
 export interface VisitorCheckInPayload {
-  full_name: string;
-  contact_number: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
   email: string;
   visiting_employee_id: number;
   purpose_of_visit: string;
   qr_token: string;
+  company?: string;
 }
 
 export interface VisitorCheckOutPayload {

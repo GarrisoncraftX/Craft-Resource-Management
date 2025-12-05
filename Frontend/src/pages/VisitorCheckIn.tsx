@@ -27,11 +27,13 @@ export const VisitorCheckIn: React.FC = () => {
   const [employeeSearch, setEmployeeSearch] = useState('');
 
   const [formData, setFormData] = useState({
-    full_name: '',
-    contact_number: '',
+    first_name: '',
+    last_name: '',
+    phone: '',
     email: '',
     visiting_employee_id: '',
     purpose_of_visit: '',
+    company: '',
   });
 
   useEffect(() => {
@@ -117,7 +119,7 @@ export const VisitorCheckIn: React.FC = () => {
     }
 
     // Validate form
-    if (!formData.full_name || !formData.contact_number || !formData.visiting_employee_id || !formData.purpose_of_visit) {
+    if (!formData.first_name || !formData.last_name || !formData.phone || !formData.visiting_employee_id || !formData.purpose_of_visit) {
       setError('Please fill in all required fields');
       return;
     }
@@ -198,7 +200,7 @@ export const VisitorCheckIn: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground mb-4">Welcome, {formData.full_name}!</p>
+            <p className="text-muted-foreground mb-4">Welcome to CRMS, {formData.first_name} {formData.last_name}!</p>
 
             {entryPass && (
               <div className="bg-white p-4 rounded-lg border-2 border-green-200">
@@ -208,13 +210,6 @@ export const VisitorCheckIn: React.FC = () => {
                   <p><strong>Host:</strong> {entryPass.host_name}</p>
                   <p><strong>Purpose:</strong> {entryPass.purpose}</p>
                   <p><strong>Valid Until:</strong> {new Date(entryPass.valid_until).toLocaleString()}</p>
-                </div>
-                <div className="mt-3">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(entryPass.qr_code)}`}
-                    alt="Entry Pass QR Code"
-                    className="mx-auto"
-                  />
                 </div>
               </div>
             )}
@@ -250,31 +245,44 @@ export const VisitorCheckIn: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="full_name">
-                  Full Name <span className="text-destructive">*</span>
+                <Label htmlFor="first_name">
+                  First Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="full_name"
-                  placeholder="John Doe"
-                  value={formData.full_name}
-                  onChange={(e) => handleInputChange('full_name', e.target.value)}
+                  id="first_name"
+                  placeholder="John"
+                  value={formData.first_name}
+                  onChange={(e) => handleInputChange('first_name', e.target.value)}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="contact_number">
-                  Contact Number <span className="text-destructive">*</span>
+                <Label htmlFor="last_name">
+                  Last Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="contact_number"
-                  type="tel"
-                  placeholder="+1234567890"
-                  value={formData.contact_number}
-                  onChange={(e) => handleInputChange('contact_number', e.target.value)}
+                  id="last_name"
+                  placeholder="Doe"
+                  value={formData.last_name}
+                  onChange={(e) => handleInputChange('last_name', e.target.value)}
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">
+                Phone Number <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="+1234567890"
+                value={formData.phone}
+                onChange={(e) => handleInputChange('phone', e.target.value)}
+                required
+              />
             </div>
 
             <div className="space-y-2">
@@ -285,6 +293,16 @@ export const VisitorCheckIn: React.FC = () => {
                 placeholder="john.doe@example.com"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="company">Company (Optional)</Label>
+              <Input
+                id="company"
+                placeholder="ABC Corporation"
+                value={formData.company}
+                onChange={(e) => handleInputChange('company', e.target.value)}
               />
             </div>
 
