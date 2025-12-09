@@ -76,7 +76,7 @@ export const MaintenanceManagement: React.FC = () => {
 	const handleAddTask = async () => {
 		// Build payload expected by backend. MaintenanceRecord entity expects:
 		// { asset: { id: <number> }, maintenanceDate: "YYYY-MM-DD", description, performedBy }
-		const payload: unknown = {
+		const payload = {
 			asset: { id: assetId ? Number(assetId) : undefined },
 			maintenanceDate: date || undefined,
 			description: description || undefined,

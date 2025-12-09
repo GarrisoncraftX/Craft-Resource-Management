@@ -401,8 +401,8 @@ export const EmployeeDashboard: React.FC = () => {
                           <TableHead>Status</TableHead>
                         </TableRow>
                       </TableHeader>
-                      <TableBody>{(attendanceData.length > 0 ? mapAttendanceToUI(attendanceData) : mockAttendanceHistory).map((record) => (
-                        <TableRow key={record.date}>
+                      <TableBody>{(attendanceData.length > 0 ? mapAttendanceToUI(attendanceData) : mockAttendanceHistory).map((record, index) => (
+                        <TableRow key={index}>
                           <TableCell>{record.date}</TableCell>
                           <TableCell>{record.checkIn}</TableCell>
                           <TableCell>{record.checkOut}</TableCell>
@@ -504,8 +504,8 @@ export const EmployeeDashboard: React.FC = () => {
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>{(payrollData.length > 0 ? mapPayrollToUI(payrollData) : mockPayrollHistory).map((payroll) => (
-                    <TableRow key={payroll.period}>
+                  <TableBody>{(payrollData.length > 0 ? mapPayrollToUI(payrollData) : mockPayrollHistory).map((payroll, index) => (
+                    <TableRow key={index}>
                       <TableCell>{payroll.period}</TableCell>
                       <TableCell>{payroll.basicSalary}</TableCell>
                       <TableCell>{payroll.allowances}</TableCell>

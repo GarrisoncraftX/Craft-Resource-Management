@@ -25,7 +25,7 @@ export const TaxAssessment: React.FC = () => {
     { id: 'TA-004', property: '321 Residential Lane', owner: 'Jane Doe', type: 'Residential', landValue: 120000, improvementValue: 280000, totalValue: 400000, taxRate: 1.2, annualTax: 4800, status: 'Appeal Filed' },
   ];
 
-  const [assessments, setAssessments] = useState<unknown[]>(dummyAssessments);
+  const [assessments, setAssessments] = useState<typeof dummyAssessments>(dummyAssessments);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,9 +66,9 @@ export const TaxAssessment: React.FC = () => {
 
   // quick computed metrics for the header cards
   const totalProperties = assessments.length;
-  const totalValue = assessments.reduce((s, a: any) => s + (Number(a.totalValue) || 0), 0);
-  const totalAnnualTax = assessments.reduce((s, a: any) => s + (Number(a.annualTax) || 0), 0);
-  const pendingReviews = assessments.filter((a: any) => (a.status ?? '').toString().toLowerCase().includes('review') || (a.status ?? '').toString().toLowerCase().includes('pending')).length;
+  const totalValue = assessments.reduce((s, a) => s + (Number(a.totalValue) || 0), 0);
+  const totalAnnualTax = assessments.reduce((s, a) => s + (Number(a.annualTax) || 0), 0);
+  const pendingReviews = assessments.filter((a) => (a.status ?? '').toString().toLowerCase().includes('review') || (a.status ?? '').toString().toLowerCase().includes('pending')).length;
 
   // Sample chart data (placeholder)
   const assessmentTrendsData: any[] = [];

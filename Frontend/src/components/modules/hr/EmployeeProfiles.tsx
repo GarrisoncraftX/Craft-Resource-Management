@@ -108,12 +108,14 @@ export const EmployeeProfiles: React.FC = () => {
   console.log(roles);
 
   const getDepartmentName = (departmentId: number | string) => {
-    const dept = departments.find(d => d.id === Number(departmentId));
+    const deptId = Number(departmentId);
+    const dept = departments.find(d => Number(d.id) === deptId);
     return dept ? dept.name : 'N/A';
   };
 
   const getRoleName = (roleId: number | string) => {
-    const role = roles.find(r => r.id === Number(roleId));
+    const rId = Number(roleId);
+    const role = roles.find(r => Number(r.id) === rId);
     return role ? role.name : 'N/A';
   };
 
