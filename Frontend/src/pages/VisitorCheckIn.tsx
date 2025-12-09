@@ -73,7 +73,7 @@ export const VisitorCheckIn: React.FC = () => {
   const loadEmployees = async () => {
     try {
       // Use direct fetch without Authorization header for public endpoint
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `http://172.20.10.5:5003`;
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `http://localhost:5003`;
       const response = await fetch(`${API_BASE_URL}/hr/employees/list`, {
         method: 'GET',
         headers: {

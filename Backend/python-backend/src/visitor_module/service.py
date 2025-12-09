@@ -43,7 +43,7 @@ class VisitorService:
 
             # Generate check-in URL for the QR code
             if not frontend_url:
-                frontend_url = os.getenv('FRONTEND_URL', 'http://172.20.10.5:5173')
+                frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
             check_in_url = f"{frontend_url}/visitor-checkin?token={token}"
 
             return {
@@ -69,11 +69,13 @@ class VisitorService:
                 return {'valid': False, 'message': 'Token not found'}
 
             token_data = result[0]
-            now = datetime.now(timezone.utc)
+            now = datetime.utcnow()
 
-            # Ensure expires_at is a datetime object
+            # Ensure expires_at is a datetime object and naive (since MySQL returns naive datetimes)
             if isinstance(token_data['expires_at'], str):
                 token_data['expires_at'] = datetime.fromisoformat(token_data['expires_at'])
+            elif isinstance(token_data['expires_at'], datetime) and token_data['expires_at'].tzinfo is not None:
+                token_data['expires_at'] = token_data['expires_at'].replace(tzinfo=None)
 
             if token_data['is_used']:
                 return {'valid': False, 'message': 'Token has already been used'}

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 class AuditService:
     def __init__(self):
-        self.java_backend_url = os.getenv('JAVA_BACKEND_URL', 'http://172.20.10.5:5002')
+        self.java_backend_url = os.getenv('JAVA_BACKEND_URL', 'http://localhost:5002')
 
     def log_action(self, user_id, action, details=None):
         try:

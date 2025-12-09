@@ -55,7 +55,7 @@ app = Flask(__name__)
 
 # Configure CORS
 CORS(app, origins=[
-    os.getenv('FRONTEND_URL', 'http://172.20.10.5:5173'),
+    os.getenv('FRONTEND_URL', 'http://localhost:5173'),
     'http://localhost:5173'
 ], supports_credentials=True)
 
