@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './button';
-import { Eye, Home, LogOut, Bell, Clock } from 'lucide-react';
+import { Eye, Home, LogOut, Bell, Clock, User } from 'lucide-react';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -26,15 +26,17 @@ interface ModuleLayoutProps {
   onViewDashboard: () => void;
   onLogout: () => void;
   isEmployeeDashboard?: boolean;
+  showSidebar?: boolean;
   children: React.ReactNode;
 }
 
-const ModuleLayout: React.FC<ModuleLayoutProps> = ({ 
-  title, 
-  onViewDashboard, 
-  onLogout, 
-  isEmployeeDashboard, 
-  children 
+const ModuleLayout: React.FC<ModuleLayoutProps> = ({
+  title,
+  onViewDashboard,
+  onLogout,
+  isEmployeeDashboard,
+  showSidebar = true,
+  children
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -74,7 +76,7 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
             {/* Logo */}
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md">
-                <span className="text-primary-foreground font-bold text-sm">CRM</span>
+                <span className="text-primary-foreground font-bold text-sm">{title}</span>
               </div>
             </div>
 
@@ -128,7 +130,7 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-2">
-              {user?.roleCode === 'SUPER_ADMIN' && title !== 'Admin Dashboard' && (
+              {user?.roleCode === 'SUPER_ADMIN' && title !== 'Admin Dashboard' && !isEmployeeDashboard && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -149,6 +151,18 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
                 <Eye className="h-4 w-4 mr-2" />
                 {isEmployeeDashboard ? 'System' : 'Dashboard'}
               </Button>
+
+              {isEmployeeDashboard && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/employee/info')}
+                  className="text-muted-foreground hover:text-foreground rounded-full"
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Account
+                </Button>
+              )}
             </div>
 
             {/* User Menu */}
@@ -184,7 +198,7 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
                 
                 {/* Mobile-only items */}
                 <div className="md:hidden py-1">
-                  {user?.roleCode === 'SUPER_ADMIN' && title !== 'Admin Dashboard' && (
+                  {user?.roleCode === 'SUPER_ADMIN' && title !== 'Admin Dashboard' && !isEmployeeDashboard && (
                     <DropdownMenuItem onClick={handleBackToAdmin}>
                       <Home className="h-4 w-4 mr-2" />
                       Back to Admin
@@ -211,10 +225,10 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
       </header>
 
       {/* Sidebar */}
-      <UnifySidebar />
+      {showSidebar && <UnifySidebar />}
 
       {/* Main Content */}
-      <main className="pt-16 min-h-screen ml-16 transition-all duration-300 ease-in-out">
+      <main className={`pt-16 min-h-screen transition-all duration-300 ease-in-out ${showSidebar ? 'ml-16' : ''}`}>
         <div className="p-6">
           {children}
         </div>

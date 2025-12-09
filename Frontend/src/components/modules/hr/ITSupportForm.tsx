@@ -30,8 +30,7 @@ export const ITSupportForm: React.FC<ITSupportFormProps> = ({ isOpen, onClose, o
     setIsSubmitting(true);
 
     try {
-      // Here you would typically send the support request to the backend
-      // For now, we'll simulate the submission
+    
       console.log('Submitting IT support request:', {
         ...formData,
         requesterId: user?.userId,
@@ -66,7 +65,7 @@ export const ITSupportForm: React.FC<ITSupportFormProps> = ({ isOpen, onClose, o
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mb-10">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <HelpCircle className="h-5 w-5" />

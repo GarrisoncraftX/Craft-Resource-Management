@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from './ui/Navbar';
+import ModuleLayout from './ui/ModuleLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -240,16 +240,14 @@ export const EmployeeDashboard: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar
-        title="CraftResourceManagement"
-        onViewDashboard={handleViewSystem}
-        onLogout={handleLogout}
-        toggleSidebar={toggleSidebar}
-        isEmployeeDashboard={true}
-      />
-
-      <main className="max-w-7xl mt-10 mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <ModuleLayout
+      title="CRMS"
+      onViewDashboard={handleViewSystem}
+      onLogout={handleLogout}
+      isEmployeeDashboard={true}
+      showSidebar={false}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <h1 className="text-4xl font-bold text-blue-600 mb-2">Employee Portal</h1>
           <p className="text-gray-600">Welcome back, {user.firstName} {user.lastName}</p>
@@ -604,7 +602,7 @@ export const EmployeeDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </div>
-      </main>
+      </div>
       <LeaveRequestForm
         userId={Number(user.userId)}
         isOpen={isLeaveRequestFormOpen}
@@ -619,6 +617,6 @@ export const EmployeeDashboard: React.FC = () => {
         onClose={() => setIsITSupportFormOpen(false)}
         onSuccess={() => setIsITSupportFormOpen(false)}
       />
-    </div>
+    </ModuleLayout>
   );
 };
