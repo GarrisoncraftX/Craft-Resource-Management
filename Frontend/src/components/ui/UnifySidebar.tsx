@@ -28,7 +28,7 @@ const modules = [
     icon: Users,
     color: "from-rose-500 to-rose-600",
     subItems: [
-      { title: "Employees Attendance", url: "/hr/attendance" },
+      { title: "Attendance", url: "/hr/attendance" },
       { title: "Employees", url: "/hr/employees" },
       { title: "Payroll Processing", url: "/hr/payroll" },
       { title: "Leave Management", url: "/hr/leave" },
@@ -70,7 +70,7 @@ const modules = [
     color: "from-violet-500 to-violet-600",
     subItems: [
       { title: "Management", url: "/security/management" },
-      { title: "Employees Attendance", url: "/security/attendance" },
+      { title: "Attendance", url: "/security/attendance" },
       { title: "Visitors", url: "/security/visitors" },
       { title: "Access Control", url: "/security/access-control" },
       { title: "Incidents", url: "/security/incidents" },

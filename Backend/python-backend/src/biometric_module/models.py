@@ -274,12 +274,140 @@ class BiometricModel:
                 DELETE FROM biometric_templates
                 WHERE user_id = %s AND biometric_type = %s
             """
-            
+
             affected_rows = self.db.execute_query(query, (user_id, biometric_type), fetch=False)
-            
+
             logger.info(f"Deleted {affected_rows} biometric template(s) for user {user_id}")
             return affected_rows > 0
-            
+
         except Exception as e:
             logger.error(f"Error deleting biometric template: {e}")
+            raise e
+
+    def get_attendance_records(self, filters: Optional[Dict] = None) -> List[Dict[str, Any]]:
+        """Get attendance records with optional filtering"""
+        try:
+            query = """
+                SELECT
+                    ar.id,
+                    ar.user_id,
+                    u.first_name,
+                    u.last_name,
+                    u.employee_id,
+                    d.name as department,
+                    ar.clock_in_time,
+                    ar.clock_out_time,
+                    ar.clock_in_method,
+                    ar.clock_out_method,
+                    ar.total_hours,
+                    ar.status,
+                    ar.created_at
+                FROM attendance_records ar
+                LEFT JOIN users u ON ar.user_id = u.id
+                LEFT JOIN departments d ON u.department_id = d.id
+                WHERE 1=1
+            """
+            params = []
+
+            if filters:
+                if filters.get('employee_name'):
+                    query += " AND (u.first_name LIKE %s OR u.last_name LIKE %s)"
+                    name_param = f"%{filters['employee_name']}%"
+                    params.extend([name_param, name_param])
+
+                if filters.get('department'):
+                    query += " AND d.name = %s"
+                    params.append(filters['department'])
+
+                if filters.get('date_from'):
+                    query += " AND DATE(ar.clock_in_time) >= %s"
+                    params.append(filters['date_from'])
+
+                if filters.get('date_to'):
+                    query += " AND DATE(ar.clock_in_time) <= %s"
+                    params.append(filters['date_to'])
+
+                if filters.get('status'):
+                    query += " AND ar.status = %s"
+                    params.append(filters['status'])
+
+            query += " ORDER BY ar.clock_in_time DESC"
+
+            results = self.db.execute_query(query, tuple(params))
+            return results or []
+
+        except Exception as e:
+            logger.error(f"Error getting attendance records: {e}")
+            raise e
+
+    def get_attendance_stats(self, date: Optional[str] = None, department: Optional[str] = None) -> Dict[str, Any]:
+        """Get attendance statistics"""
+        try:
+            base_query = """
+                SELECT
+                    COUNT(CASE WHEN ar.status = 'present' THEN 1 END) as present,
+                    COUNT(CASE WHEN ar.status = 'absent' THEN 1 END) as absent,
+                    COUNT(CASE WHEN TIMESTAMPDIFF(MINUTE, ar.clock_in_time, ar.clock_out_time) < 480 THEN 1 END) as late,
+                    COUNT(DISTINCT ar.user_id) as total_employees
+                FROM attendance_records ar
+                LEFT JOIN users u ON ar.user_id = u.id
+                WHERE DATE(ar.clock_in_time) = %s
+            """
+            params = [date or datetime.now().date()]
+
+            if department:
+                base_query += " AND u.department = %s"
+                params.append(department)
+
+            result = self.db.execute_query(base_query, tuple(params))
+
+            if result:
+                stats = result[0]
+                # Calculate on_time as present minus late
+                stats['onTime'] = stats['present'] - stats['late']
+                return {
+                    'onTime': stats['onTime'],
+                    'late': stats['late'],
+                    'absent': stats['absent'],
+                    'present': stats['present'],
+                    'totalEmployees': stats['total_employees']
+                }
+
+            return {
+                'onTime': 0,
+                'late': 0,
+                'absent': 0,
+                'present': 0,
+                'totalEmployees': 0
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting attendance stats: {e}")
+            raise e
+
+    def get_checked_in_employees(self) -> List[Dict[str, Any]]:
+        """Get currently checked-in employees"""
+        try:
+            query = """
+                SELECT
+                    ar.id,
+                    ar.user_id,
+                    u.first_name,
+                    u.last_name,
+                    u.employee_id,
+                    d.name as department,
+                    ar.clock_in_time,
+                    ar.clock_in_method
+                FROM attendance_records ar
+                LEFT JOIN users u ON ar.user_id = u.id
+                LEFT JOIN departments d ON u.department_id = d.id
+                WHERE ar.clock_out_time IS NULL
+                ORDER BY ar.clock_in_time DESC
+            """
+
+            results = self.db.execute_query(query)
+            return results or []
+
+        except Exception as e:
+            logger.error(f"Error getting checked-in employees: {e}")
             raise e

@@ -648,3 +648,76 @@ class BiometricController:
                 'success': False,
                 'message': 'Error processing attendance'
             }, 500
+
+    def get_attendance_records(self) -> tuple[Dict[str, Any], int]:
+        """Get attendance records with optional filtering"""
+        try:
+            # Get query parameters
+            employee_name = request.args.get('employee_name')
+            department = request.args.get('department')
+            date_from = request.args.get('date_from')
+            date_to = request.args.get('date_to')
+            status = request.args.get('status')
+
+            filters = {}
+            if employee_name:
+                filters['employee_name'] = employee_name
+            if department:
+                filters['department'] = department
+            if date_from:
+                filters['date_from'] = date_from
+            if date_to:
+                filters['date_to'] = date_to
+            if status:
+                filters['status'] = status
+
+            records = self.biometric_model.get_attendance_records(filters)
+
+            return {
+                'success': True,
+                'records': records
+            }, 200
+
+        except Exception as e:
+            logger.error(f"Error getting attendance records: {e}")
+            return {
+                'success': False,
+                'message': 'Error retrieving attendance records'
+            }, 500
+
+    def get_attendance_stats(self) -> tuple[Dict[str, Any], int]:
+        """Get attendance statistics"""
+        try:
+            date = request.args.get('date')
+            department = request.args.get('department')
+
+            stats = self.biometric_model.get_attendance_stats(date, department)
+
+            return {
+                'success': True,
+                'stats': stats
+            }, 200
+
+        except Exception as e:
+            logger.error(f"Error getting attendance stats: {e}")
+            return {
+                'success': False,
+                'message': 'Error retrieving attendance statistics'
+            }, 500
+
+    def get_checked_in_employees(self) -> tuple[Dict[str, Any], int]:
+        """Get currently checked-in employees"""
+        try:
+            employees = self.biometric_model.get_checked_in_employees()
+
+            return {
+                'success': True,
+                'employees': employees
+            }, 200
+
+        except Exception as e:
+            logger.error(f"Error getting checked-in employees: {e}")
+            return {
+                'success': False,
+                'message': 'Error retrieving checked-in employees'
+            }, 500

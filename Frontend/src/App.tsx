@@ -12,6 +12,9 @@ import ModuleLayout from "@/components/ui/ModuleLayout";
 
 
 const AuthForm = lazy(() => import("@/components/AuthForm"));
+
+const EmployeeAttendance = lazy(() => import("@/components/modules/EmployeeAttendance"));
+//Finance Modules
 const FinanceDashboard = lazy(() => import("@/components/modules/finance/FinanceDashboard").then(module => ({ default: module.FinanceDashboard })));
 const ChartOfAccounts = lazy(() => import("@/components/modules/finance/ChartOfAccounts").then(module => ({ default: module.ChartOfAccounts })));
 const JournalEntries = lazy(() => import("@/components/modules/finance/JournalEntries").then(module => ({ default: module.JournalEntries })));
@@ -191,6 +194,7 @@ const AppRoutes = () => {
       {/* HR Routes */}
       <Route path="/hr/benefits" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><BenefitsAdministration /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/hr/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><HRDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/hr/attendance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><EmployeeAttendance moduleType="hr" /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/hr/employees" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><EmployeeProfiles /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/hr/leave" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LeaveManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/hr/payroll" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PayrollProcessing /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
@@ -233,6 +237,7 @@ const AppRoutes = () => {
 
       {/* Security Routes */}
       <Route path="/security" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Security" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SecurityDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/security/attendance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Security Attendance" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><EmployeeAttendance moduleType="security" /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/security/access-control" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Access Control" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AccessControl /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/security/incidents" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Security Incidents" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SecurityIncidents /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/security/id-cards" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="ID Card Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><IdCardManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />

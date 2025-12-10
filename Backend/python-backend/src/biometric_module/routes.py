@@ -87,4 +87,23 @@ def attendance_status():
     response, status_code = biometric_controller.get_attendance_status()
     return jsonify(response), status_code
 
+# Attendance management routes
+@biometric_bp.route('/attendance/records', methods=['GET'])
+@auth_required
+def get_attendance_records():
+    response, status_code = biometric_controller.get_attendance_records()
+    return jsonify(response), status_code
+
+@biometric_bp.route('/attendance/stats', methods=['GET'])
+@auth_required
+def get_attendance_stats():
+    response, status_code = biometric_controller.get_attendance_stats()
+    return jsonify(response), status_code
+
+@biometric_bp.route('/attendance/checked-in', methods=['GET'])
+@auth_required
+def get_checked_in_employees():
+    response, status_code = biometric_controller.get_checked_in_employees()
+    return jsonify(response), status_code
+
 

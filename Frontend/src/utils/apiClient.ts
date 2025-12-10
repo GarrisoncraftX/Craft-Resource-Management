@@ -44,12 +44,34 @@ export class ApiClient {
     return response.json();
   }
 
-  async get(endpoint: string) {
+  async get(endpoint: string, options?: { responseType?: 'json' | 'blob' }) {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       method: 'GET',
       headers: this.getHeaders(),
     });
-    
+
+    if (options?.responseType === 'blob') {
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message ?? errorData.error ?? errorMessage;
+        } catch {
+          errorMessage = response.statusText || errorMessage;
+        }
+        if (response.status === 401) {
+          localStorage.removeItem('craft_token');
+          localStorage.removeItem('craft_user');
+          globalThis.location.href = '/signin';
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      return response.blob();
+    }
+
     return this.handleResponse(response);
   }
 
