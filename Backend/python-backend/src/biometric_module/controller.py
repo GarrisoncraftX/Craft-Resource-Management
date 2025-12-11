@@ -574,7 +574,7 @@ class BiometricController:
                 'type': 'attendance_kiosk',
                 'session_token': session_token,
                 'timestamp': datetime.utcnow().isoformat(),
-                'valid_for': 300  # 5 minutes
+                'valid_for': 3600  # 1 hour validity
             }
 
             # Encode as base64 for QR code
@@ -586,7 +586,7 @@ class BiometricController:
                 'success': True,
                 'qr_data': qr_string,
                 'session_token': session_token,
-                'expires_in': 300
+                'expires_in': 3600
             }, 200
 
         except Exception as e:

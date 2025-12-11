@@ -12,27 +12,27 @@ import type {
 class AttendanceApiService {
   // Generate QR token for kiosk display
   async generateQRToken(): Promise<QRToken> {
-    return apiClient.get('/biometric/attendance/qr-display');
+    return apiClient.get('/api/biometric/attendance/qr-display');
   }
 
   // Scan QR code for attendance
   async scanQRCode(token: string): Promise<{ success: boolean; message: string; action?: string }> {
-    return apiClient.post('/biometric/attendance/qr-scan', { token });
+    return apiClient.post('/api/biometric/attendance/qr-scan', { token });
   }
 
   // Clock in employee
   async clockIn(payload: AttendanceClockInPayload): Promise<{ success: boolean; message: string; record?: AttendanceRecord }> {
-    return apiClient.post('/biometric/attendance/clock-in', payload);
+    return apiClient.post('/api/biometric/attendance/clock-in', payload);
   }
 
   // Clock out employee
   async clockOut(payload: AttendanceClockOutPayload): Promise<{ success: boolean; message: string; record?: AttendanceRecord }> {
-    return apiClient.post('/biometric/attendance/clock-out', payload);
+    return apiClient.post('/api/biometric/attendance/clock-out', payload);
   }
 
   // Get attendance status for user
   async getAttendanceStatus(userId: string): Promise<AttendanceStatus> {
-    return apiClient.get(`/biometric/attendance/status?user_id=${userId}`);
+    return apiClient.get(`/api/biometric/attendance/status?user_id=${userId}`);
   }
 
   // Get all attendance records with optional filtering

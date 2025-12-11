@@ -98,6 +98,11 @@ class Config:
     # Cache configuration
     CACHE_TYPE = os.getenv('CACHE_TYPE', 'simple')
     CACHE_DEFAULT_TIMEOUT = int(os.getenv('CACHE_DEFAULT_TIMEOUT', 300))
+    CACHE_REDIS_HOST = os.getenv('CACHE_REDIS_HOST', 'localhost')
+    CACHE_REDIS_PORT = int(os.getenv('CACHE_REDIS_PORT', 6379))
+    CACHE_REDIS_DB = int(os.getenv('CACHE_REDIS_DB', 0))
+    CACHE_REDIS_PASSWORD = os.getenv('CACHE_REDIS_PASSWORD', None)
+    CACHE_REDIS_URL = os.getenv('CACHE_REDIS_URL', None)
     USE_MOCK_DATA = os.getenv('USE_MOCK_DATA', 'False').lower() == 'true'
     
     @staticmethod

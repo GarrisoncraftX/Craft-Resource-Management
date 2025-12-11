@@ -27,6 +27,7 @@ from src.reports_analytics_module.routes import reports_analytics_bp
 # Import database connection
 from src.database.connection import DatabaseManager
 from src.config.app import config
+from src.extensions import cache
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -34,6 +35,10 @@ app = Flask(__name__)
 # Determine environment and config
 env = os.getenv('FLASK_ENV', 'development')
 app_config = config.get(env, config['default'])
+app.config.from_object(app_config)
+
+# Initialize extensions
+cache.init_app(app)
 
 # Create filtered config dict with only valid keys for MySQLConnectionPool
 config_dict = {
@@ -49,9 +54,6 @@ config_dict = {
 }
 
 from src.utils.logger import logger
-
-# Initialize Flask app
-app = Flask(__name__)
 
 # Configure CORS
 CORS(app, origins=[

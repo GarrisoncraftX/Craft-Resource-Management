@@ -291,8 +291,7 @@ class BiometricModel:
                 SELECT
                     ar.id,
                     ar.user_id,
-                    u.first_name,
-                    u.last_name,
+                    CONCAT(u.first_name, ' ', u.last_name) as employee_name,
                     u.employee_id,
                     d.name as department,
                     ar.clock_in_time,
@@ -392,8 +391,7 @@ class BiometricModel:
                 SELECT
                     ar.id,
                     ar.user_id,
-                    u.first_name,
-                    u.last_name,
+                    CONCAT(u.first_name, ' ', u.last_name) as employee_name,
                     u.employee_id,
                     d.name as department,
                     ar.clock_in_time,

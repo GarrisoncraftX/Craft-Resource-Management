@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, RefreshCw, QrCode } from 'lucide-react';
 import { visitorApiService } from '@/services/visitorApi';
-import { apiClient } from '@/utils/apiClient';
 import { useToast } from '@/hooks/use-toast';
 import QRCode from 'qrcode';
+import { attendanceApiService } from '@/services/attendanceApi';
 
 interface QRCodeDisplayProps {
   type?: 'attendance' | 'visitor';
@@ -15,7 +15,7 @@ interface QRCodeDisplayProps {
 
 export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
   type = 'attendance',
-  refreshInterval = 3600
+  refreshInterval = 3600000, 
 }) => {
   const { toast } = useToast();
   const [qrData, setQrData] = useState<string>('');
@@ -39,10 +39,10 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
         setExpiresIn(secondsUntilExpiry);
       } else {
         // Attendance QR code logic - call backend API
-        const qrResult = await apiClient.get('/api/biometric/attendance/qr-display');
+        const qrResult = await attendanceApiService.generateQRToken();
         setQrData(qrResult.qr_data);
         setSessionToken(qrResult.session_token);
-        setExpiresIn(qrResult.expires_in);
+        setExpiresIn(Number.parseInt(qrResult.expires_in, 10));
       }
 
       toast({
@@ -179,7 +179,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
             <QrCode className="h-5 w-5" />
-            {type === 'visitor' ? 'Visitor Check-In QR Code' : 'Your Attendance QR Code'}
+            {type === 'visitor' ? 'Visitor Check-In QR Code' : 'Employees Attendance QR Code'}
           </CardTitle>
           <CardDescription>
             {type === 'visitor' 
@@ -204,7 +204,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
           </Alert>
 
           <div className="text-xs text-muted-foreground">
-            Session: {sessionToken.slice(0, 8)}...
+            Session: {sessionToken?.slice(0, 8)}...
           </div>
         </CardContent>
       </Card>

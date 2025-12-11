@@ -72,7 +72,7 @@ export const EmployeeDashboard: React.FC = () => {
 
 
   const handleCheckIn = useCallback(() => {
-    navigate('/kiosk-interface', { state: { activeSection: 'attendance' } });
+    navigate('/kiosk-interface', { state: { mode: 'SCANNER' } });
   }, [navigate]);
 
   const refreshLeaveRequests = useCallback(async () => {
@@ -128,7 +128,7 @@ export const EmployeeDashboard: React.FC = () => {
   }, [user, refreshLeaveRequests]);
 
   const handleCheckOut = useCallback(() => {
-    navigate('/kiosk-interface', { state: { activeSection: 'attendance' } });
+    navigate('/kiosk-interface', { state: { mode: 'SCANNER' } });
   }, [navigate]);
 
   const getModuleRoute = useCallback((departmentCode: string, roleCode: string) => {

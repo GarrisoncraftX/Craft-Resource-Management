@@ -43,9 +43,9 @@ export interface AttendanceClockOutPayload {
 }
 
 export interface QRToken {
-  token: string;
-  expires_at: string;
-  qr_url: string;
+  session_token: string;
+  expires_in: string;
+  qr_data: string;
 }
 
 export interface AttendanceStatus {

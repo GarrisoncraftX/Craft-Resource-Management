@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, UserCheck, LogOut, Search, RefreshCw, QrCode, Clock, Users, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { attendanceApiService } from '@/services/attendanceApi';
 import type { AttendanceRecord, AttendanceStats, AttendanceSearchParams } from '@/types/attendance';
 import { useNavigate } from 'react-router-dom';
@@ -21,6 +22,7 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
   const { toast } = useToast();
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [checkedInEmployees, setCheckedInEmployees] = useState<AttendanceRecord[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
   const [stats, setStats] = useState<AttendanceStats>({
     onTime: 0,
     late: 0,
@@ -54,6 +56,13 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
       setAttendanceRecords(recordsResponse);
       setCheckedInEmployees(checkedInResponse);
       setStats(statsResponse);
+
+      if (recordsResponse) {
+        const uniqueDepartments = Array.from(
+          new Set(recordsResponse.map((r) => r.department).filter((d): d is string => !!d))
+        );
+        setDepartments(uniqueDepartments.sort());
+      }
     } catch (error) {
       toast({
         title: 'Error',
@@ -68,7 +77,11 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
   const handleSearch = async () => {
     try {
       setIsLoading(true);
-      const data = await attendanceApiService.getAttendanceRecords(searchParams);
+      const paramsToUse = {
+        ...searchParams,
+        department: searchParams.department === 'all' ? '' : searchParams.department,
+      };
+      const data = await attendanceApiService.getAttendanceRecords(paramsToUse);
       setAttendanceRecords(data);
     } catch (error) {
       toast({
@@ -143,7 +156,7 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
           <h2 className="text-2xl font-bold">{moduleTitle}</h2>
           <p className="text-muted-foreground">Manage employee attendance records</p>
         </div>
-        <Button onClick={() => navigate('/kiosk-interface')} size="lg">
+        <Button onClick={() => navigate('/kiosk-interface', { state: { mode: 'GENERATOR' } })} size="lg">
           <QrCode className="mr-2 h-5 w-5" />
           Kiosk Interface
         </Button>
@@ -249,12 +262,22 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
             </div>
             <div>
               <Label htmlFor="department">Department</Label>
-              <Input
-                id="department"
-                placeholder="Filter by department"
+              <Select
                 value={searchParams.department}
-                onChange={(e) => setSearchParams({ ...searchParams, department: e.target.value })}
-              />
+                onValueChange={(value) => setSearchParams({ ...searchParams, department: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="date_from">From Date</Label>
@@ -362,7 +385,7 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
                         )}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {record.total_hours ? `${record.total_hours.toFixed(2)}h` : '-'}
+                        {record.total_hours ? `${Number(record.total_hours).toFixed(2)}h` : '-'}
                       </TableCell>
                       <TableCell>
                         {getStatusBadge(record.status)}
