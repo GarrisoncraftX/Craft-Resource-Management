@@ -588,7 +588,7 @@ class BiometricController:
                     'success': False,
                     'message': 'Invalid frontend URL configuration'
                 }, 500
-            qr_data = f"{frontend_url}/kiosk-interface?mode=SCANNER&session_token={session_token}"
+            qr_data = f"{frontend_url}/signin?session_token={session_token}"
 
             return {
                 'success': True,
@@ -631,7 +631,23 @@ class BiometricController:
 
             logger.info(f"Request data: session_token={session_token}, user_id={user_id}")
             logger.info(f"Request headers: {dict(request.headers)}")
-            logger.info(f"Global context g: {dict(g) if hasattr(g, '__dict__') else str(g)}")
+            logger.info(f"Global context g attributes: {dir(g)}")
+            logger.info(f"Global context g user_id: {getattr(g, 'user_id', 'Not set')}")
+
+            # Debug JWT token if present
+            auth_header = request.headers.get('Authorization')
+            if auth_header and auth_header.startswith('Bearer '):
+                token = auth_header[7:]
+                logger.info(f"JWT token present, length: {len(token)}")
+                try:
+                    import jwt
+                    from src.config.app import Config
+                    decoded = jwt.decode(token, Config.JWT_SECRET, algorithms=['HS256'])
+                    logger.info(f"JWT decoded successfully: {decoded}")
+                except Exception as jwt_error:
+                    logger.error(f"JWT decode error: {jwt_error}")
+            else:
+                logger.info("No JWT token in request")
 
             if not session_token:
                 logger.warning("Session token is missing from request")
@@ -690,7 +706,7 @@ class BiometricController:
             session_data['used_at'] = datetime.utcnow().isoformat()
             # Encrypt sensitive data before storing in cache
             import hashlib
-            session_data['used_by'] = hashlib.sha256(user_id.encode()).hexdigest()  # Hash user_id for privacy
+            session_data['used_by'] = hashlib.sha256(str(user_id).encode()).hexdigest()  # Hash user_id for privacy
             cache.set(cache_key, session_data, timeout=3600)  # Extend cache for audit purposes
             logger.info("Session token marked as used")
 
@@ -713,6 +729,8 @@ class BiometricController:
             )
 
             logger.info(f"QR attendance processed for user {user_id}: {action}")
+            logger.info(f"Attendance result: {attendance_result}")
+            logger.info(f"Employee info: {employee_info}")
 
             return {
                 'success': True,

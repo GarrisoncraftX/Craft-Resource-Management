@@ -409,3 +409,28 @@ class BiometricModel:
         except Exception as e:
             logger.error(f"Error getting checked-in employees: {e}")
             raise e
+
+    def get_employee_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get employee information by user ID"""
+        try:
+            query = """
+                SELECT
+                    u.id,
+                    u.first_name,
+                    u.last_name,
+                    u.employee_id,
+                    d.name as department_name
+                FROM users u
+                LEFT JOIN departments d ON u.department_id = d.id
+                WHERE u.id = %s
+            """
+
+            result = self.db.execute_query(query, (user_id,))
+
+            if result:
+                return result[0]
+            return None
+
+        except Exception as e:
+            logger.error(f"Error getting employee by ID {user_id}: {e}")
+            raise e

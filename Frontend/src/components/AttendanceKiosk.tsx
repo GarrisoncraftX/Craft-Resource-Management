@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,28 +7,22 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { WebcamCapture } from './WebcamCapture';
-import { QRCodeScanner } from './QRCodeScanner';
-import { QRCodeDisplay } from './QRCodeDisplay';
-import { Clock, Scan, Camera, KeyRound, CheckCircle, Loader2, QrCode } from 'lucide-react';
+import { Clock, KeyRound, CheckCircle, Loader2, QrCode } from 'lucide-react';
 import { apiClient } from '@/utils/apiClient';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-
-type KioskMode = 'SCANNER' | 'GENERATOR';
+import { PageLoadingSpinner } from '@/components/LoadingSpinner';
+import { QRCodeDisplay } from './QRCodeDisplay';
 
 export const AttendanceKiosk: React.FC = () => {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const location = useLocation();
-  const [mode, setMode] = useState<KioskMode>((location.state as { mode?: KioskMode })?.mode || 'SCANNER');
-  
-  const [activeMethod, setActiveMethod] = useState<'face' | 'qr' | 'qr-display' | 'manual'>('face');
+  const navigate = useNavigate();
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastAction, setLastAction] = useState<'clock-in' | 'clock-out' | null>(null);
   const [employeeName, setEmployeeName] = useState('');
-  const [showWebcam, setShowWebcam] = useState(false);
-  const [faceData, setFaceData] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const [manualData, setManualData] = useState({
@@ -36,109 +30,12 @@ export const AttendanceKiosk: React.FC = () => {
     password: '',
   });
 
-  const handleFaceCapture = async (imageData: string) => {
-    setFaceData(imageData);
-    setShowWebcam(false);
-    await processAttendance('face', { faceData: imageData });
-  };
 
-  const handleQRScan = async (qrData: string) => {
-    try {
-      let sessionToken: string;
 
-      // Check if QR data is a URL (from backend generated QR)
-      if (qrData.startsWith('http')) {
-        const url = new URL(qrData);
-        sessionToken = url.searchParams.get('session_token');
-
-        if (!sessionToken) {
-          throw new Error('Invalid QR code: missing session token');
-        }
-      } else {
-        try {
-          const decodedData = JSON.parse(atob(qrData));
-          sessionToken = decodedData.session_token;
-        } catch (decodeError) {
-          console.warn('QR decode error:', decodeError);
-          sessionToken = qrData;
-        }
-      }
-
-      // Call the attendance QR scan API
-      const response = await apiClient.post('/api/biometric/attendance/qr-scan', {
-        session_token: sessionToken,
-      });
-
-      if (response.success) {
-        await processAttendance('qr', {
-          employeeId: response.data?.employee_id,
-          action: response.action,
-          employeeName: response.data?.employee_name || 'Employee'
-        });
-      } else if (response.requires_sign_in) {
-        // User needs to sign in first
-        toast({
-          title: 'Sign In Required',
-          description: 'Please sign in to complete your attendance check.',
-          variant: 'default',
-        });
-        // Store session token for after login
-        sessionStorage.setItem('pending_qr_session_token', sessionToken);
-        // Redirect to signin with session_token
-        globalThis.location.href = `/signin?session_token=${sessionToken}`;
-        return;
-      } else {
-        toast({
-          title: 'QR Code Validation Failed',
-          description: response.message || 'Please try again',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('QR scan processing error:', error);
-      toast({
-        title: 'QR Code Validation Failed',
-        description: error instanceof Error ? error.message : 'Please try again',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handlePendingQRScan = async (sessionToken: string) => {
-    console.log('AttendanceKiosk - Starting handlePendingQRScan with token:', sessionToken);
-    try {
-      // Call the attendance QR scan API directly
-      console.log('AttendanceKiosk - Making API call to /api/biometric/attendance/qr-scan');
-      const response = await apiClient.post('/api/biometric/attendance/qr-scan', {
-        session_token: sessionToken,
-      });
-      console.log('AttendanceKiosk - API response:', response);
-
-      if (response.success) {
-        console.log('AttendanceKiosk - Processing successful attendance');
-        await processAttendance('qr', {
-          employeeId: response.data?.employee_id,
-          action: response.action,
-          employeeName: response.data?.employee_name || 'Employee'
-        });
-        console.log('AttendanceKiosk - Attendance processed successfully');
-      } else {
-        console.log('AttendanceKiosk - API returned success=false:', response.message);
-        toast({
-          title: 'QR Code Validation Failed',
-          description: response.message || 'Please try again',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('AttendanceKiosk - Pending QR scan processing error:', error);
-      toast({
-        title: 'QR Code Validation Failed',
-        description: error instanceof Error ? error.message : 'Please try again',
-        variant: 'destructive',
-      });
-    }
-  };
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleManualSubmit = async () => {
     if (!manualData.employeeId || !manualData.password) {
@@ -152,41 +49,8 @@ export const AttendanceKiosk: React.FC = () => {
     await processAttendance('manual', manualData);
   };
 
-  useEffect(() => {
-    if (mode === 'GENERATOR') {
-      setActiveMethod('qr-display');
-    } else {
-      setActiveMethod('qr');
-    }
-
-  // Check for session_token in URL parameters (for phone camera scans)
-    const urlParams = new URLSearchParams(location.search);
-    const sessionToken = urlParams.get('session_token');
-    console.log('AttendanceKiosk - URL sessionToken:', sessionToken, 'mode:', mode);
-    if (sessionToken && mode === 'SCANNER') {
-      console.log('AttendanceKiosk - Processing URL session token');
-      handleQRScan(sessionToken);
-    }
-
-  // Check for pending QR session token after login
-  const pendingToken = sessionStorage.getItem('pending_qr_session_token');
-  console.log('AttendanceKiosk - pendingToken:', pendingToken, 'isAuthenticated:', isAuthenticated);
-  if (pendingToken && isAuthenticated) {
-    console.log('AttendanceKiosk - Processing pending token');
-    sessionStorage.removeItem('pending_qr_session_token');
-    setMode('SCANNER'); // Ensure mode is set to SCANNER for processing
-    // Process the pending QR scan directly with the session token
-    handlePendingQRScan(pendingToken);
-  }
-  }, [mode, location.search, isAuthenticated]);
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   const processAttendance = async (
-    method: 'face' | 'qr' | 'manual',
+    method: 'manual',
     payload: Record<string, unknown>
   ) => {
     setIsProcessing(true);
@@ -194,52 +58,24 @@ export const AttendanceKiosk: React.FC = () => {
     try {
       let action: 'clock-in' | 'clock-out' = 'clock-in';
 
-      if (method === 'face') {
-        const endpoint = `/api/biometric/verify`;
-        const response = await apiClient.post(endpoint, {
-          faceData: payload.faceData,
-          verificationMethod: 'face',
-        });
+      const endpoint = `/api/biometric/attendance/${action}`;
+      const response = await apiClient.post(endpoint, {
+        ...payload,
+        verificationMethod: 'manual',
+      });
 
-        action = response.action || 'clock-in';
-        setLastAction(action);
-        setEmployeeName(response.employeeName || 'Employee');
+      action = response.action || action;
+      setLastAction(action);
+      setEmployeeName(response.employeeName || 'Employee');
 
-        toast({
-          title: 'Success!',
-          description: `Successfully ${action === 'clock-in' ? 'clocked in' : 'clocked out'}`,
-        });
-      } else if (method === 'qr') {
-        // QR scan already processed the attendance, just show success
-        action = payload.action as 'clock-in' | 'clock-out' || 'clock-in';
-        setLastAction(action);
-        setEmployeeName(payload.employeeName as string || 'Employee');
-
-        toast({
-          title: 'Success!',
-          description: `Successfully ${action === 'clock-in' ? 'clocked in' : 'clocked out'}`,
-        });
-      } else {
-        const endpoint = `/api/biometric/attendance/${action}`;
-        const response = await apiClient.post(endpoint, {
-          ...payload,
-          verificationMethod: 'manual',
-        });
-
-        action = response.action || action;
-        setLastAction(action);
-        setEmployeeName(response.employeeName || 'Employee');
-
-        toast({
-          title: 'Success!',
-          description: `Successfully ${action === 'clock-in' ? 'clocked in' : 'clocked out'}`,
-        });
-      }
+      toast({
+        title: 'Success!',
+        description: `Successfully ${action === 'clock-in' ? 'clocked in' : 'clocked out'}`,
+      });
 
       setTimeout(() => {
         setLastAction(null);
         setEmployeeName('');
-        setFaceData('');
         setManualData({ employeeId: '', password: '' });
       }, 5000);
     } catch (error) {
@@ -255,6 +91,19 @@ export const AttendanceKiosk: React.FC = () => {
 
   const formatTime = (date: Date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const formatDate = (date: Date) => date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Show loading for mobile processing
+  if (isProcessing && !lastAction) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <PageLoadingSpinner />
+          <h2 className="text-xl font-semibold text-gray-700">Processing Attendance...</h2>
+          <p className="text-gray-500">Please wait while we record your attendance.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (lastAction && employeeName) {
     return (
@@ -296,64 +145,24 @@ export const AttendanceKiosk: React.FC = () => {
           <CardHeader className="text-center border-b">
             <CardTitle className="text-2xl">Mark Your Attendance</CardTitle>
             <CardDescription className="text-base">
-              {mode === 'GENERATOR' ? 'Display QR code for employees' : 'Choose your preferred verification method'}
+              Enter your credentials to record attendance
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
-            <Tabs value={activeMethod} onValueChange={(v) => setActiveMethod(v as 'face' | 'qr' | 'qr-display' | 'manual')}>
-              <TabsList className="grid w-full grid-cols-3 mb-6">
-                <TabsTrigger value="face" className="text-base">
-                  <Camera className="mr-2 h-5 w-5" />
-                  Face ID
-                </TabsTrigger>
-                
-                {mode === 'SCANNER' && (
-                  <TabsTrigger value="qr" className="text-base">
-                    <Scan className="mr-2 h-5 w-5" />
-                    QR Code
-                  </TabsTrigger>
-                )}
-                
-                {mode === 'GENERATOR' && (
-                  <TabsTrigger value="qr-display" className="text-base">
-                    <QrCode className="mr-2 h-5 w-5" />
-                    Show QR
-                  </TabsTrigger>
-                )}
-                
+            <Tabs defaultValue="manual">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="manual" className="text-base">
                   <KeyRound className="mr-2 h-5 w-5" />
                   Manual Entry
                 </TabsTrigger>
+                <TabsTrigger value="qr" className="text-base">
+                  <QrCode className="mr-2 h-5 w-5" />
+                  QR Code
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="face" className="space-y-6">
-                <Alert><Camera className="h-4 w-4" /><AlertDescription>Position your face within the camera frame.</AlertDescription></Alert>
-                {!showWebcam ? (
-                  <Button onClick={() => setShowWebcam(true)} size="lg" className="w-full h-16 text-lg" disabled={isProcessing}>
-                    <Camera className="mr-2 h-6 w-6" />
-                    Start Face Verification
-                  </Button>
-                ) : (
-                  <div className="space-y-4">
-                    <WebcamCapture onCapture={handleFaceCapture} isActive={showWebcam} />
-                    <Button onClick={() => setShowWebcam(false)} variant="outline" className="w-full">Cancel</Button>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="qr" className="space-y-6">
-                <Alert><Scan className="h-4 w-4" /><AlertDescription>Scan the attendance QR code.</AlertDescription></Alert>
-                <div className="flex justify-center"><QRCodeScanner onScan={handleQRScan} isActive={activeMethod === 'qr'} /></div>
-              </TabsContent>
-
-              <TabsContent value="qr-display" className="space-y-6">
-                <Alert><QrCode className="h-4 w-4" /><AlertDescription>Display QR code for scanning.</AlertDescription></Alert>
-                <div className="flex justify-center"><QRCodeDisplay /></div>
-              </TabsContent>
-
               <TabsContent value="manual" className="space-y-6">
-                <Alert><KeyRound className="h-4 w-4" /><AlertDescription>Enter your credentials if other methods are unavailable.</AlertDescription></Alert>
+                <Alert><KeyRound className="h-4 w-4" /><AlertDescription>Enter your credentials to record attendance.</AlertDescription></Alert>
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="employeeId" className="text-base">Employee ID</Label>
@@ -367,6 +176,11 @@ export const AttendanceKiosk: React.FC = () => {
                     {isProcessing ? <><Loader2 className="mr-2 h-6 w-6 animate-spin" />Processing...</> : 'Submit'}
                   </Button>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="qr" className="space-y-6">
+                <Alert><QrCode className="h-4 w-4" /><AlertDescription>Generate QR code for attendance verification. Employees can scan this code with their mobile devices.</AlertDescription></Alert>
+                <QRCodeDisplay type="attendance" />
               </TabsContent>
             </Tabs>
 

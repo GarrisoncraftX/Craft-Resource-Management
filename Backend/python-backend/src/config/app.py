@@ -28,6 +28,7 @@ class Config:
     
     # JWT configuration
     JWT_SECRET_KEY = os.getenv('JWT_SECRET', 'your-jwt-secret-key')
+    JWT_SECRET = os.getenv('JWT_SECRET', 'your-jwt-secret-key')  # Alias for backward compatibility
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     

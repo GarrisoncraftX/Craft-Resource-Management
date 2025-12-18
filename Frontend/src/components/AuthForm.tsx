@@ -158,8 +158,25 @@ const AuthForm: React.FC = () => {
       // Check if there's a pending QR session token to process
       const pendingToken = sessionStorage.getItem('pending_qr_session_token');
       if (pendingToken) {
-        navigate(`/kiosk-interface?session_token=${pendingToken}`);
-        sessionStorage.removeItem('pending_qr_session_token');
+        // Process attendance directly after login
+        try {
+          const attendanceResponse = await apiClient.post('/api/biometric/attendance/qr-scan', {
+            session_token: pendingToken,
+          });
+
+          if (attendanceResponse.success) {
+            setSuccess(`Successfully signed in and ${attendanceResponse.action.replace('_', ' ')}!`);
+            sessionStorage.removeItem('pending_qr_session_token');
+            setTimeout(() => navigate('/employee-dashboard'), 2000);
+          } else {
+            setError(attendanceResponse.message || 'Failed to process attendance');
+            sessionStorage.removeItem('pending_qr_session_token');
+          }
+        } catch (attendanceError) {
+          console.error('Error processing pending QR attendance:', attendanceError);
+          setError('Successfully signed in, but failed to process attendance. Please try again.');
+          sessionStorage.removeItem('pending_qr_session_token');
+        }
       } else {
         setSuccess('Successfully signed in!');
         setTimeout(() => navigate('/employee-dashboard'), 1000);

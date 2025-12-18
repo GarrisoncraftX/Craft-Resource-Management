@@ -75,7 +75,7 @@ def attendance_clock_out():
     return jsonify(response), status_code
 
 @biometric_bp.route('/biometric/attendance/qr-scan', methods=['POST'])
-@auth_required
+@optional_auth
 def qr_attendance_scan():
     response, status_code = biometric_controller.scan_kiosk_qr()
     return jsonify(response), status_code

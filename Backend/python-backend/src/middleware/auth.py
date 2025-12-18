@@ -239,10 +239,10 @@ def optional_auth(f):
     def decorated_function(*args, **kwargs):
         try:
             auth_header = request.headers.get('Authorization')
-            
+
             if auth_header and auth_header.startswith('Bearer '):
                 token = auth_header[7:]
-                
+
                 try:
                     decoded = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
                     request.user_id = decoded.get('userId')
@@ -258,13 +258,56 @@ def optional_auth(f):
                     g.role_id = request.role_id
                     g.permissions = request.permissions
                 except jwt.InvalidTokenError:
-                    # Token is invalid, but we continue without authentication
-                    pass
-            
+                    # Token is invalid, try header-based authentication
+                    logger.debug("JWT invalid, attempting header-based authentication")
+                    _extract_user_context_from_headers()
+            elif _has_user_context_headers():
+                # No JWT but headers present, use header-based authentication
+                logger.debug("No JWT, using header-based authentication")
+                _extract_user_context_from_headers()
+            else:
+                # No authentication present, continue without it
+                logger.debug("No authentication present, proceeding without auth")
+
             return f(*args, **kwargs)
-            
+
         except Exception as e:
             logger.error(f"Optional authentication error: {e}")
             return f(*args, **kwargs)
-    
+
     return decorated_function
+
+def _has_user_context_headers():
+    """Check if user context headers are present"""
+    return (request.headers.get('x-user-id') and
+            request.headers.get('x-department-id') and
+            request.headers.get('x-role-id') and
+            request.headers.get('x-permissions'))
+
+def _extract_user_context_from_headers():
+    """Extract user context from API Gateway headers"""
+    try:
+        g.user_context = {
+            'user_id': request.headers.get('x-user-id'),
+            'department_id': int(request.headers.get('x-department-id', 0)),
+            'role_id': int(request.headers.get('x-role-id', 0)),
+            'permissions': json.loads(request.headers.get('x-permissions', '[]'))
+        }
+
+        # Set request attributes
+        request.user_id = int(g.user_context['user_id'])
+        request.employee_id = None  # Not available in headers
+        request.department_id = g.user_context['department_id']
+        request.role_id = g.user_context['role_id']
+        request.permissions = g.user_context['permissions']
+
+        # Set global context
+        g.user_id = request.user_id
+        g.employee_id = request.employee_id
+        g.department_id = request.department_id
+        g.role_id = request.role_id
+        g.permissions = request.permissions
+
+        logger.debug(f"User context extracted from headers: {g.user_context}")
+    except (ValueError, json.JSONDecodeError) as e:
+        logger.error(f"Invalid user context headers: {e}")
