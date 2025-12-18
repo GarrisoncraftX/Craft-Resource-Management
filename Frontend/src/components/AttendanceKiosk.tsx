@@ -13,13 +13,15 @@ import { QRCodeDisplay } from './QRCodeDisplay';
 import { Clock, Scan, Camera, KeyRound, CheckCircle, Loader2, QrCode } from 'lucide-react';
 import { apiClient } from '@/utils/apiClient';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 type KioskMode = 'SCANNER' | 'GENERATOR';
 
 export const AttendanceKiosk: React.FC = () => {
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
   const location = useLocation();
-  const mode = (location.state as { mode?: KioskMode })?.mode || 'SCANNER';
+  const [mode, setMode] = useState<KioskMode>((location.state as { mode?: KioskMode })?.mode || 'SCANNER');
   
   const [activeMethod, setActiveMethod] = useState<'face' | 'qr' | 'qr-display' | 'manual'>('face');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -34,19 +36,6 @@ export const AttendanceKiosk: React.FC = () => {
     password: '',
   });
 
-  useEffect(() => {
-    if (mode === 'GENERATOR') {
-      setActiveMethod('qr-display');
-    } else {
-      setActiveMethod('qr');
-    }
-  }, [mode]);
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   const handleFaceCapture = async (imageData: string) => {
     setFaceData(imageData);
     setShowWebcam(false);
@@ -55,21 +44,94 @@ export const AttendanceKiosk: React.FC = () => {
 
   const handleQRScan = async (qrData: string) => {
     try {
-      const response = await apiClient.post('/api/biometric/verify', {
-        qrData,
-        verificationMethod: 'qr',
+      let sessionToken: string;
+
+      // Check if QR data is a URL (from backend generated QR)
+      if (qrData.startsWith('http')) {
+        const url = new URL(qrData);
+        sessionToken = url.searchParams.get('session_token');
+
+        if (!sessionToken) {
+          throw new Error('Invalid QR code: missing session token');
+        }
+      } else {
+        try {
+          const decodedData = JSON.parse(atob(qrData));
+          sessionToken = decodedData.session_token;
+        } catch (decodeError) {
+          console.warn('QR decode error:', decodeError);
+          sessionToken = qrData;
+        }
+      }
+
+      // Call the attendance QR scan API
+      const response = await apiClient.post('/api/biometric/attendance/qr-scan', {
+        session_token: sessionToken,
       });
 
-      if (response.valid) {
-        await processAttendance('qr', { employeeId: response.employeeId });
+      if (response.success) {
+        await processAttendance('qr', {
+          employeeId: response.data?.employee_id,
+          action: response.action,
+          employeeName: response.data?.employee_name || 'Employee'
+        });
+      } else if (response.requires_sign_in) {
+        // User needs to sign in first
+        toast({
+          title: 'Sign In Required',
+          description: 'Please sign in to complete your attendance check.',
+          variant: 'default',
+        });
+        // Store session token for after login
+        sessionStorage.setItem('pending_qr_session_token', sessionToken);
+        // Redirect to signin with session_token
+        globalThis.location.href = `/signin?session_token=${sessionToken}`;
+        return;
       } else {
         toast({
-          title: 'Invalid QR Code',
-          description: 'Please scan a valid attendance QR code',
+          title: 'QR Code Validation Failed',
+          description: response.message || 'Please try again',
           variant: 'destructive',
         });
       }
     } catch (error) {
+      console.error('QR scan processing error:', error);
+      toast({
+        title: 'QR Code Validation Failed',
+        description: error instanceof Error ? error.message : 'Please try again',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handlePendingQRScan = async (sessionToken: string) => {
+    console.log('AttendanceKiosk - Starting handlePendingQRScan with token:', sessionToken);
+    try {
+      // Call the attendance QR scan API directly
+      console.log('AttendanceKiosk - Making API call to /api/biometric/attendance/qr-scan');
+      const response = await apiClient.post('/api/biometric/attendance/qr-scan', {
+        session_token: sessionToken,
+      });
+      console.log('AttendanceKiosk - API response:', response);
+
+      if (response.success) {
+        console.log('AttendanceKiosk - Processing successful attendance');
+        await processAttendance('qr', {
+          employeeId: response.data?.employee_id,
+          action: response.action,
+          employeeName: response.data?.employee_name || 'Employee'
+        });
+        console.log('AttendanceKiosk - Attendance processed successfully');
+      } else {
+        console.log('AttendanceKiosk - API returned success=false:', response.message);
+        toast({
+          title: 'QR Code Validation Failed',
+          description: response.message || 'Please try again',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('AttendanceKiosk - Pending QR scan processing error:', error);
       toast({
         title: 'QR Code Validation Failed',
         description: error instanceof Error ? error.message : 'Please try again',
@@ -89,6 +151,39 @@ export const AttendanceKiosk: React.FC = () => {
     }
     await processAttendance('manual', manualData);
   };
+
+  useEffect(() => {
+    if (mode === 'GENERATOR') {
+      setActiveMethod('qr-display');
+    } else {
+      setActiveMethod('qr');
+    }
+
+  // Check for session_token in URL parameters (for phone camera scans)
+    const urlParams = new URLSearchParams(location.search);
+    const sessionToken = urlParams.get('session_token');
+    console.log('AttendanceKiosk - URL sessionToken:', sessionToken, 'mode:', mode);
+    if (sessionToken && mode === 'SCANNER') {
+      console.log('AttendanceKiosk - Processing URL session token');
+      handleQRScan(sessionToken);
+    }
+
+  // Check for pending QR session token after login
+  const pendingToken = sessionStorage.getItem('pending_qr_session_token');
+  console.log('AttendanceKiosk - pendingToken:', pendingToken, 'isAuthenticated:', isAuthenticated);
+  if (pendingToken && isAuthenticated) {
+    console.log('AttendanceKiosk - Processing pending token');
+    sessionStorage.removeItem('pending_qr_session_token');
+    setMode('SCANNER'); // Ensure mode is set to SCANNER for processing
+    // Process the pending QR scan directly with the session token
+    handlePendingQRScan(pendingToken);
+  }
+  }, [mode, location.search, isAuthenticated]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const processAttendance = async (
     method: 'face' | 'qr' | 'manual',
@@ -115,15 +210,10 @@ export const AttendanceKiosk: React.FC = () => {
           description: `Successfully ${action === 'clock-in' ? 'clocked in' : 'clocked out'}`,
         });
       } else if (method === 'qr') {
-        const endpoint = `/api/biometric/attendance/qr-scan/${action}`;
-        const response = await apiClient.post(endpoint, {
-          ...payload,
-          verificationMethod: 'qr',
-        });
-
-        action = response.action || action;
+        // QR scan already processed the attendance, just show success
+        action = payload.action as 'clock-in' | 'clock-out' || 'clock-in';
         setLastAction(action);
-        setEmployeeName(response.employeeName || 'Employee');
+        setEmployeeName(payload.employeeName as string || 'Employee');
 
         toast({
           title: 'Success!',

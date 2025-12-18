@@ -8,7 +8,6 @@ import os
 env = os.getenv('FLASK_ENV', 'development')
 app_config = config.get(env, config['default'])
 
-# Create filtered config dict with only valid keys for MySQLConnectionPool
 config_dict = {
     'host': app_config.DB_HOST,
     'port': app_config.DB_PORT,

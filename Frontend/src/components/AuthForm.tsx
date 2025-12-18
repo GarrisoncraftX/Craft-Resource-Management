@@ -62,6 +62,18 @@ const AuthForm: React.FC = () => {
 
   const { isAuthenticated } = useAuth();
 
+  // Check for session_token in URL and store as pending if not authenticated
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionToken = urlParams.get('session_token');
+    if (sessionToken && !isAuthenticated) {
+      sessionStorage.setItem('pending_qr_session_token', sessionToken);
+      // Remove session_token from URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [isAuthenticated]);
+
   // Fetch departments and roles from API
   useEffect(() => {
     const fetchDepartments = async () => {
@@ -142,8 +154,16 @@ const AuthForm: React.FC = () => {
       };
 
       login(userData, token);
-      setSuccess('Successfully signed in!');
-      setTimeout(() => navigate('/employee-dashboard'), 1000);
+
+      // Check if there's a pending QR session token to process
+      const pendingToken = sessionStorage.getItem('pending_qr_session_token');
+      if (pendingToken) {
+        navigate(`/kiosk-interface?session_token=${pendingToken}`);
+        sessionStorage.removeItem('pending_qr_session_token');
+      } else {
+        setSuccess('Successfully signed in!');
+        setTimeout(() => navigate('/employee-dashboard'), 1000);
+      }
 
     } catch (err) {
       setError(err.message ?? 'Invalid credentials. Please try again.');

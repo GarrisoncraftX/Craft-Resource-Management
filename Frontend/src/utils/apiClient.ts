@@ -1,12 +1,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `http://localhost:5003`;
+const API_FALLBACK_URL = import.meta.env.VITE_API_FALLBACK_URL ?? `http://localhost:5003`;
 
 export class ApiClient {
   private readonly baseURL: string;
+  private readonly fallbackURL: string;
 
-  constructor(baseURL: string) {
+  constructor(baseURL: string, fallbackURL?: string) {
     this.baseURL = baseURL;
+    this.fallbackURL = fallbackURL ?? 'http://localhost:5003';
+  }
+
+  private isNetworkError(error: any): boolean {
+    return error instanceof TypeError && error.message === 'Failed to fetch';
+  }
+
+  private async fetchWithFallback(url: string, options: RequestInit): Promise<Response> {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      if (this.isNetworkError(error) && url.startsWith(this.baseURL)) {
+        // Retry with fallback URL
+        const fallbackUrl = url.replace(this.baseURL, this.fallbackURL);
+        return await fetch(fallbackUrl, options);
+      }
+      throw error;
+    }
   }
 
   private getHeaders(): HeadersInit {
@@ -45,7 +65,7 @@ export class ApiClient {
   }
 
   async get(endpoint: string, options?: { responseType?: 'json' | 'blob' }) {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    const response = await this.fetchWithFallback(`${this.baseURL}${endpoint}`, {
       method: 'GET',
       headers: this.getHeaders(),
     });
@@ -82,7 +102,7 @@ export class ApiClient {
       delete headers['Content-Type'];
     }
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    const response = await this.fetchWithFallback(`${this.baseURL}${endpoint}`, {
       method: 'POST',
       headers,
       body,
@@ -98,7 +118,7 @@ export class ApiClient {
       delete headers['Content-Type'];
     }
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    const response = await this.fetchWithFallback(`${this.baseURL}${endpoint}`, {
       method: 'PUT',
       headers,
       body,
@@ -108,13 +128,13 @@ export class ApiClient {
   }
 
   async delete(endpoint: string) {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    const response = await this.fetchWithFallback(`${this.baseURL}${endpoint}`, {
       method: 'DELETE',
       headers: this.getHeaders(),
     });
-    
+
     return this.handleResponse(response);
   }
 }
 
-export const apiClient = new ApiClient(API_BASE_URL);
+export const apiClient = new ApiClient(API_BASE_URL, API_FALLBACK_URL);

@@ -65,6 +65,9 @@ class Config:
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4')
 
+    # Frontend URL for QR code generation
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+
     # AWS configuration for SMS
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')

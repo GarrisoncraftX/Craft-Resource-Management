@@ -149,7 +149,7 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
                 className="text-muted-foreground hover:text-foreground rounded-full"
               >
                 <Eye className="h-4 w-4 mr-2" />
-                {isEmployeeDashboard ? 'System' : 'Dashboard'}
+                {isEmployeeDashboard ? 'View Dashboard' : 'Employee Portal'}
               </Button>
 
               {isEmployeeDashboard && (

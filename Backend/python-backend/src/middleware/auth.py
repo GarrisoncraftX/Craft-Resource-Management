@@ -2,7 +2,7 @@ import json
 import jwt
 import os
 import logging
-from flask import request, jsonify, current_app
+from flask import request, jsonify, current_app, g
 from functools import wraps
 from typing import List, Optional
 
@@ -78,12 +78,19 @@ def auth_required(f):
                     'message': 'Invalid access token'
                 }), 401
 
-            # Add user information to request
+            # Add user information to request and global context
             request.user_id = decoded.get('userId')
             request.employee_id = decoded.get('employeeId')
             request.department_id = decoded.get('departmentId')
             request.role_id = decoded.get('roleId')
             request.permissions = decoded.get('permissions', [])
+
+            # Set global context for easier access in controllers
+            g.user_id = request.user_id
+            g.employee_id = request.employee_id
+            g.department_id = request.department_id
+            g.role_id = request.role_id
+            g.permissions = request.permissions
 
             logger.debug(f"Authenticated user via JWT: {request.employee_id} (ID: {request.user_id})")
 
@@ -243,6 +250,13 @@ def optional_auth(f):
                     request.department_id = decoded.get('departmentId')
                     request.role_id = decoded.get('roleId')
                     request.permissions = decoded.get('permissions', [])
+
+                    # Set global context for easier access in controllers
+                    g.user_id = request.user_id
+                    g.employee_id = request.employee_id
+                    g.department_id = request.department_id
+                    g.role_id = request.role_id
+                    g.permissions = request.permissions
                 except jwt.InvalidTokenError:
                     # Token is invalid, but we continue without authentication
                     pass

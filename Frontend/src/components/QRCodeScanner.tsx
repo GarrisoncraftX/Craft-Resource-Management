@@ -35,24 +35,98 @@ export const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onScan, isActive }
 
       if (!videoRef.current) return;
 
+      // Request camera permissions explicitly for mobile devices
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          // For iOS devices, we need to handle camera permissions differently
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+          const isAndroid = /Android/.test(navigator.userAgent);
+          const constraints = isIOS ? {
+            video: {
+              facingMode: 'environment',
+              width: { ideal: 1280, max: 1920 },
+              height: { ideal: 720, max: 1080 },
+              frameRate: { ideal: 30, max: 30 }
+            }
+          } : isAndroid ? {
+            video: {
+              facingMode: 'environment',
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            }
+          } : {
+            video: { facingMode: 'environment' }
+          };
+
+          const stream = await navigator.mediaDevices.getUserMedia(constraints);
+          // Stop the temporary stream
+          stream.getTracks().forEach(track => track.stop());
+        } catch (permError) {
+          console.warn('Camera permission request failed:', permError);
+          // Continue anyway, qr-scanner will handle permissions
+        }
+      }
+
       const qrScanner = new QrScanner(
         videoRef.current,
         (result) => {
+          console.log('QR Code detected:', result.data);
           onScan(result.data);
           stopScanning();
         },
         {
           onDecodeError: (err) => {
+            // Only log errors, don't show to user unless persistent
+            console.debug('QR decode error:', err);
           },
           highlightScanRegion: true,
           highlightCodeOutline: true,
+          preferredCamera: 'environment', // Prefer back camera
+          maxScansPerSecond: 5, // Reduce CPU usage
+          calculateScanRegion: (video) => {
+            // Calculate scan region to improve detection on mobile
+            const videoWidth = video.videoWidth;
+            const videoHeight = video.videoHeight;
+            const regionSize = Math.min(videoWidth, videoHeight) * 0.6; // 60% of smaller dimension
+            const regionX = (videoWidth - regionSize) / 2;
+            const regionY = (videoHeight - regionSize) / 2;
+            return {
+              x: regionX,
+              y: regionY,
+              width: regionSize,
+              height: regionSize,
+              downScaledWidth: 400,
+              downScaledHeight: 400
+            };
+          }
         }
       );
+
+
 
       await qrScanner.start();
       setScanner(qrScanner);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start camera');
+      console.error('Failed to start QR scanner:', err);
+      let errorMessage = 'Failed to start camera';
+
+      if (err instanceof Error) {
+        if (err.message.includes('permission')) {
+          errorMessage = 'Camera permission denied. Please allow camera access and try again.';
+        } else if (err.message.includes('not found')) {
+          errorMessage = 'No camera found on this device.';
+        } else if (err.message.includes('NotAllowedError')) {
+          errorMessage = 'Camera access denied. Please enable camera permissions in your browser settings.';
+        } else if (err.message.includes('NotFoundError')) {
+          errorMessage = 'No camera found. Please ensure your device has a camera.';
+        } else if (err.message.includes('NotReadableError')) {
+          errorMessage = 'Camera is being used by another application. Please close other camera apps.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+
+      setError(errorMessage);
       setIsScanning(false);
     }
   };

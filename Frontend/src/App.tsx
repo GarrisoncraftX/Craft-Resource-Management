@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PageLoadingSpinner } from "@/components/LoadingSpinner";
@@ -114,12 +114,26 @@ const queryClient = new QueryClient({
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <>{children}</> : <Navigate to="/signin" replace />;
+  const location = useLocation();
+  const urlParams = new URLSearchParams(location.search);
+  const sessionToken = urlParams.get('session_token');
+  if (location.pathname === '/kiosk-interface' && sessionToken) {
+    return <>{children}</>;
+  }
+  const signinUrl = sessionToken ? `/signin?session_token=${sessionToken}` : '/signin';
+  return isAuthenticated ? <>{children}</> : <Navigate to={signinUrl} replace />;
 };
 
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
   console.log('PublicRoute - isAuthenticated:', isAuthenticated);
+  const pendingToken = sessionStorage.getItem('pending_qr_session_token');
+  console.log('PublicRoute - pendingToken:', pendingToken);
+  if (pendingToken && isAuthenticated) {
+    console.log('PublicRoute - Not redirecting due to pending token');
+    // Don't redirect if there's a pending QR token to process
+    return <>{children}</>;
+  }
   return !isAuthenticated ? <>{children}</> : <Navigate to="/employee-dashboard" replace />;
 };
 

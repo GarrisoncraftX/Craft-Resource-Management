@@ -241,7 +241,7 @@ export const EmployeeDashboard: React.FC = () => {
 
   return (
     <ModuleLayout
-      title="CRMS"
+      title="CRM"
       onViewDashboard={handleViewSystem}
       onLogout={handleLogout}
       isEmployeeDashboard={true}

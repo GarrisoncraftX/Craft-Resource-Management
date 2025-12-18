@@ -1,6 +1,7 @@
+import os
 from flask import request, g
-from typing import Dict, Any, Optional
-from datetime import datetime
+from typing import Dict, Any
+from datetime import datetime, timedelta
 
 from .models import BiometricModel
 from .service import BiometricService
@@ -8,9 +9,9 @@ from src.mockData.biometric_service import (
     enroll_biometric_mock, verify_biometric_mock, identify_biometric_mock,
     lookup_card_mock, get_biometric_statistics_mock
 )
-from src.middleware.auth import require_permission
 from src.utils.logger import logger
 from src.config.app import Config
+from src.extensions import cache
 
 class BiometricController:
     def __init__(self, db_manager):
@@ -198,8 +199,8 @@ class BiometricController:
                 )
                 return {
                     'success': False,
-                    'message': 'No biometric template found for user'
-                }, 404
+                    'message': 'Biometric verification failed'
+                }, 400
             
             # Compare templates
             verification_result = self.biometric_service.verify_biometric(
@@ -567,24 +568,31 @@ class BiometricController:
             import uuid
             session_token = str(uuid.uuid4())
 
-            # In a real implementation, you might store this in cache/redis with expiry
-            # For now, we'll just return the token that can be used for attendance
-
-            qr_data = {
-                'type': 'attendance_kiosk',
-                'session_token': session_token,
-                'timestamp': datetime.utcnow().isoformat(),
-                'valid_for': 3600  # 1 hour validity
+            # Store session data in cache for validation
+            cache_key = f"qr_session:{session_token}"
+            session_data = {
+                'created_at': datetime.utcnow().isoformat(),
+                'expires_at': (datetime.utcnow().replace(second=0, microsecond=0) + timedelta(hours=1)).isoformat(),
+                'used': False
             }
+            cache.set(cache_key, session_data, timeout=3600)  # 1 hour expiry
 
-            # Encode as base64 for QR code
-            import base64
-            import json
-            qr_string = base64.b64encode(json.dumps(qr_data).encode()).decode()
+            # Create a URL that can be scanned by phone camera or kiosk scanner
+            frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+            # Validate frontend URL to prevent open redirect
+            from urllib.parse import urlparse
+            parsed_url = urlparse(frontend_url)
+            allowed_domains = ['localhost:5173', '127.0.0.1:5173', 'yourdomain.com', parsed_url.netloc]
+            if parsed_url.scheme not in ['http', 'https'] or parsed_url.netloc not in allowed_domains:
+                return {
+                    'success': False,
+                    'message': 'Invalid frontend URL configuration'
+                }, 500
+            qr_data = f"{frontend_url}/kiosk-interface?mode=SCANNER&session_token={session_token}"
 
             return {
                 'success': True,
-                'qr_data': qr_string,
+                'qr_data': qr_data,
                 'session_token': session_token,
                 'expires_in': 3600
             }, 200
@@ -599,30 +607,99 @@ class BiometricController:
     def scan_kiosk_qr(self) -> tuple[Dict[str, Any], int]:
         """Handle QR code scan from employee dashboard"""
         try:
+            logger.info("=== QR SCAN REQUEST STARTED ===")
+
+            # Simple rate limiting: allow max 5 requests per minute per IP
+            client_ip = request.remote_addr
+            rate_key = f"rate_limit:{client_ip}"
+            rate_data = cache.get(rate_key) or {'count': 0, 'reset_time': datetime.utcnow().timestamp() + 60}
+            if datetime.utcnow().timestamp() > rate_data['reset_time']:
+                rate_data = {'count': 1, 'reset_time': datetime.utcnow().timestamp() + 60}
+            elif rate_data['count'] >= 5:
+                logger.warning(f"Rate limit exceeded for IP: {client_ip}")
+                return {
+                    'success': False,
+                    'message': 'Rate limit exceeded. Please try again later.'
+                }, 429
+            else:
+                rate_data['count'] += 1
+            cache.set(rate_key, rate_data, timeout=60)
+
             data = request.get_json()
             session_token = data.get('session_token')
-            user_id = data.get('user_id') or getattr(g, 'user_id', None)
+            user_id = getattr(g, 'user_id', None)
 
-            if not session_token or not user_id:
+            logger.info(f"Request data: session_token={session_token}, user_id={user_id}")
+            logger.info(f"Request headers: {dict(request.headers)}")
+            logger.info(f"Global context g: {dict(g) if hasattr(g, '__dict__') else str(g)}")
+
+            if not session_token:
+                logger.warning("Session token is missing from request")
                 return {
                     'success': False,
-                    'message': 'Session token and user ID required'
+                    'message': 'Session token is required'
                 }, 400
 
-            # Validate session token (in real implementation, check cache/redis)
-            # For now, just check if it's a valid UUID format
-            import uuid
-            try:
-                uuid.UUID(session_token)
-            except ValueError:
+            if not user_id:
+                logger.info(f"User not authenticated, redirecting to sign in. Session token: {session_token}")
                 return {
                     'success': False,
-                    'message': 'Invalid session token'
+                    'message': 'Please sign in to proceed with attendance.',
+                    'redirect_to': '/signin',
+                    'session_token': session_token,
+                    'requires_sign_in': True
+                }, 401
+
+            # Validate session token against cache
+            cache_key = f"qr_session:{session_token}"
+            logger.info(f"Looking up cache key: {cache_key}")
+            session_data = cache.get(cache_key)
+            logger.info(f"Session data from cache: {session_data}")
+
+            if not session_data:
+                logger.warning(f"Invalid or expired session token: {session_token}")
+                return {
+                    'success': False,
+                    'message': 'Invalid or expired session token'
                 }, 400
+
+            # Check if session token has already been used
+            if session_data.get('used', False):
+                logger.warning(f"Session token already used: {session_token}")
+                return {
+                    'success': False,
+                    'message': 'Session token has already been used'
+                }, 400
+
+            # Check if session token has expired
+            expires_at = datetime.fromisoformat(session_data['expires_at'])
+            current_time = datetime.utcnow()
+            logger.info(f"Current time: {current_time}, Expires at: {expires_at}")
+            if current_time > expires_at:
+                logger.warning(f"Session token expired: {session_token}")
+                cache.delete(cache_key)  # Clean up expired token
+                return {
+                    'success': False,
+                    'message': 'Session token has expired'
+                }, 400
+
+            logger.info("Session token validation passed")
+
+            # Mark session token as used
+            session_data['used'] = True
+            session_data['used_at'] = datetime.utcnow().isoformat()
+            # Encrypt sensitive data before storing in cache
+            import hashlib
+            session_data['used_by'] = hashlib.sha256(user_id.encode()).hexdigest()  # Hash user_id for privacy
+            cache.set(cache_key, session_data, timeout=3600)  # Extend cache for audit purposes
+            logger.info("Session token marked as used")
 
             # Determine action based on last attendance
             last_attendance = self.biometric_model.get_employee_last_attendance(user_id)
             action = 'clock_in' if not last_attendance or last_attendance['clock_out_time'] else 'clock_out'
+
+            # Get employee info for response
+            employee_info = self.biometric_model.get_employee_by_id(user_id)
 
             # Record attendance
             attendance_result = self.biometric_model.record_attendance(
@@ -632,18 +709,28 @@ class BiometricController:
             # Log attendance
             self.biometric_model.log_attendance(
                 user_id, action, 'qr_scan', True,
-                {'session_token': session_token, 'location': 'kiosk'}
+                {'session_token': session_token, 'location': 'kiosk', 'session_data': session_data}
             )
+
+            logger.info(f"QR attendance processed for user {user_id}: {action}")
 
             return {
                 'success': True,
                 'message': f'Successfully {action.replace("_", " ")}',
                 'action': action,
-                'data': attendance_result
+                'data': {
+                    'employee_id': user_id,
+                    'employee_name': employee_info.get('first_name', '') + ' ' + employee_info.get('last_name', '') if employee_info else 'Employee',
+                    'attendance': attendance_result
+                }
             }, 200
 
         except Exception as e:
+            logger.error(f"=== QR SCAN REQUEST ERROR ===")
             logger.error(f"Error processing QR attendance: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return {
                 'success': False,
                 'message': 'Error processing attendance'
