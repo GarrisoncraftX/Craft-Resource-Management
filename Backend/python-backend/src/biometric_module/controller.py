@@ -495,6 +495,7 @@ class BiometricController:
 
             # Record attendance
             method = verification_method or biometric_type or 'manual'
+            logger.info(f"Recording clock-in with method: {method} for user: {user_id}")
             attendance_result = self.biometric_model.record_attendance(user_id, 'clock_in', method, location)
 
             # Log attendance
@@ -621,6 +622,7 @@ class BiometricController:
 
             # Record attendance
             method = verification_method or biometric_type or 'manual'
+            logger.info(f"Recording clock-out with method: {method} for user: {user_id}")
             attendance_result = self.biometric_model.record_attendance(user_id, 'clock_out', method, location)
 
             # Log attendance
@@ -846,6 +848,7 @@ class BiometricController:
             employee_info = self.biometric_model.get_employee_by_id(user_id)
 
             # Record attendance
+            logger.info(f"Recording QR attendance with method: qr_scan for user: {user_id}, action: {action}")
             attendance_result = self.biometric_model.record_attendance(
                 user_id, action, 'qr_scan', 'kiosk'
             )

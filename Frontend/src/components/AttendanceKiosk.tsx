@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,18 +6,17 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Clock, KeyRound, CheckCircle, Loader2, QrCode } from 'lucide-react';
+import { Clock, KeyRound, CheckCircle, Loader2, QrCode, ArrowLeft, Home } from 'lucide-react';
 import { apiClient } from '@/utils/apiClient';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { PageLoadingSpinner } from '@/components/LoadingSpinner';
 import { QRCodeDisplay } from './QRCodeDisplay';
+import { useNavigate } from 'react-router-dom';
 
 export const AttendanceKiosk: React.FC = () => {
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
-  const location = useLocation();
   const navigate = useNavigate();
+
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastAction, setLastAction] = useState<'clock-in' | 'clock-out' | null>(null);
@@ -132,6 +130,31 @@ export const AttendanceKiosk: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 to-indigo-900 flex items-center justify-center p-4">
       <div className="max-w-6xl w-full space-y-6">
+        {/* Breadcrumb Navigation */}
+        <div className="flex items-center space-x-2 text-white/80 text-sm">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/')}
+            className="text-white/80 hover:text-white hover:bg-white/10 p-2"
+          >
+            <Home className="h-4 w-4 mr-1" />
+            Dashboard
+          </Button>
+          <span>/</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="text-white/80 hover:text-white hover:bg-white/10 p-2"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+          <span>/</span>
+          <span className="text-white">Attendance Kiosk</span>
+        </div>
+
         <div className="text-center text-white space-y-2">
           <div className="flex items-center justify-center mb-4">
             <Clock className="h-12 w-12 mr-3" />

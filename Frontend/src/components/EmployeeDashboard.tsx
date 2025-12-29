@@ -411,7 +411,10 @@ export const EmployeeDashboard: React.FC = () => {
                           <TableCell>{record.checkOut !== '-' ? record.checkOut : '-'}</TableCell>
                           <TableCell>{record.totalHours}</TableCell>
                           <TableCell>
-                            {record.checkIn !== '-' ? record.clock_in_method || 'N/A' : 'N/A'}
+                            <div className="space-y-1">
+                              <div>In: {record.checkIn !== '-' ? record.clock_in_method || 'N/A' : 'N/A'}</div>
+                              <div>Out: {record.checkOut !== '-' ? record.clock_out_method || 'N/A' : 'N/A'}</div>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge variant={record.status === 'Present' ? 'default' : 'secondary'}>

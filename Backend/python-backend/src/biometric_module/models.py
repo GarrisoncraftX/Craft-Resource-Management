@@ -188,6 +188,8 @@ class BiometricModel:
                 """
                 params = (user_id, now, method, now, now)
                 record_id = self.db.execute_query(query, params, fetch=False)
+                
+                logger.info(f"Clock-in recorded: user_id={user_id}, method={method}, record_id={record_id}")
 
                 return {
                     'record_id': record_id,
@@ -209,6 +211,8 @@ class BiometricModel:
                 """
                 params = (now, method, now, now, user_id)
                 affected_rows = self.db.execute_query(query, params, fetch=False)
+                
+                logger.info(f"Clock-out recorded: user_id={user_id}, method={method}, affected_rows={affected_rows}")
 
                 if affected_rows == 0:
                     raise Exception("No open attendance record found for clock out")
