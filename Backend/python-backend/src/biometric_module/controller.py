@@ -400,14 +400,27 @@ class BiometricController:
 
             # Handle both snake_case and camelCase field names
             user_id = data.get('user_id') or data.get('userId')
+            employee_id = data.get('employee_id') or data.get('employeeId')
+            password = data.get('password')
+            verification_method = data.get('verification_method') or data.get('verificationMethod')
             biometric_type = data.get('biometric_type') or data.get('biometricType')
             raw_data = data.get('raw_data') or data.get('rawData')
             location = data.get('location')
 
-            if not user_id:
+            # Handle manual check-in with employee credentials
+            if verification_method == 'manual' and employee_id and password:
+                # Authenticate employee using employee_id and password
+                employee = self.biometric_model.authenticate_employee(employee_id, password)
+                if not employee:
+                    return {
+                        'success': False,
+                        'message': 'Invalid employee credentials'
+                    }, 401
+                user_id = employee['id']
+            elif not user_id:
                 return {
                     'success': False,
-                    'message': 'User ID is required'
+                    'message': 'User ID or employee credentials are required'
                 }, 400
 
             # Use mock data if configured
@@ -422,21 +435,72 @@ class BiometricController:
                     'data': attendance_result
                 }, 200
 
-            # Verify biometric data first
-            if biometric_type and raw_data:
-                verification_result = self.verify_biometric()
-                if verification_result[1] != 200 or not verification_result[0]['success']:
+            # Verify biometric data first (skip for manual verification)
+            if biometric_type and raw_data and verification_method != 'manual':
+                # Process the provided biometric data
+                live_template = None
+                
+                if biometric_type == 'face':
+                    is_valid, error_msg = self.biometric_service.validate_image_quality(raw_data)
+                    if not is_valid:
+                        return {
+                            'success': False,
+                            'message': f'Image quality validation failed: {error_msg}'
+                        }, 400
+                    
+                    result, error = self.biometric_service.process_face_image(raw_data)
+                    if error:
+                        return {
+                            'success': False,
+                            'message': error
+                        }, 400
+                    live_template = result['template_data']
+                else: # card
+                    processed = self.biometric_service.process_card_data(raw_data)
+                    live_template = processed['template_data']
+                
+                # Retrieve stored template from database
+                stored_template = self.biometric_model.get_biometric_template(user_id, biometric_type)
+                
+                if not stored_template:
+                    self.biometric_model.log_biometric_access(
+                        user_id, biometric_type, 'verification', False,
+                        {'reason': 'No template found'}
+                    )
+                    return {
+                        'success': False,
+                        'message': 'Biometric verification failed - no template found'
+                    }, 400
+                
+                # Compare templates
+                verification_result = self.biometric_service.verify_biometric(
+                    live_template, stored_template, biometric_type
+                )
+                
+                if not verification_result['is_match']:
+                    self.biometric_model.log_biometric_access(
+                        user_id, biometric_type, 'verification', False,
+                        {'similarity_score': verification_result['similarity_score']}
+                    )
                     return {
                         'success': False,
                         'message': 'Biometric verification failed'
                     }, 401
+                
+                # Log successful verification
+                self.biometric_model.log_biometric_access(
+                    user_id, biometric_type, 'verification', True,
+                    {'similarity_score': verification_result['similarity_score']}
+                )
 
             # Record attendance
-            attendance_result = self.biometric_model.record_attendance(user_id, 'clock_in', biometric_type or 'manual', location)
+            method = verification_method or biometric_type or 'manual'
+            attendance_result = self.biometric_model.record_attendance(user_id, 'clock_in', method, location)
 
             # Log attendance
-            self.biometric_model.log_attendance(user_id, 'clock_in', biometric_type or 'manual', True, {
+            self.biometric_model.log_attendance(user_id, 'clock_in', method, True, {
                 'location': location,
+                'verification_method': verification_method,
                 'biometric_verification': biometric_type is not None
             })
 
@@ -462,14 +526,27 @@ class BiometricController:
 
             # Handle both snake_case and camelCase field names
             user_id = data.get('user_id') or data.get('userId')
+            employee_id = data.get('employee_id') or data.get('employeeId')
+            password = data.get('password')
+            verification_method = data.get('verification_method') or data.get('verificationMethod')
             biometric_type = data.get('biometric_type') or data.get('biometricType')
             raw_data = data.get('raw_data') or data.get('rawData')
             location = data.get('location')
 
-            if not user_id:
+            # Handle manual check-out with employee credentials
+            if verification_method == 'manual' and employee_id and password:
+                # Authenticate employee using employee_id and password
+                employee = self.biometric_model.authenticate_employee(employee_id, password)
+                if not employee:
+                    return {
+                        'success': False,
+                        'message': 'Invalid employee credentials'
+                    }, 401
+                user_id = employee['id']
+            elif not user_id:
                 return {
                     'success': False,
-                    'message': 'User ID is required'
+                    'message': 'User ID or employee credentials are required'
                 }, 400
 
             # Use mock data if configured
@@ -484,21 +561,72 @@ class BiometricController:
                     'data': attendance_result
                 }, 200
 
-            # Verify biometric data first
-            if biometric_type and raw_data:
-                verification_result = self.verify_biometric()
-                if verification_result[1] != 200 or not verification_result[0]['success']:
+            # Verify biometric data first (skip for manual verification)
+            if biometric_type and raw_data and verification_method != 'manual':
+                # Process the provided biometric data
+                live_template = None
+                
+                if biometric_type == 'face':
+                    is_valid, error_msg = self.biometric_service.validate_image_quality(raw_data)
+                    if not is_valid:
+                        return {
+                            'success': False,
+                            'message': f'Image quality validation failed: {error_msg}'
+                        }, 400
+                    
+                    result, error = self.biometric_service.process_face_image(raw_data)
+                    if error:
+                        return {
+                            'success': False,
+                            'message': error
+                        }, 400
+                    live_template = result['template_data']
+                else: # card
+                    processed = self.biometric_service.process_card_data(raw_data)
+                    live_template = processed['template_data']
+                
+                # Retrieve stored template from database
+                stored_template = self.biometric_model.get_biometric_template(user_id, biometric_type)
+                
+                if not stored_template:
+                    self.biometric_model.log_biometric_access(
+                        user_id, biometric_type, 'verification', False,
+                        {'reason': 'No template found'}
+                    )
+                    return {
+                        'success': False,
+                        'message': 'Biometric verification failed - no template found'
+                    }, 400
+                
+                # Compare templates
+                verification_result = self.biometric_service.verify_biometric(
+                    live_template, stored_template, biometric_type
+                )
+                
+                if not verification_result['is_match']:
+                    self.biometric_model.log_biometric_access(
+                        user_id, biometric_type, 'verification', False,
+                        {'similarity_score': verification_result['similarity_score']}
+                    )
                     return {
                         'success': False,
                         'message': 'Biometric verification failed'
                     }, 401
+                
+                # Log successful verification
+                self.biometric_model.log_biometric_access(
+                    user_id, biometric_type, 'verification', True,
+                    {'similarity_score': verification_result['similarity_score']}
+                )
 
             # Record attendance
-            attendance_result = self.biometric_model.record_attendance(user_id, 'clock_out', biometric_type or 'manual', location)
+            method = verification_method or biometric_type or 'manual'
+            attendance_result = self.biometric_model.record_attendance(user_id, 'clock_out', method, location)
 
             # Log attendance
-            self.biometric_model.log_attendance(user_id, 'clock_out', biometric_type or 'manual', True, {
+            self.biometric_model.log_attendance(user_id, 'clock_out', method, True, {
                 'location': location,
+                'verification_method': verification_method,
                 'biometric_verification': biometric_type is not None
             })
 
@@ -763,6 +891,7 @@ class BiometricController:
             date_from = request.args.get('date_from')
             date_to = request.args.get('date_to')
             status = request.args.get('status')
+            user_id = request.args.get('user_id')
 
             filters = {}
             if employee_name:
@@ -775,6 +904,8 @@ class BiometricController:
                 filters['date_to'] = date_to
             if status:
                 filters['status'] = status
+            if user_id:
+                filters['user_id'] = user_id
 
             records = self.biometric_model.get_attendance_records(filters)
 

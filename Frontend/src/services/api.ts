@@ -4,6 +4,7 @@ import { lookupApiService } from '@/services/nodejsbackendapi/lookupApi';
 import type { Department, Role, BudgetItem, Payslip, AuditLog } from '../types/api';
 import type { Employee, UpdateEmployeeRequest } from '../types/hr';
 import type { Asset, AssetStatistics } from '@/types/asset';
+import { attendanceApiService } from '@/services/attendanceApi';
 
 function mapToBackendBudget(budget: BudgetItem) {
   return {
@@ -110,26 +111,47 @@ export async function fetchPayslips(userId?: string): Promise<Payslip[]> {
 }
 
 export async function fetchAttendance(userId: string): Promise<any[]> {
-  return apiClient.get(`/attendance/user/${userId}`);
+  const response = await attendanceApiService.getAttendanceRecords({ user_id: userId });
+  return response || [];
 }
 
-// Helper functions to map backend data to UI format
 export const mapAttendanceToUI = (attendanceData: any[]) => {
-  return attendanceData.map((record: any) => ({
-    date: record.clockInTime ? new Date(record.clockInTime).toLocaleDateString() : 'N/A',
-    checkIn: record.clockInTime ? new Date(record.clockInTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
-    checkOut: record.clockOutTime ? new Date(record.clockOutTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
-    totalHours: record.clockInTime && record.clockOutTime
-      ? ((new Date(record.clockOutTime).getTime() - new Date(record.clockInTime).getTime()) / (1000 * 60 * 60)).toFixed(2)
-      : '0.00',
-    status: record.clockOutTime ? 'Present' : 'Incomplete'
-  }));
+  console.log('Raw attendance data:', attendanceData); // Debug log
+  return attendanceData.map((record: any) => {
+    console.log('Processing record:', record); // Debug log
+    // Create date objects and format them to avoid timezone issues
+    const clockInDate = record.clock_in_time ? new Date(record.clock_in_time) : null;
+    const clockOutDate = record.clock_out_time ? new Date(record.clock_out_time) : null;
+    
+    // Format time without timezone conversion
+    const formatTime = (date: Date) => {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'UTC' 
+      });
+    };
+    
+    const mappedRecord = {
+      date: clockInDate ? clockInDate.toLocaleDateString('en-US', { timeZone: 'UTC' }) : 'N/A',
+      checkIn: clockInDate ? formatTime(clockInDate) : '-',
+      checkOut: clockOutDate ? formatTime(clockOutDate) : '-',
+      totalHours: record.total_hours ? Number(record.total_hours).toFixed(2) : '0.00',
+      status: clockOutDate ? 'Present' : 'Incomplete',
+      clock_in_method: record.clock_in_method || 'N/A',
+      clock_out_method: record.clock_out_method || 'N/A'
+    };
+    
+    console.log('Mapped record:', mappedRecord); 
+    return mappedRecord;
+  });
 };
 
 export const mapPayrollToUI = (payrollData: Payslip[]) => {
   return payrollData.map((payslip: Payslip) => ({
     period: `${new Date(payslip.payPeriodStart).toLocaleDateString()} - ${new Date(payslip.payPeriodEnd).toLocaleDateString()}`,
-    basicSalary: `$${(payslip.grossPay * 0.8).toFixed(2)}`, // Assuming 80% is basic salary
+    basicSalary: `$${(payslip.grossPay * 0.8).toFixed(2)}`, 
     allowances: '$500.00', // Placeholder - can be calculated from actual allowances if available
     overtime: '$156.25', // Placeholder - can be calculated from actual overtime if available
     deductions: `$${(payslip.taxDeductions + payslip.otherDeductions).toFixed(2)}`,

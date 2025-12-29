@@ -391,7 +391,7 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
                         {getStatusBadge(record.status)}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {record.clock_in_method || 'N/A'}
+                        {record.clock_in_time ? (record.clock_in_method || 'N/A') : 'N/A'}
                       </TableCell>
                     </TableRow>
                   ))}

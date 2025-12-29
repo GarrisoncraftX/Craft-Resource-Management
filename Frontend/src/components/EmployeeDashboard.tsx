@@ -8,15 +8,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
-import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign, HelpCircle} from 'lucide-react';
+import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign, HelpCircle, Loader2, LogOut} from 'lucide-react';
 import { leaveApiService } from '@/services/nodejsbackendapi/leaveApi';
 import { LeaveBalance, LeaveRequest } from '@/types/leave';
 import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData';
 import { fetchAttendance, fetchPayslips, mapAttendanceToUI, mapPayrollToUI, Employee, fetchEmployeeById, fetchRecentActivities } from '@/services/api';
+import { attendanceApiService } from '@/services/attendanceApi';
 import LeaveRequestForm from './modules/hr/LeaveRequestForm';
 import { ITSupportForm } from './modules/hr/ITSupportForm';
 import { AttendancePayload, DashboardKPIs, Payslip, AuditLog } from '@/types/api';
 
+interface AttendanceRecord {
+  date: string;
+  checkIn: string;
+  checkOut: string;
+  totalHours: string;
+  status: string;
+  clock_in_method?: string;
+  clock_out_method?: string;
+}
 
 const calculateFormattedLeaveBalance = (totalDays: number): string => {
   if (totalDays >= 30) {
@@ -68,7 +78,7 @@ export const EmployeeDashboard: React.FC = () => {
   const [attendanceData, setAttendanceData] = useState<AttendancePayload[]>([]);
   const [payrollData, setPayrollData] = useState<Payslip[]>([]);
   const [recentActivities, setRecentActivities] = useState<{ id: string; message: string; timestamp: string; color: string }[]>([]);
-  const toggleSidebar = () => { };
+  const [isCheckingOut, setIsCheckingOut] = useState<string | null>(null);
 
 
   const handleCheckIn = useCallback(() => {
@@ -85,51 +95,38 @@ export const EmployeeDashboard: React.FC = () => {
     }
   }, [user?.userId]);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!user?.userId) {
-        console.error('User or User ID is undefined, skipping API call.');
-        setDashboardKPIs(mockDashboardKPIs);
-        setFormattedLeaveBalance(calculateFormattedLeaveBalance(mockDashboardKPIs.leaveBalance));
-        return;
+  const refreshAttendance = useCallback(async () => {
+    if (!user?.userId) return;
+    try {
+      const attendanceResponse = await fetchAttendance(user.userId);
+      setAttendanceData(attendanceResponse);
+    } catch (error) {
+      console.error('Failed to refresh attendance data:', error);
+    }
+  }, [user?.userId]);
+
+  const handleCheckOut = useCallback(async (recordDate: string) => {
+    if (!user?.userId) return;
+
+    setIsCheckingOut(recordDate);
+    try {
+      const response = await attendanceApiService.clockOut({
+        user_id: user.userId,
+        method: 'manual' 
+      });
+
+      if (response.success) {
+        // Refresh attendance data
+        await refreshAttendance();
+      } else {
+        console.error('Checkout failed:', response.message);
       }
-
-      try {
-        // Fetch employee data
-        const employee = await fetchEmployeeById(user.userId);
-        setEmployeeData(employee);
-
-        const leaveBalanceResponse = await leaveApiService.getLeaveBalances(Number(user.userId));
-        console.log('Fetched leave balance data:', leaveBalanceResponse);
-        const leaveBalanceData = leaveBalanceResponse;
-
-        const { totalLeaveBalance } = processLeaveBalances(leaveBalanceData);
-        const formattedBalance = calculateFormattedLeaveBalance(totalLeaveBalance);
-
-        setDashboardKPIs((prev) => ({
-          ...(prev || mockDashboardKPIs),
-          leaveBalance: totalLeaveBalance,
-        }));
-        setFormattedLeaveBalance(formattedBalance);
-
-        // Fetch leave requests
-        await refreshLeaveRequests();
-
-      } catch (error) {
-        console.error('Failed to fetch dashboard data, using mock data fallback.', error);
-        setDashboardKPIs(mockDashboardKPIs);
-        setFormattedLeaveBalance(calculateFormattedLeaveBalance(mockDashboardKPIs.leaveBalance));
-        setLeaveRequests([]);
-      }
-
-    };
-
-    fetchDashboardData();
-  }, [user, refreshLeaveRequests]);
-
-  const handleCheckOut = useCallback(() => {
-    navigate('/kiosk-interface', { state: { mode: 'SCANNER' } });
-  }, [navigate]);
+    } catch (error) {
+      console.error('Error during checkout:', error);
+    } finally {
+      setIsCheckingOut(null);
+    }
+  }, [user?.userId, refreshAttendance]);
 
   const getModuleRoute = useCallback((departmentCode: string, roleCode: string) => {
     const departmentRoutes: Record<string, string> = {
@@ -235,6 +232,12 @@ export const EmployeeDashboard: React.FC = () => {
 
     fetchDashboardData();
   }, [user]);
+
+  useEffect(() => {
+    if (activeTab === 'attendance') {
+      refreshAttendance();
+    }
+  }, [activeTab, refreshAttendance]);
 
   if (!user || !dashboardKPIs) return null;
 
@@ -370,9 +373,12 @@ export const EmployeeDashboard: React.FC = () => {
               <div>
                 <Card className="bg-blue-600 text-white mb-4">
                   <CardHeader>
-                    <CardTitle className="flex items-center text-white">
-                      <Clock className="h-5 w-5 mr-2" />
+                    <CardTitle className="flex items-center justify-between text-white">
+                      <Clock className="h-5 w-5 mr-2" />                      
                       My Attendance History
+                      <Button onClick={refreshAttendance} variant="secondary" size="sm">
+                        Refresh
+                      </Button>
                     </CardTitle>
                   </CardHeader>
                 </Card>
@@ -384,9 +390,6 @@ export const EmployeeDashboard: React.FC = () => {
                           <Plus className="h-4 w-4 mr-2" />
                           Check In
                         </Button>
-                        <Button onClick={handleCheckOut} variant="outline">
-                          Check Out
-                        </Button>
                       </div>
                     </div>
                     <Table>
@@ -396,19 +399,46 @@ export const EmployeeDashboard: React.FC = () => {
                           <TableHead>Check In</TableHead>
                           <TableHead>Check Out</TableHead>
                           <TableHead>Total Hours</TableHead>
+                          <TableHead>Method</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>{(attendanceData.length > 0 ? mapAttendanceToUI(attendanceData) : mockAttendanceHistory).map((record, index) => (
-                        <TableRow key={index}>
+                        <TableRow key={record.date || index}>
                           <TableCell>{record.date}</TableCell>
                           <TableCell>{record.checkIn}</TableCell>
-                          <TableCell>{record.checkOut}</TableCell>
+                          <TableCell>{record.checkOut !== '-' ? record.checkOut : '-'}</TableCell>
                           <TableCell>{record.totalHours}</TableCell>
+                          <TableCell>
+                            {record.checkIn !== '-' ? record.clock_in_method || 'N/A' : 'N/A'}
+                          </TableCell>
                           <TableCell>
                             <Badge variant={record.status === 'Present' ? 'default' : 'secondary'}>
                               {record.status}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {record.checkIn !== '-' && record.checkOut === '-' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleCheckOut(record.date)}
+                              disabled={isCheckingOut === record.date}
+                            >
+                              {isCheckingOut === record.date ? (
+                                <>
+                                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                  Checking Out...
+                                </>
+                              ) : (
+                                <>
+                                  <LogOut className="mr-2 h-3 w-3" />
+                                  Check Out
+                                </>
+                              )}
+                            </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}</TableBody>
@@ -503,7 +533,7 @@ export const EmployeeDashboard: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>{(payrollData.length > 0 ? mapPayrollToUI(payrollData) : mockPayrollHistory).map((payroll, index) => (
-                    <TableRow key={index}>
+                    <TableRow key={payroll.period || index}>
                       <TableCell>{payroll.period}</TableCell>
                       <TableCell>{payroll.basicSalary}</TableCell>
                       <TableCell>{payroll.allowances}</TableCell>

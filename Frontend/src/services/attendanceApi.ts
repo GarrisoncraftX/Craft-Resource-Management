@@ -36,7 +36,7 @@ class AttendanceApiService {
   }
 
   // Get all attendance records with optional filtering
-  async getAttendanceRecords(params?: AttendanceSearchParams): Promise<AttendanceRecord[]> {
+  async getAttendanceRecords(params?: AttendanceSearchParams & { user_id?: string }): Promise<AttendanceRecord[]> {
     const queryParams = new URLSearchParams();
 
     if (params) {
@@ -45,9 +45,10 @@ class AttendanceApiService {
       if (params.date_from) queryParams.append('date_from', params.date_from);
       if (params.date_to) queryParams.append('date_to', params.date_to);
       if (params.status) queryParams.append('status', params.status);
+      if (params.user_id) queryParams.append('user_id', params.user_id);
     }
 
-    const response = await apiClient.get(`/api/attendance/records?${queryParams.toString()}`);
+    const response = await apiClient.get(`/api/biometric/attendance/records?${queryParams.toString()}`);
     return response.records || [];
   }
 

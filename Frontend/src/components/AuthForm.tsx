@@ -15,6 +15,7 @@ import { apiClient } from '@/utils/apiClient';
 import { Eye, EyeOff, AlertCircle, CheckCircle} from 'lucide-react';
 import { mockDepartments, mockRoles } from '@/services/mockData';
 import type { Department, Role} from '@/types/api';
+import { ClockInSuccessModal } from './ClockInSuccessModal';
 
 
 const AuthForm: React.FC = () => {
@@ -31,6 +32,14 @@ const AuthForm: React.FC = () => {
   // Biometric states
   const [showWebcam, setShowWebcam] = useState(false);
   const [faceData, setFaceData] = useState('');
+
+  // Modal states
+  const [showClockInModal, setShowClockInModal] = useState(false);
+  const [clockInData, setClockInData] = useState<{
+    employeeData: any;
+    clockInTime: string;
+    clockInMethod: string;
+  } | null>(null);
 
   // Form states
   const [signinData, setSigninData] = useState({
@@ -165,9 +174,26 @@ const AuthForm: React.FC = () => {
           });
 
           if (attendanceResponse.success) {
-            setSuccess(`Successfully signed in and ${attendanceResponse.action.replace('_', ' ')}!`);
+            // Show modal for successful clock-in
+            if (attendanceResponse.action === 'clock_in') {
+              setClockInData({
+                employeeData: {
+                  employeeId: userData.user_id || signinData.employeeId,
+                  firstName: userData.firstName || '',
+                  lastName: userData.lastName || '',
+                  email: userData.email || '',
+                  department: userData.department || '',
+                  role: userData.role || '',
+                },
+                clockInTime: attendanceResponse.clock_in_time || new Date().toISOString(),
+                clockInMethod: attendanceResponse.clock_in_method || 'QR Code',
+              });
+              setShowClockInModal(true);
+            } else {
+              setSuccess(`Successfully signed in and ${attendanceResponse.action.replace('_', ' ')}!`);
+              setTimeout(() => navigate('/employee-dashboard'), 2000);
+            }
             sessionStorage.removeItem('pending_qr_session_token');
-            setTimeout(() => navigate('/employee-dashboard'), 2000);
           } else {
             setError(attendanceResponse.message || 'Failed to process attendance');
             sessionStorage.removeItem('pending_qr_session_token');
@@ -639,6 +665,21 @@ const AuthForm: React.FC = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Clock In Success Modal */}
+      {clockInData && (
+        <ClockInSuccessModal
+          isOpen={showClockInModal}
+          onClose={() => {
+            setShowClockInModal(false);
+            setClockInData(null);
+            navigate('/employee-dashboard');
+          }}
+          employeeData={clockInData.employeeData}
+          clockInTime={clockInData.clockInTime}
+          clockInMethod={clockInData.clockInMethod}
+        />
+      )}
     </div>
   );
 };

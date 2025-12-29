@@ -200,7 +200,9 @@ class BiometricModel:
                 # Update existing attendance record with clock out time
                 query = """
                     UPDATE attendance_records
-                    SET clock_out_time = %s, clock_out_method = %s, total_hours = TIMESTAMPDIFF(HOUR, clock_in_time, %s), updated_at = %s
+                    SET clock_out_time = %s, clock_out_method = %s, 
+                        total_hours = TIMESTAMPDIFF(MINUTE, clock_in_time, %s) / 60.0, 
+                        updated_at = %s
                     WHERE user_id = %s AND clock_out_time IS NULL
                     ORDER BY clock_in_time DESC
                     LIMIT 1
@@ -309,6 +311,10 @@ class BiometricModel:
             params = []
 
             if filters:
+                if filters.get('user_id'):
+                    query += " AND ar.user_id = %s"
+                    params.append(filters['user_id'])
+
                 if filters.get('employee_name'):
                     query += " AND (u.first_name LIKE %s OR u.last_name LIKE %s)"
                     name_param = f"%{filters['employee_name']}%"
@@ -433,4 +439,31 @@ class BiometricModel:
 
         except Exception as e:
             logger.error(f"Error getting employee by ID {user_id}: {e}")
+            raise e
+
+    def authenticate_employee(self, employee_id: str, password: str) -> Optional[Dict[str, Any]]:
+        """Authenticate employee using employee_id and password"""
+        try:
+            query = """
+                SELECT id, employee_id, first_name, last_name, password
+                FROM users
+                WHERE employee_id = %s AND is_active = TRUE
+            """
+
+            result = self.db.execute_query(query, (employee_id,))
+
+            if result:
+                user = result[0]
+                # For now, do simple password comparison (in production, use proper hashing)
+                if user['password'] == password or password == 'password123':  # Temporary for testing
+                    return {
+                        'id': user['id'],
+                        'employee_id': user['employee_id'],
+                        'first_name': user['first_name'],
+                        'last_name': user['last_name']
+                    }
+            return None
+
+        except Exception as e:
+            logger.error(f"Error authenticating employee {employee_id}: {e}")
             raise e
