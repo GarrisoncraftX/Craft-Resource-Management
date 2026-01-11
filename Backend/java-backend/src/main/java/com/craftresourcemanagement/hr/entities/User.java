@@ -13,9 +13,7 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "tenant_id")
-    private Integer tenantId;
-
+   
     @Column(name = "employee_id", nullable = false, unique = true)
     private String employeeId;
 
@@ -100,6 +98,31 @@ public class User {
     @Column(name = "emergency_contact_phone")
     private String emergencyContactPhone;
 
+    // Pillar 1: Identity & Lifecycle Management fields
+    @Column(name = "account_status")
+    private String accountStatus;
+
+    @Column(name = "temporary_password")
+    private String temporaryPassword;
+
+    @Column(name = "default_password_changed")
+    private Boolean defaultPasswordChanged = false;
+
+    @Column(name = "profile_completed")
+    private Boolean profileCompleted = false;
+
+    @Column(name = "provisioned_by")
+    private Integer provisionedBy;
+
+    @Column(name = "provisioned_date")
+    private LocalDateTime provisionedDate;
+
+    @Column(name = "job_grade_id")
+    private Integer jobGradeId;
+
+    @Column(name = "bank_name")
+    private String bankName;
+
     // Getters and Setters
 
     public Long getId() {
@@ -108,14 +131,6 @@ public class User {
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public Integer getTenantId() {
-        return tenantId;
-    }
-
-    public void setTenantId(Integer tenantId) {
-        this.tenantId = tenantId;
     }
 
     public String getEmployeeId() {
@@ -350,6 +365,72 @@ public class User {
     public void setEmergencyContactPhone(String emergencyContactPhone) {
         this.emergencyContactPhone = emergencyContactPhone;
     }
+
+    // Pillar 1: Identity & Lifecycle Management getters and setters
+    public String getAccountStatus() {
+        return accountStatus;
+    }
+
+    public void setAccountStatus(String accountStatus) {
+        this.accountStatus = accountStatus;
+    }
+
+    public String getTemporaryPassword() {
+        return temporaryPassword;
+    }
+
+    public void setTemporaryPassword(String temporaryPassword) {
+        this.temporaryPassword = temporaryPassword;
+    }
+
+    public Boolean getDefaultPasswordChanged() {
+        return defaultPasswordChanged;
+    }
+
+    public void setDefaultPasswordChanged(Boolean defaultPasswordChanged) {
+        this.defaultPasswordChanged = defaultPasswordChanged;
+    }
+
+    public Boolean getProfileCompleted() {
+        return profileCompleted;
+    }
+
+    public void setProfileCompleted(Boolean profileCompleted) {
+        this.profileCompleted = profileCompleted;
+    }
+
+    public Integer getProvisionedBy() {
+        return provisionedBy;
+    }
+
+    public void setProvisionedBy(Integer provisionedBy) {
+        this.provisionedBy = provisionedBy;
+    }
+
+    public LocalDateTime getProvisionedDate() {
+        return provisionedDate;
+    }
+
+    public void setProvisionedDate(LocalDateTime provisionedDate) {
+        this.provisionedDate = provisionedDate;
+    }
+
+    public Integer getJobGradeId() {
+        return jobGradeId;
+    }
+
+    public void setJobGradeId(Integer jobGradeId) {
+        this.jobGradeId = jobGradeId;
+    }
+
+    public String getBankName() {
+        return bankName;
+    }
+
+    public void setBankName(String bankName) {
+        this.bankName = bankName;
+    }
+
 
     @PrePersist
     protected void onCreate() {

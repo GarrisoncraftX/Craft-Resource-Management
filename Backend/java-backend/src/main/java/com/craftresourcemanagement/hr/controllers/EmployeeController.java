@@ -23,9 +23,24 @@ public class EmployeeController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<User> registerEmployee(@RequestBody User user) {
-        User savedUser = employeeService.registerEmployee(user);
-        return ResponseEntity.ok(savedUser);
+    public ResponseEntity<?> registerEmployee(@RequestBody User user) {
+        try {
+            User savedUser = employeeService.registerEmployee(user);
+
+            // Pillar 1: Return provisioning information for new employees
+            if (user.getId() == null) {
+                return ResponseEntity.ok(new ProvisioningResponse(
+                    savedUser,
+                    "Employee provisioned successfully. Temporary Key: " + savedUser.getEmployeeId() + " + CRMSemp123!",
+                    savedUser.getEmployeeId(),
+                    savedUser.getTemporaryPassword()
+                ));
+            } else {
+                return ResponseEntity.ok(savedUser);
+            }
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @GetMapping("/list")
@@ -35,6 +50,16 @@ public class EmployeeController {
             return ResponseEntity.ok(employees);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    @GetMapping("/provisioned")
+    public ResponseEntity<?> getProvisionedEmployees() {
+        try {
+            List<User> provisionedEmployees = employeeService.getProvisionedEmployees();
+            return ResponseEntity.ok(new ProvisionedEmployeesResponse(provisionedEmployees));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Failed to fetch provisioned employees: " + e.getMessage());
         }
     }
 
@@ -73,6 +98,14 @@ public class EmployeeController {
                     if (request.getPassword() != null) {
                         existingUser.setPassword(request.getPassword());
                     }
+                    if (request.getProfileCompleted() != null) existingUser.setProfileCompleted(request.getProfileCompleted());
+                    if (request.getDefaultPasswordChanged() != null) existingUser.setDefaultPasswordChanged(request.getDefaultPasswordChanged());
+                    
+                    // Preserve hireDate if null to avoid constraint violation
+                    if (existingUser.getHireDate() == null) {
+                        existingUser.setHireDate(java.time.LocalDate.now());
+                    }
+                    
                     User updatedUser = employeeService.registerEmployee(existingUser);
                     return ResponseEntity.ok(updatedUser);
                 })

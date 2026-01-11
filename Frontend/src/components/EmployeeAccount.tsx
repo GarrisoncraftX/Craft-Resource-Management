@@ -96,9 +96,16 @@ export const EmployeeAccount: React.FC = () => {
         momoNumber: bankingInfo.momoNumber,
         password: personalInfo.password || undefined,
         confirmPassword: personalInfo.confirmPassword || undefined,
+        profileCompleted: true,
+        defaultPasswordChanged: personalInfo.password ? true : undefined,
       };
       await updateEmployeeById(user.userId, updateRequest);
       toast.success('Personal information updated successfully');
+      
+      // Redirect to dashboard after successful profile completion
+      if (updateRequest.profileCompleted) {
+        setTimeout(() => navigate('/employee-dashboard'), 1500);
+      }
     } catch (error) {
       console.error('Failed to update personal information:', error);
       toast.error('Failed to update personal information');

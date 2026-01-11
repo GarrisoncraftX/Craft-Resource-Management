@@ -3,10 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, RefreshCw, QrCode } from 'lucide-react';
-import { visitorApiService } from '@/services/visitorApi';
+import { visitorApiService } from '@/services/pythonbackendapi/visitorApi';
 import { useToast } from '@/hooks/use-toast';
 import QRCode from 'qrcode';
-import { attendanceApiService } from '@/services/attendanceApi';
+import { attendanceApiService } from '@/services/pythonbackendapi/attendanceApi';
 
 interface QRCodeDisplayProps {
   type?: 'attendance' | 'visitor';

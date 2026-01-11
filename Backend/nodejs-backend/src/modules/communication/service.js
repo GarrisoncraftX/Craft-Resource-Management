@@ -223,6 +223,43 @@ class CommunicationService {
             return { success: false, error: error.message };
         }
     }
+
+    async sendEmployeeWelcomeEmail(email, firstName, lastName, employeeId, defaultPassword) {
+        try {
+            const subject = 'Welcome to CraftResourceManagement';
+            const html = `
+                <h2>Welcome ${firstName} ${lastName}!</h2>
+                <p>Your account has been created by HR.</p>
+                <p><strong>Employee ID:</strong> ${employeeId}</p>
+                <p><strong>Default Password:</strong> ${defaultPassword}</p>
+                <p>Please login at: ${process.env.FRONTEND_URL}/signin</p>
+                <p><strong>Important:</strong> You must change your password and complete your profile upon first login.</p>
+            `;
+
+            const mailOptions = {
+                from: process.env.MAIL_DEFAULT_SENDER || 'noreply@gmail.com',
+                to: email,
+                subject: subject,
+                html: html
+            };
+
+            const info = await this.transporter.sendMail(mailOptions);
+
+            this.logger.info('Employee welcome email sent', {
+                to: email,
+                employeeId: employeeId,
+                messageId: info.messageId
+            });
+
+            return { success: true, messageId: info.messageId };
+        } catch (error) {
+            this.logger.error('Failed to send employee welcome email', {
+                email: email,
+                error: error.message
+            });
+            return { success: false, error: error.message };
+        }
+    }
 }
 
 module.exports = new CommunicationService();

@@ -1,5 +1,5 @@
-import { apiClient } from '../utils/apiClient';
-import type { JournalEntry, JournalEntryCreate, JournalEntryUpdate } from '../types/journal';
+import { apiClient } from '../../utils/apiClient';
+import type { JournalEntry, JournalEntryCreate, JournalEntryUpdate } from '../../types/journal';
 
 export const mockJournalEntries: JournalEntry[] = [
   {

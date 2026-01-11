@@ -21,6 +21,8 @@ public class UpdateEmployeeRequest {
     private String employeeId;
     private String password;
     private String confirmPassword;
+    private Boolean profileCompleted;
+    private Boolean defaultPasswordChanged;
 
     // Getters and Setters
 
@@ -166,5 +168,21 @@ public class UpdateEmployeeRequest {
 
     public void setConfirmPassword(String confirmPassword) {
         this.confirmPassword = confirmPassword;
+    }
+
+    public Boolean getProfileCompleted() {
+        return profileCompleted;
+    }
+
+    public void setProfileCompleted(Boolean profileCompleted) {
+        this.profileCompleted = profileCompleted;
+    }
+
+    public Boolean getDefaultPasswordChanged() {
+        return defaultPasswordChanged;
+    }
+
+    public void setDefaultPasswordChanged(Boolean defaultPasswordChanged) {
+        this.defaultPasswordChanged = defaultPasswordChanged;
     }
 }

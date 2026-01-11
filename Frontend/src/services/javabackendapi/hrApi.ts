@@ -1,3 +1,4 @@
+import { ProvisioningResponse } from '@/types/hr';
 import { apiClient } from '@/utils/apiClient';
 
 // Types for HR API
@@ -321,6 +322,11 @@ class HrApiService {
   // Additional Payslip endpoint
   async getPayslipsByUser(userId: number): Promise<Payslip[]> {
     return apiClient.get(`/hr/payroll/payslips/user/${userId}`);
+  }
+
+  async getProvisionedEmployees(): Promise<ProvisioningResponse[]> {
+    const response = await apiClient.get('/hr/employees/provisioned');
+    return response.employees || [];
   }
 }
 

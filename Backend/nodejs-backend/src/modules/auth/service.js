@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const User = require('./model');
@@ -8,6 +9,7 @@ const Permission = require('./models/permission');
 const RolePermission = require('./models/rolePermission');
 const LeaveService = require('../leave/service');
 const auditService = require('../audit/service');
+const { pool } = require('../../config/database');
 
 const BIOMETRIC_SERVICE_URL = process.env.PYTHON_BASE_URL || 'http://localhost:5000';
 
@@ -365,16 +367,20 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
       throw new Error(`Account is locked until ${new Date(user.accountLockedUntil).toISOString()}`);
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.passwordHash);
+    let passwordMatch = await bcrypt.compare(password, user.passwordHash);
+    
     if (!passwordMatch) {
-      // Increment failed login attempts
+      const sha256Hash = crypto.createHash('sha256').update(user.employeeId + password).digest('hex');
+      passwordMatch = sha256Hash === user.passwordHash;
+    }
+    
+    if (!passwordMatch) {
       user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
 
       // Lock account logic
       if (user.failedLoginAttempts >= 5) {
         let lockDurationMinutes = 1;
         if (user.accountLockedUntil && new Date(user.accountLockedUntil) > now) {
-          // If already locked, increase lock duration
           const previousLockDuration = (new Date(user.accountLockedUntil) - now) / 60000; 
           if (previousLockDuration <= 1) {
             lockDurationMinutes = 3;
@@ -463,7 +469,6 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
       { expiresIn: '24h' }
     );
 
-    // Return token and full user details including codes
     return {
       token,
       user: {
@@ -482,11 +487,41 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
         role: user.Role ? user.Role.name : '',
         roleCode,
         permissions,
+        defaultPasswordChanged: user.defaultPasswordChanged,
+        profileCompleted: user.profileCompleted,
+        hiredDate: user.hireDate ? (user.hireDate instanceof Date ? user.hireDate.toISOString().split('T')[0] : user.hireDate) : null,
       },
     };
+};
+
+const hrCreateEmployee = async (firstName, lastName, email, departmentId, jobGradeId, roleId, hrUserId) => {
+  try {
+    await pool.query(
+      'CALL hr_create_employee(?, ?, ?, ?, ?, ?, ?, @emp_id, @success, @msg)',
+      [firstName, lastName, email, departmentId, jobGradeId, roleId, hrUserId]
+    );
+
+    const [[output]] = await pool.query('SELECT @emp_id as employeeId, @success as success, @msg as message');
+
+    if (!output.success) {
+      const error = new Error(output.message);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    return output.employeeId;
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      const duplicateError = new Error('Email address already exists');
+      duplicateError.statusCode = 409;
+      throw duplicateError;
+    }
+    throw error;
+  }
 };
 
 module.exports = {
   register,
   signin,
+  hrCreateEmployee,
 };

@@ -705,11 +705,9 @@ class BiometricController:
                 'expires_at': (datetime.utcnow().replace(second=0, microsecond=0) + timedelta(hours=1)).isoformat(),
                 'used': False
             }
-            cache.set(cache_key, session_data, timeout=3600)  # 1 hour expiry
+            cache.set(cache_key, session_data, timeout=3600)  
 
-            # Create a URL that can be scanned by phone camera or kiosk scanner
             frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
-            # Validate frontend URL to prevent open redirect
             from urllib.parse import urlparse
             parsed_url = urlparse(frontend_url)
             allowed_domains = ['localhost:5173', '127.0.0.1:5173', 'yourdomain.com', parsed_url.netloc]
@@ -959,4 +957,152 @@ class BiometricController:
             return {
                 'success': False,
                 'message': 'Error retrieving checked-in employees'
+            }, 500
+
+    # Pillar 2: HR Dashboard monitoring methods
+    def get_manual_fallback_attendances(self) -> tuple[Dict[str, Any], int]:
+        """Get manual fallback attendances for HR review"""
+        try:
+            attendances = self.biometric_model.get_manual_fallback_attendances()
+            return {
+                'success': True,
+                'attendances': attendances
+            }, 200
+        except Exception as e:
+            logger.error(f"Error getting manual fallback attendances: {e}")
+            return {
+                'success': False,
+                'message': 'Error retrieving manual fallback attendances'
+            }, 500
+
+    def get_attendances_by_method(self, method: str) -> tuple[Dict[str, Any], int]:
+        """Get attendances by verification method"""
+        try:
+            attendances = self.biometric_model.get_attendances_by_method(method)
+            return {
+                'success': True,
+                'attendances': attendances
+            }, 200
+        except Exception as e:
+            logger.error(f"Error getting attendances by method: {e}")
+            return {
+                'success': False,
+                'message': 'Error retrieving attendances by method'
+            }, 500
+
+    def flag_attendance_for_audit(self, attendance_id: int) -> tuple[Dict[str, Any], int]:
+        """Flag attendance for audit review"""
+        try:
+            data = request.get_json()
+            audit_notes = data.get('auditNotes', 'Flagged for manual check-in review')
+            self.biometric_model.flag_attendance_for_audit(attendance_id, audit_notes)
+            return {
+                'success': True,
+                'message': 'Attendance flagged for audit successfully'
+            }, 200
+        except Exception as e:
+            logger.error(f"Error flagging attendance for audit: {e}")
+            return {
+                'success': False,
+                'message': 'Error flagging attendance for audit'
+            }, 500
+
+    def get_manual_fallbacks_by_date_range(self) -> tuple[Dict[str, Any], int]:
+        """Get manual fallback attendances by date range"""
+        try:
+            start_date = request.args.get('startDate')
+            end_date = request.args.get('endDate')
+            attendances = self.biometric_model.get_manual_fallbacks_by_date_range(start_date, end_date)
+            return {
+                'success': True,
+                'attendances': attendances
+            }, 200
+        except Exception as e:
+            logger.error(f"Error getting manual fallbacks by date range: {e}")
+            return {
+                'success': False,
+                'message': 'Error retrieving manual fallbacks by date range'
+            }, 500
+
+    def get_user_attendance_by_date_range(self, user_id: int) -> tuple[Dict[str, Any], int]:
+        """Get user attendance by date range"""
+        try:
+            start_date = request.args.get('startDate')
+            end_date = request.args.get('endDate')
+            attendances = self.biometric_model.get_user_attendance_by_date_range(user_id, start_date, end_date)
+            return {
+                'success': True,
+                'attendances': attendances
+            }, 200
+        except Exception as e:
+            logger.error(f"Error getting user attendance by date range: {e}")
+            return {
+                'success': False,
+                'message': 'Error retrieving user attendance by date range'
+            }, 500
+
+    def get_buddy_punch_report(self) -> tuple[Dict[str, Any], int]:
+        """Generate buddy punch risk report"""
+        try:
+            manual_attendances = self.biometric_model.get_manual_fallback_attendances()
+            report = {
+                'totalManualEntries': len(manual_attendances),
+                'flaggedAttendances': manual_attendances,
+                'reportGeneratedAt': datetime.utcnow().isoformat(),
+                'buddyPunchRisk': 'HIGH' if len(manual_attendances) > 10 else 'MEDIUM' if len(manual_attendances) > 5 else 'LOW'
+            }
+            return {
+                'success': True,
+                'report': report
+            }, 200
+        except Exception as e:
+            logger.error(f"Error generating buddy punch report: {e}")
+            return {
+                'success': False,
+                'message': 'Error generating buddy punch report'
+            }, 500
+
+    def flag_buddy_punch_risk(self, attendance_id: int) -> tuple[Dict[str, Any], int]:
+        """Flag attendance for buddy punch review"""
+        try:
+            data = request.get_json()
+            reason = data.get('reason', 'Flagged for buddy punch review')
+            self.biometric_model.flag_attendance_for_audit(attendance_id, reason)
+            return {
+                'success': True,
+                'message': 'Attendance flagged for buddy punch review'
+            }, 200
+        except Exception as e:
+            logger.error(f"Error flagging buddy punch risk: {e}")
+            return {
+                'success': False,
+                'message': 'Error flagging attendance'
+            }, 500
+
+    def get_attendance_method_statistics(self) -> tuple[Dict[str, Any], int]:
+        """Get attendance method distribution statistics"""
+        try:
+            qr_attendances = self.biometric_model.get_attendances_by_method('qr')
+            manual_attendances = self.biometric_model.get_attendances_by_method('manual')
+            biometric_attendances = self.biometric_model.get_attendances_by_method('biometric')
+
+            total = len(qr_attendances) + len(manual_attendances) + len(biometric_attendances)
+
+            stats = {
+                'qrCount': len(qr_attendances),
+                'manualCount': len(manual_attendances),
+                'biometricCount': len(biometric_attendances),
+                'totalAttendances': total,
+                'manualPercentage': (len(manual_attendances) / total * 100) if total > 0 else 0
+            }
+
+            return {
+                'success': True,
+                'stats': stats
+            }, 200
+        except Exception as e:
+            logger.error(f"Error getting attendance method statistics: {e}")
+            return {
+                'success': False,
+                'message': 'Error retrieving attendance method statistics'
             }, 500

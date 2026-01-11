@@ -11,6 +11,8 @@ export interface AttendanceRecord {
   status: 'present' | 'absent' | 'late' | 'early_out' | 'incomplete';
   clock_in_method?: string;
   clock_out_method?: string;
+  manual_fallback_flag?: boolean;
+  audit_notes?: string;
   created_at: string;
   updated_at: string;
 }
@@ -53,4 +55,18 @@ export interface AttendanceStatus {
   can_clock_out: boolean;
   last_action?: 'clock_in' | 'clock_out';
   last_timestamp?: string;
+}
+
+export interface BuddyPunchReport {
+  totalManualEntries: number;
+  flaggedAttendances: AttendanceRecord[];
+  reportGeneratedAt: string;
+}
+
+export interface AttendanceMethodStats {
+  qrCount: number;
+  manualCount: number;
+  biometricCount: number;
+  totalAttendances: number;
+  manualPercentage: number;
 }

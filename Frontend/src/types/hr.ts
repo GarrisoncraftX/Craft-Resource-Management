@@ -1,4 +1,11 @@
 
+export interface ProvisioningResponse {
+  user: Employee;
+  message: string;
+  employeeId: string;
+  temporaryPassword: string;
+}
+
 export interface TrainingProgram {
   id: string;
   title: string;

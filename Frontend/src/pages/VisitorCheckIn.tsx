@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, Loader2, AlertTriangle, UserCheck } from 'lucide-react';
-import { visitorApiService } from '@/services/visitorApi';
+import { visitorApiService } from '@/services/pythonbackendapi/visitorApi';
 import { useAuth } from '@/contexts/AuthContext';
 import type { EntryPass } from '@/types/visitor';
 

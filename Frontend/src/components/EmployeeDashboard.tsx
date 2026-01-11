@@ -11,22 +11,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign, HelpCircle, Loader2, LogOut} from 'lucide-react';
 import { leaveApiService } from '@/services/nodejsbackendapi/leaveApi';
 import { LeaveBalance, LeaveRequest } from '@/types/leave';
-import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData';
-import { fetchAttendance, fetchPayslips, mapAttendanceToUI, mapPayrollToUI, Employee, fetchEmployeeById, fetchRecentActivities } from '@/services/api';
-import { attendanceApiService } from '@/services/attendanceApi';
+import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData/mockData';
+import { fetchAttendance, fetchPayslips, mapAttendanceToUI, mapPayrollToUI, Employee, fetchRecentActivities } from '@/services/api';
+import { attendanceApiService } from '@/services/pythonbackendapi/attendanceApi';
 import LeaveRequestForm from './modules/hr/LeaveRequestForm';
 import { ITSupportForm } from './modules/hr/ITSupportForm';
 import { AttendancePayload, DashboardKPIs, Payslip, AuditLog } from '@/types/api';
 
-interface AttendanceRecord {
-  date: string;
-  checkIn: string;
-  checkOut: string;
-  totalHours: string;
-  status: string;
-  clock_in_method?: string;
-  clock_out_method?: string;
-}
 
 const calculateFormattedLeaveBalance = (totalDays: number): string => {
   if (totalDays >= 30) {
@@ -79,6 +70,8 @@ export const EmployeeDashboard: React.FC = () => {
   const [payrollData, setPayrollData] = useState<Payslip[]>([]);
   const [recentActivities, setRecentActivities] = useState<{ id: string; message: string; timestamp: string; color: string }[]>([]);
   const [isCheckingOut, setIsCheckingOut] = useState<string | null>(null);
+  const [attendanceError, setAttendanceError] = useState(false);
+  const [payrollError, setPayrollError] = useState(false);
 
 
   const handleCheckIn = useCallback(() => {
@@ -141,6 +134,7 @@ export const EmployeeDashboard: React.FC = () => {
       'REVENUE_TAX': '/revenue-tax/dashboard',
       'SECURITY': '/security/dashboard',
       'ASSETS': '/assets/dashboard',
+      'OPERATIONS': '/operations/dashboard',
       'INFORMATION_TECHNOLOGY': '/admin/dashboard',
     };
 
@@ -198,14 +192,26 @@ export const EmployeeDashboard: React.FC = () => {
         setLeaveRequests(leaveRequestsResponse);
 
         // Fetch attendance data
-        const attendanceResponse = await fetchAttendance(user.userId);
-        console.log("Attendace records", attendanceResponse)
-        setAttendanceData(attendanceResponse);
+        try {
+          const attendanceResponse = await fetchAttendance(user.userId);
+          console.log("Attendace records", attendanceResponse)
+          setAttendanceData(attendanceResponse);
+          setAttendanceError(false);
+        } catch (error) {
+          console.error('Failed to fetch attendance data:', error);
+          setAttendanceError(true);
+        }
 
         // Fetch payroll data
-        const payrollResponse = await fetchPayslips(user.userId);
-        console.log("Payroll response", payrollResponse)
-        setPayrollData(payrollResponse);
+        try {
+          const payrollResponse = await fetchPayslips(user.userId);
+          console.log("Payroll response", payrollResponse)
+          setPayrollData(payrollResponse);
+          setPayrollError(false);
+        } catch (error) {
+          console.error('Failed to fetch payroll data:', error);
+          setPayrollError(true);
+        }
 
         // Fetch recent activities from audit logs
         const auditLogsResponse = await fetchRecentActivities(user.userId);
@@ -223,8 +229,6 @@ export const EmployeeDashboard: React.FC = () => {
         setDashboardKPIs(mockDashboardKPIs);
         setFormattedLeaveBalance(calculateFormattedLeaveBalance(mockDashboardKPIs.leaveBalance));
         setLeaveRequests([]);
-        setAttendanceData([]);
-        setPayrollData([]);
         setRecentActivities([]);
       }
 
@@ -292,7 +296,9 @@ export const EmployeeDashboard: React.FC = () => {
               </div>
               <div>
                 <p className="text-blue-100 text-sm">Hire Date</p>
-                <p className="font-semibold text-sm sm:text-base">2020-03-15</p>
+                <p className="font-semibold text-sm sm:text-base">
+                  {user.hiredDate ? new Date(user.hiredDate).toLocaleDateString() : 'N/A'}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -404,7 +410,7 @@ export const EmployeeDashboard: React.FC = () => {
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
-                      <TableBody>{(attendanceData.length > 0 ? mapAttendanceToUI(attendanceData) : mockAttendanceHistory).map((record, index) => (
+                      <TableBody>{(attendanceError ? mapAttendanceToUI(mockAttendanceHistory) : mapAttendanceToUI(attendanceData)).map((record, index) => (
                         <TableRow key={record.date || index}>
                           <TableCell>{record.date}</TableCell>
                           <TableCell>{record.checkIn}</TableCell>
@@ -535,7 +541,7 @@ export const EmployeeDashboard: React.FC = () => {
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>{(payrollData.length > 0 ? mapPayrollToUI(payrollData) : mockPayrollHistory).map((payroll, index) => (
+                  <TableBody>{(payrollError ? mockPayrollHistory : mapPayrollToUI(payrollData)).map((payroll, index) => (
                     <TableRow key={payroll.period || index}>
                       <TableCell>{payroll.period}</TableCell>
                       <TableCell>{payroll.basicSalary}</TableCell>

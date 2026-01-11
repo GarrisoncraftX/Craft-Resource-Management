@@ -471,3 +471,147 @@ class BiometricModel:
         except Exception as e:
             logger.error(f"Error authenticating employee {employee_id}: {e}")
             raise e
+
+    def get_manual_fallback_attendances(self) -> List[Dict[str, Any]]:
+        """Get manual fallback attendances for HR review"""
+        try:
+            query = """
+                SELECT
+                    ar.id,
+                    ar.user_id,
+                    CONCAT(u.first_name, ' ', u.last_name) as employee_name,
+                    u.employee_id,
+                    d.name as department,
+                    ar.clock_in_time,
+                    ar.clock_out_time,
+                    ar.clock_in_method,
+                    ar.clock_out_method,
+                    ar.total_hours,
+                    ar.status,
+                    ar.created_at
+                FROM attendance_records ar
+                LEFT JOIN users u ON ar.user_id = u.id
+                LEFT JOIN departments d ON u.department_id = d.id
+                WHERE ar.clock_in_method = 'manual' OR ar.clock_out_method = 'manual'
+                ORDER BY ar.created_at DESC
+            """
+
+            results = self.db.execute_query(query)
+            return results or []
+
+        except Exception as e:
+            logger.error(f"Error getting manual fallback attendances: {e}")
+            raise e
+
+    def get_attendances_by_method(self, method: str) -> List[Dict[str, Any]]:
+        """Get attendances by verification method"""
+        try:
+            query = """
+                SELECT
+                    ar.id,
+                    ar.user_id,
+                    CONCAT(u.first_name, ' ', u.last_name) as employee_name,
+                    u.employee_id,
+                    d.name as department,
+                    ar.clock_in_time,
+                    ar.clock_out_time,
+                    ar.clock_in_method,
+                    ar.clock_out_method,
+                    ar.total_hours,
+                    ar.status,
+                    ar.created_at
+                FROM attendance_records ar
+                LEFT JOIN users u ON ar.user_id = u.id
+                LEFT JOIN departments d ON u.department_id = d.id
+                WHERE ar.clock_in_method = %s OR ar.clock_out_method = %s
+                ORDER BY ar.created_at DESC
+            """
+
+            results = self.db.execute_query(query, (method, method))
+            return results or []
+
+        except Exception as e:
+            logger.error(f"Error getting attendances by method {method}: {e}")
+            raise e
+
+    def get_manual_fallbacks_by_date_range(self, start_date: Optional[str], end_date: Optional[str]) -> List[Dict[str, Any]]:
+        """Get manual fallback attendances by date range"""
+        try:
+            query = """
+                SELECT
+                    ar.id,
+                    ar.user_id,
+                    CONCAT(u.first_name, ' ', u.last_name) as employee_name,
+                    u.employee_id,
+                    d.name as department,
+                    ar.clock_in_time,
+                    ar.clock_out_time,
+                    ar.clock_in_method,
+                    ar.clock_out_method,
+                    ar.total_hours,
+                    ar.status,
+                    ar.created_at
+                FROM attendance_records ar
+                LEFT JOIN users u ON ar.user_id = u.id
+                LEFT JOIN departments d ON u.department_id = d.id
+                WHERE (ar.clock_in_method = 'manual' OR ar.clock_out_method = 'manual')
+            """
+            params = []
+
+            if start_date:
+                query += " AND DATE(ar.created_at) >= %s"
+                params.append(start_date)
+
+            if end_date:
+                query += " AND DATE(ar.created_at) <= %s"
+                params.append(end_date)
+
+            query += " ORDER BY ar.created_at DESC"
+
+            results = self.db.execute_query(query, tuple(params))
+            return results or []
+
+        except Exception as e:
+            logger.error(f"Error getting manual fallbacks by date range: {e}")
+            raise e
+
+    def get_user_attendance_by_date_range(self, user_id: int, start_date: Optional[str], end_date: Optional[str]) -> List[Dict[str, Any]]:
+        """Get user attendance by date range"""
+        try:
+            query = """
+                SELECT
+                    ar.id,
+                    ar.user_id,
+                    CONCAT(u.first_name, ' ', u.last_name) as employee_name,
+                    u.employee_id,
+                    d.name as department,
+                    ar.clock_in_time,
+                    ar.clock_out_time,
+                    ar.clock_in_method,
+                    ar.clock_out_method,
+                    ar.total_hours,
+                    ar.status,
+                    ar.created_at
+                FROM attendance_records ar
+                LEFT JOIN users u ON ar.user_id = u.id
+                LEFT JOIN departments d ON u.department_id = d.id
+                WHERE ar.user_id = %s
+            """
+            params = [user_id]
+
+            if start_date:
+                query += " AND DATE(ar.clock_in_time) >= %s"
+                params.append(start_date)
+
+            if end_date:
+                query += " AND DATE(ar.clock_in_time) <= %s"
+                params.append(end_date)
+
+            query += " ORDER BY ar.clock_in_time DESC"
+
+            results = self.db.execute_query(query, tuple(params))
+            return results or []
+
+        except Exception as e:
+            logger.error(f"Error getting user attendance by date range for user {user_id}: {e}")
+            raise e

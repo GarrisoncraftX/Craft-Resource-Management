@@ -31,7 +31,7 @@ const departmentModules = [
   },
   {
     title: "HR Management",
-    url: "/hr/dashboard",
+    url: "/hr",
     icon: Users,
     description: "Employee management and HR operations",
     color: "bg-blue-500",
@@ -211,7 +211,7 @@ export const SuperAdminDashboardSelector: React.FC = () => {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Button
-                  onClick={() => handleModuleSelect('/hr/dashboard')}
+                  onClick={() => handleModuleSelect('/hr')}
                   variant="outline"
                   className="flex flex-col h-20"
                 >

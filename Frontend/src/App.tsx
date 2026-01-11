@@ -97,6 +97,9 @@ const ContractManagement = lazy(() => import("@/components/modules/procurement/C
 const VendorManagement = lazy(() => import("@/components/modules/procurement/VendorManagement").then(module => ({ default: module.VendorManagement })));
 const VisitorCheckIn = lazy(() => import("@/pages/VisitorCheckIn").then(module => ({ default: module.VisitorCheckIn })));
 
+//Operations Modules
+const OperationsDashboard = lazy(() => import("@/components/modules/operations/OperationsDashboard").then(module => ({ default: module.OperationsDashboard })));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -144,11 +147,34 @@ const SuspenseWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) 
 );
 
 const AppRoutes = () => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleViewDashboard = () => {
-    navigate('/employee-dashboard');
+    if (location.pathname === '/employee-dashboard') {
+      const departmentRoutes: Record<string, string> = {
+        'FINANCE': '/finance/dashboard',
+        'HR': '/hr',
+        'PROCUREMENT': '/procurement/dashboard',
+        'LEGAL': '/legal/dashboard',
+        'PLANNING': '/planning/dashboard',
+        'TRANSPORTATION': '/transportation',
+        'HEALTH_SAFETY': '/health-safety/dashboard',
+        'PUBLIC_RELATIONS': '/public-relations',
+        'REVENUE_TAX': '/revenue',
+        'SECURITY': '/security',
+        'ASSETS': '/assets/dashboard',
+        'OPERATIONS': '/operations/dashboard',
+      };
+      
+      const departmentRoute = user?.departmentCode ? departmentRoutes[user.departmentCode] : null;
+      if (departmentRoute) {
+        navigate(departmentRoute);
+      }
+    } else {
+      navigate('/employee-dashboard');
+    }
   };
 
   const handleLogout = () => {
@@ -207,7 +233,7 @@ const AppRoutes = () => {
 
       {/* HR Routes */}
       <Route path="/hr/benefits" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><BenefitsAdministration /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/hr/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><HRDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/hr" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><HRDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/hr/attendance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><EmployeeAttendance moduleType="hr" /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/hr/employees" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><EmployeeProfiles /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/hr/leave" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LeaveManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
@@ -220,6 +246,11 @@ const AppRoutes = () => {
       <Route path="/legal/management" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/legal/cases" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Cases" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalCases /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/legal/compliance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Compliance" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ComplianceRecords /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+
+      {/* Operations Routes */}
+      <Route path="/operations" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Operations Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><OperationsDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/operations/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Operations Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><OperationsDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+     
       {/* Planning & Development Routes */}
       <Route path="/planning/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Planning Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PlanningDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/planning/projects" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Planning" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ProjectManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />

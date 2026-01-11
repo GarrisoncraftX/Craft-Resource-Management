@@ -95,6 +95,42 @@ const User = sequelize.define('User', {
     type: DataTypes.DATE,
     field: 'date_of_joining',
   },
+  accountStatus: {
+    type: DataTypes.ENUM('PROVISIONED', 'ACTIVE', 'SUSPENDED', 'TERMINATED'),
+    defaultValue: 'PROVISIONED',
+    field: 'account_status',
+  },
+  defaultPasswordChanged: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'default_password_changed',
+  },
+  profileCompleted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'profile_completed',
+  },
+  provisionedBy: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'provisioned_by',
+  },
+  jobGradeId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'job_grade_id',
+  },
+  bankName: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'bank_name',
+  },
+  bankAccountNumber: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    field: 'account_number',
+  },
+
 }, {
   tableName: 'users',
   timestamps: true,

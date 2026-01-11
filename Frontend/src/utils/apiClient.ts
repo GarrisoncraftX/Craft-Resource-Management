@@ -18,11 +18,13 @@ export class ApiClient {
 
   private async fetchWithFallback(url: string, options: RequestInit): Promise<Response> {
     try {
-      return await fetch(url, options);
+      const response = await fetch(url, { ...options, signal: AbortSignal.timeout(5000) });
+      return response;
     } catch (error) {
-      if (this.isNetworkError(error) && url.startsWith(this.baseURL)) {
-        // Retry with fallback URL
-        const fallbackUrl = url.replace(this.baseURL, this.fallbackURL);
+      if (this.isNetworkError(error) || (error as Error).name === 'TimeoutError') {
+        const fallbackUrl = url.startsWith(this.baseURL) 
+          ? url.replace(this.baseURL, this.fallbackURL)
+          : url.replace(this.fallbackURL, this.baseURL);
         return await fetch(fallbackUrl, options);
       }
       throw error;

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, UserCheck, LogOut, Search, RefreshCw, QrCode } from 'lucide-react';
-import { visitorApiService } from '@/services/visitorApi';
+import { visitorApiService } from '@/services/pythonbackendapi/visitorApi';
 import type { Visitor } from '@/types/visitor';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';

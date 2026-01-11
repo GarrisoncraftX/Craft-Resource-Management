@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, UserCheck, LogOut, Search, RefreshCw, QrCode, Clock, Users, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { attendanceApiService } from '@/services/attendanceApi';
+import { attendanceApiService } from '@/services/pythonbackendapi/attendanceApi';
 import type { AttendanceRecord, AttendanceStats, AttendanceSearchParams } from '@/types/attendance';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';

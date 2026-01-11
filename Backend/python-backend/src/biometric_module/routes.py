@@ -111,4 +111,53 @@ def get_checked_in_employees():
     response, status_code = biometric_controller.get_checked_in_employees()
     return jsonify(response), status_code
 
+# Pillar 2: HR Dashboard monitoring endpoints
+@biometric_bp.route('/attendance/manual-fallbacks', methods=['GET'])
+@auth_required
+def get_manual_fallback_attendances():
+    response, status_code = biometric_controller.get_manual_fallback_attendances()
+    return jsonify(response), status_code
+
+@biometric_bp.route('/attendance/by-method/<method>', methods=['GET'])
+@auth_required
+def get_attendances_by_method(method):
+    response, status_code = biometric_controller.get_attendances_by_method(method)
+    return jsonify(response), status_code
+
+@biometric_bp.route('/attendance/<int:attendance_id>/flag-audit', methods=['POST'])
+@auth_required
+def flag_attendance_for_audit(attendance_id):
+    response, status_code = biometric_controller.flag_attendance_for_audit(attendance_id)
+    return jsonify(response), status_code
+
+@biometric_bp.route('/attendance/manual-fallbacks/date-range', methods=['GET'])
+@auth_required
+def get_manual_fallbacks_by_date_range():
+    response, status_code = biometric_controller.get_manual_fallbacks_by_date_range()
+    return jsonify(response), status_code
+
+@biometric_bp.route('/attendance/user/<int:user_id>/date-range', methods=['GET'])
+@auth_required
+def get_user_attendance_by_date_range(user_id):
+    response, status_code = biometric_controller.get_user_attendance_by_date_range(user_id)
+    return jsonify(response), status_code
+
+@biometric_bp.route('/attendance/buddy-punch-report', methods=['GET'])
+@auth_required
+def get_buddy_punch_report():
+    response, status_code = biometric_controller.get_buddy_punch_report()
+    return jsonify(response), status_code
+
+@biometric_bp.route('/attendance/<int:attendance_id>/buddy-punch-flag', methods=['POST'])
+@auth_required
+def flag_buddy_punch_risk(attendance_id):
+    response, status_code = biometric_controller.flag_buddy_punch_risk(attendance_id)
+    return jsonify(response), status_code
+
+@biometric_bp.route('/attendance/method-statistics', methods=['GET'])
+@auth_required
+def get_attendance_method_statistics():
+    response, status_code = biometric_controller.get_attendance_method_statistics()
+    return jsonify(response), status_code
+
 

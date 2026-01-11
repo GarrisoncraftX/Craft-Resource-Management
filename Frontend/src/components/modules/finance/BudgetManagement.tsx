@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Edit, Trash2, Search, TrendingUp, AlertTriangle, DollarSign, Calendar } from 'lucide-react';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { BudgetItem, BudgetRequest } from '@/types/api';
-import { budgetManagementData, mockBudgetRequest } from '@/services/mockData';
+import { budgetManagementData, mockBudgetRequest } from '@/services/mockData/mockData';
 import { apiClient } from '@/utils/apiClient';
 import { BudgetForm } from './BudgetForm';
 import { BudgetRequestForm } from './BudgetRequestForm';

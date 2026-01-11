@@ -10,4 +10,5 @@ public interface EmployeeService {
     List<User> listAllEmployees();
     Optional<User> findByEmployeeId(String employeeId);
     Optional<User> findById(Long id);
+    List<User> getProvisionedEmployees();
 }

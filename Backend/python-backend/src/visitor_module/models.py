@@ -8,8 +8,7 @@ class Visitor(Base):
     __tablename__ = 'visitors'
 
     visitor_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    tenant_id = Column(Integer, default=0)
-    full_name = Column(String(200), nullable=False)  # Combined first and last name
+    full_name = Column(String(200), nullable=False) 
     contact_number = Column(String(20), nullable=False)
     email = Column(String(255), nullable=True)
     visiting_employee_id = Column(Integer, ForeignKey('users.id'), nullable=False)

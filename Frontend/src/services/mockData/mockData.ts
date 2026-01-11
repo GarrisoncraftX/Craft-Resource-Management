@@ -60,9 +60,9 @@ export const mockDashboardKPIs = {
 };
 
 export const mockAttendanceHistory = [
-    { date: '2024-06-01', checkIn: '08:30', checkOut: '17:15', totalHours: '8.75', status: 'Present' },
-    { date: '2024-05-31', checkIn: '08:45', checkOut: '17:30', totalHours: '8.75', status: 'Present' },
-    { date: '2024-05-30', checkIn: '-', checkOut: '-', totalHours: '0', status: 'Sick Leave' },
+    { date: '2024-06-01', checkIn: '08:30', checkOut: '17:15', totalHours: '8.75', status: 'Present', clock_in_method: 'QR Code', clock_out_method: 'QR Code' },
+    { date: '2024-05-31', checkIn: '08:45', checkOut: '17:30', totalHours: '8.75', status: 'Present', clock_in_method: 'QR Code', clock_out_method: 'QR Code' },
+    { date: '2024-05-30', checkIn: '-', checkOut: '-', totalHours: '0', status: 'Sick Leave', clock_in_method: undefined, clock_out_method: undefined },
   ];
 
 export const mockLeaveApplications = [

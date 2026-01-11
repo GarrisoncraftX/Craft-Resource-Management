@@ -12,6 +12,9 @@ export interface User {
   department: string;
   role: string;
   profilePictureUrl?: string;
+  defaultPasswordChanged?: boolean;
+  profileCompleted?: boolean;
+  hiredDate?: string;
 }
 
 export interface AuthContextType {

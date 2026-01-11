@@ -1,4 +1,5 @@
 const authService = require('./service');
+const communicationService = require('../communication/service');
 
 const register = async (req, res) => {
   try {
@@ -29,8 +30,46 @@ const logout = async (req, res) => {
   res.status(200).json({ message: 'Logout successful' });
 };
 
+const hrCreateEmployee = async (req, res) => {
+  try {
+    const { firstName, lastName, email, departmentId, jobGradeId, roleId } = req.body;
+    const hrUserId = req.user.id;
+
+    const employeeId = await authService.hrCreateEmployee(
+      firstName,
+      lastName,
+      email,
+      departmentId,
+      jobGradeId,
+      roleId,
+      hrUserId
+    );
+
+    const defaultPassword = 'CRMSemp123!';
+    await communicationService.sendEmployeeWelcomeEmail(
+      email,
+      firstName,
+      lastName,
+      employeeId,
+      defaultPassword
+    );
+
+    res.status(201).json({
+      success: true,
+      employeeId,
+      message: 'Employee created and email sent successfully'
+    });
+  } catch (error) {
+    console.error('HR Create Employee Error:', error);
+    const statusCode = error.statusCode || 500;
+    const message = error.message || 'Failed to create employee';
+    res.status(statusCode).json({ error: message });
+  }
+};
+
 module.exports = {
   register,
   signin,
   logout,
+  hrCreateEmployee,
 };

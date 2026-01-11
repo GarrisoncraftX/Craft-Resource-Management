@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, Search, Receipt, Calendar, DollarSign, Send } from 'lucide-react';
 import { PermissionGuard } from '@/components/PermissionGuard';
+import { financeApiService } from '@/services/javabackendapi/financeApi';
 
 interface CustomerInvoice {
   id: string;
@@ -25,7 +26,17 @@ interface CustomerInvoice {
 }
 
 export const AccountsReceivable: React.FC = () => {
-  const [invoices, setInvoices] = useState<CustomerInvoice[]>([
+  const [invoices, setInvoices] = useState<CustomerInvoice[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [isAddingInvoice, setIsAddingInvoice] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<CustomerInvoice | null>(null);
+  const [isPaymentDialog, setIsPaymentDialog] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState(0);
+
+  const mockInvoices: CustomerInvoice[] = [
     {
       id: '1',
       invoiceNumber: 'INV-2024-001',
@@ -65,14 +76,37 @@ export const AccountsReceivable: React.FC = () => {
       balance: 8500.00,
       paymentTerms: 'Net 15',
     },
-  ]);
+  ];
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [isAddingInvoice, setIsAddingInvoice] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<CustomerInvoice | null>(null);
-  const [isPaymentDialog, setIsPaymentDialog] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState(0);
+  useEffect(() => {
+    fetchInvoices();
+  }, []);
+
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true);
+      const data = await financeApiService.getAllAccountReceivables();
+      const mappedData: CustomerInvoice[] = data.map((item: any) => ({
+        id: item.id?.toString() || '',
+        invoiceNumber: item.invoiceNumber,
+        customer: item.customerId?.toString() || 'Unknown',
+        amount: item.amount,
+        dueDate: item.dueDate,
+        status: item.status as CustomerInvoice['status'],
+        description: item.description || '',
+        issueDate: item.dueDate,
+        amountPaid: 0,
+        balance: item.amount,
+        paymentTerms: 'Net 30',
+      }));
+      setInvoices(mappedData);
+    } catch (error) {
+      console.error('Failed to fetch invoices, using mock data:', error);
+      setInvoices(mockInvoices);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredInvoices = invoices.filter(invoice => {
     const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||

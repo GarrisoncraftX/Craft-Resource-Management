@@ -2,7 +2,7 @@ import React, { useState } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 import {
   Calculator, Users, Package, ShoppingCart, Shield, Scale,
-  Megaphone, Map, Receipt, Heart, Truck, BarChart3, ChevronLeft
+  Megaphone, Map, Receipt, Heart, Truck, BarChart3, ChevronLeft, Settings
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from '@/contexts/AuthContext'
@@ -89,6 +89,22 @@ const modules = [
       { title: "Compliance", url: "/legal/compliance" },
       { title: "Documents", url: "/legal/documents" },
       { title: "Opinions", url: "/legal/opinions" },
+    ]
+  },
+  {
+    title: "Operations",
+    url: "/operations",
+    icon: Settings,
+    color: "from-purple-500 to-purple-600",
+    subItems: [
+      { title: "Dashboard", url: "/operations/dashboard" },
+      { title: "Facilities", url: "/assets/dashboard" },
+      { title: "Maintenance", url: "/assets/maintenance" },
+      { title: "Procurement", url: "/procurement/dashboard" },
+      { title: "Vendors", url: "/procurement/vendors" },
+      { title: "Health & Safety", url: "/health-safety/dashboard" },
+      { title: "Transportation", url: "/transportation" },
+      { title: "Analytics", url: "/reports/analytics" },
     ]
   },
   {
@@ -202,6 +218,7 @@ export function UnifySidebar() {
       'REVENUE_TAX': 'Revenue',
       'SECURITY': 'Security',
       'ASSETS': 'Assets',
+      'OPERATIONS': 'Operations',
     }
 
     const adminRoles = ['ADMIN', 'SYSTEM_ADMIN', 'SUPER_ADMIN']

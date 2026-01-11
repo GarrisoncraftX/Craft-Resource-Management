@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus, Search, CreditCard, Calendar, DollarSign } from 'lucide-react';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { Invoice } from '@/types/api';
-import { mockInvoice } from '@/services/mockData';
+import { mockInvoice } from '@/services/mockData/mockData';
+import { financeApiService } from '@/services/javabackendapi/financeApi';
 
 const InvoiceForm: React.FC<{ invoice?: Invoice; onSubmit: (invoice: Invoice) => void; onCancel: () => void }> = ({ invoice, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -152,12 +153,30 @@ const InvoiceForm: React.FC<{ invoice?: Invoice; onSubmit: (invoice: Invoice) =>
 };
 
 export const AccountsPayable: React.FC = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>(mockInvoice);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [isAddingInvoice, setIsAddingInvoice] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
+  useEffect(() => {
+    fetchInvoices();
+  }, []);
+
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true);
+      const data = await financeApiService.getAllAccountPayables();
+      setInvoices(data as unknown as Invoice[]);
+    } catch (error) {
+      console.error('Failed to fetch invoices, using mock data:', error);
+      setInvoices(mockInvoice);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredInvoices = invoices.filter(invoice => {
     const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -1,10 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { apiClient } from '../utils/apiClient';
 import { lookupApiService } from '@/services/nodejsbackendapi/lookupApi';
+import { systemApiService } from '@/services/nodejsbackendapi/systemApi';
+import { hrApiService } from '@/services/javabackendapi/hrApi';
+import { financeApiService } from '@/services/javabackendapi/financeApi';
+import { assetApiService } from '@/services/javabackendapi/assetApi';
+import { legalApiService } from '@/services/javabackendapi/legalApi';
+import { revenueApiService } from '@/services/javabackendapi/revenueApi';
+import { systemApiService as javaSystemApiService } from '@/services/javabackendapi/systemApi';
+import { attendanceApiService } from '@/services/pythonbackendapi/attendanceApi';
 import type { Department, Role, BudgetItem, Payslip, AuditLog } from '../types/api';
 import type { Employee, UpdateEmployeeRequest } from '../types/hr';
-import type { Asset, AssetStatistics } from '@/types/asset';
-import { attendanceApiService } from '@/services/attendanceApi';
+import type { Asset } from '@/types/asset';
 
 function mapToBackendBudget(budget: BudgetItem) {
   return {
@@ -65,54 +71,96 @@ function mapToFrontendBudget(budget: BudgetItem): BudgetItem {
 
 
 
+// HR Employee endpoints (Java Backend)
 export async function fetchEmployees(): Promise<Employee[]> {
-  return apiClient.get('/hr/employees/list');
+  return hrApiService.listEmployees() as any;
 }
 
 export async function fetchEmployeeById(id: string): Promise<Employee> {
-  return apiClient.get(`/hr/employees/id/${id}`);
+  return hrApiService.getEmployeeById(Number(id)) as any;
 }
 
 export async function updateEmployeeById(id: string, employee: UpdateEmployeeRequest): Promise<Employee> {
-  return apiClient.put(`/hr/employees/id/${id}`, employee);
+  return hrApiService.updateEmployee(Number(id), employee as any) as any;
 }
 
 export async function uploadProfilePicture(id: string, file: File): Promise<Employee> {
-  const formData = new FormData();
-  formData.append('file', file);
-  return apiClient.put(`/hr/employees/id/${id}/profile-picture`, formData);
+  await hrApiService.updateProfilePicture(Number(id), file);
+  return hrApiService.getEmployeeById(Number(id)) as any;
 }
 
 export async function createEmployee(employee: Partial<Employee>): Promise<Employee> {
-  return apiClient.post('/hr/employees/register', employee);
+  return hrApiService.registerEmployee(employee as any) as any;
 }
 
+export async function fetchProvisionedEmployees(): Promise<any[]> {
+  return hrApiService.getProvisionedEmployees();
+}
+
+// Finance Budget endpoints (Java Backend)
 export async function createBudget(budget: BudgetItem): Promise<BudgetItem> {
   const backendBudget = mapToBackendBudget(budget);
-  const response = await apiClient.post('/finance/budgets', backendBudget);
-  return mapToFrontendBudget(response);
+  const response = await financeApiService.createBudget(backendBudget as any);
+  return mapToFrontendBudget(response as any);
 }
 
 export async function updateBudget(id: string | number, budget: BudgetItem): Promise<BudgetItem> {
   const backendBudget = mapToBackendBudget(budget);
-  const response = await apiClient.put(`/finance/budgets/${id}`, backendBudget);
-  return mapToFrontendBudget(response);
+  const response = await financeApiService.updateBudget(Number(id), backendBudget as any);
+  return mapToFrontendBudget(response as any);
 }
 
 export async function deleteBudget(id: string | number): Promise<void> {
-  return apiClient.delete(`/finance/budgets/${id}`);
+  return financeApiService.deleteBudget(Number(id));
 }
 
+// Payroll endpoints (Java Backend)
 export async function fetchPayslips(userId?: string): Promise<Payslip[]> {
   if (userId) {
-    return apiClient.get(`/hr/payroll/payslips/user/${userId}`);
+    return hrApiService.getPayslipsByUser(Number(userId)) as any;
   }
-  return apiClient.get('/hr/payroll/payslips');
+  return hrApiService.getAllPayslips() as any;
 }
 
+// Attendance endpoints (Python Backend)
 export async function fetchAttendance(userId: string): Promise<any[]> {
-  const response = await attendanceApiService.getAttendanceRecords({ user_id: userId });
-  return response || [];
+  return attendanceApiService.getAttendanceRecords({ user_id: userId });
+}
+
+export async function getManualFallbackAttendances(): Promise<any[]> {
+  return attendanceApiService.getManualFallbackAttendances();
+}
+
+export async function getAttendancesByMethod(method: string): Promise<any[]> {
+  return attendanceApiService.getAttendancesByMethod(method);
+}
+
+export async function flagAttendanceForAudit(attendanceId: number, auditNotes: string): Promise<any> {
+  return attendanceApiService.flagAttendanceForAudit(attendanceId, auditNotes);
+}
+
+export async function getManualFallbacksByDateRange(startDate: string, endDate: string): Promise<any[]> {
+  return attendanceApiService.getManualFallbacksByDateRange(startDate, endDate);
+}
+
+export async function getUserAttendanceByDateRange(userId: number, startDate: string, endDate: string): Promise<any[]> {
+  return attendanceApiService.getUserAttendanceByDateRange(userId, startDate, endDate);
+}
+
+export async function getBuddyPunchReport(): Promise<any> {
+  return attendanceApiService.getBuddyPunchReport();
+}
+
+export async function flagBuddyPunchRisk(attendanceId: number, reason: string): Promise<any> {
+  return attendanceApiService.flagBuddyPunchRisk(attendanceId, reason);
+}
+
+export async function getAttendanceMethodStatistics(): Promise<any> {
+  return attendanceApiService.getAttendanceMethodStatistics();
+}
+
+export async function reviewAttendance(attendanceId: number, hrUserId: number, notes: string): Promise<any> {
+  return attendanceApiService.reviewAttendance(attendanceId, hrUserId, notes);
 }
 
 export const mapAttendanceToUI = (attendanceData: any[]) => {
@@ -160,169 +208,171 @@ export const mapPayrollToUI = (payrollData: Payslip[]) => {
   }));
 };
 
-// Integrate Asset endpoints implemented in Java AssetController (@RequestMapping("/assets")).
-// We call '/assets' so the API Gateway forwards to Java backend. Keep these functions alongside other services.
-
-// Fetch all assets from backend (GET /assets).
-// If gateway rewrites or expects /api prefix adjust accordingly (this project proxies non-/api by default to java backend).
+// Asset endpoints (Java Backend)
 export async function fetchAssets(): Promise<Asset[]> {
-  return apiClient.get('/assets');
+  return assetApiService.getAllAssets() as any;
 }
 
-// Fetch single asset by id (GET /assets/{id})
 export async function fetchAssetById(id: number | string): Promise<Asset> {
-  return apiClient.get(`/assets/${id}`);
+  return assetApiService.getAssetById(Number(id)) as any;
 }
 
-// Create / Update / Delete wrappers
 export async function createAsset(asset: Partial<Asset>): Promise<Asset> {
-  return apiClient.post('/assets', asset);
+  return assetApiService.createAsset(asset as any) as any;
 }
+
 export async function updateAsset(id: number | string, asset: Partial<Asset>): Promise<Asset> {
-  return apiClient.put(`/assets/${id}`, asset);
+  return assetApiService.updateAsset(Number(id), asset as any) as any;
 }
+
 export async function deleteAsset(id: number | string): Promise<void> {
-  await apiClient.delete(`/assets/${id}`);
+  return assetApiService.deleteAsset(Number(id));
 }
 
-// MaintenanceRecord endpoints (Java controller: /assets/maintenance-records)
 export async function fetchMaintenanceRecords() {
-  return apiClient.get('/assets/maintenance-records');
+  return assetApiService.getAllMaintenanceRecords();
 }
+
 export async function createMaintenanceRecord(record: unknown) {
-  return apiClient.post('/assets/maintenance-records', record);
+  return assetApiService.createMaintenanceRecord(record as any);
 }
+
 export async function updateMaintenanceRecord(id: number | string, record: unknown) {
-  return apiClient.put(`/assets/maintenance-records/${id}`, record);
+  return assetApiService.updateMaintenanceRecord(Number(id), record as any);
 }
+
 export async function deleteMaintenanceRecord(id: number | string) {
-  return apiClient.delete(`/assets/maintenance-records/${id}`);
+  return assetApiService.deleteMaintenanceRecord(Number(id));
 }
 
-// DisposalRecord endpoints (Java controller: /assets/disposal-records)
 export async function fetchDisposalRecords() {
-  return apiClient.get('/assets/disposal-records');
-}
-export async function createDisposalRecord(record: unknown) {
-  return apiClient.post('/assets/disposal-records', record);
-}
-export async function updateDisposalRecord(id: number | string, record: unknown) {
-  return apiClient.put(`/assets/disposal-records/${id}`, record);
-}
-export async function deleteDisposalRecord(id: number | string) {
-  return apiClient.delete(`/assets/disposal-records/${id}`);
+  return assetApiService.getAllDisposalRecords();
 }
 
-// Acquisition endpoints (placeholder - add actual backend when ready)
+export async function createDisposalRecord(record: unknown) {
+  return assetApiService.createDisposalRecord(record as any);
+}
+
+export async function updateDisposalRecord(id: number | string, record: unknown) {
+  return assetApiService.updateDisposalRecord(Number(id), record as any);
+}
+
+export async function deleteDisposalRecord(id: number | string) {
+  return assetApiService.deleteDisposalRecord(Number(id));
+}
+
 export async function fetchAcquisitionRequests() {
-  return apiClient.get('/assets/acquisition-requests');
+  return assetApiService.getAcquisitionRequests();
 }
 
 export async function submitAcquisitionRequest(request: unknown) {
-  return apiClient.post('/assets/acquisition-requests', request);
+  return assetApiService.submitAcquisitionRequest(request);
 }
 
-
-//LegalCase endpoints (Java controller: /legal/cases)
-export async function createLegalCase(record: any){
-  return apiClient.post('/legal/cases', record);
+// Legal endpoints (Java Backend)
+export async function createLegalCase(record: any) {
+  return legalApiService.createLegalCase(record);
 }
 
 export async function fetchLegalCases() {
-  return apiClient.get('/legal/cases');
+  return legalApiService.getAllLegalCases();
 }
+
 export async function updateLegalCase(id: number | string, record: any) {
-  return apiClient.put(`/legal/cases/${id}`, record);
+  return legalApiService.updateLegalCase(Number(id), record);
 }
+
 export async function deleteLegalCase(id: number | string) {
-  return apiClient.delete(`/legal/cases/${id}`);
+  return legalApiService.deleteLegalCase(Number(id));
 }
 
 export async function fetchLegalCaseById(id: number | string) {
-  return apiClient.get(`/legal/cases/${id}`);
+  return legalApiService.getLegalCaseById(Number(id));
 }
 
-// ComplianceRecord endpoints (Java controller: /legal/compliance-records)
 export async function createComplianceRecord(record: any) {
-  return apiClient.post('/legal/compliance-records', record);
+  return legalApiService.createComplianceRecord(record);
 }
 
 export async function fetchComplianceRecords() {
-  return apiClient.get('/legal/compliance-records');
+  return legalApiService.getAllComplianceRecords();
 }
+
 export async function fetchComplianceRecordById(id: number | string) {
-  return apiClient.get(`/legal/compliance-records/${id}`);
+  return legalApiService.getComplianceRecordById(Number(id));
 }
 
 export async function updateComplianceRecord(id: number | string, record: any) {
-  return apiClient.put(`/legal/compliance-records/${id}`, record);
+  return legalApiService.updateComplianceRecord(Number(id), record);
 }
 
 export async function deleteComplianceRecord(id: number | string) {
-  return apiClient.delete(`/legal/compliance-records/${id}`);
+  return legalApiService.deleteComplianceRecord(Number(id));
 }
 
-//TaxAssessment endpoints (Java controller: /tax/assessments)
+// Revenue endpoints (Java Backend)
 export async function createTaxAssessment(record: any) {
-  return apiClient.post('/revenue/tax-assessments', record);
+  return revenueApiService.createTaxAssessment(record);
 }
 
 export async function fetchTaxAssessments() {
-  return apiClient.get('/revenue/tax-assessments');
+  return revenueApiService.getAllTaxAssessments();
 }
 
 export async function fetchTaxAssessmentById(id: number | string) {
-  return apiClient.get(`/revenue/tax-assessments/${id}`);
+  return revenueApiService.getTaxAssessmentById(Number(id));
 }
 
 export async function updateTaxAssessment(id: number | string, record: any) {
-  return apiClient.put(`/revenue/tax-assessments/${id}`, record);
+  return revenueApiService.updateTaxAssessment(Number(id), record);
 }
 
 export async function deleteTaxAssessment(id: number | string) {
-  return apiClient.delete(`/revenue/tax-assessments/${id}`);
+  return revenueApiService.deleteTaxAssessment(Number(id));
 }
 
-//RevenueCollection endpoints (Java controller: /revenue/revenue-collections)
 export async function createRevenueCollection(record: any) {
-  return apiClient.post('/revenue/revenue-collections', record);
+  return revenueApiService.createRevenueCollection(record);
 }
 
 export async function fetchRevenueCollections() {
-  return apiClient.get('/revenue/revenue-collections');
+  return revenueApiService.getAllRevenueCollections();
 }
-
 
 export async function fetchRevenueCollectionById(id: number | string) {
-  return apiClient.get(`/revenue/revenue-collections/${id}`);
+  return revenueApiService.getRevenueCollectionById(Number(id));
 }
+
 export async function updateRevenueCollection(id: number | string, record: any) {
-  return apiClient.put(`/revenue/revenue-collections/${id}`, record);
+  return revenueApiService.updateRevenueCollection(Number(id), record);
 }
+
 export async function deleteRevenueCollection(id: number | string) {
-  return apiClient.delete(`/revenue/revenue-collections/${id}`);
+  return revenueApiService.deleteRevenueCollection(Number(id));
 }
 
-// SystemConfig endpoints
+// System Config endpoints (Java Backend)
 export async function createSystem(record: any) {
-  return apiClient.post('/configs', record);
-}
-export async function fetchSystemByID(id: number | string) {
-  return apiClient.get(`/configs/${id}`);
+  return javaSystemApiService.createSystemConfig(record);
 }
 
-export async function fetchSystem(){
-  return apiClient.get('/configs'); 
+export async function fetchSystemByID(id: number | string) {
+  return javaSystemApiService.getSystemConfigById(Number(id));
 }
+
+export async function fetchSystem() {
+  return javaSystemApiService.getAllSystemConfigs();
+}
+
 export async function updateSystem(id: number | string, record: any) {
-  return apiClient.put(`/configs/${id}`, record);
+  return javaSystemApiService.updateSystemConfig(Number(id), record);
 }
 
 export async function deleteSystem(id: number | string) {
-  return apiClient.delete(`/configs/${id}`);
+  return javaSystemApiService.deleteSystemConfig(Number(id));
 }
 
-
+// Lookup endpoints (Node.js Backend)
 export async function fetchDepartments(): Promise<Department[]> {
   return lookupApiService.getDepartments();
 }
@@ -331,8 +381,9 @@ export async function fetchRoles(): Promise<Role[]> {
   return lookupApiService.getRoles();
 }
 
+// Audit Log endpoints (Node.js Backend)
 export async function fetchRecentActivities(userId: string): Promise<AuditLog[]> {
-  return apiClient.get(`/system/audit-logs/user/${userId}/recent`);
+  return systemApiService.getRecentActivities(userId) as any;
 }
 
 export { Department, Role, BudgetItem, Employee, UpdateEmployeeRequest, Payslip, AuditLog };

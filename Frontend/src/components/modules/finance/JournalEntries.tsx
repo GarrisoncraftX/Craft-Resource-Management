@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus, Edit, Search } from 'lucide-react';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { JournalEntryForm } from './JournalEntryForm';
-import { journalApi } from '@/services/journalApi';
+import { journalApi } from '@/services/javabackendapi/journalApi';
 import { fetchEmployees } from '@/services/api';
 import type { JournalEntry } from '@/types/journal';
 import type { Employee } from '@/types/hr';

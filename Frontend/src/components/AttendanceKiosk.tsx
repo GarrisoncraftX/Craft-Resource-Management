@@ -56,15 +56,20 @@ export const AttendanceKiosk: React.FC = () => {
     try {
       let action: 'clock-in' | 'clock-out' = 'clock-in';
 
-      const endpoint = `/api/biometric/attendance/${action}`;
+      // Determine if this is clock-in or clock-out based on current attendance status
+      const currentAttendanceResponse = await apiClient.get(`/attendance/current/${payload.employeeId}`);
+      const hasCurrentAttendance = currentAttendanceResponse && !currentAttendanceResponse.clock_out_time;
+
+      action = hasCurrentAttendance ? 'clock-out' : 'clock-in';
+
+      const endpoint = action === 'clock-in' ? '/attendance/manual-clock-in' : '/attendance/manual-clock-out';
       const response = await apiClient.post(endpoint, {
-        ...payload,
-        verificationMethod: 'manual',
+        employeeId: payload.employeeId,
+        password: payload.password,
       });
 
-      action = response.action || action;
       setLastAction(action);
-      setEmployeeName(response.employeeName || 'Employee');
+      setEmployeeName(response.user?.first_name + ' ' + response.user?.last_name || 'Employee');
 
       toast({
         title: 'Success!',

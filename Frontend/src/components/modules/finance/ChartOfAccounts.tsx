@@ -12,7 +12,7 @@ import { PermissionGuard } from '@/components/PermissionGuard';
 import { apiClient } from '@/utils/apiClient';
 import { AccountForm } from './AccountForm';
 import { Account } from '@/types/api'
-import { mockAccountData } from '@/services/mockData.ts'
+import { mockAccountData } from '@/services/mockData/mockData'
 
 export const ChartOfAccounts: React.FC = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);

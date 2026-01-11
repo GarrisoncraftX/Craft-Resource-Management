@@ -97,6 +97,15 @@ class AssetApiService {
   async deleteDisposalRecord(id: number): Promise<void> {
     return apiClient.delete(`/assets/disposal-records/${id}`);
   }
+
+  // Acquisition endpoints
+  async getAcquisitionRequests(): Promise<any[]> {
+    return apiClient.get('/assets/acquisition-requests');
+  }
+
+  async submitAcquisitionRequest(request: unknown): Promise<any> {
+    return apiClient.post('/assets/acquisition-requests', request);
+  }
 }
 
 export const assetApiService = new AssetApiService();

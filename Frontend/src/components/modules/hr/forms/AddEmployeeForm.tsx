@@ -5,10 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { fetchDepartments, fetchRoles, createEmployee } from '@/services/api';
-import { mockDepartments, mockRoles } from '@/services/mockData';
+import { fetchDepartments, fetchRoles } from '@/services/api';
+import { apiClient } from '@/utils/apiClient';
+import { mockDepartments, mockRoles } from '@/services/mockData/mockData';
 import type { Department, Role } from '@/types/api';
-import type { Employee } from '@/types/hr';
 
 
 interface AddEmployeeFormProps {
@@ -23,126 +23,59 @@ export const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
   onSuccess
 }) => {
   const [formData, setFormData] = useState({
-    employeeId: '',
     firstName: '',
     lastName: '',
-    middleName: '',
     email: '',
     departmentId: '',
+    jobGradeId: '3',
     roleId: '',
-    nationalId: '',
-    phoneNumber: '',
-    address: '',
-    dateOfBirth: '',
-    hireDate: '',
-    salary: '',
-    bankAccountNumber: '',
-    momoNumber: '',
   });
 
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
-  const [isDepartmentsLoading, setIsDepartmentsLoading] = useState(false);
-  const [isRolesLoading, setIsRolesLoading] = useState(false);
+  const [jobGrades] = useState([
+    { id: 1, name: 'G1 - Entry Level' },
+    { id: 2, name: 'G2 - Junior' },
+    { id: 3, name: 'G3 - Mid Level' },
+    { id: 4, name: 'G4 - Senior' },
+    { id: 5, name: 'G5 - Manager' }
+  ]);
 
   useEffect(() => {
-    const loadDepartments = async () => {
-      setIsDepartmentsLoading(true);
-      try {
-        const response = await fetchDepartments();
-        if (response?.length > 0) {
-          setDepartments(response);
-        } else {
-          setDepartments(mockDepartments);
-        }
-      } catch (err) {
-        console.error('Failed to fetch departments:', err);
-        setDepartments(mockDepartments);
-      } finally {
-        setIsDepartmentsLoading(false);
-      }
-    };
-
-    const loadRoles = async () => {
-      setIsRolesLoading(true);
-      try {
-        const response = await fetchRoles();
-        if (response?.length > 0) {
-          setRoles(response);
-        } else {
-          setRoles(mockRoles);
-        }
-      } catch (err) {
-        console.error('Failed to fetch roles:', err);
-        setRoles(mockRoles);
-      } finally {
-        setIsRolesLoading(false);
-      }
-    };
-
     if (open) {
-      loadDepartments();
-      loadRoles();
+      fetchDepartments().then(setDepartments).catch(() => setDepartments(mockDepartments));
+      fetchRoles().then(setRoles).catch(() => setRoles(mockRoles));
     }
   }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setLoading(true);
 
     try {
-      const payload: Partial<Employee> = {
-        employeeId: formData.employeeId,
+      const response = await apiClient.post('/api/auth/hr/create-employee', {
         firstName: formData.firstName,
         lastName: formData.lastName,
-        middleName: formData.middleName,
         email: formData.email,
         departmentId: Number(formData.departmentId),
+        jobGradeId: Number(formData.jobGradeId),
         roleId: Number(formData.roleId),
-        phone: formData.phoneNumber,
-        address: formData.address,
-        dateOfBirth: formData.dateOfBirth,
-        hireDate: formData.hireDate,
-        salary: formData.salary ? Number(formData.salary) : undefined,
-        accountNumber: formData.bankAccountNumber,
-        momoNumber: formData.momoNumber,
-      };
-
-      await createEmployee(payload);
+      });
 
       toast({
         title: "Success",
-        description: "Employee added successfully!"
+        description: `Employee ${response.employeeId} created! Credentials sent to ${formData.email}`
       });
 
       onSuccess?.();
       onOpenChange(false);
-
-      // Reset form
-      setFormData({
-        employeeId: '',
-        firstName: '',
-        lastName: '',
-        middleName: '',
-        email: '',
-        departmentId: '',
-        roleId: '',
-        nationalId: '',
-        phoneNumber: '',
-        address: '',
-        dateOfBirth: '',
-        hireDate: '',
-        salary: '',
-        bankAccountNumber: '',
-        momoNumber: '',
-      });
+      setFormData({ firstName: '', lastName: '', email: '', departmentId: '', jobGradeId: '3', roleId: '' });
     } catch (error: unknown) {
       const err = error as { message?: string };
       toast({
         title: "Error",
-        description: err.message || "Failed to add employee",
+        description: err.message || "Failed to create employee",
         variant: "destructive"
       });
     } finally {
@@ -152,209 +85,65 @@ export const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Add New Employee</DialogTitle>
+          <DialogTitle>Register New Employee</DialogTitle>
           <DialogDescription>
-            Enter complete details for the new employee
+            Employee ID will be auto-generated. Default password (CRMSemp123!) will be emailed.
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name Fields */}
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="firstName">First Name *</Label>
-              <Input
-                id="firstName"
-                value={formData.firstName}
-                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="middleName">Middle Name</Label>
-              <Input
-                id="middleName"
-                value={formData.middleName}
-                onChange={(e) => setFormData(prev => ({ ...prev, middleName: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label htmlFor="lastName">Last Name *</Label>
-              <Input
-                id="lastName"
-                value={formData.lastName}
-                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Employee ID and Email */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="employeeId">Employee ID *</Label>
-              <Input
-                id="employeeId"
-                value={formData.employeeId}
-                onChange={(e) => setFormData(prev => ({ ...prev, employeeId: e.target.value }))}
-                placeholder="Enter Employee ID"
-                required
-              />
+              <Label>First Name *</Label>
+              <Input value={formData.firstName} onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))} required />
             </div>
             <div>
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                required
-              />
+              <Label>Last Name *</Label>
+              <Input value={formData.lastName} onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))} required />
             </div>
           </div>
 
-          {/* National ID and Phone */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="nationalId">National ID</Label>
-              <Input
-                id="nationalId"
-                value={formData.nationalId}
-                onChange={(e) => setFormData(prev => ({ ...prev, nationalId: e.target.value }))}
-                placeholder="National ID number"
-              />
-            </div>
-            <div>
-              <Label htmlFor="phoneNumber">Phone Number</Label>
-              <Input
-                id="phoneNumber"
-                type="tel"
-                value={formData.phoneNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, phoneNumber: e.target.value }))}
-              />
-            </div>
-          </div>
-
-          {/* Address */}
           <div>
-            <Label htmlFor="address">Address</Label>
-            <Input
-              id="address"
-              value={formData.address}
-              onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-              placeholder="Residential address"
-            />
+            <Label>Email *</Label>
+            <Input type="email" value={formData.email} onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} required />
           </div>
 
-          {/* Date of Birth */}
-          <div>
-            <Label htmlFor="dateOfBirth">Date of Birth</Label>
-            <Input
-              id="dateOfBirth"
-              type="date"
-              value={formData.dateOfBirth}
-              onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
-            />
-          </div>
-
-          {/* Department and Role */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="department">Department *</Label>
-              <Select 
-                value={formData.departmentId} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, departmentId: value }))}
-                disabled={isDepartmentsLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={isDepartmentsLoading ? "Loading..." : "Select department"} />
-                </SelectTrigger>
+              <Label>Department *</Label>
+              <Select value={formData.departmentId} onValueChange={(value) => setFormData(prev => ({ ...prev, departmentId: value }))}>
+                <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
                 <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id.toString()}>
-                      {dept.name}
-                    </SelectItem>
-                  ))}
+                  {departments.map((dept) => <SelectItem key={dept.id} value={dept.id.toString()}>{dept.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label htmlFor="role">Role *</Label>
-              <Select 
-                value={formData.roleId} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, roleId: value }))}
-                disabled={isRolesLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={isRolesLoading ? "Loading..." : "Select role"} />
-                </SelectTrigger>
+              <Label>Role *</Label>
+              <Select value={formData.roleId} onValueChange={(value) => setFormData(prev => ({ ...prev, roleId: value }))}>
+                <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
                 <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id.toString()}>
-                      {role.name}
-                    </SelectItem>
-                  ))}
+                  {roles.map((role) => <SelectItem key={role.id} value={role.id.toString()}>{role.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          {/* Hire Date and Salary */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="hireDate">Hire Date</Label>
-              <Input
-                id="hireDate"
-                type="date"
-                value={formData.hireDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, hireDate: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label htmlFor="salary">Salary</Label>
-              <Input
-                id="salary"
-                type="number"
-                value={formData.salary}
-                onChange={(e) => setFormData(prev => ({ ...prev, salary: e.target.value }))}
-                placeholder="Annual salary"
-              />
-            </div>
+          <div>
+            <Label>Job Grade *</Label>
+            <Select value={formData.jobGradeId} onValueChange={(value) => setFormData(prev => ({ ...prev, jobGradeId: value }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {jobGrades.map((grade) => <SelectItem key={grade.id} value={grade.id.toString()}>{grade.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Bank Account and Momo Number */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="bankAccountNumber">Bank Account Number</Label>
-              <Input
-                id="bankAccountNumber"
-                value={formData.bankAccountNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, bankAccountNumber: e.target.value }))}
-                placeholder="Bank account number"
-              />
-            </div>
-            <div>
-              <Label htmlFor="momoNumber">Mobile Money Number</Label>
-              <Input
-                id="momoNumber"
-                value={formData.momoNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, momoNumber: e.target.value }))}
-                placeholder="Mobile money number"
-              />
-            </div>
-          </div>
-
-
-          
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Adding Employee...' : 'Add Employee'}
-            </Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Creating...' : 'Create Employee'}</Button>
           </div>
         </form>
       </DialogContent>

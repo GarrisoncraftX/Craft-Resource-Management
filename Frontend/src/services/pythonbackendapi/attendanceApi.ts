@@ -95,6 +95,49 @@ class AttendanceApiService {
       responseType: 'blob'
     });
   }
+
+  // Manual fallback attendances
+  async getManualFallbackAttendances(): Promise<any[]> {
+    const response = await apiClient.get('/api/attendance/manual-fallbacks');
+    return response.attendances || [];
+  }
+
+  async getAttendancesByMethod(method: string): Promise<any[]> {
+    const response = await apiClient.get(`/api/attendance/by-method/${method}`);
+    return response.attendances || [];
+  }
+
+  async flagAttendanceForAudit(attendanceId: number, auditNotes: string): Promise<any> {
+    return apiClient.post(`/api/attendance/${attendanceId}/flag-audit`, { auditNotes });
+  }
+
+  async getManualFallbacksByDateRange(startDate: string, endDate: string): Promise<any[]> {
+    const response = await apiClient.get(`/api/attendance/manual-fallbacks/date-range?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
+    return response.attendances || [];
+  }
+
+  async getUserAttendanceByDateRange(userId: number, startDate: string, endDate: string): Promise<any[]> {
+    const response = await apiClient.get(`/api/attendance/user/${userId}/date-range?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
+    return response.attendances || [];
+  }
+
+  async getBuddyPunchReport(): Promise<any> {
+    const response = await apiClient.get('/api/attendance/buddy-punch-report');
+    return response.report || {};
+  }
+
+  async flagBuddyPunchRisk(attendanceId: number, reason: string): Promise<any> {
+    return apiClient.post(`/api/attendance/${attendanceId}/buddy-punch-flag`, { reason });
+  }
+
+  async getAttendanceMethodStatistics(): Promise<any> {
+    const response = await apiClient.get('/api/attendance/method-statistics');
+    return response.stats || {};
+  }
+
+  async reviewAttendance(attendanceId: number, hrUserId: number, notes: string): Promise<any> {
+    return apiClient.post(`/api/attendance/${attendanceId}/review`, { hrUserId, notes });
+  }
 }
 
 export const attendanceApiService = new AttendanceApiService();

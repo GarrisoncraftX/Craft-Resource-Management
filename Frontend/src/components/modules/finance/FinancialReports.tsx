@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -13,15 +13,101 @@ import {
   accountsPayableData,
   accountsReceivableData,
   financialReportsData,
-} from '@/services/mockData';
+} from '@/services/mockData/mockData';
 import {BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer,} from 'recharts';
+import { financeApiService } from '@/services/javabackendapi/financeApi';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A569BD', '#E74C3C', '#3498DB'];
 
 export const FinancialReports: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [reports, setReports] = useState(financialReportsData);
+  const [chartData, setChartData] = useState(chartOfAccountsData);
+  const [budgetData, setBudgetData] = useState(budgetManagementData);
+  const [journalData, setJournalData] = useState(journalEntriesData);
+  const [payableData, setPayableData] = useState(accountsPayableData);
+  const [receivableData, setReceivableData] = useState(accountsReceivableData);
+  const [loading, setLoading] = useState(true);
 
-  const filteredReports = financialReportsData.filter(report =>
+  useEffect(() => {
+    fetchFinancialData();
+  }, []);
+
+  const fetchFinancialData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch Chart of Accounts
+      try {
+        const accounts = await financeApiService.getAllChartOfAccounts();
+        const accountTypeCount = accounts.reduce((acc: any, account: any) => {
+          acc[account.accountType] = (acc[account.accountType] || 0) + 1;
+          return acc;
+        }, {});
+        const chartDataFromApi = Object.entries(accountTypeCount).map(([name, value]) => ({ name, value: value as number }));
+        if (chartDataFromApi.length > 0) setChartData(chartDataFromApi);
+      } catch (error) {
+        console.error('Failed to fetch chart of accounts, using mock data:', error);
+      }
+
+      // Fetch Budget Data
+      try {
+        const budgets = await financeApiService.getAllBudgets();
+        const budgetDataFromApi = budgets.map((b: any) => ({
+          name: b.budgetName,
+          budget: b.amount,
+          spent: b.spentAmount || 0
+        }));
+        if (budgetDataFromApi.length > 0) setBudgetData(budgetDataFromApi);
+      } catch (error) {
+        console.error('Failed to fetch budgets, using mock data:', error);
+      }
+
+      // Fetch Journal Entries
+      try {
+        const entries = await financeApiService.getAllJournalEntries();
+        const journalDataFromApi = entries.map((e: any) => ({
+          date: e.entryDate,
+          debit: e.debit,
+          credit: e.credit
+        }));
+        if (journalDataFromApi.length > 0) setJournalData(journalDataFromApi);
+      } catch (error) {
+        console.error('Failed to fetch journal entries, using mock data:', error);
+      }
+
+      // Fetch Accounts Payable
+      try {
+        const payables = await financeApiService.getAllAccountPayables();
+        const payableDataFromApi = payables.map((p: any) => ({
+          name: p.vendorId?.toString() || 'Vendor',
+          amount: p.amount
+        }));
+        if (payableDataFromApi.length > 0) setPayableData(payableDataFromApi);
+      } catch (error) {
+        console.error('Failed to fetch accounts payable, using mock data:', error);
+      }
+
+      // Fetch Accounts Receivable
+      try {
+        const receivables = await financeApiService.getAllAccountReceivables();
+        const receivableDataFromApi = receivables.map((r: any) => ({
+          name: r.customerId?.toString() || 'Customer',
+          amount: r.amount
+        }));
+        if (receivableDataFromApi.length > 0) setReceivableData(receivableDataFromApi);
+      } catch (error) {
+        console.error('Failed to fetch accounts receivable, using mock data:', error);
+      }
+
+    } catch (error) {
+      console.error('Failed to fetch financial data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredReports = reports.filter(report =>
     report.reportName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     report.period.toLowerCase().includes(searchTerm.toLowerCase()) ||
     report.status.toLowerCase().includes(searchTerm.toLowerCase())
@@ -53,7 +139,7 @@ export const FinancialReports: React.FC = () => {
         <CardHeader>
           <CardTitle>Reports Overview</CardTitle>
           <CardDescription>
-            {filteredReports.length} of {financialReportsData.length} reports displayed
+            {filteredReports.length} of {reports.length} reports displayed
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -101,7 +187,7 @@ export const FinancialReports: React.FC = () => {
           <ResponsiveContainer>
             <PieChart>
               <Pie
-                data={chartOfAccountsData}
+                data={chartData}
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
@@ -110,8 +196,8 @@ export const FinancialReports: React.FC = () => {
                 fill="#8884d8"
                 label
               >
-              {chartOfAccountsData.map((entry) => (
-                <Cell key={entry.name} fill={COLORS[chartOfAccountsData.findIndex(e => e.name === entry.name) % COLORS.length]} />
+              {chartData.map((entry) => (
+                <Cell key={entry.name} fill={COLORS[chartData.findIndex(e => e.name === entry.name) % COLORS.length]} />
               ))}
               </Pie>
               <Tooltip />
@@ -127,7 +213,7 @@ export const FinancialReports: React.FC = () => {
         </CardHeader>
         <CardContent style={{ width: '100%', height: 300 }}>
           <ResponsiveContainer>
-            <BarChart data={budgetManagementData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <BarChart data={budgetData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
@@ -146,7 +232,7 @@ export const FinancialReports: React.FC = () => {
         </CardHeader>
         <CardContent style={{ width: '100%', height: 300 }}>
           <ResponsiveContainer>
-            <BarChart data={journalEntriesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <BarChart data={journalData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
@@ -165,14 +251,14 @@ export const FinancialReports: React.FC = () => {
         </CardHeader>
         <CardContent style={{ width: '100%', height: 300 }}>
           <ResponsiveContainer>
-            <BarChart data={accountsPayableData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <BarChart data={payableData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip />
               <Legend />
-              {accountsPayableData.map((entry) => (
-                <Bar key={entry.name} dataKey="amount" fill={COLORS[accountsPayableData.findIndex(e => e.name === entry.name) % COLORS.length]} />
+              {payableData.map((entry) => (
+                <Bar key={entry.name} dataKey="amount" fill={COLORS[payableData.findIndex(e => e.name === entry.name) % COLORS.length]} />
               ))}
             </BarChart>
           </ResponsiveContainer>
@@ -185,14 +271,14 @@ export const FinancialReports: React.FC = () => {
         </CardHeader>
         <CardContent style={{ width: '100%', height: 300 }}>
           <ResponsiveContainer>
-            <BarChart data={accountsReceivableData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <BarChart data={receivableData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip />
               <Legend />
-              {accountsReceivableData.map((entry) => (
-                <Bar key={entry.name} dataKey="amount" fill={COLORS[accountsReceivableData.findIndex(e => e.name === entry.name) % COLORS.length]} />
+              {receivableData.map((entry) => (
+                <Bar key={entry.name} dataKey="amount" fill={COLORS[receivableData.findIndex(e => e.name === entry.name) % COLORS.length]} />
               ))}
             </BarChart>
           </ResponsiveContainer>
