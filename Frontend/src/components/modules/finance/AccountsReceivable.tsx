@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, Search, Receipt, Calendar, DollarSign, Send } from 'lucide-react';
+import { Plus, Search, Receipt, Calendar, DollarSign, Send } from 'lucide-react';
 import { PermissionGuard } from '@/components/PermissionGuard';
-import { financeApiService } from '@/services/javabackendapi/financeApi';
+import { financeApiService, AccountReceivable } from '@/services/javabackendapi/financeApi';
+import { mockCustomerInvoices } from '@/services/mockData/mockData';
 
 interface CustomerInvoice {
   id: string;
@@ -27,7 +28,6 @@ interface CustomerInvoice {
 
 export const AccountsReceivable: React.FC = () => {
   const [invoices, setInvoices] = useState<CustomerInvoice[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -36,57 +36,14 @@ export const AccountsReceivable: React.FC = () => {
   const [isPaymentDialog, setIsPaymentDialog] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(0);
 
-  const mockInvoices: CustomerInvoice[] = [
-    {
-      id: '1',
-      invoiceNumber: 'INV-2024-001',
-      customer: 'ABC Corporation',
-      amount: 15000.00,
-      dueDate: '2024-02-15',
-      status: 'Sent',
-      description: 'Professional services - Q1 2024',
-      issueDate: '2024-01-15',
-      amountPaid: 0,
-      balance: 15000.00,
-      paymentTerms: 'Net 30',
-    },
-    {
-      id: '2',
-      invoiceNumber: 'INV-2024-002',
-      customer: 'XYZ Industries',
-      amount: 25000.00,
-      dueDate: '2024-02-20',
-      status: 'Partial',
-      description: 'Equipment rental - January 2024',
-      issueDate: '2024-01-20',
-      amountPaid: 10000.00,
-      balance: 15000.00,
-      paymentTerms: 'Net 30',
-    },
-    {
-      id: '3',
-      invoiceNumber: 'INV-2024-003',
-      customer: 'Tech Solutions Ltd',
-      amount: 8500.00,
-      dueDate: '2024-02-05',
-      status: 'Overdue',
-      description: 'Software development services',
-      issueDate: '2024-01-05',
-      amountPaid: 0,
-      balance: 8500.00,
-      paymentTerms: 'Net 15',
-    },
-  ];
-
   useEffect(() => {
     fetchInvoices();
   }, []);
 
   const fetchInvoices = async () => {
     try {
-      setLoading(true);
       const data = await financeApiService.getAllAccountReceivables();
-      const mappedData: CustomerInvoice[] = data.map((item: any) => ({
+      const mappedData: CustomerInvoice[] = data.map((item: AccountReceivable) => ({
         id: item.id?.toString() || '',
         invoiceNumber: item.invoiceNumber,
         customer: item.customerId?.toString() || 'Unknown',
@@ -102,9 +59,7 @@ export const AccountsReceivable: React.FC = () => {
       setInvoices(mappedData);
     } catch (error) {
       console.error('Failed to fetch invoices, using mock data:', error);
-      setInvoices(mockInvoices);
-    } finally {
-      setLoading(false);
+      setInvoices(mockCustomerInvoices);
     }
   };
 
@@ -193,7 +148,7 @@ export const AccountsReceivable: React.FC = () => {
               id="amount"
               type="number"
               value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
+              onChange={(e) => setFormData({ ...formData, amount: Number.parseFloat(e.target.value) })}
               placeholder="0.00"
               step="0.01"
               required

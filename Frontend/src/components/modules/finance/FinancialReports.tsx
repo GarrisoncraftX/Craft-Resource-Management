@@ -15,19 +15,18 @@ import {
   financialReportsData,
 } from '@/services/mockData/mockData';
 import {BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer,} from 'recharts';
-import { financeApiService } from '@/services/javabackendapi/financeApi';
+import { financeApiService, ChartOfAccount, BudgetResponse, JournalEntry, AccountPayable, AccountReceivable } from '@/services/javabackendapi/financeApi';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A569BD', '#E74C3C', '#3498DB'];
 
 export const FinancialReports: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [reports, setReports] = useState(financialReportsData);
+  const [reports] = useState(financialReportsData);
   const [chartData, setChartData] = useState(chartOfAccountsData);
   const [budgetData, setBudgetData] = useState(budgetManagementData);
   const [journalData, setJournalData] = useState(journalEntriesData);
   const [payableData, setPayableData] = useState(accountsPayableData);
   const [receivableData, setReceivableData] = useState(accountsReceivableData);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchFinancialData();
@@ -35,12 +34,10 @@ export const FinancialReports: React.FC = () => {
 
   const fetchFinancialData = async () => {
     try {
-      setLoading(true);
-      
       // Fetch Chart of Accounts
       try {
         const accounts = await financeApiService.getAllChartOfAccounts();
-        const accountTypeCount = accounts.reduce((acc: any, account: any) => {
+        const accountTypeCount = accounts.reduce((acc: Record<string, number>, account: ChartOfAccount) => {
           acc[account.accountType] = (acc[account.accountType] || 0) + 1;
           return acc;
         }, {});
@@ -53,7 +50,7 @@ export const FinancialReports: React.FC = () => {
       // Fetch Budget Data
       try {
         const budgets = await financeApiService.getAllBudgets();
-        const budgetDataFromApi = budgets.map((b: any) => ({
+        const budgetDataFromApi = budgets.map((b: BudgetResponse) => ({
           name: b.budgetName,
           budget: b.amount,
           spent: b.spentAmount || 0
@@ -66,7 +63,7 @@ export const FinancialReports: React.FC = () => {
       // Fetch Journal Entries
       try {
         const entries = await financeApiService.getAllJournalEntries();
-        const journalDataFromApi = entries.map((e: any) => ({
+        const journalDataFromApi = entries.map((e: JournalEntry) => ({
           date: e.entryDate,
           debit: e.debit,
           credit: e.credit
@@ -79,7 +76,7 @@ export const FinancialReports: React.FC = () => {
       // Fetch Accounts Payable
       try {
         const payables = await financeApiService.getAllAccountPayables();
-        const payableDataFromApi = payables.map((p: any) => ({
+        const payableDataFromApi = payables.map((p: AccountPayable) => ({
           name: p.vendorId?.toString() || 'Vendor',
           amount: p.amount
         }));
@@ -91,7 +88,7 @@ export const FinancialReports: React.FC = () => {
       // Fetch Accounts Receivable
       try {
         const receivables = await financeApiService.getAllAccountReceivables();
-        const receivableDataFromApi = receivables.map((r: any) => ({
+        const receivableDataFromApi = receivables.map((r: AccountReceivable) => ({
           name: r.customerId?.toString() || 'Customer',
           amount: r.amount
         }));
@@ -102,8 +99,6 @@ export const FinancialReports: React.FC = () => {
 
     } catch (error) {
       console.error('Failed to fetch financial data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -1,22 +1,79 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DollarSign, TrendingUp, AlertCircle, Calculator } from 'lucide-react';
-
-const budgetData = [
-  { department: 'HR', allocated: 50000, spent: 35000, remaining: 15000 },
-  { department: 'IT', allocated: 75000, spent: 68000, remaining: 7000 },
-  { department: 'Marketing', allocated: 30000, spent: 22000, remaining: 8000 },
-];
-
-const recentTransactions = [
-  { id: '001', date: '2024-01-15', description: 'Office Supplies', amount: -1250, type: 'Expense' },
-  { id: '002', date: '2024-01-14', description: 'Client Payment', amount: 5000, type: 'Revenue' },
-  { id: '003', date: '2024-01-13', description: 'Utilities', amount: -800, type: 'Expense' },
-];
+import { financeApiService, BudgetResponse, JournalEntry, AccountPayable } from '@/services/javabackendapi/financeApi';
+import { mockDashboardBudgets, mockDashboardTransactions, mockFinanceDashboardKPIs } from '@/services/mockData/mockData';
 
 export const FinanceDashboard: React.FC = () => {
+  const [budgetData, setBudgetData] = useState(mockDashboardBudgets);
+  const [recentTransactions, setRecentTransactions] = useState(mockDashboardTransactions);
+  const [kpis, setKpis] = useState(mockFinanceDashboardKPIs);
+
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch Budget Data
+      try {
+        const budgets = await financeApiService.getAllBudgets();
+        if (budgets.length > 0) {
+          const budgetDataFromApi = budgets.map((b: BudgetResponse) => ({
+            department: b.budgetName,
+            allocated: b.amount,
+            spent: b.spentAmount || 0,
+            remaining: b.amount - (b.spentAmount || 0)
+          }));
+          setBudgetData(budgetDataFromApi);
+        }
+      } catch (error) {
+        console.error('Failed to fetch budgets, using mock data:', error);
+      }
+
+      // Fetch Journal Entries for recent transactions
+      try {
+        const entries = await financeApiService.getAllJournalEntries();
+        if (entries.length > 0) {
+          const transactionsFromApi = entries.slice(0, 5).map((e: JournalEntry, index: number) => ({
+            id: e.id?.toString() || index.toString(),
+            date: e.entryDate,
+            description: e.description,
+            amount: e.debit - e.credit,
+            type: e.debit > e.credit ? 'Revenue' as const : 'Expense' as const
+          }));
+          setRecentTransactions(transactionsFromApi);
+        }
+      } catch (error) {
+        console.error('Failed to fetch transactions, using mock data:', error);
+      }
+
+      try {
+        const entries = await financeApiService.getAllJournalEntries();
+        const totalRevenue = entries.reduce((sum: number, e: JournalEntry) => sum + (e.debit > e.credit ? e.debit : 0), 0);
+        const totalExpenses = entries.reduce((sum: number, e: JournalEntry) => sum + (e.credit > e.debit ? e.credit : 0), 0);
+        
+        const payables = await financeApiService.getAllAccountPayables();
+        const pendingPayables = payables.filter((p: AccountPayable) => p.status === 'Pending');
+        
+        setKpis({
+          totalRevenue,
+          totalExpenses,
+          netProfit: totalRevenue - totalExpenses,
+          pendingInvoices: pendingPayables.length,
+          pendingInvoicesValue: pendingPayables.reduce((sum: number, p: AccountPayable) => sum + p.amount, 0)
+        });
+      } catch (error) {
+        console.error('Failed to calculate KPIs, using mock data:', error);
+      }
+
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    }
+  };
   return (
     <div className="min-h-screen flex-1 flex flex-col p-6 bg-background">
       <div className="space-y-6">
@@ -28,7 +85,7 @@ export const FinanceDashboard: React.FC = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$245,320</div>
+              <div className="text-2xl font-bold">${kpis.totalRevenue.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">+12% from last month</p>
             </CardContent>
           </Card>
@@ -39,7 +96,7 @@ export const FinanceDashboard: React.FC = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$89,450</div>
+              <div className="text-2xl font-bold">${kpis.totalExpenses.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">+3% from last month</p>
             </CardContent>
           </Card>
@@ -50,7 +107,7 @@ export const FinanceDashboard: React.FC = () => {
               <Calculator className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$155,870</div>
+              <div className="text-2xl font-bold">${kpis.netProfit.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">+18% from last month</p>
             </CardContent>
           </Card>
@@ -61,8 +118,8 @@ export const FinanceDashboard: React.FC = () => {
               <AlertCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">23</div>
-              <p className="text-xs text-muted-foreground">$45,230 total value</p>
+              <div className="text-2xl font-bold">{kpis.pendingInvoices}</div>
+              <p className="text-xs text-muted-foreground">${kpis.pendingInvoicesValue.toLocaleString()} total value</p>
             </CardContent>
           </Card>
         </div>

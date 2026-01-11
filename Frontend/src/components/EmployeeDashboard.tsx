@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign, HelpCircle, Loader2, LogOut} from 'lucide-react';
 import { leaveApiService } from '@/services/nodejsbackendapi/leaveApi';
 import { LeaveBalance, LeaveRequest } from '@/types/leave';
-import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData/mockData';
+import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData/hr';
 import { fetchAttendance, fetchPayslips, mapAttendanceToUI, mapPayrollToUI, Employee, fetchRecentActivities } from '@/services/api';
 import { attendanceApiService } from '@/services/pythonbackendapi/attendanceApi';
 import LeaveRequestForm from './modules/hr/LeaveRequestForm';

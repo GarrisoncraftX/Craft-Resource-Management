@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { BookOpen, Calendar, Users, DollarSign } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
+import { hrApiService } from '@/services/javabackendapi/hrApi';
 
 interface AddTrainingFormProps {
   open: boolean;
@@ -65,8 +66,15 @@ export const AddTrainingForm: React.FC<AddTrainingFormProps> = ({
     setLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const trainingCourse = {
+        name: formData.title,
+        description: formData.description,
+        duration: Number.parseInt(formData.duration, 10),
+        cost: Number.parseFloat(formData.cost || '0'),
+        instructor: formData.instructor
+      };
+
+      await hrApiService.createTrainingCourse(trainingCourse);
       
       toast({
         title: "Success",
@@ -94,9 +102,11 @@ export const AddTrainingForm: React.FC<AddTrainingFormProps> = ({
         certificateAwarded: false
       });
     } catch (error) {
+      console.error('Failed to create training program:', error);
       toast({
         title: "Error",
-        description: "Failed to create training program"
+        description: "Failed to create training program",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);

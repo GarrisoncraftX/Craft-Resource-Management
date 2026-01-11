@@ -1,5 +1,6 @@
 package com.craftresourcemanagement.hr.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,10 +15,12 @@ public class Payslip {
 
     @ManyToOne
     @JoinColumn(name = "payroll_run_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private PayrollRun payrollRun;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "temporaryPassword"})
     private User user;
 
     @Column(nullable = false)

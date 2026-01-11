@@ -60,7 +60,9 @@ export class ApiClient {
         globalThis.location.href = '/signin'; 
       }
       
-      throw new Error(errorMessage);
+      const error = new Error(errorMessage);
+      (error as any).status = response.status;
+      throw error;
     }
     
     return response.json();

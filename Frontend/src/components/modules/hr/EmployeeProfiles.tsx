@@ -67,6 +67,7 @@ export const EmployeeProfiles: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
+        setLoading(true);
         const [employeesData, departmentsData, rolesData] = await Promise.all([
           fetchEmployees(),
           lookupApiService.getDepartments(),
@@ -76,8 +77,7 @@ export const EmployeeProfiles: React.FC = () => {
         setDepartments(departmentsData);
         setRoles(rolesData);
       } catch (error) {
-        console.error('Failed to fetch data:', error);
-
+        console.error('Failed to fetch data from database, using mock data as fallback:', error);
         setEmployees(mockEmployeeData.map(e => ({ 
           id: e.id, 
           tenantId: 0, 

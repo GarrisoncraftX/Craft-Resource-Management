@@ -86,9 +86,8 @@ export const HRDashboard: React.FC = () => {
     }
   };
 
-  const handleViewEmployee = (employeeId: string) => {
-    // Navigate to employee details page
-    navigate(`/hr/employee/${employeeId}`);
+  const handleViewEmployee = (id: number) => {
+    navigate(`/hr/employee/${id}`);
   };
 
   const handleFlagBuddyPunch = async (attendanceId: number) => {
@@ -290,7 +289,7 @@ export const HRDashboard: React.FC = () => {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleViewEmployee(employee.employeeId)}
+                                  onClick={() => handleViewEmployee(employee.id)}
                                 >
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details

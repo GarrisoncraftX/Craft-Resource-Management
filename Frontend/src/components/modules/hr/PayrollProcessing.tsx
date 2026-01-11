@@ -31,6 +31,7 @@ export const PayrollProcessing: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const [payslipsData, employeesData] = await Promise.all([
           fetchPayslips(),
           fetchEmployees()
@@ -38,7 +39,6 @@ export const PayrollProcessing: React.FC = () => {
         setPayslips(payslipsData);
         setEmployees(employeesData);
 
-        // Set initial selected period to the latest available
         if (payslipsData.length > 0) {
           const latestPeriod = payslipsData.reduce((latest, current) => {
             const latestDate = new Date(latest.payPeriodEnd);
@@ -47,16 +47,26 @@ export const PayrollProcessing: React.FC = () => {
           }, payslipsData[0]);
           setSelectedPeriod(`${latestPeriod.payPeriodStart} - ${latestPeriod.payPeriodEnd}`);
         }
-
-
       } catch (err) {
-        console.error("Failed to fetch data:", err);
-        setError("Failed to load payroll data. Using mock data as fallback.");
+        console.error("Failed to fetch payroll data from database, using mock data as fallback:", err);
+        setError("Failed to load payroll data from database. Using mock data as fallback.");
         setPayslips(mockPayslips);
-        // For mock data, we don't have employee names, so we'll use placeholders
-        setEmployees(mockPayslips.map(p => ({ id: String(p.user_id), firstName: `Employee ${p.user_id}`, lastName: '', tenantId: 0, employeeId: `EMP${p.user_id}`, email: `employee${p.user_id}@example.com`, departmentId: 1, roleId: 1, isActive: 1, biometricEnrollmentStatus: 'NONE', failedLoginAttempts: 0, createdAt: '', updatedAt: '' } as Employee)));
+        setEmployees(mockPayslips.map(p => ({ 
+          id: String(p.user_id), 
+          firstName: `Employee ${p.user_id}`, 
+          lastName: '', 
+          tenantId: 0, 
+          employeeId: `EMP${p.user_id}`, 
+          email: `employee${p.user_id}@example.com`, 
+          departmentId: 1, 
+          roleId: 1, 
+          isActive: 1, 
+          biometricEnrollmentStatus: 'NONE', 
+          failedLoginAttempts: 0, 
+          createdAt: '', 
+          updatedAt: '' 
+        } as Employee)));
 
-        // Set initial selected period for mock data
         if (mockPayslips.length > 0) {
           const latestPeriod = mockPayslips.reduce((latest, current) => {
             const latestDate = new Date(latest.payPeriodEnd);
@@ -65,7 +75,6 @@ export const PayrollProcessing: React.FC = () => {
           }, mockPayslips[0]);
           setSelectedPeriod(`${latestPeriod.payPeriodStart} - ${latestPeriod.payPeriodEnd}`);
         }
-
       } finally {
         setLoading(false);
       }

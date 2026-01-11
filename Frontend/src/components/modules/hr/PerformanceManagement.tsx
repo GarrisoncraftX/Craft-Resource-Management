@@ -1,115 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { StarIcon, Target, TrendingUp, Users, Calendar, Plus } from 'lucide-react';
-
-const performanceReviews = [
-  {
-    id: 'PR001',
-    employee: 'John Doe',
-    reviewPeriod: 'Q4 2023',
-    reviewer: 'Sarah Wilson',
-    overallScore: 4.2,
-    status: 'Completed',
-    dueDate: '2024-01-15',
-    goals: 5,
-    completedGoals: 4
-  },
-  {
-    id: 'PR002',
-    employee: 'Jane Smith',
-    reviewPeriod: 'Q4 2023',
-    reviewer: 'Michael Brown',
-    overallScore: 4.7,
-    status: 'Completed',
-    dueDate: '2024-01-15',
-    goals: 6,
-    completedGoals: 6
-  },
-  {
-    id: 'PR003',
-    employee: 'Mike Johnson',
-    reviewPeriod: 'Q1 2024',
-    reviewer: 'Sarah Wilson',
-    overallScore: null,
-    status: 'In Progress',
-    dueDate: '2024-04-15',
-    goals: 4,
-    completedGoals: 2
-  },
-];
-
-const goals = [
-  {
-    employee: 'John Doe',
-    goal: 'Complete Advanced Leadership Training',
-    category: 'Professional Development',
-    progress: 80,
-    targetDate: '2024-03-31',
-    status: 'On Track'
-  },
-  {
-    employee: 'John Doe',
-    goal: 'Increase Team Productivity by 15%',
-    category: 'Performance',
-    progress: 60,
-    targetDate: '2024-06-30',
-    status: 'On Track'
-  },
-  {
-    employee: 'Jane Smith',
-    goal: 'Implement New HR Management System',
-    category: 'Process Improvement',
-    progress: 100,
-    targetDate: '2024-02-28',
-    status: 'Completed'
-  },
-  {
-    employee: 'Mike Johnson',
-    goal: 'Reduce Processing Time by 20%',
-    category: 'Efficiency',
-    progress: 25,
-    targetDate: '2024-05-31',
-    status: 'Behind'
-  },
-];
-
-const kpiData = [
-  {
-    employee: 'John Doe',
-    position: 'Team Lead',
-    productivity: 92,
-    quality: 88,
-    teamwork: 95,
-    innovation: 85,
-    overall: 90
-  },
-  {
-    employee: 'Jane Smith',
-    position: 'HR Manager',
-    productivity: 96,
-    quality: 94,
-    teamwork: 91,
-    innovation: 89,
-    overall: 93
-  },
-  {
-    employee: 'Mike Johnson',
-    position: 'Analyst',
-    productivity: 78,
-    quality: 82,
-    teamwork: 88,
-    innovation: 76,
-    overall: 81
-  },
-];
+import { StarIcon, Target, TrendingUp, Calendar, Plus, Edit, Trash2 } from 'lucide-react';
+import { hrApiService, PerformanceReview, User } from '@/services/javabackendapi/hrApi';
+import { AddPerformanceReviewForm } from './forms/AddPerformanceReviewForm';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import { mockMonthlyPerformance, mockKpiData } from '@/services/mockData/hr';
 
 export const PerformanceManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState('reviews');
+  const [performanceReviews, setPerformanceReviews] = useState<PerformanceReview[]>([]);
+  const [employees, setEmployees] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const [reviews, empList] = await Promise.all([
+        hrApiService.getAllPerformanceReviews(),
+        hrApiService.listEmployees()
+      ]);
+      setPerformanceReviews(reviews);
+      setEmployees(empList);
+    } catch (error) {
+      console.error('Failed to load performance reviews:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getEmployeeName = (employeeId: number) => {
+    const emp = employees.find(e => e.id === employeeId);
+    return emp ? `${emp.firstName} ${emp.lastName}` : `Employee ${employeeId}`;
+  };
+
+  const avgRating = performanceReviews.length > 0 
+    ? (performanceReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / performanceReviews.length).toFixed(1)
+    : '0.0';
+
+  const topPerformers = performanceReviews.filter(r => r.rating >= 4.5).length;
+
+  const ratingDistribution = [
+    { rating: '5 Stars', count: performanceReviews.filter(r => r.rating >= 4.5).length },
+    { rating: '4 Stars', count: performanceReviews.filter(r => r.rating >= 3.5 && r.rating < 4.5).length },
+    { rating: '3 Stars', count: performanceReviews.filter(r => r.rating >= 2.5 && r.rating < 3.5).length },
+    { rating: '2 Stars', count: performanceReviews.filter(r => r.rating >= 1.5 && r.rating < 2.5).length },
+    { rating: '1 Star', count: performanceReviews.filter(r => r.rating < 1.5).length },
+  ];
+
+  if (loading) return <div className="flex items-center justify-center h-64">Loading...</div>;
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -128,7 +74,7 @@ export const PerformanceManagement: React.FC = () => {
             <h1 className="text-3xl font-bold tracking-tight">Performance Management</h1>
             <p className="text-muted-foreground">Track and manage employee performance and goals</p>
           </div>
-          <Button>
+          <Button onClick={() => setShowAddForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Performance Review
           </Button>
@@ -142,7 +88,7 @@ export const PerformanceManagement: React.FC = () => {
               <StarIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">4.3/5.0</div>
+              <div className="text-2xl font-bold">{avgRating}/5.0</div>
               <p className="text-xs text-muted-foreground">+0.2 from last quarter</p>
             </CardContent>
           </Card>
@@ -154,7 +100,7 @@ export const PerformanceManagement: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">78%</div>
-              <p className="text-xs text-muted-foreground">142 of 182 goals</p>
+              <p className="text-xs text-muted-foreground">{performanceReviews.length} reviews</p>
             </CardContent>
           </Card>
 
@@ -175,7 +121,7 @@ export const PerformanceManagement: React.FC = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">23</div>
+              <div className="text-2xl font-bold">{topPerformers}</div>
               <p className="text-xs text-muted-foreground">4.5+ rating</p>
             </CardContent>
           </Card>
@@ -209,44 +155,39 @@ export const PerformanceManagement: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {performanceReviews.map((review) => (
-                      <TableRow key={review.id}>
-                        <TableCell className="font-medium">{review.employee}</TableCell>
-                        <TableCell>{review.reviewPeriod}</TableCell>
-                        <TableCell>{review.reviewer}</TableCell>
-                        <TableCell>
-                          {review.overallScore ? (
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{review.overallScore}</span>
-                              <div className="flex">
-                                {renderStars(review.overallScore)}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">Pending</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{review.dueDate}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={
-                              review.status === 'Completed' ? 'default' : 
-                              review.status === 'In Progress' ? 'secondary' : 'outline'
-                            }
-                          >
-                            {review.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm">View</Button>
-                            {review.status !== 'Completed' && (
-                              <Button variant="ghost" size="sm">Edit</Button>
-                            )}
-                          </div>
+                    {performanceReviews.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                          No performance reviews found
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      performanceReviews.map((review) => (
+                        <TableRow key={review.id}>
+                          <TableCell className="font-medium">{getEmployeeName(review.employeeId)}</TableCell>
+                          <TableCell>{new Date(review.reviewDate).toLocaleDateString()}</TableCell>
+                          <TableCell>{getEmployeeName(review.reviewerId)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{review.rating}</span>
+                              <div className="flex">
+                                {renderStars(review.rating)}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{new Date(review.reviewDate).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Badge variant="default">Completed</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -261,35 +202,26 @@ export const PerformanceManagement: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {goals.map((goal, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="font-medium">{goal.goal}</h3>
-                          <p className="text-sm text-muted-foreground">{goal.employee} • {goal.category}</p>
-                        </div>
-                        <Badge 
-                          variant={
-                            goal.status === 'Completed' ? 'default' : 
-                            goal.status === 'On Track' ? 'secondary' : 'destructive'
-                          }
-                        >
-                          {goal.status}
-                        </Badge>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Progress</span>
-                          <span className="text-sm font-medium">{goal.progress}%</span>
-                        </div>
-                        <Progress value={goal.progress} className="w-full" />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Target Date: {goal.targetDate}</span>
-                          <Button variant="ghost" size="sm">Update</Button>
-                        </div>
-                      </div>
+                  {performanceReviews.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">
+                      No goals and objectives to display
                     </div>
-                  ))}
+                  ) : (
+                    performanceReviews.map((review) => (
+                      <div key={review.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="font-medium">{review.goals || 'No goals set'}</h3>
+                            <p className="text-sm text-muted-foreground">{getEmployeeName(review.employeeId)}</p>
+                          </div>
+                          <Badge variant="default">Completed</Badge>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="text-sm text-muted-foreground">{review.comments}</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -303,120 +235,127 @@ export const PerformanceManagement: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {kpiData.map((employee, index) => (
-                    <div key={index} className="border rounded-lg p-6">
-                      <div className="flex justify-between items-center mb-4">
-                        <div>
-                          <h3 className="font-medium">{employee.employee}</h3>
-                          <p className="text-sm text-muted-foreground">{employee.position}</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold">{employee.overall}%</div>
-                          <p className="text-sm text-muted-foreground">Overall Score</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Productivity</span>
-                            <span className="text-sm font-medium">{employee.productivity}%</span>
-                          </div>
-                          <Progress value={employee.productivity} className="w-full" />
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Quality</span>
-                            <span className="text-sm font-medium">{employee.quality}%</span>
-                          </div>
-                          <Progress value={employee.quality} className="w-full" />
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Teamwork</span>
-                            <span className="text-sm font-medium">{employee.teamwork}%</span>
-                          </div>
-                          <Progress value={employee.teamwork} className="w-full" />
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Innovation</span>
-                            <span className="text-sm font-medium">{employee.innovation}%</span>
-                          </div>
-                          <Progress value={employee.innovation} className="w-full" />
-                        </div>
-                      </div>
+                  {performanceReviews.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">
+                      No KPI data to display
                     </div>
-                  ))}
+                  ) : (
+                    performanceReviews.map((review) => (
+                      <div key={review.id} className="border rounded-lg p-6">
+                        <div className="flex justify-between items-center mb-4">
+                          <div>
+                            <h3 className="font-medium">{getEmployeeName(review.employeeId)}</h3>
+                            <p className="text-sm text-muted-foreground">Performance Review</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold">{review.rating * 20}%</div>
+                            <p className="text-sm text-muted-foreground">Overall Score</p>
+                          </div>
+                        </div>
+                        <div className="text-sm text-muted-foreground">{review.comments}</div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Performance Summary</CardTitle>
-                  <CardDescription>Overall performance metrics and trends</CardDescription>
+                  <CardTitle>Performance Rating Distribution</CardTitle>
+                  <CardDescription>Distribution of employee ratings</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button className="w-full">Generate Report</Button>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={ratingDistribution}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="rating" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="count" fill="#3b82f6" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Goal Achievement Report</CardTitle>
-                  <CardDescription>Track goal completion rates and trends</CardDescription>
+                  <CardTitle>Average Performance Trend</CardTitle>
+                  <CardDescription>Monthly average performance ratings</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button className="w-full">Generate Report</Button>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={mockMonthlyPerformance}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis domain={[0, 5]} />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="avgRating" stroke="#10b981" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Performance Distribution</CardTitle>
-                  <CardDescription>Analyze performance ratings across teams</CardDescription>
+                  <CardTitle>Key Performance Indicators</CardTitle>
+                  <CardDescription>Average KPI scores across dimensions</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button className="w-full">Generate Report</Button>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <RadarChart data={mockKpiData}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="subject" />
+                      <PolarRadiusAxis angle={90} domain={[0, 100]} />
+                      <Radar name="Performance" dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Top Performers Report</CardTitle>
-                  <CardDescription>Identify high-performing employees</CardDescription>
+                  <CardTitle>Top Performers</CardTitle>
+                  <CardDescription>Employees with highest ratings</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button className="w-full">Generate Report</Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Performance Improvement</CardTitle>
-                  <CardDescription>Track improvement plans and outcomes</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button className="w-full">Generate Report</Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Team Performance</CardTitle>
-                  <CardDescription>Department and team-level performance</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button className="w-full">Generate Report</Button>
+                  <div className="space-y-4">
+                    {[...performanceReviews]
+                      .sort((a, b) => b.rating - a.rating)
+                      .slice(0, 5)
+                      .map((review, index) => (
+                        <div key={review.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <div className="font-medium">{getEmployeeName(review.employeeId)}</div>
+                              <div className="text-sm text-muted-foreground">Rating: {review.rating}/5.0</div>
+                            </div>
+                          </div>
+                          <div className="flex">{renderStars(review.rating)}</div>
+                        </div>
+                      ))}
+                  </div>
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
         </Tabs>
       </div>
+
+      <AddPerformanceReviewForm 
+        open={showAddForm} 
+        onOpenChange={setShowAddForm}
+        onSuccess={loadData}
+      />
     </div>
   );
 };

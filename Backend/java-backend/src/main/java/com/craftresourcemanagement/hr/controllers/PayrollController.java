@@ -64,7 +64,14 @@ public class PayrollController {
 
     @GetMapping("/payslips")
     public ResponseEntity<List<Payslip>> getAllPayslips() {
-        return ResponseEntity.ok(payrollService.getAllPayslips());
+        try {
+            List<Payslip> payslips = payrollService.getAllPayslips();
+            return ResponseEntity.ok(payslips);
+        } catch (Exception e) {
+            System.err.println("Error fetching payslips: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.ok(new java.util.ArrayList<>());
+        }
     }
 
     @GetMapping("/payslips/{id}")

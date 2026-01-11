@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,79 +6,33 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Heart, Shield, Car, Plane, Plus, Settings } from 'lucide-react';
-
-const benefitPlans = [
-  {
-    id: 'HEALTH001',
-    name: 'Premium Health Insurance',
-    type: 'Health',
-    coverage: 'Medical, Dental, Vision',
-    enrolled: 142,
-    eligible: 156,
-    cost: 450,
-    icon: Heart
-  },
-  {
-    id: 'LIFE001',
-    name: 'Life Insurance',
-    type: 'Life',
-    coverage: '2x Annual Salary',
-    enrolled: 138,
-    eligible: 156,
-    cost: 25,
-    icon: Shield
-  },
-  {
-    id: 'TRANS001',
-    name: 'Transportation Allowance',
-    type: 'Transportation',
-    coverage: 'Monthly Transit Pass',
-    enrolled: 89,
-    eligible: 156,
-    cost: 120,
-    icon: Car
-  },
-  {
-    id: 'VACATION001',
-    name: 'Additional Vacation Days',
-    type: 'Time Off',
-    coverage: '5 Extra Days',
-    enrolled: 95,
-    eligible: 156,
-    cost: 0,
-    icon: Plane
-  },
-];
-
-const enrollmentData = [
-  { 
-    employee: 'John Doe', 
-    healthInsurance: 'Enrolled', 
-    lifeInsurance: 'Enrolled', 
-    transportation: 'Not Enrolled', 
-    vacation: 'Enrolled',
-    totalCost: 475
-  },
-  { 
-    employee: 'Jane Smith', 
-    healthInsurance: 'Enrolled', 
-    lifeInsurance: 'Enrolled', 
-    transportation: 'Enrolled', 
-    vacation: 'Not Enrolled',
-    totalCost: 595
-  },
-  { 
-    employee: 'Mike Johnson', 
-    healthInsurance: 'Enrolled', 
-    lifeInsurance: 'Not Enrolled', 
-    transportation: 'Enrolled', 
-    vacation: 'Enrolled',
-    totalCost: 570
-  },
-];
+import { hrApiService } from '@/services/javabackendapi/hrApi';
 
 export const BenefitsAdministration: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [benefitPlans, setBenefitPlans] = useState<any[]>([]);
+  const [employeeBenefits, setEmployeeBenefits] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [plans, benefits] = await Promise.all([
+          hrApiService.getAllBenefitPlans(),
+          hrApiService.getAllEmployeeBenefits()
+        ]);
+        setBenefitPlans(plans);
+        setEmployeeBenefits(benefits);
+      } catch (error) {
+        console.error('Failed to load benefits data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  if (loading) return <div className="flex items-center justify-center h-64">Loading...</div>;
 
   return (
     <div className="min-h-screen flex-1 flex flex-col p-6 bg-background">
@@ -109,7 +63,6 @@ export const BenefitsAdministration: React.FC = () => {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            {/* Benefits Overview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -117,33 +70,30 @@ export const BenefitsAdministration: React.FC = () => {
                   <Heart className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">$89,250</div>
+                  <div className="text-2xl font-bold">${benefitPlans.reduce((sum, p) => sum + (p.premium || 0), 0).toLocaleString()}</div>
                   <p className="text-xs text-muted-foreground">Monthly cost</p>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Enrollment Rate</CardTitle>
                   <Shield className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">91%</div>
-                  <p className="text-xs text-muted-foreground">142 of 156 eligible</p>
+                  <div className="text-2xl font-bold">{employeeBenefits.length}</div>
+                  <p className="text-xs text-muted-foreground">Active enrollments</p>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Active Plans</CardTitle>
                   <Car className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">4</div>
+                  <div className="text-2xl font-bold">{benefitPlans.length}</div>
                   <p className="text-xs text-muted-foreground">Available to employees</p>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Open Enrollment</CardTitle>
@@ -155,36 +105,29 @@ export const BenefitsAdministration: React.FC = () => {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Enrollment by Plan */}
             <Card>
               <CardHeader>
                 <CardTitle>Enrollment by Benefit Plan</CardTitle>
                 <CardDescription>Current enrollment status across all benefit plans</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {benefitPlans.map((plan) => {
-                  const Icon = plan.icon;
-                  const enrollmentRate = (plan.enrolled / plan.eligible) * 100;
-                  return (
-                    <div key={plan.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <Icon className="h-8 w-8 text-primary" />
-                        <div>
-                          <h3 className="font-medium">{plan.name}</h3>
-                          <p className="text-sm text-muted-foreground">{plan.coverage}</p>
-                        </div>
-                      </div>
-                      <div className="text-right space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{plan.enrolled}/{plan.eligible}</span>
-                          <Badge variant="outline">{enrollmentRate.toFixed(0)}%</Badge>
-                        </div>
-                        <Progress value={enrollmentRate} className="w-32" />
+                {benefitPlans.map((plan) => (
+                  <div key={plan.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <Heart className="h-8 w-8 text-primary" />
+                      <div>
+                        <h3 className="font-medium">{plan.name}</h3>
+                        <p className="text-sm text-muted-foreground">{plan.description}</p>
                       </div>
                     </div>
-                  );
-                })}
+                    <div className="text-right space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">${plan.premium}</span>
+                        <Badge variant="outline">{plan.type}</Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </TabsContent>
@@ -212,9 +155,9 @@ export const BenefitsAdministration: React.FC = () => {
                       <TableRow key={plan.id}>
                         <TableCell className="font-medium">{plan.name}</TableCell>
                         <TableCell>{plan.type}</TableCell>
-                        <TableCell>{plan.coverage}</TableCell>
-                        <TableCell>${plan.cost}</TableCell>
-                        <TableCell>{plan.enrolled}/{plan.eligible}</TableCell>
+                        <TableCell>{plan.description}</TableCell>
+                        <TableCell>${plan.premium}</TableCell>
+                        <TableCell>-</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Button variant="ghost" size="sm">Edit</Button>
@@ -249,30 +192,15 @@ export const BenefitsAdministration: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {enrollmentData.map((enrollment, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{enrollment.employee}</TableCell>
-                        <TableCell>
-                          <Badge variant={enrollment.healthInsurance === 'Enrolled' ? 'default' : 'secondary'}>
-                            {enrollment.healthInsurance}
+                    {employeeBenefits.map((benefit) => (
+                      <TableRow key={benefit.id}>
+                        <TableCell className="font-medium">Employee {benefit.employeeId}</TableCell>
+                        <TableCell colSpan={4}>
+                          <Badge variant={benefit.status === 'active' ? 'default' : 'secondary'}>
+                            {benefit.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <Badge variant={enrollment.lifeInsurance === 'Enrolled' ? 'default' : 'secondary'}>
-                            {enrollment.lifeInsurance}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={enrollment.transportation === 'Enrolled' ? 'default' : 'secondary'}>
-                            {enrollment.transportation}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={enrollment.vacation === 'Enrolled' ? 'default' : 'secondary'}>
-                            {enrollment.vacation}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">${enrollment.totalCost}</TableCell>
+                        <TableCell className="font-medium">-</TableCell>
                         <TableCell>
                           <Button variant="ghost" size="sm">Manage</Button>
                         </TableCell>

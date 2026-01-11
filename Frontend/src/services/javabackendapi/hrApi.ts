@@ -178,7 +178,12 @@ class HrApiService {
   }
 
   async getAllPayrollRuns(): Promise<PayrollRun[]> {
-    return apiClient.get('/hr/payroll/runs');
+    try {
+      return await apiClient.get('/hr/payroll/runs');
+    } catch (error) {
+      console.warn('Failed to fetch payroll runs from database, using empty array as fallback:', error instanceof Error ? error.message : 'Unknown error');
+      return [];
+    }
   }
 
   async getPayrollRunById(id: number): Promise<PayrollRun> {
@@ -199,7 +204,12 @@ class HrApiService {
   }
 
   async getAllPayslips(): Promise<Payslip[]> {
-    return apiClient.get('/hr/payroll/payslips');
+    try {
+      return await apiClient.get('/hr/payroll/payslips');
+    } catch (error) {
+      console.warn('Failed to fetch payslips from database, using empty array as fallback:', error instanceof Error ? error.message : 'Unknown error');
+      return [];
+    }
   }
 
   async getPayslipById(id: number): Promise<Payslip> {
@@ -220,7 +230,12 @@ class HrApiService {
   }
 
   async getAllBenefitPlans(): Promise<BenefitPlan[]> {
-    return apiClient.get('/hr/payroll/benefit-plans');
+    try {
+      return await apiClient.get('/hr/payroll/benefit-plans');
+    } catch (error) {
+      console.warn('Failed to fetch benefit plans from database, using empty array as fallback:', error instanceof Error ? error.message : 'Unknown error');
+      return [];
+    }
   }
 
   async getBenefitPlanById(id: number): Promise<BenefitPlan> {
@@ -241,7 +256,12 @@ class HrApiService {
   }
 
   async getAllEmployeeBenefits(): Promise<EmployeeBenefit[]> {
-    return apiClient.get('/hr/payroll/employee-benefits');
+    try {
+      return await apiClient.get('/hr/payroll/employee-benefits');
+    } catch (error) {
+      console.warn('Failed to fetch employee benefits from database, using empty array as fallback:', error instanceof Error ? error.message : 'Unknown error');
+      return [];
+    }
   }
 
   async getEmployeeBenefitById(id: number): Promise<EmployeeBenefit> {
@@ -262,7 +282,12 @@ class HrApiService {
   }
 
   async getAllTrainingCourses(): Promise<TrainingCourse[]> {
-    return apiClient.get('/hr/payroll/training-courses');
+    try {
+      return await apiClient.get('/hr/payroll/training-courses');
+    } catch (error) {
+      console.warn('Failed to fetch training courses from database, using empty array as fallback:', error instanceof Error ? error.message : 'Unknown error');
+      return [];
+    }
   }
 
   async getTrainingCourseById(id: number): Promise<TrainingCourse> {
@@ -283,7 +308,12 @@ class HrApiService {
   }
 
   async getAllEmployeeTrainings(): Promise<EmployeeTraining[]> {
-    return apiClient.get('/hr/payroll/employee-trainings');
+    try {
+      return await apiClient.get('/hr/payroll/employee-trainings');
+    } catch (error) {
+      console.warn('Failed to fetch employee trainings from database, using empty array as fallback:', error instanceof Error ? error.message : 'Unknown error');
+      return [];
+    }
   }
 
   async getEmployeeTrainingById(id: number): Promise<EmployeeTraining> {
@@ -304,7 +334,12 @@ class HrApiService {
   }
 
   async getAllPerformanceReviews(): Promise<PerformanceReview[]> {
-    return apiClient.get('/hr/payroll/performance-reviews');
+    try {
+      return await apiClient.get('/hr/payroll/performance-reviews');
+    } catch (error) {
+      console.warn('Failed to fetch performance reviews from database, using empty array as fallback:', error instanceof Error ? error.message : 'Unknown error');
+      return [];
+    }
   }
 
   async getPerformanceReviewById(id: number): Promise<PerformanceReview> {
@@ -319,7 +354,6 @@ class HrApiService {
     return apiClient.delete(`/hr/payroll/performance-reviews/${id}`);
   }
 
-  // Additional Payslip endpoint
   async getPayslipsByUser(userId: number): Promise<Payslip[]> {
     return apiClient.get(`/hr/payroll/payslips/user/${userId}`);
   }

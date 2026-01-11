@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { ClipboardCheck, Star, Target, Calendar } from 'lucide-react';
+import { hrApiService } from '@/services/javabackendapi/hrApi';
 
 interface AddPerformanceReviewFormProps {
   open: boolean;
@@ -39,6 +40,21 @@ export const AddPerformanceReviewForm: React.FC<AddPerformanceReviewFormProps> =
   });
 
   const [loading, setLoading] = useState(false);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [reviewers, setReviewers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const empList = await hrApiService.listEmployees();
+        setEmployees(empList);
+        setReviewers(empList);
+      } catch (error) {
+        console.error('Failed to load employees:', error);
+      }
+    };
+    if (open) loadData();
+  }, [open]);
 
   const reviewTypes = [
     'Annual Review',
@@ -58,27 +74,33 @@ export const AddPerformanceReviewForm: React.FC<AddPerformanceReviewFormProps> =
     { value: '1', label: '1 - Unsatisfactory' }
   ];
 
-  const mockEmployees = [
-    { id: '1', name: 'John Doe', department: 'IT' },
-    { id: '2', name: 'Jane Smith', department: 'HR' },
-    { id: '3', name: 'Mike Johnson', department: 'Finance' },
-    { id: '4', name: 'Sarah Wilson', department: 'Operations' }
-  ];
+  const mockEmployees = employees.map(emp => ({
+    id: emp.id.toString(),
+    name: `${emp.firstName} ${emp.lastName}`,
+    department: emp.department || 'N/A'
+  }));
 
-  const mockReviewers = [
-    { id: '1', name: 'Alice Brown', title: 'HR Manager' },
-    { id: '2', name: 'Bob Davis', title: 'IT Director' },
-    { id: '3', name: 'Carol White', title: 'Finance Manager' },
-    { id: '4', name: 'David Lee', title: 'Operations Manager' }
-  ];
+  const mockReviewers = reviewers.map(emp => ({
+    id: emp.id.toString(),
+    name: `${emp.firstName} ${emp.lastName}`,
+    title: emp.role || 'N/A'
+  }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const performanceReview = {
+        employeeId: parseInt(formData.employeeId),
+        reviewerId: parseInt(formData.reviewerId),
+        reviewDate: formData.scheduledDate || new Date().toISOString(),
+        rating: parseFloat(formData.overallRating),
+        comments: formData.comments,
+        goals: formData.goals
+      };
+
+      await hrApiService.createPerformanceReview(performanceReview);
       
       toast({
         title: "Success",
@@ -107,7 +129,8 @@ export const AddPerformanceReviewForm: React.FC<AddPerformanceReviewFormProps> =
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to schedule performance review"
+        description: "Failed to schedule performance review",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
