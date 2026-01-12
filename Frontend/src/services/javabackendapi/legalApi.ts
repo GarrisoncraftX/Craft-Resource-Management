@@ -66,3 +66,46 @@ class LegalApiService {
 }
 
 export const legalApiService = new LegalApiService();
+
+// ============================================================================
+// WRAPPER FUNCTIONS FOR BACKWARD COMPATIBILITY
+// ============================================================================
+export async function createLegalCaseRecord(record: LegalCase) {
+  return legalApiService.createLegalCase(record);
+}
+
+export async function fetchLegalCases() {
+  return legalApiService.getAllLegalCases();
+}
+
+export async function updateLegalCaseRecord(id: number | string, record: LegalCase) {
+  return legalApiService.updateLegalCase(Number(id), record);
+}
+
+export async function deleteLegalCaseRecord(id: number | string) {
+  return legalApiService.deleteLegalCase(Number(id));
+}
+
+export async function fetchLegalCaseById(id: number | string) {
+  return legalApiService.getLegalCaseById(Number(id));
+}
+
+export async function createComplianceRecordItem(record: ComplianceRecord) {
+  return legalApiService.createComplianceRecord(record);
+}
+
+export async function fetchComplianceRecords() {
+  return legalApiService.getAllComplianceRecords();
+}
+
+export async function fetchComplianceRecordById(id: number | string) {
+  return legalApiService.getComplianceRecordById(Number(id));
+}
+
+export async function updateComplianceRecordItem(id: number | string, record: ComplianceRecord) {
+  return legalApiService.updateComplianceRecord(Number(id), record);
+}
+
+export async function deleteComplianceRecordItem(id: number | string) {
+  return legalApiService.deleteComplianceRecord(Number(id));
+}

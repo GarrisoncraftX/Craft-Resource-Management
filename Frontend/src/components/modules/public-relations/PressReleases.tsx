@@ -1,26 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Send, Calendar, Eye, Plus, Edit } from 'lucide-react';
-import { PermissionGuard } from '@/components/PermissionGuard';
+import { FileText, Send, Calendar, Eye, Plus } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { publicRelationsApiService, type PressRelease } from '@/services/nodejsbackendapi/publicRelationsApi';
+import { mockPressReleases } from '@/services/mockData/pr';
+import { PressReleaseFormDialog } from './PressReleaseFormDialog';
 
 export const PressReleases: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [pressReleases, setPressReleases] = useState<PressRelease[]>(mockPressReleases as PressRelease[]);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const pressReleases = [
-    { id: 'PR-001', title: 'City Launches New Digital Services Platform', category: 'Technology', status: 'Published', views: 1250, publishDate: '2024-01-15', author: 'Communications Team' },
-    { id: 'PR-002', title: 'Annual Budget Approval and Key Infrastructure Projects', category: 'Finance', status: 'Published', views: 2100, publishDate: '2024-01-10', author: 'Finance Department' },
-    { id: 'PR-003', title: 'Public Consultation on New Park Development', category: 'Development', status: 'Draft', views: 0, publishDate: null, author: 'Planning Department' },
-    { id: 'PR-004', title: 'Emergency Services Response Time Improvements', category: 'Public Safety', status: 'Scheduled', views: 0, publishDate: '2024-02-01', author: 'Emergency Services' },
-  ];
+  useEffect(() => {
+    loadPressReleases();
+  }, []);
+
+  const loadPressReleases = async () => {
+    try {
+      const data = await publicRelationsApiService.getPressReleases();
+      setPressReleases(data);
+    } catch (error) {
+      console.error('Error loading press releases:', error);
+      setPressReleases(mockPressReleases as PressRelease[]);
+    }
+  };
 
   const mediaEngagement = [
     { month: 'Jan', releases: 8, views: 15000, shares: 450 },
@@ -153,65 +160,13 @@ export const PressReleases: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Create Press Release</CardTitle>
-                <CardDescription>Draft a new press release</CardDescription>
+                <CardDescription>Use the form dialog to create a new press release</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="title">Release Title</Label>
-                      <Input id="title" placeholder="Enter press release title" />
-                    </div>
-                    <div>
-                      <Label htmlFor="category">Category</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="technology">Technology</SelectItem>
-                          <SelectItem value="finance">Finance</SelectItem>
-                          <SelectItem value="development">Development</SelectItem>
-                          <SelectItem value="safety">Public Safety</SelectItem>
-                          <SelectItem value="environment">Environment</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="summary">Executive Summary</Label>
-                    <Textarea id="summary" placeholder="Brief summary for media outlets" />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="content">Full Content</Label>
-                    <Textarea 
-                      id="content" 
-                      placeholder="Full press release content..."
-                      className="min-h-[200px]"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="publishDate">Publish Date</Label>
-                      <Input id="publishDate" type="datetime-local" />
-                    </div>
-                    <div>
-                      <Label htmlFor="author">Author/Department</Label>
-                      <Input id="author" placeholder="Author or department name" />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button variant="outline">Save as Draft</Button>
-                    <Button>Schedule Publication</Button>
-                    <PermissionGuard requiredPermissions={['pr.releases.publish']}>
-                      <Button variant="default">Publish Now</Button>
-                    </PermissionGuard>
-                  </div>
-                </div>
+                <Button onClick={() => setDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create New Release
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -219,14 +174,16 @@ export const PressReleases: React.FC = () => {
           <TabsContent value="manage">
             <Card>
               <CardHeader>
-                <CardTitle>Manage Press Releases</CardTitle>
-                <CardDescription>View and edit existing releases</CardDescription>
-                <PermissionGuard requiredPermissions={['pr.releases.create']}>
-                  <Button>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Manage Press Releases</CardTitle>
+                    <CardDescription>View and edit existing releases</CardDescription>
+                  </div>
+                  <Button onClick={() => setDialogOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     New Release
                   </Button>
-                </PermissionGuard>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -246,22 +203,24 @@ export const PressReleases: React.FC = () => {
                       <TableRow key={release.id}>
                         <TableCell className="font-medium">{release.id}</TableCell>
                         <TableCell className="max-w-xs truncate">{release.title}</TableCell>
-                        <TableCell>{release.category}</TableCell>
+                        <TableCell>{release.tags?.[0] || 'General'}</TableCell>
                         <TableCell>
-                          <Badge variant={
-                            release.status === 'Published' ? 'default' : 
-                            release.status === 'Scheduled' ? 'secondary' : 
-                            'outline'
-                          }>
+                          <Badge
+                            variant={
+                              release.status === 'published'
+                                ? 'default'
+                                : release.status === 'draft'
+                                ? 'secondary'
+                                : 'outline'
+                            }
+                          >
                             {release.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>{release.views.toLocaleString()}</TableCell>
+                        <TableCell>{release.views?.toLocaleString() || 0}</TableCell>
                         <TableCell>{release.publishDate || 'Not scheduled'}</TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          <Button variant="outline" size="sm">View</Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -312,6 +271,7 @@ export const PressReleases: React.FC = () => {
           </TabsContent>
         </Tabs>
       </main>
+      <PressReleaseFormDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={loadPressReleases} />
     </div>
   );
 };

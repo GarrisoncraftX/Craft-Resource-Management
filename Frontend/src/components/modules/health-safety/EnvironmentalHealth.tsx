@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,68 +10,56 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Leaf, Plus, Search, Thermometer, Droplets, Wind, Zap, TrendingUp, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, RadialBarChart, RadialBar } from 'recharts';
+import { healthSafetyApiService } from '@/services/pythonbackendapi/healthSafetyApi';
+import type { EnvironmentalMonitoring } from '@/services/mockData/health-safety';
+import { useToast } from '@/hooks/use-toast';
 
 export const EnvironmentalHealth: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [environmentalData, setEnvironmentalData] = useState<EnvironmentalMonitoring[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    parameter: '',
+    location: '',
+    threshold: '',
+    unit: '',
+    frequency: '',
+    description: ''
+  });
+  const { toast } = useToast();
 
-  const environmentalData = [
-    {
-      id: 'ENV-001',
-      parameter: 'Air Quality Index',
-      location: 'Manufacturing Floor',
-      currentValue: 45,
-      unit: 'AQI',
-      threshold: 50,
-      status: 'Good',
-      lastChecked: '2024-01-22 09:30',
-      trend: 'stable'
-    },
-    {
-      id: 'ENV-002',
-      parameter: 'Noise Level',
-      location: 'Production Area',
-      currentValue: 78,
-      unit: 'dB',
-      threshold: 85,
-      status: 'Normal',
-      lastChecked: '2024-01-22 10:15',
-      trend: 'decreasing'
-    },
-    {
-      id: 'ENV-003',
-      parameter: 'Temperature',
-      location: 'Server Room',
-      currentValue: 24.5,
-      unit: '°C',
-      threshold: 25,
-      status: 'Normal',
-      lastChecked: '2024-01-22 10:00',
-      trend: 'stable'
-    },
-    {
-      id: 'ENV-004',
-      parameter: 'Humidity',
-      location: 'Storage Area',
-      currentValue: 68,
-      unit: '%',
-      threshold: 70,
-      status: 'Warning',
-      lastChecked: '2024-01-22 09:45',
-      trend: 'increasing'
-    },
-    {
-      id: 'ENV-005',
-      parameter: 'CO2 Levels',
-      location: 'Office Area',
-      currentValue: 820,
-      unit: 'ppm',
-      threshold: 1000,
-      status: 'Normal',
-      lastChecked: '2024-01-22 10:30',
-      trend: 'stable'
+  useEffect(() => {
+    loadEnvironmentalData();
+  }, []);
+
+  const loadEnvironmentalData = async () => {
+    const data = await healthSafetyApiService.getEnvironmentalData();
+    setEnvironmentalData(data);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.parameter || !formData.location || !formData.threshold || !formData.unit) {
+      toast({ title: 'Error', description: 'Please fill all required fields', variant: 'destructive' });
+      return;
     }
-  ];
+    const result = await healthSafetyApiService.addMonitoringPoint({
+      parameter: formData.parameter,
+      location: formData.location,
+      currentValue: 0,
+      unit: formData.unit,
+      threshold: parseFloat(formData.threshold),
+      status: 'Normal',
+      lastChecked: new Date().toISOString(),
+      trend: 'stable'
+    });
+    if (result.success) {
+      toast({ title: 'Success', description: 'Monitoring point added successfully' });
+      setIsOpen(false);
+      setFormData({ parameter: '', location: '', threshold: '', unit: '', frequency: '', description: '' });
+      loadEnvironmentalData();
+    }
+  };
 
   const hourlyTrends = [
     { time: '06:00', airQuality: 42, noise: 65, temperature: 22, humidity: 58 },
@@ -149,7 +137,7 @@ export const EnvironmentalHealth: React.FC = () => {
           <h1 className="text-3xl font-bold">Environmental Health</h1>
           <p className="text-muted-foreground">Monitor environmental parameters and compliance</p>
         </div>
-        <Dialog>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -163,37 +151,37 @@ export const EnvironmentalHealth: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="parameter">Parameter</Label>
-                <Select>
+                <Select value={formData.parameter} onValueChange={(v) => setFormData({...formData, parameter: v})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select parameter" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="air-quality">Air Quality Index</SelectItem>
-                    <SelectItem value="noise">Noise Level</SelectItem>
-                    <SelectItem value="temperature">Temperature</SelectItem>
-                    <SelectItem value="humidity">Humidity</SelectItem>
-                    <SelectItem value="co2">CO2 Levels</SelectItem>
-                    <SelectItem value="lighting">Lighting Levels</SelectItem>
+                    <SelectItem value="Air Quality Index">Air Quality Index</SelectItem>
+                    <SelectItem value="Noise Level">Noise Level</SelectItem>
+                    <SelectItem value="Temperature">Temperature</SelectItem>
+                    <SelectItem value="Humidity">Humidity</SelectItem>
+                    <SelectItem value="CO2 Levels">CO2 Levels</SelectItem>
+                    <SelectItem value="Lighting Levels">Lighting Levels</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label htmlFor="location">Location</Label>
-                <Input id="location" placeholder="Monitoring location" />
+                <Input id="location" placeholder="Monitoring location" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="threshold">Threshold</Label>
-                  <Input id="threshold" type="number" placeholder="Alert threshold" />
+                  <Input id="threshold" type="number" placeholder="Alert threshold" value={formData.threshold} onChange={(e) => setFormData({...formData, threshold: e.target.value})} />
                 </div>
                 <div>
                   <Label htmlFor="unit">Unit</Label>
-                  <Input id="unit" placeholder="Measurement unit" />
+                  <Input id="unit" placeholder="Measurement unit" value={formData.unit} onChange={(e) => setFormData({...formData, unit: e.target.value})} />
                 </div>
               </div>
               <div>
                 <Label htmlFor="frequency">Monitoring Frequency</Label>
-                <Select>
+                <Select value={formData.frequency} onValueChange={(v) => setFormData({...formData, frequency: v})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select frequency" />
                   </SelectTrigger>
@@ -207,9 +195,9 @@ export const EnvironmentalHealth: React.FC = () => {
               </div>
               <div>
                 <Label htmlFor="description">Description</Label>
-                <Textarea id="description" placeholder="Additional details..." />
+                <Textarea id="description" placeholder="Additional details..." value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
               </div>
-              <Button className="w-full">Add Monitoring Point</Button>
+              <Button className="w-full" onClick={handleSubmit}>Add Monitoring Point</Button>
             </div>
           </DialogContent>
         </Dialog>

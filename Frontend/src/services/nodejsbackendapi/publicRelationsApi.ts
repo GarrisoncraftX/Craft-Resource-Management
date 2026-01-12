@@ -11,6 +11,7 @@ export interface PressRelease {
   authorId: string;
   tags: string[];
   mediaContacts: string[];
+  views?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -41,6 +42,9 @@ export interface PublicEvent {
   mediaCoverage: string[];
   status: 'planned' | 'ongoing' | 'completed' | 'cancelled';
   budget?: number;
+  expectedAttendees?: number;
+  registeredAttendees?: number;
+  actualAttendees?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -75,6 +79,10 @@ export interface PublicRelationsReport {
   totalEvents: number;
   completedEvents: number;
   mediaCoverage: number;
+  totalReach?: number;
+  engagementRate?: number;
+  mediaReports?: number;
+  publicEvents?: number;
 }
 
 class PublicRelationsApiService {

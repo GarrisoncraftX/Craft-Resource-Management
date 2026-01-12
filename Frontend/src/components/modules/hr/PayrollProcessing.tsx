@@ -9,6 +9,7 @@ import { fetchPayslips, fetchEmployees } from '@/services/api';
 import { mockPayslips } from '@/services/mockData/payroll';
 import { Payslip, PayrollStatus } from '@/types/api';
 import { Employee } from '@/types/hr';
+import { ProcessPayrollForm } from './forms/ProcessPayrollForm';
 
 interface PayrollDisplayData {
   id: number;
@@ -27,6 +28,7 @@ export const PayrollProcessing: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [displayedPayslips, setDisplayedPayslips] = useState<PayrollDisplayData[]>([]);
+  const [isProcessPayrollOpen, setIsProcessPayrollOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -161,7 +163,7 @@ export const PayrollProcessing: React.FC = () => {
               <Download className="h-4 w-4 mr-2" />
               Export Report
             </Button>
-            <Button>
+            <Button onClick={() => setIsProcessPayrollOpen(true)}>
               <Calculator className="h-4 w-4 mr-2" />
               Process Payroll
             </Button>
@@ -321,6 +323,15 @@ export const PayrollProcessing: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      <ProcessPayrollForm
+        open={isProcessPayrollOpen}
+        onOpenChange={setIsProcessPayrollOpen}
+        onSuccess={() => {
+          // Refresh payroll data after successful processing
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };

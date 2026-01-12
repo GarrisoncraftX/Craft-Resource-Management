@@ -7,11 +7,21 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileText, Download} from 'lucide-react';
+import { reportsApiService, type ReportParams } from '@/services/pythonbackendapi/reportsApi';
+import { useToast } from '@/hooks/use-toast';
 
 export const CustomReportBuilder: React.FC = () => {
   const [activeTab, setActiveTab] = useState('builder');
-
-
+  const [loading, setLoading] = useState(false);
+  const [reportForm, setReportForm] = useState<ReportParams>({
+    name: '',
+    type: '',
+    dataSources: [],
+    dateRange: '',
+    format: 'pdf'
+  });
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const { toast } = useToast();
 
   const reportTemplates = [
     { id: 1, name: 'Monthly Financial Summary', category: 'Finance', frequency: 'Monthly', lastRun: '2024-01-31' },
@@ -19,7 +29,24 @@ export const CustomReportBuilder: React.FC = () => {
     { id: 3, name: 'Asset Utilization Report', category: 'Assets', frequency: 'Weekly', lastRun: '2024-02-05' },
     { id: 4, name: 'Safety Incident Analysis', category: 'Health & Safety', frequency: 'Monthly', lastRun: '2024-01-31' },
   ];
-  
+
+  const handleGenerateReport = async () => {
+    if (!reportForm.name || !reportForm.type || !reportForm.dateRange) {
+      toast({ title: 'Error', description: 'Please fill all required fields', variant: 'destructive' });
+      return;
+    }
+    setLoading(true);
+    try {
+      await reportsApiService.generateReport(reportForm);
+      toast({ title: 'Success', description: 'Report generated successfully' });
+      setReportForm({ name: '', type: '', dataSources: [], dateRange: '', format: 'pdf' });
+      setSelectedFields([]);
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to generate report', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -48,11 +75,11 @@ export const CustomReportBuilder: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <Label htmlFor="reportName">Report Name</Label>
-                      <Input id="reportName" placeholder="Enter report name" />
+                      <Input id="reportName" placeholder="Enter report name" value={reportForm.name} onChange={(e) => setReportForm({...reportForm, name: e.target.value})} />
                     </div>
                     <div>
                       <Label htmlFor="dataSource">Data Source</Label>
-                      <Select>
+                      <Select value={reportForm.type} onValueChange={(v) => setReportForm({...reportForm, type: v})}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select data source" />
                         </SelectTrigger>
@@ -67,7 +94,7 @@ export const CustomReportBuilder: React.FC = () => {
                     </div>
                     <div>
                       <Label htmlFor="chartType">Chart Type</Label>
-                      <Select>
+                      <Select value={reportForm.format} onValueChange={(v) => setReportForm({...reportForm, format: v})}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select chart type" />
                         </SelectTrigger>
@@ -87,7 +114,10 @@ export const CustomReportBuilder: React.FC = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
                       {['Revenue', 'Expenses', 'Employee Count', 'Performance Score', 'Asset Value', 'Incident Count'].map((field) => (
                         <div key={field} className="flex items-center space-x-2">
-                          <Checkbox id={field} />
+                          <Checkbox id={field} checked={selectedFields.includes(field)} onCheckedChange={(checked) => {
+                            if (checked) setSelectedFields([...selectedFields, field]);
+                            else setSelectedFields(selectedFields.filter(f => f !== field));
+                          }} />
                           <Label htmlFor={field} className="text-sm">{field}</Label>
                         </div>
                       ))}
@@ -97,7 +127,7 @@ export const CustomReportBuilder: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="dateRange">Date Range</Label>
-                      <Select>
+                      <Select value={reportForm.dateRange} onValueChange={(v) => setReportForm({...reportForm, dateRange: v})}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select date range" />
                         </SelectTrigger>
@@ -127,7 +157,7 @@ export const CustomReportBuilder: React.FC = () => {
 
                   <div className="flex gap-2">
                     <Button variant="outline">Save as Template</Button>
-                    <Button>Generate Report</Button>
+                    <Button onClick={handleGenerateReport} disabled={loading}>Generate Report</Button>
                     <Button variant="outline">
                       <Download className="h-4 w-4 mr-2" />
                       Export

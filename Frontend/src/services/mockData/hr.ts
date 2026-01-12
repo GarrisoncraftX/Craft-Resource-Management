@@ -56,29 +56,6 @@ export const mockEmployees = [
   'Charlie Wilson - Planning',
 ];
 
-export const mockIdCards = [
-  {
-    cardId: 'CARD12345',
-    firstName: 'John',
-    lastName: 'Doe',
-    employeeId: 'EMP001',
-    email: 'john.doe@example.com',
-    department: 'FINANCE',
-    nationalId: 'NID123456789',
-    phoneNumber: '555-1234',
-  },
-  {
-    cardId: 'CARD67890',
-    firstName: 'Jane',
-    lastName: 'Smith',
-    employeeId: 'EMP002',
-    email: 'jane.smith@example.com',
-    department: 'HR',
-    nationalId: 'NID987654321',
-    phoneNumber: '555-5678',
-  },
-];
-
 export const mockAttendanceHistory = [
   { date: '2024-06-01', checkIn: '08:30', checkOut: '17:15', totalHours: '8.75', status: 'Present', clock_in_method: 'QR Code', clock_out_method: 'QR Code' },
   { date: '2024-05-31', checkIn: '08:45', checkOut: '17:30', totalHours: '8.75', status: 'Present', clock_in_method: 'QR Code', clock_out_method: 'QR Code' },

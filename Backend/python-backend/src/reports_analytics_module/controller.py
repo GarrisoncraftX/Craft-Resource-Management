@@ -1,6 +1,7 @@
-from flask import request
+from flask import request, g, send_file
 from src.reports_analytics_module.service import ReportsAnalyticsService
 from src.utils.logger import logger
+import io
 
 class ReportsController:
     def __init__(self):
@@ -18,7 +19,8 @@ class ReportsController:
 
     def list_reports(self):
         try:
-            reports = self.reports_service.list_reports()
+            user_id = g.user_id
+            reports = self.reports_service.list_reports(user_id)
             return {'success': True, 'reports': reports}, 200
         except Exception as e:
             logger.error(f"Error listing reports: {e}")
@@ -32,9 +34,50 @@ class ReportsController:
             logger.error(f"Error getting report {report_id}: {e}")
             return {'success': False, 'message': 'Failed to get report'}, 500
 
+    def delete_report(self, report_id):
+        try:
+            user_id = g.user_id
+            self.reports_service.delete_report(report_id, user_id)
+            return {'success': True, 'message': 'Report deleted successfully'}, 200
+        except Exception as e:
+            logger.error(f"Error deleting report {report_id}: {e}")
+            return {'success': False, 'message': 'Failed to delete report'}, 500
+
+    def download_report(self, report_id):
+        try:
+            file_data = self.reports_service.download_report(report_id)
+            return send_file(io.BytesIO(file_data), mimetype='application/pdf', as_attachment=True, download_name=f'report-{report_id}.pdf')
+        except Exception as e:
+            logger.error(f"Error downloading report {report_id}: {e}")
+            return {'success': False, 'message': 'Failed to download report'}, 500
+
 class AnalyticsController:
     def __init__(self):
         self.analytics_service = ReportsAnalyticsService()
+
+    def get_monthly_trends(self):
+        try:
+            data = self.analytics_service.get_monthly_trends()
+            return {'success': True, 'data': data}, 200
+        except Exception as e:
+            logger.error(f"Error getting monthly trends: {e}")
+            return {'success': False, 'message': 'Failed to get monthly trends'}, 500
+
+    def get_ai_insights(self):
+        try:
+            data = self.analytics_service.get_ai_insights()
+            return {'success': True, 'data': data}, 200
+        except Exception as e:
+            logger.error(f"Error getting AI insights: {e}")
+            return {'success': False, 'message': 'Failed to get AI insights'}, 500
+
+    def get_kpis(self):
+        try:
+            data = self.analytics_service.get_kpis()
+            return {'success': True, 'data': data}, 200
+        except Exception as e:
+            logger.error(f"Error getting KPIs: {e}")
+            return {'success': False, 'message': 'Failed to get KPIs'}, 500
 
     def get_attendance_analytics(self):
         try:

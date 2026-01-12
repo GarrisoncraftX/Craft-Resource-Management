@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -7,8 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Download, Search, Filter, Eye, Calendar } from 'lucide-react';
+import { FileText, Download, Search, Calendar } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { adminApiService } from '@/services/javabackendapi/adminApi';
+import type { AuditLog } from '@/services/mockData/admin';
 
 const auditStats = [
   { date: '2024-01-10', events: 145 },
@@ -27,71 +29,22 @@ const actionTypes = [
   { name: 'View', value: 8, color: '#8b5cf6' }
 ];
 
-const mockAuditLogs = [
-  {
-    id: 1,
-    timestamp: '2024-01-15 14:30:22',
-    user: 'john.doe@company.com',
-    action: 'Login',
-    resource: 'System',
-    details: 'Successful login from IP 192.168.1.45',
-    severity: 'Info',
-    category: 'Authentication',
-    ip: '192.168.1.45'
-  },
-  {
-    id: 2,
-    timestamp: '2024-01-15 13:45:15',
-    user: 'jane.smith@company.com',
-    action: 'Update',
-    resource: 'User Profile',
-    details: 'Updated user profile information',
-    severity: 'Info',
-    category: 'User Management',
-    ip: '192.168.1.78'
-  },
-  {
-    id: 3,
-    timestamp: '2024-01-15 12:20:08',
-    user: 'admin@company.com',
-    action: 'Delete',
-    resource: 'Database Record',
-    details: 'Deleted user record ID: 12345',
-    severity: 'Warning',
-    category: 'Data Management',
-    ip: '192.168.1.10'
-  },
-  {
-    id: 4,
-    timestamp: '2024-01-15 11:15:30',
-    user: 'mike.johnson@company.com',
-    action: 'Failed Login',
-    resource: 'System',
-    details: 'Failed login attempt - incorrect password',
-    severity: 'Warning',
-    category: 'Authentication',
-    ip: '192.168.1.100'
-  },
-  {
-    id: 5,
-    timestamp: '2024-01-15 10:30:45',
-    user: 'system@company.com',
-    action: 'Backup',
-    resource: 'Database',
-    details: 'Automated backup completed successfully',
-    severity: 'Info',
-    category: 'System',
-    ip: 'localhost'
-  }
-];
-
 export const AuditLogs: React.FC = () => {
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSeverity, setSelectedSeverity] = useState('all');
   const [dateRange, setDateRange] = useState('7days');
 
-  const filteredLogs = mockAuditLogs.filter(log => {
+  useEffect(() => {
+    const fetchLogs = async () => {
+      const data = await adminApiService.getAuditLogs();
+      setAuditLogs(data);
+    };
+    fetchLogs();
+  }, []);
+
+  const filteredLogs = auditLogs.filter(log => {
     const matchesSearch = log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          log.resource.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -152,8 +105,8 @@ export const AuditLogs: React.FC = () => {
               <FileText className="h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12,847</div>
-              <p className="text-xs opacity-80">This month</p>
+              <div className="text-2xl font-bold">{auditLogs.length}</div>
+              <p className="text-xs opacity-80">All time</p>
             </CardContent>
           </Card>
 

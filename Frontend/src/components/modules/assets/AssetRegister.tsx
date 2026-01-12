@@ -4,61 +4,24 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { Search, Plus, Edit, Eye, Package } from 'lucide-react';
+import { Search, Edit, Eye } from 'lucide-react';
 
-// Use the service that calls the Java controller (/assets)
 import { fetchAssets } from '@/services/api';
 import type { Asset } from '@/types/asset';
-
-// Dummy data (kept as fallback)
-const assetData: Asset[] = [
-  {
-    id: 1,
-    assetTag: 'AST001',
-    assetName: 'Dell Laptop OptiPlex 7090',
-    description: 'IT Equipment',
-    location: 'IT Department',
-    status: 'Active',
-    acquisitionDate: '2023-06-15',
-    acquisitionCost: 1200,
-    currentValue: 1100,
-    condition: 'Good'
-  },
-  {
-    id: 2,
-    assetTag: 'AST002',
-    assetName: 'Conference Room Table',
-    description: 'Furniture',
-    location: 'Meeting Room A',
-    status: 'Active',
-    acquisitionDate: '2022-03-20',
-    acquisitionCost: 800,
-    currentValue: 650,
-    condition: 'Good'
-  },
-  {
-    id: 3,
-    assetTag: 'AST003',
-    assetName: 'Industrial Printer HP LaserJet',
-    description: 'Office Equipment',
-    location: 'Admin Office',
-    status: 'Maintenance',
-    acquisitionDate: '2023-01-10',
-    acquisitionCost: 1500,
-    currentValue: 1200,
-    condition: 'Fair'
-  },
-];
+import { mockAssets } from '@/services/mockData/assets';
+import { AssetFormDialog } from './AssetFormDialog';
 
 export const AssetRegister: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // start with dummies so UI works offline
-  const [assets, setAssets] = useState<Asset[]>(assetData);
+  const [assets, setAssets] = useState<Asset[]>(mockAssets);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch from backend (/assets) and replace assets only if valid array returned
+  const handleAssetCreated = (newAsset: Asset) => {
+    setAssets(prev => [newAsset, ...prev]);
+  };
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -70,9 +33,9 @@ export const AssetRegister: React.FC = () => {
         if (!cancelled && Array.isArray(list) && list.length > 0) {
           setAssets(list);
         }
-      } catch (err: any) {
-        console.warn('Failed to fetch assets — using fallback dummies.', err?.message ?? err);
-        setError(err?.message ?? 'Failed to fetch assets');
+      } catch (err) {
+        console.warn('Failed to fetch assets — using fallback dummies.', err instanceof Error ? err.message : err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch assets');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -104,10 +67,7 @@ export const AssetRegister: React.FC = () => {
             <h1 className="text-3xl font-bold tracking-tight">Asset Register</h1>
             <p className="text-muted-foreground">Comprehensive database of all organizational assets</p>
           </div>
-          <Button className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Add Asset
-          </Button>
+          <AssetFormDialog onAssetCreated={handleAssetCreated} />
         </div>
 
         {/* Search */}

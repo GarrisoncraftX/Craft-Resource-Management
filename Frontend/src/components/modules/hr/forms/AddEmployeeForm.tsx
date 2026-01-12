@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/hooks/use-toast';
 import { fetchDepartments, fetchRoles } from '@/services/api';
 import { apiClient } from '@/utils/apiClient';
-import { mockDepartments, mockRoles } from '@/services/mockData/mockData';
+import { mockDepartments, mockRoles } from '@/services/mockData/hr';
 import type { Department, Role } from '@/types/api';
 
 

@@ -1,16 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, Send, Users, Mail, MessageSquare, Calendar, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { NotificationFormDialog } from './NotificationFormDialog';
+import { adminApiService } from '@/services/javabackendapi/adminApi';
+import type { Notification } from '@/services/mockData/admin';
 
 const notificationStats = [
   { month: 'Jan', email: 1200, sms: 450, push: 890 },
@@ -27,56 +26,23 @@ const deliveryRates = [
   { name: 'Pending', value: 5, color: '#f59e0b' }
 ];
 
-const recentNotifications = [
-  {
-    id: 1,
-    title: 'System Maintenance Alert',
-    message: 'Scheduled maintenance will begin at 2:00 AM',
-    type: 'System',
-    recipients: 245,
-    timestamp: '2024-01-15 09:30:00',
-    status: 'Sent',
-    priority: 'High'
-  },
-  {
-    id: 2,
-    title: 'Security Alert',
-    message: 'Multiple failed login attempts detected',
-    type: 'Security',
-    recipients: 12,
-    timestamp: '2024-01-15 08:45:00',
-    status: 'Delivered',
-    priority: 'Critical'
-  },
-  {
-    id: 3,
-    title: 'Weekly Report Available',
-    message: 'Your weekly analytics report is ready',
-    type: 'Report',
-    recipients: 89,
-    timestamp: '2024-01-15 07:00:00',
-    status: 'Sent',
-    priority: 'Low'
-  }
-];
-
 export const Notifications: React.FC = () => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [newNotification, setNewNotification] = useState({
-    title: '',
-    message: '',
-    type: 'general',
-    priority: 'medium',
-    recipients: 'all'
-  });
-  const [settings, setSettings] = useState({
-    emailEnabled: true,
-    smsEnabled: false,
-    pushEnabled: true,
-    autoSend: false
-  });
 
-  const filteredNotifications = recentNotifications.filter(notification =>
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      const data = await adminApiService.getNotifications();
+      setNotifications(data);
+    };
+    fetchNotifications();
+  }, []);
+
+  const handleNotificationSent = (notification: Notification) => {
+    setNotifications(prev => [notification, ...prev]);
+  };
+
+  const filteredNotifications = notifications.filter(notification =>
     notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     notification.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
     notification.type.toLowerCase().includes(searchTerm.toLowerCase())
@@ -110,10 +76,7 @@ export const Notifications: React.FC = () => {
             <h1 className="text-3xl font-bold tracking-tight">Notification Management</h1>
             <p className="text-muted-foreground">Send and manage system notifications</p>
           </div>
-          <Button className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            Send Notification
-          </Button>
+          <NotificationFormDialog onNotificationSent={handleNotificationSent} />
         </div>
 
         {/* Notification Stats Cards */}
@@ -163,105 +126,11 @@ export const Notifications: React.FC = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="send" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="send">Send Notification</TabsTrigger>
+        <Tabs defaultValue="history" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="history">Notification History</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="send" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Create New Notification</CardTitle>
-                <CardDescription>Compose and send notifications to users</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="title">Notification Title</Label>
-                    <Input
-                      id="title"
-                      placeholder="Enter notification title"
-                      value={newNotification.title}
-                      onChange={(e) => setNewNotification(prev => ({ ...prev, title: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="type">Notification Type</Label>
-                    <Select value={newNotification.type} onValueChange={(value) => setNewNotification(prev => ({ ...prev, type: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="general">General</SelectItem>
-                        <SelectItem value="security">Security</SelectItem>
-                        <SelectItem value="system">System</SelectItem>
-                        <SelectItem value="report">Report</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="message">Message</Label>
-                  <Textarea
-                    id="message"
-                    placeholder="Enter your notification message"
-                    value={newNotification.message}
-                    onChange={(e) => setNewNotification(prev => ({ ...prev, message: e.target.value }))}
-                    rows={4}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="priority">Priority</Label>
-                    <Select value={newNotification.priority} onValueChange={(value) => setNewNotification(prev => ({ ...prev, priority: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="critical">Critical</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="recipients">Recipients</Label>
-                    <Select value={newNotification.recipients} onValueChange={(value) => setNewNotification(prev => ({ ...prev, recipients: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Users</SelectItem>
-                        <SelectItem value="admins">Administrators</SelectItem>
-                        <SelectItem value="managers">Managers</SelectItem>
-                        <SelectItem value="employees">Employees</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch id="schedule" />
-                  <Label htmlFor="schedule">Schedule for later</Label>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button className="flex items-center gap-2">
-                    <Send className="h-4 w-4" />
-                    Send Now
-                  </Button>
-                  <Button variant="outline">Save as Draft</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           <TabsContent value="history" className="space-y-6">
             <Card>
@@ -397,91 +266,6 @@ export const Notifications: React.FC = () => {
                     <Line type="monotone" dataKey="push" stroke="hsl(var(--accent))" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="settings" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Channels</CardTitle>
-                <CardDescription>Configure notification delivery methods</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="email">Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Send notifications via email</p>
-                  </div>
-                  <Switch
-                    id="email"
-                    checked={settings.emailEnabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, emailEnabled: checked }))}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="sms">SMS Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Send notifications via SMS</p>
-                  </div>
-                  <Switch
-                    id="sms"
-                    checked={settings.smsEnabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, smsEnabled: checked }))}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="push">Push Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Send browser push notifications</p>
-                  </div>
-                  <Switch
-                    id="push"
-                    checked={settings.pushEnabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, pushEnabled: checked }))}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="auto">Auto-send Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Automatically send system notifications</p>
-                  </div>
-                  <Switch
-                    id="auto"
-                    checked={settings.autoSend}
-                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, autoSend: checked }))}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Templates</CardTitle>
-                <CardDescription>Manage notification templates</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2">
-                    <Bell className="h-6 w-6" />
-                    <span>System Alert</span>
-                  </Button>
-                  <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2">
-                    <MessageSquare className="h-6 w-6" />
-                    <span>Security Warning</span>
-                  </Button>
-                  <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2">
-                    <Calendar className="h-6 w-6" />
-                    <span>Scheduled Maintenance</span>
-                  </Button>
-                  <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2">
-                    <Mail className="h-6 w-6" />
-                    <span>General Notice</span>
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>

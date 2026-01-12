@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,66 +6,30 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Activity, Cpu, HardDrive, Wifi, Users, RefreshCw, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
-
-const systemMetrics = [
-  { time: '00:00', cpu: 25, memory: 65, disk: 45, network: 30 },
-  { time: '04:00', cpu: 18, memory: 58, disk: 42, network: 15 },
-  { time: '08:00', cpu: 45, memory: 72, disk: 48, network: 85 },
-  { time: '12:00', cpu: 62, memory: 78, disk: 52, network: 95 },
-  { time: '16:00', cpu: 38, memory: 69, disk: 47, network: 72 },
-  { time: '20:00', cpu: 28, memory: 61, disk: 44, network: 45 }
-];
-
-const responseTimeData = [
-  { time: '00:00', response: 120 },
-  { time: '04:00', response: 95 },
-  { time: '08:00', response: 280 },
-  { time: '12:00', response: 340 },
-  { time: '16:00', response: 220 },
-  { time: '20:00', response: 150 }
-];
-
-const errorRateData = [
-  { time: '00:00', errors: 2 },
-  { time: '04:00', errors: 1 },
-  { time: '08:00', errors: 8 },
-  { time: '12:00', errors: 12 },
-  { time: '16:00', errors: 5 },
-  { time: '20:00', errors: 3 }
-];
-
-const systemAlerts = [
-  {
-    id: 1,
-    type: 'High CPU Usage',
-    severity: 'Warning',
-    timestamp: '2024-01-15 14:30:00',
-    message: 'CPU usage exceeded 80% for more than 5 minutes',
-    status: 'Active'
-  },
-  {
-    id: 2,
-    type: 'Disk Space Low',
-    severity: 'Critical',
-    timestamp: '2024-01-15 13:45:00',
-    message: 'Available disk space is below 10%',
-    status: 'Resolved'
-  },
-  {
-    id: 3,
-    type: 'Memory Usage High',
-    severity: 'Warning',
-    timestamp: '2024-01-15 12:20:00',
-    message: 'Memory usage reached 85%',
-    status: 'Active'
-  }
-];
+import { systemApiService } from '@/services/javabackendapi/systemApiService';
+import type { SystemMetric, SystemAlert } from '@/services/mockData/system';
 
 export const SystemMonitoring: React.FC = () => {
-  const [currentCpu] = useState(42);
-  const [currentMemory] = useState(68);
-  const [currentDisk] = useState(47);
-  const [activeUsers] = useState(156);
+  const [systemMetrics, setSystemMetrics] = useState<SystemMetric[]>([]);
+  const [systemAlerts, setSystemAlerts] = useState<SystemAlert[]>([]);
+  const [stats, setStats] = useState({ currentCpu: 0, currentMemory: 0, currentDisk: 0, activeUsers: 0 });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [metrics, alerts, statsData] = await Promise.all([
+        systemApiService.getSystemMetrics(),
+        systemApiService.getSystemAlerts(),
+        systemApiService.getSystemStats()
+      ]);
+      setSystemMetrics(metrics);
+      setSystemAlerts(alerts);
+      setStats(statsData);
+    };
+    fetchData();
+  }, []);
+
+  const responseTimeData = systemMetrics.map(m => ({ time: m.time, response: m.cpu * 5 }));
+  const errorRateData = systemMetrics.map(m => ({ time: m.time, errors: Math.floor(m.cpu / 10) }));
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -101,47 +65,50 @@ export const SystemMonitoring: React.FC = () => {
 
         {/* System Status Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="bg-blue-500 text-white">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">CPU Usage</CardTitle>
               <Cpu className="h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{currentCpu}%</div>
-              <p className="text-xs opacity-80">Normal load</p>
+              <div className="text-2xl font-bold">{stats.currentCpu}%</div>
+              <Progress value={stats.currentCpu} className="mt-2" />
+              <p className="text-xs text-muted-foreground mt-1">Normal load</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-green-500 text-white">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Memory Usage</CardTitle>
               <Activity className="h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{currentMemory}%</div>
-              <p className="text-xs opacity-80">8.2GB of 12GB</p>
+              <div className="text-2xl font-bold">{stats.currentMemory}%</div>
+              <Progress value={stats.currentMemory} className="mt-2" />
+              <p className="text-xs text-muted-foreground mt-1">8.2GB of 12GB</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-orange-500 text-white">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Disk Usage</CardTitle>
               <HardDrive className="h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{currentDisk}%</div>
-              <p className="text-xs opacity-80">235GB of 500GB</p>
+              <div className="text-2xl font-bold">{stats.currentDisk}%</div>
+              <Progress value={stats.currentDisk} className="mt-2" />
+              <p className="text-xs text-muted-foreground mt-1">235GB of 500GB</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-purple-500 text-white">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Users</CardTitle>
               <Users className="h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{activeUsers}</div>
-              <p className="text-xs opacity-80">Currently online</p>
+              <div className="text-2xl font-bold">{stats.activeUsers}</div>
+              <p className="text-xs text-muted-foreground mt-1">Currently online</p>
             </CardContent>
           </Card>
         </div>

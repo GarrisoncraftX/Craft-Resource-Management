@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,34 +7,54 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Shield, AlertTriangle, Users, ClipboardList, Plus, FileText } from 'lucide-react';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { healthSafetyApiService } from '@/services/pythonbackendapi/healthSafetyApi';
+import type { IncidentReport, SafetyInspection, TrainingSession } from '@/services/mockData/health-safety';
+import { useNavigate } from 'react-router-dom';
 
 export const HealthSafetyDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [incidents, setIncidents] = useState<IncidentReport[]>([]);
+  const [inspections, setInspections] = useState<SafetyInspection[]>([]);
+  const [trainingSessions, setTrainingSessions] = useState<TrainingSession[]>([]);
+  const navigate = useNavigate();
 
-  const safetyInspections = [
-    { id: 'INS-001', facility: 'City Hall', type: 'Fire Safety', inspector: 'John Safety', date: '2024-01-20', status: 'Passed', score: 95 },
-    { id: 'INS-002', facility: 'Public Library', type: 'Building Safety', inspector: 'Sarah Inspector', date: '2024-01-18', status: 'Failed', score: 72 },
-    { id: 'INS-003', facility: 'Community Center', type: 'Health & Safety', inspector: 'Mike Auditor', date: '2024-01-22', status: 'Pending', score: 0 },
-  ];
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const incidents = [
-    { id: 'INC-001', type: 'Workplace Injury', location: 'Maintenance Dept', reporter: 'Bob Worker', date: '2024-01-21', severity: 'Minor', status: 'Under Investigation' },
-    { id: 'INC-002', type: 'Chemical Spill', location: 'Lab Building', reporter: 'Jane Scientist', date: '2024-01-19', severity: 'Major', status: 'Resolved' },
-    { id: 'INC-003', type: 'Equipment Failure', location: 'Generator Room', reporter: 'Tom Tech', date: '2024-01-20', severity: 'Medium', status: 'Investigating' },
-  ];
-
-  const trainingPrograms = [
-    { name: 'Fire Safety Training', participants: 120, completion: 95, nextSession: '2024-02-15', status: 'Active' },
-    { name: 'First Aid Certification', participants: 85, completion: 88, nextSession: '2024-03-01', status: 'Active' },
-    { name: 'Emergency Response', participants: 200, completion: 76, nextSession: '2024-02-20', status: 'Scheduled' },
-  ];
+  const loadData = async () => {
+    const [incidentsData, inspectionsData, trainingData] = await Promise.all([
+      healthSafetyApiService.getIncidents(),
+      healthSafetyApiService.getInspections(),
+      healthSafetyApiService.getTrainingSessions()
+    ]);
+    setIncidents(incidentsData);
+    setInspections(inspectionsData);
+    setTrainingSessions(trainingData);
+  };
 
   const healthSafetyMetrics = {
-    totalInspections: 45,
-    incidentRate: 2.3,
-    trainingCompletion: 86,
+    totalInspections: inspections.length,
+    incidentRate: incidents.length * 0.5,
+    trainingCompletion: trainingSessions.reduce((acc, t) => acc + t.completionRate, 0) / (trainingSessions.length || 1),
     complianceScore: 94
   };
+
+  const incidentsByType = [
+    { type: 'Injury', count: incidents.filter(i => i.type === 'Injury').length, fill: '#ef4444' },
+    { type: 'Environmental', count: incidents.filter(i => i.type === 'Environmental').length, fill: '#10b981' },
+    { type: 'Equipment', count: incidents.filter(i => i.type === 'Equipment').length, fill: '#f59e0b' },
+    { type: 'Near Miss', count: incidents.filter(i => i.type === 'Near Miss').length, fill: '#3b82f6' }
+  ];
+
+  const inspectionTrends = [
+    { month: 'Jan', passed: 12, failed: 2 },
+    { month: 'Feb', passed: 15, failed: 1 },
+    { month: 'Mar', passed: 14, failed: 3 },
+    { month: 'Apr', passed: 18, failed: 1 },
+    { month: 'May', passed: 16, failed: 2 },
+    { month: 'Jun', passed: 19, failed: 1 }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -120,13 +140,13 @@ export const HealthSafetyDashboard: React.FC = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {safetyInspections.map((inspection) => (
+                      {inspections.slice(0, 3).map((inspection) => (
                         <TableRow key={inspection.id}>
-                          <TableCell className="font-medium">{inspection.facility}</TableCell>
+                          <TableCell className="font-medium">{inspection.location}</TableCell>
                           <TableCell>{inspection.type}</TableCell>
-                          <TableCell>{inspection.date}</TableCell>
+                          <TableCell>{inspection.scheduledDate}</TableCell>
                           <TableCell>
-                            <Badge variant={inspection.status === 'Passed' ? 'default' : inspection.status === 'Failed' ? 'destructive' : 'secondary'}>
+                            <Badge variant={inspection.status === 'Completed' ? 'default' : inspection.status === 'Failed' ? 'destructive' : 'secondary'}>
                               {inspection.status}
                             </Badge>
                           </TableCell>
@@ -145,22 +165,22 @@ export const HealthSafetyDashboard: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {trainingPrograms.map((program, index) => (
-                      <div key={index} className="space-y-2">
+                    {trainingSessions.slice(0, 3).map((program) => (
+                      <div key={program.id} className="space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="font-medium">{program.name}</span>
-                          <Badge variant={program.status === 'Active' ? 'default' : 'secondary'}>
+                          <span className="font-medium">{program.title}</span>
+                          <Badge variant={program.status === 'Completed' ? 'default' : 'secondary'}>
                             {program.status}
                           </Badge>
                         </div>
                         <div className="flex justify-between text-sm text-gray-600">
-                          <span>{program.participants} participants</span>
-                          <span>{program.completion}% complete</span>
+                          <span>{program.enrolled} participants</span>
+                          <span>{program.completionRate}% complete</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${program.completion}%` }} />
+                          <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${program.completionRate}%` }} />
                         </div>
-                        <p className="text-xs text-gray-500">Next session: {program.nextSession}</p>
+                        <p className="text-xs text-gray-500">Next session: {program.scheduledDate}</p>
                       </div>
                     ))}
                   </div>
@@ -175,14 +195,23 @@ export const HealthSafetyDashboard: React.FC = () => {
                 <CardTitle>Safety Inspections</CardTitle>
                 <CardDescription>Schedule and manage safety inspections</CardDescription>
                 <PermissionGuard requiredPermissions={['health.inspections.create']}>
-                  <Button>
+                  <Button onClick={() => navigate('/health-safety/inspections')}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Schedule Inspection
+                    View All Inspections
                   </Button>
                 </PermissionGuard>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">Safety inspection management interface will be implemented here.</p>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={inspectionTrends}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="passed" stroke="#10b981" strokeWidth={2} name="Passed" />
+                    <Line type="monotone" dataKey="failed" stroke="#ef4444" strokeWidth={2} name="Failed" />
+                  </LineChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </TabsContent>
@@ -193,30 +222,30 @@ export const HealthSafetyDashboard: React.FC = () => {
                 <CardTitle>Incident Reporting</CardTitle>
                 <CardDescription>Report and track safety incidents</CardDescription>
                 <PermissionGuard requiredPermissions={['health.incidents.create']}>
-                  <Button>
+                  <Button onClick={() => navigate('/health-safety/incidents')}>
                     <AlertTriangle className="h-4 w-4 mr-2" />
-                    Report Incident
+                    View All Incidents
                   </Button>
                 </PermissionGuard>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {incidents.map((incident) => (
-                    <div key={incident.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{incident.type}</p>
-                        <p className="text-sm text-gray-600">{incident.location} • Reporter: {incident.reporter}</p>
-                        <p className="text-xs text-gray-500">{incident.date}</p>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant={incident.severity === 'Major' ? 'destructive' : incident.severity === 'Medium' ? 'default' : 'secondary'}>
-                          {incident.severity}
-                        </Badge>
-                        <p className="text-xs text-gray-500 mt-1">{incident.status}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={incidentsByType}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      dataKey="count"
+                      label={({ type, count }) => `${type}: ${count}`}
+                    >
+                      {incidentsByType.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </TabsContent>
@@ -227,14 +256,33 @@ export const HealthSafetyDashboard: React.FC = () => {
                 <CardTitle>Safety Training Management</CardTitle>
                 <CardDescription>Organize and track safety training programs</CardDescription>
                 <PermissionGuard requiredPermissions={['health.training.manage']}>
-                  <Button>
+                  <Button onClick={() => navigate('/health-safety/training')}>
                     <Users className="h-4 w-4 mr-2" />
-                    Create Training Program
+                    View All Training
                   </Button>
                 </PermissionGuard>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">Training management interface will be implemented here.</p>
+                <div className="space-y-4">
+                  {trainingSessions.slice(0, 3).map((program) => (
+                    <div key={program.id} className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">{program.title}</span>
+                        <Badge variant={program.status === 'Completed' ? 'default' : 'secondary'}>
+                          {program.status}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>{program.enrolled} participants</span>
+                        <span>{program.completionRate}% complete</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${program.completionRate}%` }} />
+                      </div>
+                      <p className="text-xs text-gray-500">Next session: {program.scheduledDate}</p>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -245,14 +293,27 @@ export const HealthSafetyDashboard: React.FC = () => {
                 <CardTitle>Environmental Health</CardTitle>
                 <CardDescription>Monitor environmental health factors</CardDescription>
                 <PermissionGuard requiredPermissions={['health.environmental.manage']}>
-                  <Button>
+                  <Button onClick={() => navigate('/health-safety/environmental')}>
                     <FileText className="h-4 w-4 mr-2" />
-                    Environmental Report
+                    View Environmental Data
                   </Button>
                 </PermissionGuard>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">Environmental health monitoring interface will be implemented here.</p>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={[
+                    { parameter: 'Air Quality', value: 95 },
+                    { parameter: 'Noise Control', value: 88 },
+                    { parameter: 'Temperature', value: 92 },
+                    { parameter: 'Humidity', value: 85 }
+                  ]}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="parameter" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#10b981" />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </TabsContent>

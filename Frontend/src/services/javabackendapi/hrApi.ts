@@ -365,3 +365,50 @@ class HrApiService {
 }
 
 export const hrApiService = new HrApiService();
+
+// ============================================================================
+// WRAPPER FUNCTIONS FOR BACKWARD COMPATIBILITY
+// ============================================================================
+export async function fetchEmployees(): Promise<User[]> {
+  return hrApiService.listEmployees();
+}
+
+export async function fetchEmployeeById(id: string): Promise<User> {
+  return hrApiService.getEmployeeById(Number(id));
+}
+
+export async function updateEmployeeById(id: string, employee: UpdateEmployeeRequest): Promise<User> {
+  return hrApiService.updateEmployee(Number(id), employee);
+}
+
+export async function uploadProfilePicture(id: string, file: File): Promise<User> {
+  await hrApiService.updateProfilePicture(Number(id), file);
+  return hrApiService.getEmployeeById(Number(id));
+}
+
+export async function createEmployee(employee: Partial<User>): Promise<User> {
+  return hrApiService.registerEmployee(employee as User);
+}
+
+export async function fetchProvisionedEmployees() {
+  return hrApiService.getProvisionedEmployees();
+}
+
+export async function fetchPayslips(userId?: string): Promise<Payslip[]> {
+  if (userId) {
+    return hrApiService.getPayslipsByUser(Number(userId));
+  }
+  return hrApiService.getAllPayslips();
+}
+
+export const mapPayrollToUI = (payrollData: Payslip[]) => {
+  return payrollData.map((payslip: Payslip) => ({
+    period: `${new Date(payslip.payPeriodStart).toLocaleDateString()} - ${new Date(payslip.payPeriodEnd).toLocaleDateString()}`,
+    basicSalary: `$${(payslip.grossPay * 0.8).toFixed(2)}`,
+    allowances: '$500.00',
+    overtime: '$156.25',
+    deductions: `$${(payslip.taxDeductions + payslip.otherDeductions).toFixed(2)}`,
+    netPay: `$${payslip.netPay.toFixed(2)}`,
+    status: payslip.payrollRun?.status === 'COMPLETED' ? 'Processed' : 'Pending'
+  }));
+};

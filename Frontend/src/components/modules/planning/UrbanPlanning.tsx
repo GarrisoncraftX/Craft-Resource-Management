@@ -1,47 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Building, FileText, Plus, Save, Search } from 'lucide-react';
+import { MapPin, Building, Plus } from 'lucide-react';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { planningApiService, UrbanPlan } from '@/services/nodejsbackendapi/planningApi';
+import { mockUrbanPlans, mockBudgetAllocation } from '@/services/mockData/planning';
+import { UrbanPlanFormDialog } from './UrbanPlanFormDialog';
+import { toast } from '@/hooks/use-toast';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export const UrbanPlanning: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [urbanPlans, setUrbanPlans] = useState<UrbanPlan[]>(mockUrbanPlans);
+  const [planDialogOpen, setPlanDialogOpen] = useState(false);
 
-  const zonePlans = [
-    { id: 'ZP-001', zone: 'Downtown Commercial', type: 'Commercial', area: '2.5 km²', population: 15000, status: 'Active' },
-    { id: 'ZP-002', zone: 'Residential District A', type: 'Residential', area: '4.2 km²', population: 25000, status: 'Under Review' },
-    { id: 'ZP-003', zone: 'Industrial Park', type: 'Industrial', area: '3.8 km²', population: 500, status: 'Active' },
-    { id: 'ZP-004', zone: 'Green Belt', type: 'Conservation', area: '6.1 km²', population: 0, status: 'Protected' },
-  ];
+  useEffect(() => {
+    loadUrbanPlans();
+  }, []);
 
-  const developmentProjects = [
-    { id: 'DP-001', name: 'City Center Redevelopment', zone: 'Downtown Commercial', budget: 25000000, progress: 65, status: 'In Progress' },
-    { id: 'DP-002', name: 'Affordable Housing Phase 1', zone: 'Residential District A', budget: 18000000, progress: 30, status: 'Planning' },
-    { id: 'DP-003', name: 'Industrial Expansion', zone: 'Industrial Park', budget: 12000000, progress: 85, status: 'Near Completion' },
-  ];
+  const loadUrbanPlans = async () => {
+    try {
+      const data = await planningApiService.getUrbanPlans().catch(() => mockUrbanPlans);
+      setUrbanPlans(data);
+    } catch (error) {
+      console.error('Error loading urban plans:', error);
+    }
+  };
 
-  const zoneData = [
-    { zone: 'Commercial', area: 2.5, population: 15000, projects: 8 },
-    { zone: 'Residential', area: 4.2, population: 25000, projects: 12 },
-    { zone: 'Industrial', area: 3.8, population: 500, projects: 5 },
-    { zone: 'Conservation', area: 6.1, population: 0, projects: 2 },
-  ];
+  const handleCreatePlan = async (plan: Omit<UrbanPlan, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      await planningApiService.createUrbanPlan(plan);
+      toast({ title: 'Success', description: 'Urban plan created successfully' });
+      loadUrbanPlans();
+    } catch (error) {
+      console.error('Error creating urban plan:', error);
+      toast({ title: 'Error', description: 'Failed to create urban plan', variant: 'destructive' });
+    }
+  };
 
-  const landUseData = [
-    { name: 'Residential', value: 45, color: '#8884d8' },
-    { name: 'Commercial', value: 20, color: '#82ca9d' },
-    { name: 'Industrial', value: 15, color: '#ffc658' },
-    { name: 'Green Space', value: 12, color: '#ff7300' },
-    { name: 'Infrastructure', value: 8, color: '#d084d0' },
-  ];
+  const planTypeData = urbanPlans.reduce((acc, plan) => {
+    const existing = acc.find(item => item.type === plan.planType);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      acc.push({ type: plan.planType, count: 1 });
+    }
+    return acc;
+  }, [] as { type: string; count: number }[]);
+
+  const statusData = urbanPlans.reduce((acc, plan) => {
+    const existing = acc.find(item => item.status === plan.status);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      acc.push({ status: plan.status, count: 1 });
+    }
+    return acc;
+  }, [] as { status: string; count: number }[]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -56,56 +76,53 @@ export const UrbanPlanning: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Zones</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Plans</CardTitle>
               <MapPin className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">24</div>
-              <p className="text-xs text-muted-foreground">Planning zones</p>
+              <div className="text-2xl font-bold">{urbanPlans.length}</div>
+              <p className="text-xs text-muted-foreground">Urban development plans</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
+              <CardTitle className="text-sm font-medium">Approved Plans</CardTitle>
               <Building className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">27</div>
-              <p className="text-xs text-muted-foreground">Development projects</p>
+              <div className="text-2xl font-bold">{urbanPlans.filter(p => p.status === 'approved').length}</div>
+              <p className="text-xs text-muted-foreground">Ready for implementation</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Area</CardTitle>
+              <CardTitle className="text-sm font-medium">Under Review</CardTitle>
               <MapPin className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">16.6 km²</div>
-              <p className="text-xs text-muted-foreground">Planned area</p>
+              <div className="text-2xl font-bold">{urbanPlans.filter(p => p.status === 'review').length}</div>
+              <p className="text-xs text-muted-foreground">Pending approval</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Population</CardTitle>
+              <CardTitle className="text-sm font-medium">Implemented</CardTitle>
               <Building className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">40,500</div>
-              <p className="text-xs text-muted-foreground">In planning areas</p>
+              <div className="text-2xl font-bold">{urbanPlans.filter(p => p.status === 'implemented').length}</div>
+              <p className="text-xs text-muted-foreground">Active plans</p>
             </CardContent>
           </Card>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="zones">Zone Planning</TabsTrigger>
-            <TabsTrigger value="development">Development</TabsTrigger>
-            <TabsTrigger value="landuse">Land Use</TabsTrigger>
-            <TabsTrigger value="permits">Permits</TabsTrigger>
+            <TabsTrigger value="plans">Urban Plans</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
@@ -113,19 +130,18 @@ export const UrbanPlanning: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Zone Distribution</CardTitle>
-                  <CardDescription>Area coverage by zone type</CardDescription>
+                  <CardTitle>Plans by Type</CardTitle>
+                  <CardDescription>Distribution of urban plan types</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={zoneData}>
+                    <BarChart data={planTypeData}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="zone" />
+                      <XAxis dataKey="type" />
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="area" fill="#8884d8" name="Area (km²)" />
-                      <Bar dataKey="projects" fill="#82ca9d" name="Projects" />
+                      <Bar dataKey="count" fill="#8884d8" name="Plans" />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -133,24 +149,24 @@ export const UrbanPlanning: React.FC = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Land Use Distribution</CardTitle>
-                  <CardDescription>Current land use allocation</CardDescription>
+                  <CardTitle>Plan Status Distribution</CardTitle>
+                  <CardDescription>Current status of all plans</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
-                        data={landUseData}
+                        data={statusData}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={(entry) => `${entry.status}: ${entry.count}`}
                         outerRadius={80}
                         fill="#8884d8"
-                        dataKey="value"
+                        dataKey="count"
                       >
-                        {landUseData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        {statusData.map((entry) => (
+                          <Cell key={entry.status} fill={COLORS[statusData.indexOf(entry) % COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip />
@@ -161,68 +177,47 @@ export const UrbanPlanning: React.FC = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="zones">
+          <TabsContent value="plans">
             <Card>
               <CardHeader>
-                <CardTitle>Zone Planning Management</CardTitle>
-                <CardDescription>Create and manage planning zones</CardDescription>
-                <PermissionGuard requiredPermissions={['planning.zones.create']}>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Zone Plan
-                  </Button>
-                </PermissionGuard>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Urban Development Plans</CardTitle>
+                    <CardDescription>Strategic urban planning initiatives</CardDescription>
+                  </div>
+                  <PermissionGuard requiredPermissions={['planning.urban.create']}>
+                    <Button onClick={() => setPlanDialogOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      New Urban Plan
+                    </Button>
+                  </PermissionGuard>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div>
-                    <Label htmlFor="zoneName">Zone Name</Label>
-                    <Input id="zoneName" placeholder="Enter zone name" />
-                  </div>
-                  <div>
-                    <Label htmlFor="zoneType">Zone Type</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select zone type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="residential">Residential</SelectItem>
-                        <SelectItem value="commercial">Commercial</SelectItem>
-                        <SelectItem value="industrial">Industrial</SelectItem>
-                        <SelectItem value="conservation">Conservation</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="area">Area (km²)</Label>
-                    <Input id="area" type="number" placeholder="Zone area" />
-                  </div>
-                </div>
-
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Zone ID</TableHead>
-                      <TableHead>Zone Name</TableHead>
+                      <TableHead>Title</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Area</TableHead>
-                      <TableHead>Population</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Jurisdiction</TableHead>
+                      <TableHead>Period</TableHead>
+                      <TableHead>Objectives</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {zonePlans.map((zone) => (
-                      <TableRow key={zone.id}>
-                        <TableCell className="font-medium">{zone.id}</TableCell>
-                        <TableCell>{zone.zone}</TableCell>
-                        <TableCell>{zone.type}</TableCell>
-                        <TableCell>{zone.area}</TableCell>
-                        <TableCell>{zone.population.toLocaleString()}</TableCell>
+                    {urbanPlans.map((plan) => (
+                      <TableRow key={plan.id}>
+                        <TableCell className="font-medium">{plan.title}</TableCell>
+                        <TableCell>{plan.planType}</TableCell>
                         <TableCell>
-                          <Badge variant={zone.status === 'Active' ? 'default' : 'secondary'}>
-                            {zone.status}
+                          <Badge variant={plan.status === 'approved' ? 'default' : 'secondary'}>
+                            {plan.status}
                           </Badge>
                         </TableCell>
+                        <TableCell>{plan.jurisdiction}</TableCell>
+                        <TableCell>{plan.planningPeriod.startDate.substring(0, 4)} - {plan.planningPeriod.endDate.substring(0, 4)}</TableCell>
+                        <TableCell>{plan.objectives.length} objectives</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -231,118 +226,60 @@ export const UrbanPlanning: React.FC = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="development">
-            <Card>
-              <CardHeader>
-                <CardTitle>Development Projects</CardTitle>
-                <CardDescription>Track development project progress</CardDescription>
-                <PermissionGuard requiredPermissions={['planning.development.create']}>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Project
-                  </Button>
-                </PermissionGuard>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {developmentProjects.map((project) => (
-                    <div key={project.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h3 className="font-semibold">{project.name}</h3>
-                          <p className="text-sm text-gray-600">{project.zone}</p>
-                        </div>
-                        <Badge variant={project.status === 'In Progress' ? 'default' : 'secondary'}>
-                          {project.status}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm text-gray-600">Budget</p>
-                          <p className="font-medium">${(project.budget / 1000000).toFixed(1)}M</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600">Progress</p>
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-blue-600 h-2 rounded-full" 
-                                style={{ width: `${project.progress}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-sm font-medium">{project.progress}%</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="landuse">
-            <Card>
-              <CardHeader>
-                <CardTitle>Land Use Planning</CardTitle>
-                <CardDescription>Define land use classifications</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label htmlFor="landUseType">Land Use Type</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select land use type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="residential">Residential</SelectItem>
-                        <SelectItem value="commercial">Commercial</SelectItem>
-                        <SelectItem value="industrial">Industrial</SelectItem>
-                        <SelectItem value="recreational">Recreational</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="restrictions">Usage Restrictions</Label>
-                    <Textarea id="restrictions" placeholder="Enter usage restrictions" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="permits">
-            <Card>
-              <CardHeader>
-                <CardTitle>Development Permits</CardTitle>
-                <CardDescription>Process development permit applications</CardDescription>
-                <PermissionGuard requiredPermissions={['planning.permits.issue']}>
-                  <Button>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Issue Permit
-                  </Button>
-                </PermissionGuard>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">Development permit management interface will be implemented here.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           <TabsContent value="reports">
-            <Card>
-              <CardHeader>
-                <CardTitle>Planning Reports</CardTitle>
-                <CardDescription>Development and zoning analytics</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">Planning reports and analytics will be implemented here.</p>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Plan Type Analytics</CardTitle>
+                  <CardDescription>Urban plan categorization</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={planTypeData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="type" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="count" fill="#3b82f6" name="Number of Plans" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Budget Allocation</CardTitle>
+                  <CardDescription>Resource distribution across sectors</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={mockBudgetAllocation}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={(entry) => `${entry.name}: ${entry.value}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {mockBudgetAllocation.map((entry) => (
+                          <Cell key={entry.name} fill={COLORS[mockBudgetAllocation.indexOf(entry) % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
+
+      <UrbanPlanFormDialog open={planDialogOpen} onOpenChange={setPlanDialogOpen} onSubmit={handleCreatePlan} />
     </div>
   );
 };

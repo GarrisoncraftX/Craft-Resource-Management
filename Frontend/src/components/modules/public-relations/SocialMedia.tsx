@@ -1,44 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, Eye, Heart, MessageCircle, Share, Plus, BarChart3 } from 'lucide-react';
+import { Calendar, Clock, Heart, MessageCircle, Share, Plus, BarChart3 } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
+import { mockSocialMediaPosts } from '@/services/mockData/pr';
+import { SocialMediaPostFormDialog } from './SocialMediaPostFormDialog';
 
-const socialPosts = [
-  {
-    id: 1,
-    platform: 'Facebook',
-    content: 'Excited to announce our new community initiative! Join us this Saturday...',
-    scheduledDate: '2024-01-20',
-    scheduledTime: '10:00',
-    status: 'Scheduled',
-    engagement: { likes: 45, comments: 12, shares: 8 }
-  },
-  {
-    id: 2,
-    platform: 'Twitter',
-    content: 'Breaking: New policy update will benefit over 1000 residents in our community',
-    scheduledDate: '2024-01-18',
-    scheduledTime: '14:30',
-    status: 'Published',
-    engagement: { likes: 120, comments: 35, shares: 67 }
-  },
-  {
-    id: 3,
-    platform: 'LinkedIn',
-    content: 'Our quarterly transparency report is now available. Read about our progress...',
-    scheduledDate: '2024-01-15',
-    scheduledTime: '09:00',
-    status: 'Published',
-    engagement: { likes: 89, comments: 23, shares: 41 }
-  }
-];
+interface SocialPost {
+  id: string | number;
+  platform: string;
+  content: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  status: 'scheduled' | 'published' | 'draft';
+  engagement: { likes: number; comments: number; shares: number };
+}
 
 const engagementData = [
   { date: '2024-01-01', facebook: 120, twitter: 89, linkedin: 45, instagram: 67 },
@@ -62,20 +40,27 @@ const contentCategories = [
 ];
 
 export const SocialMedia: React.FC = () => {
-  const [posts, setPosts] = useState(socialPosts);
-  const [showScheduleForm, setShowScheduleForm] = useState(false);
-  const [newPost, setNewPost] = useState({
-    platform: '',
-    content: '',
-    scheduledDate: '',
-    scheduledTime: ''
-  });
+  const [posts, setPosts] = useState(mockSocialMediaPosts);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    loadSocialMediaPosts();
+  }, []);
+
+  const loadSocialMediaPosts = async () => {
+    try {
+      setPosts(mockSocialMediaPosts);
+    } catch (error) {
+      console.error('Error loading social media posts:', error);
+      setPosts(mockSocialMediaPosts);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Published': return 'bg-green-500';
-      case 'Scheduled': return 'bg-blue-500';
-      case 'Draft': return 'bg-gray-500';
+      case 'published': return 'bg-green-500';
+      case 'scheduled': return 'bg-blue-500';
+      case 'draft': return 'bg-gray-500';
       default: return 'bg-gray-500';
     }
   };
@@ -98,7 +83,7 @@ export const SocialMedia: React.FC = () => {
             <h1 className="text-3xl font-bold tracking-tight">Social Media Management</h1>
             <p className="text-muted-foreground">Schedule posts and monitor social media engagement</p>
           </div>
-          <Button onClick={() => setShowScheduleForm(true)} className="flex items-center gap-2">
+          <Button onClick={() => setDialogOpen(true)} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Schedule Post
           </Button>
@@ -157,7 +142,7 @@ export const SocialMedia: React.FC = () => {
                       
                       <p className="text-sm">{post.content}</p>
                       
-                      {post.status === 'Published' && (
+                      {post.status === 'published' && (
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Heart className="h-4 w-4" />
@@ -177,7 +162,7 @@ export const SocialMedia: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm">Edit</Button>
                         <Button variant="outline" size="sm">Preview</Button>
-                        {post.status === 'Scheduled' && (
+                        {post.status === 'scheduled' && (
                           <Button variant="outline" size="sm">Cancel</Button>
                         )}
                       </div>
@@ -326,6 +311,7 @@ export const SocialMedia: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
+      <SocialMediaPostFormDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={loadSocialMediaPosts} />
     </div>
   );
 };

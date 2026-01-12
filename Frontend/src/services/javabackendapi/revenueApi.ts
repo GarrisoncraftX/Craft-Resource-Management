@@ -65,3 +65,46 @@ class RevenueApiService {
 }
 
 export const revenueApiService = new RevenueApiService();
+
+// ============================================================================
+// WRAPPER FUNCTIONS FOR BACKWARD COMPATIBILITY
+// ============================================================================
+export async function createTaxAssessmentRecord(record: TaxAssessment) {
+  return revenueApiService.createTaxAssessment(record);
+}
+
+export async function fetchTaxAssessments() {
+  return revenueApiService.getAllTaxAssessments();
+}
+
+export async function fetchTaxAssessmentById(id: number | string) {
+  return revenueApiService.getTaxAssessmentById(Number(id));
+}
+
+export async function updateTaxAssessmentRecord(id: number | string, record: TaxAssessment) {
+  return revenueApiService.updateTaxAssessment(Number(id), record);
+}
+
+export async function deleteTaxAssessmentRecord(id: number | string) {
+  return revenueApiService.deleteTaxAssessment(Number(id));
+}
+
+export async function createRevenueCollectionRecord(record: RevenueCollection) {
+  return revenueApiService.createRevenueCollection(record);
+}
+
+export async function fetchRevenueCollections() {
+  return revenueApiService.getAllRevenueCollections();
+}
+
+export async function fetchRevenueCollectionById(id: number | string) {
+  return revenueApiService.getRevenueCollectionById(Number(id));
+}
+
+export async function updateRevenueCollectionRecord(id: number | string, record: RevenueCollection) {
+  return revenueApiService.updateRevenueCollection(Number(id), record);
+}
+
+export async function deleteRevenueCollectionRecord(id: number | string) {
+  return revenueApiService.deleteRevenueCollection(Number(id));
+}

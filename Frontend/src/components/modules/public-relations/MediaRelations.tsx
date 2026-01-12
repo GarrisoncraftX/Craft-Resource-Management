@@ -1,72 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Phone, Mail, Calendar, Plus, BarChart3, TrendingUp } from 'lucide-react';
+import { Phone, Mail, Plus, BarChart3, TrendingUp } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-
-const mediaContacts = [
-  {
-    id: 1,
-    name: 'Sarah Johnson',
-    organization: 'Daily News',
-    type: 'Newspaper',
-    email: 'sarah.johnson@dailynews.com',
-    phone: '+1 (555) 123-4567',
-    specialty: 'Government Affairs',
-    lastContact: '2024-01-10',
-    status: 'Active'
-  },
-  {
-    id: 2,
-    name: 'Mike Chen',
-    organization: 'Channel 7 News',
-    type: 'Television',
-    email: 'mike.chen@channel7.com',
-    phone: '+1 (555) 234-5678',
-    specialty: 'Breaking News',
-    lastContact: '2024-01-08',
-    status: 'Active'
-  },
-  {
-    id: 3,
-    name: 'Emily Rodriguez',
-    organization: 'FM Radio 101',
-    type: 'Radio',
-    email: 'emily@fm101.com',
-    phone: '+1 (555) 345-6789',
-    specialty: 'Community Events',
-    lastContact: '2024-01-05',
-    status: 'Inactive'
-  }
-];
-
-const mediaInteractions = [
-  {
-    id: 1,
-    date: '2024-01-15',
-    contact: 'Sarah Johnson',
-    type: 'Interview',
-    subject: 'Budget Announcement',
-    outcome: 'Positive Coverage',
-    followUp: 'Required'
-  },
-  {
-    id: 2,
-    date: '2024-01-12',
-    contact: 'Mike Chen',
-    type: 'Press Conference',
-    subject: 'New Policy Launch',
-    outcome: 'Neutral Coverage',
-    followUp: 'Complete'
-  }
-];
+import { publicRelationsApiService, type MediaContact } from '@/services/nodejsbackendapi/publicRelationsApi';
+import { mockMediaContacts } from '@/services/mockData/pr';
+import { MediaContactFormDialog } from './MediaContactFormDialog';
 
 const mediaTypeData = [
   { name: 'Newspaper', value: 45, color: '#3b82f6' },
@@ -92,15 +35,28 @@ const coverageAnalysis = [
 ];
 
 export const MediaRelations: React.FC = () => {
-  const [contacts, setContacts] = useState(mediaContacts);
-  const [interactions, setInteractions] = useState(mediaInteractions);
+  const [contacts, setContacts] = useState<MediaContact[]>(mockMediaContacts as MediaContact[]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAddContact, setShowAddContact] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    loadMediaContacts();
+  }, []);
+
+  const loadMediaContacts = async () => {
+    try {
+      const data = await publicRelationsApiService.getMediaContacts();
+      setContacts(data);
+    } catch (error) {
+      console.error('Error loading media contacts:', error);
+      setContacts(mockMediaContacts as MediaContact[]);
+    }
+  };
 
   const filteredContacts = contacts.filter(contact =>
     contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     contact.organization.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.specialty.toLowerCase().includes(searchTerm.toLowerCase())
+    contact.specialization.join(' ').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -111,7 +67,7 @@ export const MediaRelations: React.FC = () => {
             <h1 className="text-3xl font-bold tracking-tight">Media Relations</h1>
             <p className="text-muted-foreground">Manage media contacts and track interactions</p>
           </div>
-          <Button onClick={() => setShowAddContact(true)} className="flex items-center gap-2">
+          <Button onClick={() => setDialogOpen(true)} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Add Media Contact
           </Button>
@@ -126,7 +82,6 @@ export const MediaRelations: React.FC = () => {
           </TabsList>
 
           <TabsContent value="contacts" className="space-y-6">
-            {/* Search and Stats */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
               <div className="md:col-span-2">
                 <Card>
@@ -157,7 +112,7 @@ export const MediaRelations: React.FC = () => {
                   <CardTitle className="text-sm font-medium">Active Contacts</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{contacts.filter(c => c.status === 'Active').length}</div>
+                  <div className="text-2xl font-bold">{contacts.filter(c => c.status === 'active').length}</div>
                 </CardContent>
               </Card>
 
@@ -171,7 +126,6 @@ export const MediaRelations: React.FC = () => {
               </Card>
             </div>
 
-            {/* Media Contacts Table */}
             <Card>
               <CardHeader>
                 <CardTitle>Media Contacts Directory</CardTitle>
@@ -183,7 +137,6 @@ export const MediaRelations: React.FC = () => {
                     <TableRow>
                       <TableHead>Contact</TableHead>
                       <TableHead>Organization</TableHead>
-                      <TableHead>Type</TableHead>
                       <TableHead>Specialty</TableHead>
                       <TableHead>Last Contact</TableHead>
                       <TableHead>Status</TableHead>
@@ -207,13 +160,10 @@ export const MediaRelations: React.FC = () => {
                           </div>
                         </TableCell>
                         <TableCell>{contact.organization}</TableCell>
+                        <TableCell>{contact.specialization.join(', ')}</TableCell>
+                        <TableCell>{contact.lastContacted ? new Date(contact.lastContacted).toLocaleDateString() : 'N/A'}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{contact.type}</Badge>
-                        </TableCell>
-                        <TableCell>{contact.specialty}</TableCell>
-                        <TableCell>{new Date(contact.lastContact).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <Badge className={contact.status === 'Active' ? 'bg-green-500' : 'bg-gray-500'}>
+                          <Badge className={contact.status === 'active' ? 'bg-green-500' : 'bg-gray-500'}>
                             {contact.status}
                           </Badge>
                         </TableCell>
@@ -224,9 +174,6 @@ export const MediaRelations: React.FC = () => {
                             </Button>
                             <Button variant="ghost" size="sm">
                               <Phone className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Calendar className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -245,54 +192,7 @@ export const MediaRelations: React.FC = () => {
                 <CardDescription>Track all interactions with media contacts</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <Button className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Log New Interaction
-                  </Button>
-                  
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Subject</TableHead>
-                        <TableHead>Outcome</TableHead>
-                        <TableHead>Follow-up</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {interactions.map((interaction) => (
-                        <TableRow key={interaction.id}>
-                          <TableCell>{new Date(interaction.date).toLocaleDateString()}</TableCell>
-                          <TableCell>{interaction.contact}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{interaction.type}</Badge>
-                          </TableCell>
-                          <TableCell>{interaction.subject}</TableCell>
-                          <TableCell>
-                            <Badge className={
-                              interaction.outcome.includes('Positive') ? 'bg-green-500' :
-                              interaction.outcome.includes('Negative') ? 'bg-red-500' : 'bg-yellow-500'
-                            }>
-                              {interaction.outcome}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={interaction.followUp === 'Required' ? 'bg-orange-500' : 'bg-green-500'}>
-                              {interaction.followUp}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm">View Details</Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <p className="text-muted-foreground">Interaction tracking coming soon</p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -376,6 +276,7 @@ export const MediaRelations: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
+      <MediaContactFormDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={loadMediaContacts} />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Scale, FileText, Gavel, Shield, AlertTriangle, Users, BookOpen, Home } from 'lucide-react';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { fetchLegalCases, fetchComplianceRecords } from '@/services/api';
+import { mockLegalCases, mockComplianceRecords } from '@/services/mockData/legal';
+import type { LegalCase, ComplianceRecord } from '@/services/mockData/legal';
 
 const legalMenuItems = [
   { title: "Overview", path: "/legal/dashboard", icon: Home },
@@ -54,19 +58,90 @@ const LegalSidebar = () => {
 };
 
 export const LegalDashboard: React.FC = () => {
-  const [activeSection, setActiveSection] = useState('overview');
+  const [legalCases, setLegalCases] = useState<LegalCase[]>(mockLegalCases);
+  const [complianceRecords, setComplianceRecords] = useState<ComplianceRecord[]>(mockComplianceRecords);
+  const [loading, setLoading] = useState(true);
 
-  const legalCases = [
-    { id: 'LEG-001', title: 'Contract Dispute - Vendor ABC', status: 'Active', priority: 'High', assignee: 'John Smith' },
-    { id: 'LEG-002', title: 'Employment Law Review', status: 'Pending', priority: 'Medium', assignee: 'Jane Doe' },
-    { id: 'LEG-003', title: 'Compliance Audit', status: 'Completed', priority: 'Low', assignee: 'Mike Johnson' },
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [casesData, complianceData] = await Promise.all([
+        fetchLegalCases().catch(() => mockLegalCases),
+        fetchComplianceRecords().catch(() => mockComplianceRecords)
+      ]);
+      
+      if (Array.isArray(casesData) && casesData.length > 0) {
+        const mapped = casesData.map((c: any) => ({
+          id: c.id ?? `LEG-${Math.random().toString(36).slice(2, 8)}`,
+          caseNumber: c.caseNumber ?? '',
+          title: c.title ?? 'Untitled Case',
+          description: c.description ?? '',
+          status: c.status ?? 'Pending',
+          priority: c.priority ?? 'Medium',
+          assignedLawyer: c.assignedLawyer ?? '',
+          filingDate: c.filingDate ?? '',
+          resolutionDate: c.resolutionDate,
+          stage: c.stage ?? c.status ?? 'Investigation',
+          counsel: c.counsel ?? c.assignedLawyer ?? '',
+          nextDate: c.nextDate
+        }));
+        setLegalCases(mapped);
+      }
+      
+      if (Array.isArray(complianceData) && complianceData.length > 0) {
+        const mapped = complianceData.map((r: any) => ({
+          id: r.id ?? `CMP-${Math.random().toString(36).slice(2, 8)}`,
+          entity: r.entity ?? '',
+          regulation: r.regulation ?? '',
+          complianceDate: r.complianceDate ?? '',
+          status: r.status ?? 'Unknown',
+          notes: r.notes,
+          area: r.area ?? r.entity ?? 'Unknown',
+          lastAudit: r.lastAudit ?? r.complianceDate ?? '',
+          nextReview: r.nextReview ?? ''
+        }));
+        setComplianceRecords(mapped);
+      }
+    } catch (error) {
+      console.warn('Failed to load legal data, using mock data', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const activeCases = legalCases.filter(c => c.status === 'Active').length;
+  const pendingContracts = legalCases.filter(c => c.status === 'Pending').length;
+  const compliantRecords = complianceRecords.filter(r => r.status === 'Compliant').length;
+  const complianceRate = complianceRecords.length > 0 ? Math.round((compliantRecords / complianceRecords.length) * 100) : 0;
+  const highPriorityCases = legalCases.filter(c => c.priority === 'High').length;
+
+  const casesByStatus = [
+    { name: 'Active', value: legalCases.filter(c => c.status === 'Active').length, fill: '#3b82f6' },
+    { name: 'Pending', value: legalCases.filter(c => c.status === 'Pending').length, fill: '#f59e0b' },
+    { name: 'Completed', value: legalCases.filter(c => c.status === 'Completed').length, fill: '#10b981' },
+    { name: 'Dismissed', value: legalCases.filter(c => c.status === 'Dismissed').length, fill: '#ef4444' }
+  ].filter(item => item.value > 0);
+
+  const casesByPriority = [
+    { priority: 'Critical', count: legalCases.filter(c => c.priority === 'Critical').length, fill: '#dc2626' },
+    { priority: 'High', count: legalCases.filter(c => c.priority === 'High').length, fill: '#f59e0b' },
+    { priority: 'Medium', count: legalCases.filter(c => c.priority === 'Medium').length, fill: '#3b82f6' },
+    { priority: 'Low', count: legalCases.filter(c => c.priority === 'Low').length, fill: '#10b981' }
   ];
 
-  const complianceItems = [
-    { area: 'Data Protection', status: 'Compliant', lastReview: '2024-01-15', nextReview: '2024-07-15' },
-    { area: 'Employment Law', status: 'Review Required', lastReview: '2023-12-01', nextReview: '2024-06-01' },
-    { area: 'Financial Regulations', status: 'Compliant', lastReview: '2024-01-10', nextReview: '2024-07-10' },
-  ];
+  const complianceByStatus = [
+    { status: 'Compliant', count: complianceRecords.filter(r => r.status === 'Compliant').length, fill: '#10b981' },
+    { status: 'Review Required', count: complianceRecords.filter(r => r.status === 'Review Required').length, fill: '#f59e0b' },
+    { status: 'Non-Compliant', count: complianceRecords.filter(r => r.status === 'Non-Compliant').length, fill: '#ef4444' }
+  ].filter(item => item.count > 0);
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
 
   return (
     <SidebarProvider>
@@ -90,41 +165,93 @@ export const LegalDashboard: React.FC = () => {
                   <Gavel className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">12</div>
-                  <p className="text-xs text-muted-foreground">3 high priority</p>
+                  <div className="text-2xl font-bold">{activeCases}</div>
+                  <p className="text-xs text-muted-foreground">{highPriorityCases} high priority</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Contracts</CardTitle>
+                  <CardTitle className="text-sm font-medium">Pending Cases</CardTitle>
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">8</div>
+                  <div className="text-2xl font-bold">{pendingContracts}</div>
                   <p className="text-xs text-muted-foreground">Awaiting review</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Compliance Status</CardTitle>
+                  <CardTitle className="text-sm font-medium">Compliance Rate</CardTitle>
                   <Shield className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">95%</div>
-                  <p className="text-xs text-muted-foreground">Overall compliance rate</p>
+                  <div className="text-2xl font-bold">{complianceRate}%</div>
+                  <p className="text-xs text-muted-foreground">{compliantRecords} of {complianceRecords.length} compliant</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Risk Level</CardTitle>
+                  <CardTitle className="text-sm font-medium">Total Cases</CardTitle>
                   <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">Low</div>
-                  <p className="text-xs text-muted-foreground">Current risk assessment</p>
+                  <div className="text-2xl font-bold">{legalCases.length}</div>
+                  <p className="text-xs text-muted-foreground">All legal matters</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Cases by Status</CardTitle>
+                  <CardDescription>Distribution of legal cases</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={casesByStatus}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {casesByStatus.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Cases by Priority</CardTitle>
+                  <CardDescription>Priority distribution</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={casesByPriority}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="priority" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#3b82f6">
+                        {casesByPriority.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
             </div>
@@ -132,8 +259,8 @@ export const LegalDashboard: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Active Legal Cases</CardTitle>
-                  <CardDescription>Current ongoing legal matters</CardDescription>
+                  <CardTitle>Recent Legal Cases</CardTitle>
+                  <CardDescription>Latest legal matters</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -146,12 +273,12 @@ export const LegalDashboard: React.FC = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {legalCases.map((legalCase) => (
+                      {legalCases.slice(0, 5).map((legalCase) => (
                         <TableRow key={legalCase.id}>
                           <TableCell className="font-medium">{legalCase.id}</TableCell>
                           <TableCell>{legalCase.title}</TableCell>
                           <TableCell>
-                            <Badge variant={legalCase.priority === 'High' ? 'destructive' : legalCase.priority === 'Medium' ? 'default' : 'secondary'}>
+                            <Badge variant={legalCase.priority === 'High' || legalCase.priority === 'Critical' ? 'destructive' : legalCase.priority === 'Medium' ? 'default' : 'secondary'}>
                               {legalCase.priority}
                             </Badge>
                           </TableCell>
@@ -169,24 +296,23 @@ export const LegalDashboard: React.FC = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Compliance Overview</CardTitle>
-                  <CardDescription>Regulatory compliance status</CardDescription>
+                  <CardTitle>Compliance Status</CardTitle>
+                  <CardDescription>Compliance by status</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {complianceItems.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{item.area}</p>
-                          <p className="text-sm text-muted-foreground">Last reviewed: {item.lastReview}</p>
-                          <p className="text-xs text-muted-foreground">Next review: {item.nextReview}</p>
-                        </div>
-                        <Badge variant={item.status === 'Compliant' ? 'default' : 'destructive'}>
-                          {item.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={complianceByStatus}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="status" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#10b981">
+                        {complianceByStatus.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
             </div>

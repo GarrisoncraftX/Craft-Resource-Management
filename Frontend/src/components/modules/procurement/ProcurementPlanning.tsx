@@ -1,48 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { ShoppingCart, Calendar, DollarSign, FileText, Plus } from 'lucide-react';
-
-const procurementPlans = [
-  {
-    id: 'PROC001',
-    item: 'Office Laptops (50 units)',
-    category: 'IT Equipment', 
-    budget: 75000,
-    spent: 0,
-    status: 'Planning',
-    priority: 'High',
-    targetDate: '2024-03-15',
-    progress: 25
-  },
-  {
-    id: 'PROC002',
-    item: 'Annual Software Licenses',
-    category: 'Software',
-    budget: 25000,
-    spent: 18500,
-    status: 'In Progress',
-    priority: 'Medium',
-    targetDate: '2024-02-28',
-    progress: 74
-  },
-  {
-    id: 'PROC003',
-    item: 'Security System Upgrade',
-    category: 'Security',
-    budget: 120000,
-    spent: 120000,
-    status: 'Completed',
-    priority: 'High',
-    targetDate: '2024-01-31',
-    progress: 100
-  },
-];
+import { mockProcurementPlans, mockProcurementMetrics } from '@/services/mockData/procurement';
+import { ProcurementPlanFormDialog } from './ProcurementPlanFormDialog';
+import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 
 export const ProcurementPlanning: React.FC = () => {
+  const [plans, setPlans] = useState(mockProcurementPlans);
+  const [metrics, setMetrics] = useState(mockProcurementMetrics);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setPlans(mockProcurementPlans);
+      setMetrics(mockProcurementMetrics);
+    } catch (error) {
+      console.error('Error loading planning data:', error);
+    }
+  };
+
+  const budgetTrend = [
+    { month: 'Jan', budget: 850000, spent: 120000 },
+    { month: 'Feb', budget: 850000, spent: 245000 },
+    { month: 'Mar', budget: 850000, spent: 365000 },
+    { month: 'Apr', budget: 850000, spent: 485000 },
+    { month: 'May', budget: 850000, spent: 580000 },
+    { month: 'Jun', budget: 850000, spent: 650000 }
+  ];
   return (
     <div className="min-h-screen flex-1 flex flex-col p-6 bg-background">
       <div className="space-y-6">
@@ -51,7 +43,7 @@ export const ProcurementPlanning: React.FC = () => {
             <h1 className="text-3xl font-bold tracking-tight">Procurement Planning</h1>
             <p className="text-muted-foreground">Strategic planning and budgeting for procurement activities</p>
           </div>
-          <Button>
+          <Button onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Procurement Plan
           </Button>
@@ -65,7 +57,7 @@ export const ProcurementPlanning: React.FC = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$850K</div>
+              <div className="text-2xl font-bold">${(metrics.totalBudget / 1000).toFixed(0)}K</div>
               <p className="text-xs text-muted-foreground">FY 2024 allocation</p>
             </CardContent>
           </Card>
@@ -76,8 +68,8 @@ export const ProcurementPlanning: React.FC = () => {
               <ShoppingCart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$485K</div>
-              <p className="text-xs text-muted-foreground">57% of total budget</p>
+              <div className="text-2xl font-bold">${(metrics.budgetUtilized / 1000).toFixed(0)}K</div>
+              <p className="text-xs text-muted-foreground">{Math.round((metrics.budgetUtilized / metrics.totalBudget) * 100)}% of total budget</p>
             </CardContent>
           </Card>
 
@@ -87,7 +79,7 @@ export const ProcurementPlanning: React.FC = () => {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
+              <div className="text-2xl font-bold">{metrics.activePlans}</div>
               <p className="text-xs text-muted-foreground">Currently in progress</p>
             </CardContent>
           </Card>
@@ -98,11 +90,32 @@ export const ProcurementPlanning: React.FC = () => {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">78%</div>
+              <div className="text-2xl font-bold">{metrics.completionRate}%</div>
               <p className="text-xs text-muted-foreground">On-time completion</p>
             </CardContent>
           </Card>
         </div>
+
+        {/* Budget Trend Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Budget Utilization Trend</CardTitle>
+            <CardDescription>Monthly budget vs actual spending</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={budgetTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Legend />
+                <Line type="monotone" dataKey="budget" stroke="#8884d8" name="Budget" />
+                <Line type="monotone" dataKey="spent" stroke="#82ca9d" name="Spent" />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
         {/* Procurement Plans */}
         <Card>
@@ -112,7 +125,7 @@ export const ProcurementPlanning: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {procurementPlans.map((plan) => (
+              {plans.map((plan) => (
                 <div key={plan.id} className="border rounded-lg p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div>
@@ -138,10 +151,6 @@ export const ProcurementPlanning: React.FC = () => {
                       <p className="text-sm text-muted-foreground">Spent</p>
                       <p className="text-lg font-semibold">${plan.spent.toLocaleString()}</p>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Remaining</p>
-                      <p className="text-lg font-semibold">${(plan.budget - plan.spent).toLocaleString()}</p>
-                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -157,6 +166,7 @@ export const ProcurementPlanning: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+      <ProcurementPlanFormDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={loadData} />
     </div>
   );
 };

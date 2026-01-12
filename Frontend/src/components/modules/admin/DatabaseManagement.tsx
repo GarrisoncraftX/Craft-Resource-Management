@@ -1,29 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, RefreshCw, Download, Upload, Trash2, Archive, HardDrive } from 'lucide-react';
+import { Database, RefreshCw, Download, Trash2, Archive, HardDrive } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { systemApiService } from '@/services/javabackendapi/systemApiService';
+import type { DatabaseTable, BackupRecord } from '@/services/mockData/system';
 
-const databaseStats = [
-  { name: 'Users', records: 1247, size: '2.3MB', growth: '+5.2%' },
-  { name: 'Employees', records: 342, size: '1.8MB', growth: '+2.1%' },
-  { name: 'Assets', records: 892, size: '4.7MB', growth: '+8.3%' },
-  { name: 'Transactions', records: 5634, size: '15.2MB', growth: '+12.5%' },
-  { name: 'Reports', records: 234, size: '8.9MB', growth: '+3.7%' }
-];
+export const DatabaseManagement: React.FC = () => {
+  const [databaseStats, setDatabaseStats] = useState<DatabaseTable[]>([]);
+  const [backupHistory, setBackupHistory] = useState<BackupRecord[]>([]);
+  const [connectionStatus] = useState('Connected');
+  const [dbHealth] = useState(94);
 
-const performanceData = [
-  { time: '00:00', queries: 120, response: 45 },
-  { time: '04:00', queries: 89, response: 32 },
-  { time: '08:00', queries: 290, response: 78 },
-  { time: '12:00', queries: 340, response: 95 },
-  { time: '16:00', queries: 280, response: 67 },
-  { time: '20:00', queries: 180, response: 52 }
-];
+  useEffect(() => {
+    const fetchData = async () => {
+      const [tables, backups] = await Promise.all([
+        systemApiService.getDatabaseTables(),
+        systemApiService.getBackupRecords()
+      ]);
+      setDatabaseStats(tables);
+      setBackupHistory(backups);
+    };
+    fetchData();
+  }, []);
+
+  const handleCreateBackup = async () => {
+    const backup = await systemApiService.createBackup();
+    setBackupHistory(prev => [backup, ...prev]);
+  };
+
+  const performanceData = databaseStats.map((t, i) => ({ time: `${i * 4}:00`, queries: t.records / 10, response: t.records / 50 }));
 
 const storageUsage = [
   { name: 'User Data', value: 25, color: '#3b82f6' },
@@ -32,36 +42,7 @@ const storageUsage = [
   { name: 'Backups', value: 20, color: '#ef4444' }
 ];
 
-const backupHistory = [
-  {
-    id: 1,
-    type: 'Full Backup',
-    timestamp: '2024-01-15 02:00:00',
-    size: '2.4GB',
-    status: 'Completed',
-    duration: '45 min'
-  },
-  {
-    id: 2,
-    type: 'Incremental',
-    timestamp: '2024-01-14 02:00:00',
-    size: '340MB',
-    status: 'Completed',
-    duration: '12 min'
-  },
-  {
-    id: 3,
-    type: 'Full Backup',
-    timestamp: '2024-01-13 02:00:00',
-    size: '2.3GB',
-    status: 'Failed',
-    duration: '38 min'
-  }
-];
 
-export const DatabaseManagement: React.FC = () => {
-  const [connectionStatus] = useState('Connected');
-  const [dbHealth] = useState(94);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -266,13 +247,9 @@ export const DatabaseManagement: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2 mb-4">
-                  <Button className="flex items-center gap-2">
+                  <Button className="flex items-center gap-2" onClick={handleCreateBackup}>
                     <Download className="h-4 w-4" />
                     Create Backup
-                  </Button>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Upload className="h-4 w-4" />
-                    Restore
                   </Button>
                 </div>
                 

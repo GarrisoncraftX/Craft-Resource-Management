@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,57 +10,55 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CheckSquare, Plus, Search, Calendar, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { healthSafetyApiService } from '@/services/pythonbackendapi/healthSafetyApi';
+import type { SafetyInspection } from '@/services/mockData/health-safety';
+import { useToast } from '@/hooks/use-toast';
 
 export const SafetyInspections: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [inspections, setInspections] = useState<SafetyInspection[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    type: '',
+    location: '',
+    inspector: '',
+    scheduledDate: '',
+    notes: ''
+  });
+  const { toast } = useToast();
 
-  const inspections = [
-    {
-      id: '1',
-      type: 'Fire Safety',
-      location: 'Building A - Floor 3',
-      inspector: 'John Smith',
-      scheduledDate: '2024-01-15',
-      status: 'Completed',
-      score: 95,
-      findings: '2 minor issues',
-      nextDue: '2024-04-15'
-    },
-    {
-      id: '2',
-      type: 'Electrical Safety',
-      location: 'Manufacturing Floor',
-      inspector: 'Sarah Johnson',
-      scheduledDate: '2024-01-20',
-      status: 'In Progress',
-      score: null,
-      findings: 'Pending',
-      nextDue: '2024-05-20'
-    },
-    {
-      id: '3',
-      type: 'Structural Integrity',
-      location: 'Warehouse B',
-      inspector: 'Mike Davis',
-      scheduledDate: '2024-01-25',
+  useEffect(() => {
+    loadInspections();
+  }, []);
+
+  const loadInspections = async () => {
+    const data = await healthSafetyApiService.getInspections();
+    setInspections(data);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.type || !formData.location || !formData.inspector || !formData.scheduledDate) {
+      toast({ title: 'Error', description: 'Please fill all required fields', variant: 'destructive' });
+      return;
+    }
+    const result = await healthSafetyApiService.scheduleInspection({
+      type: formData.type,
+      location: formData.location,
+      inspector: formData.inspector,
+      scheduledDate: formData.scheduledDate,
       status: 'Scheduled',
       score: null,
       findings: 'Not started',
-      nextDue: '2024-07-25'
-    },
-    {
-      id: '4',
-      type: 'Chemical Safety',
-      location: 'Laboratory',
-      inspector: 'Lisa Chen',
-      scheduledDate: '2024-01-12',
-      status: 'Failed',
-      score: 65,
-      findings: '3 critical issues',
-      nextDue: '2024-02-12'
+      nextDue: new Date(new Date(formData.scheduledDate).setMonth(new Date(formData.scheduledDate).getMonth() + 6)).toISOString().split('T')[0]
+    });
+    if (result.success) {
+      toast({ title: 'Success', description: 'Inspection scheduled successfully' });
+      setIsOpen(false);
+      setFormData({ type: '', location: '', inspector: '', scheduledDate: '', notes: '' });
+      loadInspections();
     }
-  ];
+  };
 
   const monthlyData = [
     { month: 'Jan', completed: 12, failed: 2, scheduled: 8 },
@@ -117,7 +115,7 @@ export const SafetyInspections: React.FC = () => {
           <h1 className="text-3xl font-bold">Safety Inspections</h1>
           <p className="text-muted-foreground">Manage and track safety inspections</p>
         </div>
-        <Dialog>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -131,46 +129,46 @@ export const SafetyInspections: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="inspection-type">Inspection Type</Label>
-                <Select>
+                <Select value={formData.type} onValueChange={(v) => setFormData({...formData, type: v})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select inspection type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="fire">Fire Safety</SelectItem>
-                    <SelectItem value="electrical">Electrical Safety</SelectItem>
-                    <SelectItem value="structural">Structural Integrity</SelectItem>
-                    <SelectItem value="chemical">Chemical Safety</SelectItem>
-                    <SelectItem value="environmental">Environmental</SelectItem>
+                    <SelectItem value="Fire Safety">Fire Safety</SelectItem>
+                    <SelectItem value="Electrical Safety">Electrical Safety</SelectItem>
+                    <SelectItem value="Structural Integrity">Structural Integrity</SelectItem>
+                    <SelectItem value="Chemical Safety">Chemical Safety</SelectItem>
+                    <SelectItem value="Environmental">Environmental</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label htmlFor="location">Location</Label>
-                <Input id="location" placeholder="Inspection location" />
+                <Input id="location" placeholder="Inspection location" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} />
               </div>
               <div>
                 <Label htmlFor="inspector">Inspector</Label>
-                <Select>
+                <Select value={formData.inspector} onValueChange={(v) => setFormData({...formData, inspector: v})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select inspector" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="john">John Smith</SelectItem>
-                    <SelectItem value="sarah">Sarah Johnson</SelectItem>
-                    <SelectItem value="mike">Mike Davis</SelectItem>
-                    <SelectItem value="lisa">Lisa Chen</SelectItem>
+                    <SelectItem value="John Smith">John Smith</SelectItem>
+                    <SelectItem value="Sarah Johnson">Sarah Johnson</SelectItem>
+                    <SelectItem value="Mike Davis">Mike Davis</SelectItem>
+                    <SelectItem value="Lisa Chen">Lisa Chen</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label htmlFor="date">Scheduled Date</Label>
-                <Input id="date" type="date" />
+                <Input id="date" type="date" value={formData.scheduledDate} onChange={(e) => setFormData({...formData, scheduledDate: e.target.value})} />
               </div>
               <div>
                 <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" placeholder="Additional notes..." />
+                <Textarea id="notes" placeholder="Additional notes..." value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} />
               </div>
-              <Button className="w-full">Schedule Inspection</Button>
+              <Button className="w-full" onClick={handleSubmit}>Schedule Inspection</Button>
             </div>
           </DialogContent>
         </Dialog>

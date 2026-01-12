@@ -33,6 +33,7 @@ const DatabaseManagement = lazy(() => import("@/components/modules/admin/Databas
 const SystemMonitoring = lazy(() => import("@/components/modules/admin/SystemMonitoring").then(module => ({ default: module.SystemMonitoring })));
 const Notifications = lazy(() => import("@/components/modules/admin/Notifications").then(module => ({ default: module.Notifications })));
 const AuditLogs = lazy(() => import("@/components/modules/admin/AuditLogs").then(module => ({ default: module.AuditLogs })));
+const SupportTickets = lazy(() => import("@/components/modules/admin/SupportTickets").then(module => ({ default: module.SupportTickets })));
 
 //Assets Modules
 const AssetRegister = lazy(() => import("@/components/modules/assets/AssetRegister").then(module => ({ default: module.AssetRegister })));
@@ -62,6 +63,9 @@ const LegalDashboard = lazy(() => import("@/components/modules/legal/LegalDashbo
 const LegalManagement = lazy(() => import("@/components/modules/legal/LegalManagement").then(module => ({ default: module.LegalManagement })));
 const LegalCases = lazy(() => import("@/components/modules/legal/LegalCases").then(module => ({ default: module.LegalCases })));
 const ComplianceRecords = lazy(() => import("@/components/modules/legal/ComplianceMonitoring").then(module => ({ default: module.ComplianceMonitoring })));
+const LegalDocuments = lazy(() => import("@/components/modules/legal/LegalDocuments").then(module => ({ default: module.LegalDocuments })));
+const ContractReview = lazy(() => import("@/components/modules/legal/ContractReview").then(module => ({ default: module.ContractReview })));
+const LegalOpinions = lazy(() => import("@/components/modules/legal/LegalOpinions").then(module => ({ default: module.LegalOpinions })));
 const PublicRelationsDashboard = lazy(() => import("@/components/modules/public-relations/PublicRelationsDashboard").then(module => ({ default: module.PublicRelationsDashboard })));
 const PlanningDashboard = lazy(() => import("@/components/modules/planning/PlanningDashboard").then(module => ({ default: module.PlanningDashboard })));
 
@@ -70,10 +74,17 @@ const RevenueDashboard = lazy(() => import("@/components/modules/revenue/Revenue
 const UrbanPlanning = lazy(() => import("@/components/modules/planning/UrbanPlanning").then(module => ({ default: module.UrbanPlanning })));
 const ProjectManagement = lazy(() => import("@/components/modules/planning/ProjectManagement").then(module => ({ default: module.ProjectManagement })));
 const PressReleases = lazy(() => import("@/components/modules/public-relations/PressReleases").then(module => ({ default: module.PressReleases })));
+const MediaRelations = lazy(() => import("@/components/modules/public-relations/MediaRelations").then(module => ({ default: module.MediaRelations })));
+const PublicEvents = lazy(() => import("@/components/modules/public-relations/PublicEvents").then(module => ({ default: module.PublicEvents })));
+const SocialMedia = lazy(() => import("@/components/modules/public-relations/SocialMedia").then(module => ({ default: module.SocialMedia })));
 const TaxAssessment = lazy(() => import("@/components/modules/revenue/TaxAssessment").then(module => ({ default: module.TaxAssessment })));
 const ReportAnalytics = lazy(() => import("@/components/modules/reports/ReportAnalytics").then(module => ({ default: module.ReportAnalytics })));
 const CustomReportBuilder = lazy(() => import("@/components/modules/reports/CustomReportBuilder").then(module => ({ default: module.CustomReportBuilder })));
 const HealthSafetyDashboard = lazy(() => import("@/components/modules/health-safety/HealthSafetyDashboard").then(module => ({ default: module.HealthSafetyDashboard })));
+const IncidentReporting = lazy(() => import("@/components/modules/health-safety/IncidentReporting").then(module => ({ default: module.IncidentReporting })));
+const SafetyInspections = lazy(() => import("@/components/modules/health-safety/SafetyInspections").then(module => ({ default: module.SafetyInspections })));
+const SafetyTraining = lazy(() => import("@/components/modules/health-safety/SafetyTraining").then(module => ({ default: module.SafetyTraining })));
+const EnvironmentalHealth = lazy(() => import("@/components/modules/health-safety/EnvironmentalHealth").then(module => ({ default: module.EnvironmentalHealth })));
 const TransportationDashboard = lazy(() => import("@/components/modules/transportation/TransportationDashboard").then(module => ({ default: module.TransportationDashboard })));
 const ReportsDashboard = lazy(() => import("@/components/modules/reports/ReportsDashboard").then(module => ({ default: module.ReportsDashboard })));
 const FinancialReports = lazy(() => import("@/components/modules/finance/FinancialReports").then(module => ({ default: module.FinancialReports })));
@@ -195,6 +206,7 @@ const AppRoutes = () => {
       <Route path="/admin/notifications" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><Notifications /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/admin/security" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><Security /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SystemSettings /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/admin/support" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SupportTickets /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><UserManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
       {/* Asset Management Routes */}
@@ -229,7 +241,11 @@ const AppRoutes = () => {
       <Route path="/finance/reports" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Finance Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><FinancialReports /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
       {/* Health & Safety Routes */}
-      <Route path="/health-safety/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Health & Safety Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><HealthSafetyDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/health-safety/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Health & Safety" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><HealthSafetyDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/health-safety/incidents" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Health & Safety" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><IncidentReporting /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/health-safety/inspections" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Health & Safety" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SafetyInspections /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/health-safety/training" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Health & Safety" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SafetyTraining /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/health-safety/environmental" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Health & Safety" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><EnvironmentalHealth /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
       {/* HR Routes */}
       <Route path="/hr/benefits" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><BenefitsAdministration /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
@@ -243,9 +259,12 @@ const AppRoutes = () => {
 
       {/* Legal Routes */}
       <Route path="/legal/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/legal/management" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/legal/management" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/legal/cases" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Cases" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalCases /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/legal/compliance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Compliance" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ComplianceRecords /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/legal/compliance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Compliance Monitoring" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ComplianceRecords /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/legal/documents" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Documents" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalDocuments /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/legal/contracts" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Contract Review" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ContractReview /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/legal/opinions" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Opinions" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalOpinions /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
       {/* Operations Routes */}
       <Route path="/operations" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Operations Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><OperationsDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
@@ -267,6 +286,9 @@ const AppRoutes = () => {
 
       {/* Public Relations Routes */}
       <Route path="/pr/releases" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Public Relations" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PressReleases /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/pr/media" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Public Relations" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><MediaRelations /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/pr/events" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Public Relations" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PublicEvents /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/pr/social" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Public Relations" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SocialMedia /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/public-relations" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Public Relations" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PublicRelationsDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
       {/* Reports Routes */}

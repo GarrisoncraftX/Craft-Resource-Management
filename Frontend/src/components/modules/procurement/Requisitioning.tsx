@@ -1,52 +1,45 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Plus } from 'lucide-react';
+import { procurementApiService } from '@/services/nodejsbackendapi/procurementApi';
+import { mockRequisitions } from '@/services/mockData/procurement';
+import { RequisitionFormDialog } from './RequisitionFormDialog';
 
 export const Requisitioning: React.FC = () => {
-  const requisitions = [
-    { id: 'REQ-001', department: 'IT', item: 'Laptops (10)', amount: 15000, status: 'Approved', date: '2024-01-20' },
-    { id: 'REQ-002', department: 'HR', item: 'Training Materials', amount: 2500, status: 'Pending', date: '2024-01-22' },
-  ];
+  const [requisitions, setRequisitions] = useState<typeof mockRequisitions>(mockRequisitions);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    loadRequisitions();
+  }, []);
+
+  const loadRequisitions = async () => {
+    try {
+      const data = await procurementApiService.getProcurementRequests() as typeof mockRequisitions;
+      setRequisitions(data);
+    } catch (error) {
+      console.error('Error loading requisitions:', error);
+      setRequisitions(mockRequisitions);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>New Requisition</CardTitle>
-          <CardDescription>Create a purchase requisition</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="flex justify-between items-center">
             <div>
-              <Label htmlFor="department">Department</Label>
-              <Input id="department" placeholder="e.g., IT" />
+              <CardTitle>Requisitions</CardTitle>
+              <CardDescription>Track procurement requests and approval status</CardDescription>
             </div>
-            <div>
-              <Label htmlFor="item">Item</Label>
-              <Input id="item" placeholder="e.g., Laptops (10)" />
-            </div>
-            <div>
-              <Label htmlFor="amount">Amount</Label>
-              <Input id="amount" type="number" placeholder="0.00" />
-            </div>
-            <div className="flex items-end">
-              <Button className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Submit
-              </Button>
-            </div>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Requisition
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Requisitions</CardTitle>
-          <CardDescription>Track approval status</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -67,7 +60,7 @@ export const Requisitioning: React.FC = () => {
                   <TableCell>{r.department}</TableCell>
                   <TableCell>{r.item}</TableCell>
                   <TableCell>${r.amount.toLocaleString()}</TableCell>
-                  <TableCell>{r.status}</TableCell>
+                  <TableCell><Badge>{r.status}</Badge></TableCell>
                   <TableCell>{r.date}</TableCell>
                 </TableRow>
               ))}
@@ -75,6 +68,7 @@ export const Requisitioning: React.FC = () => {
           </Table>
         </CardContent>
       </Card>
+      <RequisitionFormDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={loadRequisitions} />
     </div>
   );
 };

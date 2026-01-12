@@ -1,26 +1,75 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Plus } from 'lucide-react';
+import { procurementApiService } from '@/services/nodejsbackendapi/procurementApi';
+import { mockContracts } from '@/services/mockData/procurement';
+import { ContractFormDialog } from './ContractFormDialog';
+import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 
 export const ContractManagement: React.FC = () => {
-  const contracts = [
-    { id: 'CTR-001', vendor: 'TechCorp Solutions', title: 'IT Equipment Supply', start: '2024-01-01', end: '2024-12-31', value: 125000, status: 'Active' },
-    { id: 'CTR-002', vendor: 'Clean Masters', title: 'Cleaning Services', start: '2023-06-01', end: '2024-05-31', value: 32000, status: 'Expiring Soon' },
+  const [contracts, setContracts] = useState<typeof mockContracts>(mockContracts);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    loadContracts();
+  }, []);
+
+  const loadContracts = async () => {
+    try {
+      const data = await procurementApiService.getContracts() as typeof mockContracts;
+      setContracts(data);
+    } catch (error) {
+      console.error('Error loading contracts:', error);
+      setContracts(mockContracts);
+    }
+  };
+
+  const contractTrend = [
+    { month: 'Jan', value: 125000 },
+    { month: 'Feb', value: 145000 },
+    { month: 'Mar', value: 132000 },
+    { month: 'Apr', value: 158000 },
+    { month: 'May', value: 175000 },
+    { month: 'Jun', value: 162000 }
   ];
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Contracts</CardTitle>
-          <CardDescription>Manage supplier agreements</CardDescription>
+          <CardTitle>Contract Value Trend</CardTitle>
+          <CardDescription>Monthly contract values over time</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button className="mb-4">
-            <Plus className="h-4 w-4 mr-2" /> New Contract
-          </Button>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={contractTrend}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Legend />
+              <Line type="monotone" dataKey="value" stroke="#8884d8" name="Contract Value" />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Contracts</CardTitle>
+              <CardDescription>Manage supplier agreements</CardDescription>
+            </div>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" /> New Contract
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
@@ -42,13 +91,14 @@ export const ContractManagement: React.FC = () => {
                   <TableCell>{c.start}</TableCell>
                   <TableCell>{c.end}</TableCell>
                   <TableCell>${c.value.toLocaleString()}</TableCell>
-                  <TableCell>{c.status}</TableCell>
+                  <TableCell><Badge variant={c.status === 'active' ? 'default' : 'secondary'}>{c.status}</Badge></TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+      <ContractFormDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={loadContracts} />
     </div>
   );
 };

@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { ClipboardCheck, Star, Target, Calendar } from 'lucide-react';
 import { hrApiService } from '@/services/javabackendapi/hrApi';
+import { fetchDepartments, fetchRoles } from '@/services/api';
 
 interface AddPerformanceReviewFormProps {
   open: boolean;
@@ -42,15 +43,23 @@ export const AddPerformanceReviewForm: React.FC<AddPerformanceReviewFormProps> =
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
   const [reviewers, setReviewers] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const empList = await hrApiService.listEmployees();
+        const [empList, deptList, roleList] = await Promise.all([
+          hrApiService.listEmployees(),
+          fetchDepartments(),
+          fetchRoles()
+        ]);
         setEmployees(empList);
         setReviewers(empList);
+        setDepartments(deptList);
+        setRoles(roleList);
       } catch (error) {
-        console.error('Failed to load employees:', error);
+        console.error('Failed to load data:', error);
       }
     };
     if (open) loadData();
@@ -74,16 +83,26 @@ export const AddPerformanceReviewForm: React.FC<AddPerformanceReviewFormProps> =
     { value: '1', label: '1 - Unsatisfactory' }
   ];
 
+  const getDepartmentName = (deptId: number) => {
+    const dept = departments.find(d => d.id === deptId);
+    return dept?.name || '';
+  };
+
+  const getRoleName = (roleId: number) => {
+    const role = roles.find(r => r.id === roleId);
+    return role?.name || '';
+  };
+
   const mockEmployees = employees.map(emp => ({
     id: emp.id.toString(),
     name: `${emp.firstName} ${emp.lastName}`,
-    department: emp.department || 'N/A'
+    department: getDepartmentName(emp.departmentId)
   }));
 
   const mockReviewers = reviewers.map(emp => ({
     id: emp.id.toString(),
     name: `${emp.firstName} ${emp.lastName}`,
-    title: emp.role || 'N/A'
+    title: getRoleName(emp.roleId)
   }));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -161,7 +180,7 @@ export const AddPerformanceReviewForm: React.FC<AddPerformanceReviewFormProps> =
                 <SelectContent>
                   {mockEmployees.map((employee) => (
                     <SelectItem key={employee.id} value={employee.id}>
-                      {employee.name} - {employee.department}
+                      {employee.name}{employee.department ? ` - ${employee.department}` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -176,7 +195,7 @@ export const AddPerformanceReviewForm: React.FC<AddPerformanceReviewFormProps> =
                 <SelectContent>
                   {mockReviewers.map((reviewer) => (
                     <SelectItem key={reviewer.id} value={reviewer.id}>
-                      {reviewer.name} - {reviewer.title}
+                      {reviewer.name}{reviewer.title ? ` - ${reviewer.title}` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

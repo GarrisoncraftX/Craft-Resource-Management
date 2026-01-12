@@ -8,7 +8,7 @@ import { Employee } from '@/types/hr';
 import { Department, Role } from '@/types/api';
 import { toast } from 'sonner';
 import { fetchDepartments, fetchRoles, updateEmployeeById } from '@/services/api';
-import { mockDepartments, mockRoles } from '@/services/mockData/mockData';
+import { mockDepartments, mockRoles } from '@/services/mockData/hr';
 
 interface EditEmployeeDialogProps {
   open: boolean;

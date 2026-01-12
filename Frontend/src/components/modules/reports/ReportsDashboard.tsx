@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,62 +14,92 @@ import { PermissionGuard } from '@/components/PermissionGuard';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { FileText,  Download, Filter, TrendingUp, Users, DollarSign, Brain, AlertCircle, CheckCircle } from 'lucide-react';
+import { reportsApiService, type ReportParams } from '@/services/pythonbackendapi/reportsApi';
+import { mockReports, mockMonthlyTrends, mockAIInsights, mockKPIs } from '@/services/mockData/reports';
+import { useToast } from '@/hooks/use-toast';
 
 export const ReportsDashboard: React.FC = () => {
   const [reportBuilderDialog, setReportBuilderDialog] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState('month');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [reportHistoryData, setReportHistoryData] = useState(mockReports);
+  const [monthlyTrendsData, setMonthlyTrendsData] = useState(mockMonthlyTrends);
+  const [aiInsightsData, setAIInsightsData] = useState(mockAIInsights);
+  const [kpiData, setKpiData] = useState(mockKPIs);
+  const [loading, setLoading] = useState(false);
+  const [reportForm, setReportForm] = useState<ReportParams>({
+    name: '',
+    type: '',
+    dataSources: [],
+    dateRange: '',
+    format: '',
+    filters: ''
+  });
+  const { toast } = useToast();
 
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const monthlyTrendsData = [
-    { month: 'Jan', revenue: 450000, expenses: 320000, employees: 245, incidents: 3 },
-    { month: 'Feb', revenue: 480000, expenses: 335000, employees: 248, incidents: 2 },
-    { month: 'Mar', revenue: 520000, expenses: 348000, employees: 252, incidents: 1 },
-    { month: 'Apr', revenue: 490000, expenses: 342000, employees: 255, incidents: 4 },
-    { month: 'May', revenue: 530000, expenses: 356000, employees: 258, incidents: 2 },
-    { month: 'Jun', revenue: 560000, expenses: 365000, employees: 262, incidents: 1 }
-  ];
-
-  const aiInsightsData = [
-    {
-      id: 1,
-      type: 'anomaly',
-      severity: 'high',
-      title: 'Unusual Spending Pattern Detected',
-      description: 'Procurement expenses have increased 25% above normal baseline in the past week.',
-      department: 'Procurement',
-      confidence: 94,
-      date: '2024-07-02'
-    },
-    {
-      id: 2,
-      type: 'prediction',
-      severity: 'medium',
-      title: 'Budget Overrun Forecast',
-      description: 'HR department is projected to exceed quarterly budget by 8% based on current spending trends.',
-      department: 'HR',
-      confidence: 87,
-      date: '2024-07-01'
-    },
-    {
-      id: 3,
-      type: 'optimization',
-      severity: 'low',
-      title: 'Efficiency Improvement Opportunity',
-      description: 'Asset maintenance scheduling could be optimized to reduce costs by 12%.',
-      department: 'Assets',
-      confidence: 92,
-      date: '2024-06-30'
+  const loadData = async () => {
+    try {
+      const [reports, trends, insights, kpis] = await Promise.all([
+        reportsApiService.listReports().catch(() => mockReports),
+        reportsApiService.getMonthlyTrends().catch(() => mockMonthlyTrends),
+        reportsApiService.getAIInsights().catch(() => mockAIInsights),
+        reportsApiService.getKPIs().catch(() => mockKPIs)
+      ]);
+      setReportHistoryData(reports);
+      setMonthlyTrendsData(trends);
+      setAIInsightsData(insights);
+      setKpiData(kpis);
+    } catch (error) {
+      console.error('Error loading data:', error);
     }
-  ];
+  };
 
-  const reportHistoryData = [
-    { id: 'RPT001', name: 'Monthly Financial Summary', type: 'Financial', generated: '2024-07-01', status: 'Generated', size: '2.4MB' },
-    { id: 'RPT002', name: 'HR Performance Report', type: 'HR', generated: '2024-06-30', status: 'Generated', size: '1.8MB' },
-    { id: 'RPT003', name: 'Security Incident Analysis', type: 'Security', generated: '2024-06-29', status: 'Generated', size: '3.2MB' },
-    { id: 'RPT004', name: 'Procurement Efficiency Report', type: 'Procurement', generated: '2024-06-28', status: 'Failed', size: '0MB' },
-    { id: 'RPT005', name: 'Asset Utilization Report', type: 'Assets', generated: '2024-06-27', status: 'Generated', size: '1.5MB' }
-  ];
+  const handleGenerateReport = async () => {
+    if (!reportForm.name || !reportForm.type || !reportForm.dateRange || !reportForm.format) {
+      toast({ title: 'Error', description: 'Please fill all required fields', variant: 'destructive' });
+      return;
+    }
+    setLoading(true);
+    try {
+      await reportsApiService.generateReport(reportForm);
+      toast({ title: 'Success', description: 'Report generated successfully' });
+      setReportBuilderDialog(false);
+      loadData();
+      setReportForm({ name: '', type: '', dataSources: [], dateRange: '', format: '', filters: '' });
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to generate report', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteReport = async (reportId: string) => {
+    try {
+      await reportsApiService.deleteReport(reportId);
+      toast({ title: 'Success', description: 'Report deleted successfully' });
+      loadData();
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to delete report', variant: 'destructive' });
+    }
+  };
+
+  const handleDownloadReport = async (reportId: string) => {
+    try {
+      const blob = await reportsApiService.downloadReport(reportId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report-${reportId}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to download report', variant: 'destructive' });
+    }
+  };
 
   const chartConfig = {
     efficiency: { label: 'Efficiency %', color: 'hsl(var(--chart-1))' },
@@ -132,11 +162,11 @@ export const ReportsDashboard: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="reportName">Report Name</Label>
-                        <Input id="reportName" placeholder="Enter report name" />
+                        <Input id="reportName" placeholder="Enter report name" value={reportForm.name} onChange={(e) => setReportForm({...reportForm, name: e.target.value})} />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="reportType">Report Type</Label>
-                        <Select>
+                        <Select value={reportForm.type} onValueChange={(v) => setReportForm({...reportForm, type: v})}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
@@ -155,7 +185,10 @@ export const ReportsDashboard: React.FC = () => {
                       <div className="grid grid-cols-2 gap-4">
                         {['Finance', 'HR', 'Security', 'Assets', 'Procurement', 'Legal'].map((dept) => (
                           <div key={dept} className="flex items-center space-x-2">
-                            <Checkbox id={dept.toLowerCase()} />
+                            <Checkbox id={dept.toLowerCase()} checked={reportForm.dataSources.includes(dept)} onCheckedChange={(checked) => {
+                              if (checked) setReportForm({...reportForm, dataSources: [...reportForm.dataSources, dept]});
+                              else setReportForm({...reportForm, dataSources: reportForm.dataSources.filter(d => d !== dept)});
+                            }} />
                             <Label htmlFor={dept.toLowerCase()}>{dept}</Label>
                           </div>
                         ))}
@@ -165,7 +198,7 @@ export const ReportsDashboard: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="dateRange">Date Range</Label>
-                        <Select>
+                        <Select value={reportForm.dateRange} onValueChange={(v) => setReportForm({...reportForm, dateRange: v})}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select range" />
                           </SelectTrigger>
@@ -180,7 +213,7 @@ export const ReportsDashboard: React.FC = () => {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="format">Output Format</Label>
-                        <Select>
+                        <Select value={reportForm.format} onValueChange={(v) => setReportForm({...reportForm, format: v})}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select format" />
                           </SelectTrigger>
@@ -196,11 +229,11 @@ export const ReportsDashboard: React.FC = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="filters">Additional Filters</Label>
-                      <Textarea id="filters" placeholder="Specify any additional filtering criteria or custom requirements..." />
+                      <Textarea id="filters" placeholder="Specify any additional filtering criteria or custom requirements..." value={reportForm.filters} onChange={(e) => setReportForm({...reportForm, filters: e.target.value})} />
                     </div>
 
                     <div className="flex gap-2 pt-4">
-                      <Button className="flex-1">Generate Report</Button>
+                      <Button className="flex-1" onClick={handleGenerateReport} disabled={loading}>Generate Report</Button>
                       <Button variant="outline" onClick={() => setReportBuilderDialog(false)}>Cancel</Button>
                     </div>
                   </div>
@@ -262,8 +295,8 @@ export const ReportsDashboard: React.FC = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$560,000</div>
-              <p className="text-xs text-muted-foreground">+5.8% from last month</p>
+              <div className="text-2xl font-bold">${kpiData.totalRevenue.value.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">+{kpiData.totalRevenue.change}% from last month</p>
             </CardContent>
           </Card>
           <Card>
@@ -272,8 +305,8 @@ export const ReportsDashboard: React.FC = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">262</div>
-              <p className="text-xs text-muted-foreground">+4 new hires this month</p>
+              <div className="text-2xl font-bold">{kpiData.activeEmployees.value}</div>
+              <p className="text-xs text-muted-foreground">+{kpiData.activeEmployees.change} new hires this month</p>
             </CardContent>
           </Card>
           <Card>
@@ -282,8 +315,8 @@ export const ReportsDashboard: React.FC = () => {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">47</div>
-              <p className="text-xs text-muted-foreground">This month</p>
+              <div className="text-2xl font-bold">{kpiData.reportsGenerated.value}</div>
+              <p className="text-xs text-muted-foreground">{kpiData.reportsGenerated.period}</p>
             </CardContent>
           </Card>
           <Card>
@@ -292,8 +325,8 @@ export const ReportsDashboard: React.FC = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">94.2%</div>
-              <p className="text-xs text-muted-foreground">+2.1% improvement</p>
+              <div className="text-2xl font-bold">{kpiData.systemEfficiency.value}%</div>
+              <p className="text-xs text-muted-foreground">+{kpiData.systemEfficiency.change}% improvement</p>
             </CardContent>
           </Card>
         </div>
@@ -436,12 +469,12 @@ export const ReportsDashboard: React.FC = () => {
                           <TableCell>{report.size}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button size="sm" variant="outline" disabled={report.status === 'Failed'}>
+                              <Button size="sm" variant="outline" disabled={report.status === 'Failed'} onClick={() => handleDownloadReport(report.id)}>
                                 <Download className="mr-1 h-3 w-3" />Download
                               </Button>
                               <Button size="sm" variant="outline">View</Button>
                               <PermissionGuard requiredPermissions={['reports.delete']}>
-                                <Button size="sm" variant="outline">Delete</Button>
+                                <Button size="sm" variant="outline" onClick={() => handleDeleteReport(report.id)}>Delete</Button>
                               </PermissionGuard>
                             </div>
                           </TableCell>

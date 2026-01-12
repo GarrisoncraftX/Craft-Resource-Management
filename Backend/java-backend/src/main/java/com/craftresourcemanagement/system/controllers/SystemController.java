@@ -1,7 +1,6 @@
 package com.craftresourcemanagement.system.controllers;
 
-import com.craftresourcemanagement.system.entities.SystemConfig;
-import com.craftresourcemanagement.system.entities.AuditLog;
+import com.craftresourcemanagement.system.entities.*;
 import com.craftresourcemanagement.system.services.SystemService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -91,5 +90,49 @@ public class SystemController {
     @GetMapping("/audit-logs/user/{performedBy}/recent")
     public ResponseEntity<List<AuditLog>> getRecentAuditLogsForUser(@PathVariable String performedBy) {
         return ResponseEntity.ok(systemService.getRecentAuditLogsForUser(performedBy));
+    }
+
+    // Security - Access Rules
+    @PostMapping("/security/access-rules")
+    public ResponseEntity<AccessRule> createAccessRule(@RequestBody AccessRule accessRule) {
+        return ResponseEntity.ok(systemService.createAccessRule(accessRule));
+    }
+
+    @GetMapping("/security/access-rules")
+    public ResponseEntity<List<AccessRule>> getAllAccessRules() {
+        return ResponseEntity.ok(systemService.getAllAccessRules());
+    }
+
+    // Security - Guard Posts
+    @PostMapping("/security/guard-posts")
+    public ResponseEntity<GuardPost> createGuardPost(@RequestBody GuardPost guardPost) {
+        return ResponseEntity.ok(systemService.createGuardPost(guardPost));
+    }
+
+    @GetMapping("/security/guard-posts")
+    public ResponseEntity<List<GuardPost>> getAllGuardPosts() {
+        return ResponseEntity.ok(systemService.getAllGuardPosts());
+    }
+
+    // Security - SOPs
+    @PostMapping("/security/sops")
+    public ResponseEntity<SOP> createSOP(@RequestBody SOP sop) {
+        return ResponseEntity.ok(systemService.createSOP(sop));
+    }
+
+    @GetMapping("/security/sops")
+    public ResponseEntity<List<SOP>> getAllSOPs() {
+        return ResponseEntity.ok(systemService.getAllSOPs());
+    }
+
+    // Security - Incidents
+    @PostMapping("/security/incidents")
+    public ResponseEntity<SecurityIncident> createSecurityIncident(@RequestBody SecurityIncident incident) {
+        return ResponseEntity.ok(systemService.createSecurityIncident(incident));
+    }
+
+    @GetMapping("/security/incidents")
+    public ResponseEntity<List<SecurityIncident>> getAllSecurityIncidents() {
+        return ResponseEntity.ok(systemService.getAllSecurityIncidents());
     }
 }

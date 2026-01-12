@@ -139,6 +139,16 @@ export class ApiClient {
 
     return this.handleResponse(response);
   }
+
+  async patch(endpoint: string, data?: any) {
+    const response = await this.fetchWithFallback(`${this.baseURL}${endpoint}`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: data ? JSON.stringify(data) : undefined,
+    });
+
+    return this.handleResponse(response);
+  }
 }
 
 export const apiClient = new ApiClient(API_BASE_URL, API_FALLBACK_URL);

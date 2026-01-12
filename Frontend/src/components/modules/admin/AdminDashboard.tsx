@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink} from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Settings, Users, Shield, Database, Activity, Bell, FileText, Home } from 'lucide-react';
+import { Settings, Users, Shield, Database, Activity, Bell, FileText, Home, Headphones } from 'lucide-react';
 import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { SuperAdminDashboardSelector } from './SuperAdminDashboardSelector';
 import { useAuth } from '@/contexts/AuthContext';
+import { adminApiService } from '@/services/javabackendapi/adminApi';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 const adminMenuItems = [
   { title: "Overview", path: "/admin/dashboard", icon: Home },
@@ -15,6 +16,7 @@ const adminMenuItems = [
   { title: "Security", path: "/admin/security", icon: Shield },
   { title: "Database Management", path: "/admin/database", icon: Database },
   { title: "System Monitoring", path: "/admin/monitoring", icon: Activity },
+  { title: "Support Tickets", path: "/admin/support", icon: Headphones },
   { title: "Notifications", path: "/admin/notifications", icon: Bell },
   { title: "Audit Logs", path: "/admin/logs", icon: FileText },
 ];
@@ -54,24 +56,44 @@ const AdminSidebar = () => {
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
+  const [stats, setStats] = useState<{
+    totalUsers: number;
+    activeSessions: number;
+    databaseSize: string;
+    systemUptime: string;
+  } | null>(null);
+  const [auditLogs, setAuditLogs] = useState<Array<{
+    id: number;
+    action: string;
+    resource: string;
+    user: string;
+    timestamp: string;
+    severity: string;
+  }>>([]);
 
-  // Show SuperAdminDashboardSelector for SUPER_ADMIN users
+  useEffect(() => {
+    const fetchData = async () => {
+      const [statsData, logsData] = await Promise.all([
+        adminApiService.getSystemStats(),
+        adminApiService.getAuditLogs()
+      ]);
+      setStats(statsData);
+      setAuditLogs(logsData.slice(0, 4));
+    };
+    fetchData();
+  }, []);
+
   if (user?.roleCode === 'SUPER_ADMIN') {
     return <SuperAdminDashboardSelector />;
   }
 
-  const systemStats = [
-    { metric: 'Total Users', value: 247, change: '+5', status: 'up' },
-    { metric: 'Active Sessions', value: 89, change: '+12', status: 'up' },
-    { metric: 'Database Size', value: '2.4GB', change: '+0.1GB', status: 'neutral' },
-    { metric: 'System Uptime', value: '99.9%', change: '0%', status: 'neutral' },
-  ];
+  if (!stats) return null;
 
-  const recentActivities = [
-    { id: 1, user: 'John Doe', action: 'User logged in', timestamp: '2024-01-15 10:30:00', type: 'info' },
-    { id: 2, user: 'Admin', action: 'System backup completed', timestamp: '2024-01-15 09:00:00', type: 'success' },
-    { id: 3, user: 'Jane Smith', action: 'Failed login attempt', timestamp: '2024-01-15 08:45:00', type: 'warning' },
-    { id: 4, user: 'System', action: 'Database maintenance started', timestamp: '2024-01-15 08:00:00', type: 'info' },
+  const systemStats = [
+    { metric: 'Total Users', value: stats.totalUsers, change: '+5', status: 'up' },
+    { metric: 'Active Sessions', value: stats.activeSessions, change: '+12', status: 'up' },
+    { metric: 'Database Size', value: stats.databaseSize, change: '+0.1GB', status: 'neutral' },
+    { metric: 'System Uptime', value: stats.systemUptime, change: '0%', status: 'neutral' },
   ];
 
   const usersByDepartment = [
@@ -80,6 +102,15 @@ export const AdminDashboard: React.FC = () => {
     { department: 'IT', count: 28, active: 28 },
     { department: 'Legal', count: 22, active: 20 },
     { department: 'Planning', count: 31, active: 29 },
+  ];
+
+  const performanceData = [
+    { time: '00:00', users: 45, sessions: 12 },
+    { time: '04:00', users: 38, sessions: 8 },
+    { time: '08:00', users: 156, sessions: 89 },
+    { time: '12:00', users: 189, sessions: 102 },
+    { time: '16:00', users: 167, sessions: 95 },
+    { time: '20:00', users: 98, sessions: 45 }
   ];
 
   return (
@@ -117,28 +148,20 @@ export const AdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent System Activities</CardTitle>
-                  <CardDescription>Latest system events and user actions</CardDescription>
+                  <CardTitle>System Activity Trends</CardTitle>
+                  <CardDescription>User and session activity over 24 hours</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {recentActivities.map((activity) => (
-                      <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{activity.action}</p>
-                          <p className="text-sm text-muted-foreground">User: {activity.user}</p>
-                          <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
-                        </div>
-                        <Badge variant={
-                          activity.type === 'success' ? 'default' :
-                          activity.type === 'warning' ? 'destructive' :
-                          'secondary'
-                        }>
-                          {activity.type}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={performanceData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="time" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={2} name="Users" />
+                      <Line type="monotone" dataKey="sessions" stroke="#10b981" strokeWidth={2} name="Sessions" />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
 
@@ -148,41 +171,42 @@ export const AdminDashboard: React.FC = () => {
                   <CardDescription>Active users across departments</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Department</TableHead>
-                        <TableHead>Total Users</TableHead>
-                        <TableHead>Active</TableHead>
-                        <TableHead>Activity Rate</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {usersByDepartment.map((dept) => (
-                        <TableRow key={dept.department}>
-                          <TableCell className="font-medium">{dept.department}</TableCell>
-                          <TableCell>{dept.count}</TableCell>
-                          <TableCell>{dept.active}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <div className="w-full bg-muted rounded-full h-2">
-                                <div
-                                  className="bg-primary h-2 rounded-full"
-                                  style={{ width: `${(dept.active / dept.count) * 100}%` }}
-                                />
-                              </div>
-                              <span className="text-sm text-muted-foreground">
-                                {Math.round((dept.active / dept.count) * 100)}%
-                              </span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={usersByDepartment}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="department" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#3b82f6" name="Total" />
+                      <Bar dataKey="active" fill="#10b981" name="Active" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
             </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Audit Logs</CardTitle>
+                <CardDescription>Latest system events and user actions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="font-medium">{log.action} - {log.resource}</p>
+                        <p className="text-sm text-muted-foreground">User: {log.user}</p>
+                        <p className="text-xs text-muted-foreground">{log.timestamp}</p>
+                      </div>
+                      <Badge variant={log.severity === 'Warning' ? 'destructive' : 'secondary'}>
+                        {log.severity}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </main>
         </div>
       </div>

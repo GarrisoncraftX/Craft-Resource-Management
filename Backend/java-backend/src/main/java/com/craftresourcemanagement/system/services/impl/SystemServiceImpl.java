@@ -1,9 +1,7 @@
 package com.craftresourcemanagement.system.services.impl;
 
-import com.craftresourcemanagement.system.entities.SystemConfig;
-import com.craftresourcemanagement.system.entities.AuditLog;
-import com.craftresourcemanagement.system.repositories.SystemConfigRepository;
-import com.craftresourcemanagement.system.repositories.AuditLogRepository;
+import com.craftresourcemanagement.system.entities.*;
+import com.craftresourcemanagement.system.repositories.*;
 import com.craftresourcemanagement.system.services.SystemService;
 import org.springframework.stereotype.Service;
 
@@ -15,11 +13,23 @@ public class SystemServiceImpl implements SystemService {
 
     private final SystemConfigRepository systemConfigRepository;
     private final AuditLogRepository auditLogRepository;
+    private final AccessRuleRepository accessRuleRepository;
+    private final GuardPostRepository guardPostRepository;
+    private final SOPRepository sopRepository;
+    private final SecurityIncidentRepository securityIncidentRepository;
 
     public SystemServiceImpl(SystemConfigRepository systemConfigRepository,
-                             AuditLogRepository auditLogRepository) {
+                             AuditLogRepository auditLogRepository,
+                             AccessRuleRepository accessRuleRepository,
+                             GuardPostRepository guardPostRepository,
+                             SOPRepository sopRepository,
+                             SecurityIncidentRepository securityIncidentRepository) {
         this.systemConfigRepository = systemConfigRepository;
         this.auditLogRepository = auditLogRepository;
+        this.accessRuleRepository = accessRuleRepository;
+        this.guardPostRepository = guardPostRepository;
+        this.sopRepository = sopRepository;
+        this.securityIncidentRepository = securityIncidentRepository;
     }
 
     // SystemConfig
@@ -94,5 +104,49 @@ public class SystemServiceImpl implements SystemService {
     @Override
     public void deleteAuditLog(Long id) {
         auditLogRepository.deleteById(id);
+    }
+
+    // Security - Access Rules
+    @Override
+    public AccessRule createAccessRule(AccessRule accessRule) {
+        return accessRuleRepository.save(accessRule);
+    }
+
+    @Override
+    public List<AccessRule> getAllAccessRules() {
+        return accessRuleRepository.findAll();
+    }
+
+    // Security - Guard Posts
+    @Override
+    public GuardPost createGuardPost(GuardPost guardPost) {
+        return guardPostRepository.save(guardPost);
+    }
+
+    @Override
+    public List<GuardPost> getAllGuardPosts() {
+        return guardPostRepository.findAll();
+    }
+
+    // Security - SOPs
+    @Override
+    public SOP createSOP(SOP sop) {
+        return sopRepository.save(sop);
+    }
+
+    @Override
+    public List<SOP> getAllSOPs() {
+        return sopRepository.findAll();
+    }
+
+    // Security - Incidents
+    @Override
+    public SecurityIncident createSecurityIncident(SecurityIncident incident) {
+        return securityIncidentRepository.save(incident);
+    }
+
+    @Override
+    public List<SecurityIncident> getAllSecurityIncidents() {
+        return securityIncidentRepository.findAll();
     }
 }

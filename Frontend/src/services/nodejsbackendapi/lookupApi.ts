@@ -185,3 +185,14 @@ class LookupApiService {
 }
 
 export const lookupApiService = new LookupApiService();
+
+// ============================================================================
+// WRAPPER FUNCTIONS FOR BACKWARD COMPATIBILITY
+// ============================================================================
+export async function fetchDepartments(): Promise<Department[]> {
+  return lookupApiService.getDepartments();
+}
+
+export async function fetchRoles(): Promise<Role[]> {
+  return lookupApiService.getRoles();
+}

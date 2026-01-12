@@ -1,47 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Progress } from '@/components/ui/progress';
-import { Megaphone, Users, Calendar, TrendingUp, Eye, Heart, MessageCircle, Plus, Camera } from 'lucide-react';
-import { PermissionGuard } from '@/components/PermissionGuard';
+import { Eye, Heart, MessageCircle, Calendar, Plus } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
+import { publicRelationsApiService } from '@/services/nodejsbackendapi/publicRelationsApi';
+import { mockPRMetrics } from '@/services/mockData/pr';
 
 export const PublicRelationsDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [metrics, setMetrics] = useState<{
+    totalReach: number;
+    engagementRate: number;
+    mediaReports: number;
+    publicEvents: number;
+    totalPressReleases: number;
+    publishedPressReleases: number;
+    totalMediaContacts: number;
+    activeMediaContacts: number;
+    totalEvents: number;
+    completedEvents: number;
+  }>(mockPRMetrics);
 
-  const recentPressReleases = [
-    { id: 'PR-001', title: 'New Municipal Development Project Announced', status: 'Published', date: '2024-01-20', views: 1250, engagement: 87 },
-    { id: 'PR-002', title: 'City Council Budget Approval for 2024', status: 'Draft', date: '2024-01-22', views: 0, engagement: 0 },
-    { id: 'PR-003', title: 'Public Safety Initiative Launch', status: 'Review', date: '2024-01-19', views: 850, engagement: 63 },
-  ];
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
 
-  const mediaContacts = [
-    { name: 'Jane Reporter', outlet: 'City Daily News', type: 'Print', lastContact: '2024-01-18', relationship: 'Active' },
-    { name: 'Mike Broadcaster', outlet: 'Local TV 5', type: 'Television', lastContact: '2024-01-15', relationship: 'Active' },
-    { name: 'Sarah Journalist', outlet: 'Metro Radio', type: 'Radio', lastContact: '2024-01-10', relationship: 'Inactive' },
-  ];
-
-  const socialMediaMetrics = {
-    facebook: { followers: 12450, engagement: 3.2, posts: 23 },
-    twitter: { followers: 8750, engagement: 2.8, posts: 45 },
-    instagram: { followers: 5200, engagement: 4.1, posts: 18 },
-    linkedin: { followers: 3100, engagement: 2.1, posts: 12 }
+  const loadDashboardData = async () => {
+    try {
+      const metricsData = await publicRelationsApiService.getPublicRelationsReport();
+      setMetrics({
+        totalReach: metricsData.totalReach || 0,
+        engagementRate: metricsData.engagementRate || 0,
+        mediaReports: metricsData.mediaReports || 0,
+        publicEvents: metricsData.publicEvents || 0,
+        totalPressReleases: metricsData.totalPressReleases,
+        publishedPressReleases: metricsData.publishedPressReleases,
+        totalMediaContacts: metricsData.totalMediaContacts,
+        activeMediaContacts: metricsData.activeMediaContacts,
+        totalEvents: metricsData.totalEvents,
+        completedEvents: metricsData.completedEvents,
+      });
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      setMetrics(mockPRMetrics);
+    }
   };
 
-  const upcomingEvents = [
-    { name: 'Town Hall Meeting', date: '2024-02-15', type: 'Public Meeting', attendees: 200, status: 'Planned' },
-    { name: 'Community Festival', date: '2024-03-10', type: 'Public Event', attendees: 1500, status: 'Planning' },
-    { name: 'Budget Presentation', date: '2024-02-28', type: 'Press Conference', attendees: 50, status: 'Confirmed' },
+  const engagementData = [
+    { month: 'Jan', reach: 35000, engagement: 2.8 },
+    { month: 'Feb', reach: 38000, engagement: 3.1 },
+    { month: 'Mar', reach: 42000, engagement: 3.3 },
+    { month: 'Apr', reach: 45000, engagement: 3.4 },
   ];
 
-  const prMetrics = {
-    totalReach: 45000,
-    engagementRate: 3.4,
-    mediaReports: 23,
-    publicEvents: 8
-  };
+  const mediaTypeData = [
+    { name: 'Press Releases', value: metrics.publishedPressReleases },
+    { name: 'Media Contacts', value: metrics.activeMediaContacts },
+    { name: 'Events', value: metrics.completedEvents },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -53,7 +70,6 @@ export const PublicRelationsDashboard: React.FC = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -61,7 +77,7 @@ export const PublicRelationsDashboard: React.FC = () => {
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{prMetrics.totalReach.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{metrics.totalReach.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">+15% from last month</p>
             </CardContent>
           </Card>
@@ -72,7 +88,7 @@ export const PublicRelationsDashboard: React.FC = () => {
               <Heart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{prMetrics.engagementRate}%</div>
+              <div className="text-2xl font-bold">{metrics.engagementRate}%</div>
               <p className="text-xs text-muted-foreground">+0.3% from last month</p>
             </CardContent>
           </Card>
@@ -83,7 +99,7 @@ export const PublicRelationsDashboard: React.FC = () => {
               <MessageCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{prMetrics.mediaReports}</div>
+              <div className="text-2xl font-bold">{metrics.mediaReports}</div>
               <p className="text-xs text-muted-foreground">This month</p>
             </CardContent>
           </Card>
@@ -94,7 +110,7 @@ export const PublicRelationsDashboard: React.FC = () => {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{prMetrics.publicEvents}</div>
+              <div className="text-2xl font-bold">{metrics.publicEvents}</div>
               <p className="text-xs text-muted-foreground">Events this quarter</p>
             </CardContent>
           </Card>
@@ -113,48 +129,39 @@ export const PublicRelationsDashboard: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent Press Releases</CardTitle>
-                  <CardDescription>Latest public communications</CardDescription>
+                  <CardTitle>Engagement Trends</CardTitle>
+                  <CardDescription>Monthly reach and engagement metrics</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {recentPressReleases.map((release) => (
-                      <div key={release.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium">{release.title}</p>
-                          <p className="text-sm text-gray-600">Published: {release.date}</p>
-                          <p className="text-xs text-gray-500">{release.views} views • {release.engagement}% engagement</p>
-                        </div>
-                        <Badge variant={release.status === 'Published' ? 'default' : release.status === 'Draft' ? 'secondary' : 'outline'}>
-                          {release.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={engagementData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="reach" stroke="#8884d8" name="Reach" />
+                      <Line type="monotone" dataKey="engagement" stroke="#82ca9d" name="Engagement %" />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Social Media Overview</CardTitle>
-                  <CardDescription>Cross-platform engagement metrics</CardDescription>
+                  <CardTitle>PR Activities Overview</CardTitle>
+                  <CardDescription>Distribution of PR activities</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {Object.entries(socialMediaMetrics).map(([platform, metrics]) => (
-                      <div key={platform} className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium capitalize">{platform}</span>
-                          <span className="text-sm text-gray-600">{metrics.followers.toLocaleString()} followers</span>
-                        </div>
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>{metrics.engagement}% engagement</span>
-                          <span>{metrics.posts} posts this month</span>
-                        </div>
-                        <Progress value={metrics.engagement * 20} className="h-2" />
-                      </div>
-                    ))}
-                  </div>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={mediaTypeData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#8884d8" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
             </div>
@@ -163,44 +170,20 @@ export const PublicRelationsDashboard: React.FC = () => {
           <TabsContent value="press">
             <Card>
               <CardHeader>
-                <CardTitle>Press Releases Management</CardTitle>
-                <CardDescription>Create and publish press releases</CardDescription>
-                <PermissionGuard requiredPermissions={['pr.press.create']}>
-                  <Button>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Press Releases Management</CardTitle>
+                    <CardDescription>Create and publish press releases</CardDescription>
+                  </div>
+                  <Button onClick={() => globalThis.location.href = '/pr/releases'}>
                     <Plus className="h-4 w-4 mr-2" />
-                    New Press Release
+                    View All
                   </Button>
-                </PermissionGuard>
+                </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Views</TableHead>
-                      <TableHead>Engagement</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentPressReleases.map((release) => (
-                      <TableRow key={release.id}>
-                        <TableCell className="font-medium">{release.id}</TableCell>
-                        <TableCell>{release.title}</TableCell>
-                        <TableCell>
-                          <Badge variant={release.status === 'Published' ? 'default' : release.status === 'Draft' ? 'secondary' : 'outline'}>
-                            {release.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{release.date}</TableCell>
-                        <TableCell>{release.views.toLocaleString()}</TableCell>
-                        <TableCell>{release.engagement}%</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <p className="text-muted-foreground">Total Press Releases: {metrics.totalPressReleases}</p>
+                <p className="text-muted-foreground">Published: {metrics.publishedPressReleases}</p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -208,42 +191,20 @@ export const PublicRelationsDashboard: React.FC = () => {
           <TabsContent value="media">
             <Card>
               <CardHeader>
-                <CardTitle>Media Relations</CardTitle>
-                <CardDescription>Manage media contacts and relationships</CardDescription>
-                <PermissionGuard requiredPermissions={['pr.media.manage']}>
-                  <Button>
-                    <Users className="h-4 w-4 mr-2" />
-                    Add Media Contact
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Media Relations</CardTitle>
+                    <CardDescription>Manage media contacts and relationships</CardDescription>
+                  </div>
+                  <Button onClick={() => globalThis.location.href = '/pr/media'}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    View All
                   </Button>
-                </PermissionGuard>
+                </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Outlet</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Last Contact</TableHead>
-                      <TableHead>Relationship</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mediaContacts.map((contact, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{contact.name}</TableCell>
-                        <TableCell>{contact.outlet}</TableCell>
-                        <TableCell>{contact.type}</TableCell>
-                        <TableCell>{contact.lastContact}</TableCell>
-                        <TableCell>
-                          <Badge variant={contact.relationship === 'Active' ? 'default' : 'secondary'}>
-                            {contact.relationship}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <p className="text-muted-foreground">Total Media Contacts: {metrics.totalMediaContacts}</p>
+                <p className="text-muted-foreground">Active Contacts: {metrics.activeMediaContacts}</p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -251,35 +212,19 @@ export const PublicRelationsDashboard: React.FC = () => {
           <TabsContent value="social">
             <Card>
               <CardHeader>
-                <CardTitle>Social Media Management</CardTitle>
-                <CardDescription>Schedule and monitor social media content</CardDescription>
-                <PermissionGuard requiredPermissions={['pr.social.post']}>
-                  <Button>
-                    <Camera className="h-4 w-4 mr-2" />
-                    Schedule Post
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Social Media Management</CardTitle>
+                    <CardDescription>Schedule and monitor social media content</CardDescription>
+                  </div>
+                  <Button onClick={() => globalThis.location.href = '/pr/social'}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    View All
                   </Button>
-                </PermissionGuard>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {Object.entries(socialMediaMetrics).map(([platform, metrics]) => (
-                    <Card key={platform}>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base capitalize">{platform}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="text-2xl font-bold">{metrics.followers.toLocaleString()}</div>
-                          <p className="text-xs text-gray-600">Followers</p>
-                          <div className="flex justify-between text-sm">
-                            <span>{metrics.engagement}% engagement</span>
-                            <span>{metrics.posts} posts</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <p className="text-muted-foreground">Social media management dashboard</p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -287,42 +232,20 @@ export const PublicRelationsDashboard: React.FC = () => {
           <TabsContent value="events">
             <Card>
               <CardHeader>
-                <CardTitle>Public Events Management</CardTitle>
-                <CardDescription>Plan and manage public events and meetings</CardDescription>
-                <PermissionGuard requiredPermissions={['pr.events.create']}>
-                  <Button>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Public Events Management</CardTitle>
+                    <CardDescription>Plan and manage public events and meetings</CardDescription>
+                  </div>
+                  <Button onClick={() => globalThis.location.href = '/pr/events'}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Plan New Event
+                    View All
                   </Button>
-                </PermissionGuard>
+                </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Event Name</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Expected Attendees</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {upcomingEvents.map((event, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{event.name}</TableCell>
-                        <TableCell>{event.date}</TableCell>
-                        <TableCell>{event.type}</TableCell>
-                        <TableCell>{event.attendees}</TableCell>
-                        <TableCell>
-                          <Badge variant={event.status === 'Confirmed' ? 'default' : event.status === 'Planned' ? 'secondary' : 'outline'}>
-                            {event.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <p className="text-muted-foreground">Total Events: {metrics.totalEvents}</p>
+                <p className="text-muted-foreground">Completed: {metrics.completedEvents}</p>
               </CardContent>
             </Card>
           </TabsContent>

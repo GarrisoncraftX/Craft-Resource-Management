@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,61 +10,57 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle, Plus, Search, Clock, CheckCircle2, XCircle, Eye } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { healthSafetyApiService } from '@/services/pythonbackendapi/healthSafetyApi';
+import type { IncidentReport } from '@/services/mockData/health-safety';
+import { useToast } from '@/hooks/use-toast';
 
 export const IncidentReporting: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
+  const [incidents, setIncidents] = useState<IncidentReport[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    type: '',
+    severity: '',
+    location: '',
+    description: '',
+    immediateAction: ''
+  });
+  const { toast } = useToast();
 
-  const incidents = [
-    {
-      id: 'INC-001',
-      title: 'Slip and Fall Incident',
-      type: 'Injury',
-      severity: 'Minor',
-      location: 'Manufacturing Floor',
-      reportedBy: 'John Smith',
-      reportedDate: '2024-01-15',
-      status: 'Under Investigation',
-      assignedTo: 'Safety Officer',
-      description: 'Employee slipped on wet floor near workstation 5'
-    },
-    {
-      id: 'INC-002',
-      title: 'Chemical Spill',
-      type: 'Environmental',
-      severity: 'Major',
-      location: 'Laboratory',
-      reportedBy: 'Lisa Chen',
-      reportedDate: '2024-01-12',
-      status: 'Resolved',
-      assignedTo: 'Environmental Team',
-      description: 'Small chemical spill contained and cleaned'
-    },
-    {
-      id: 'INC-003',
-      title: 'Equipment Malfunction',
-      type: 'Equipment',
-      severity: 'Critical',
-      location: 'Production Line A',
-      reportedBy: 'Mike Davis',
-      reportedDate: '2024-01-18',
-      status: 'Open',
-      assignedTo: 'Maintenance Team',
-      description: 'Press machine safety guard failure'
-    },
-    {
-      id: 'INC-004',
-      title: 'Near Miss - Falling Object',
-      type: 'Near Miss',
-      severity: 'Minor',
-      location: 'Warehouse',
-      reportedBy: 'Sarah Johnson',
-      reportedDate: '2024-01-20',
-      status: 'Closed',
-      assignedTo: 'Warehouse Manager',
-      description: 'Box fell from shelf, no injuries'
+  useEffect(() => {
+    loadIncidents();
+  }, []);
+
+  const loadIncidents = async () => {
+    const data = await healthSafetyApiService.getIncidents();
+    setIncidents(data);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.title || !formData.type || !formData.severity || !formData.location) {
+      toast({ title: 'Error', description: 'Please fill all required fields', variant: 'destructive' });
+      return;
     }
-  ];
+    const result = await healthSafetyApiService.createIncident({
+      title: formData.title,
+      type: formData.type as any,
+      severity: formData.severity as any,
+      location: formData.location,
+      reportedBy: 'Current User',
+      reportedDate: new Date().toISOString().split('T')[0],
+      status: 'Open',
+      assignedTo: 'Safety Team',
+      description: formData.description
+    });
+    if (result.success) {
+      toast({ title: 'Success', description: 'Incident reported successfully' });
+      setIsOpen(false);
+      setFormData({ title: '', type: '', severity: '', location: '', description: '', immediateAction: '' });
+      loadIncidents();
+    }
+  };
 
   const monthlyTrends = [
     { month: 'Jan', incidents: 8, resolved: 6 },
@@ -136,7 +132,7 @@ export const IncidentReporting: React.FC = () => {
           <h1 className="text-3xl font-bold">Incident Reporting</h1>
           <p className="text-muted-foreground">Track and manage safety incidents</p>
         </div>
-        <Dialog>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -150,49 +146,49 @@ export const IncidentReporting: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="incident-title">Incident Title</Label>
-                <Input id="incident-title" placeholder="Brief incident description" />
+                <Input id="incident-title" placeholder="Brief incident description" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
               </div>
               <div>
                 <Label htmlFor="incident-type">Type</Label>
-                <Select>
+                <Select value={formData.type} onValueChange={(v) => setFormData({...formData, type: v})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select incident type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="injury">Injury</SelectItem>
-                    <SelectItem value="environmental">Environmental</SelectItem>
-                    <SelectItem value="equipment">Equipment</SelectItem>
-                    <SelectItem value="near-miss">Near Miss</SelectItem>
-                    <SelectItem value="security">Security</SelectItem>
+                    <SelectItem value="Injury">Injury</SelectItem>
+                    <SelectItem value="Environmental">Environmental</SelectItem>
+                    <SelectItem value="Equipment">Equipment</SelectItem>
+                    <SelectItem value="Near Miss">Near Miss</SelectItem>
+                    <SelectItem value="Security">Security</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label htmlFor="severity">Severity</Label>
-                <Select>
+                <Select value={formData.severity} onValueChange={(v) => setFormData({...formData, severity: v})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select severity" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="minor">Minor</SelectItem>
-                    <SelectItem value="major">Major</SelectItem>
-                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="Minor">Minor</SelectItem>
+                    <SelectItem value="Major">Major</SelectItem>
+                    <SelectItem value="Critical">Critical</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label htmlFor="location">Location</Label>
-                <Input id="location" placeholder="Incident location" />
+                <Input id="location" placeholder="Incident location" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} />
               </div>
               <div>
                 <Label htmlFor="description">Description</Label>
-                <Textarea id="description" placeholder="Detailed incident description..." />
+                <Textarea id="description" placeholder="Detailed incident description..." value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
               </div>
               <div>
                 <Label htmlFor="immediate-action">Immediate Action Taken</Label>
-                <Textarea id="immediate-action" placeholder="Actions taken immediately..." />
+                <Textarea id="immediate-action" placeholder="Actions taken immediately..." value={formData.immediateAction} onChange={(e) => setFormData({...formData, immediateAction: e.target.value})} />
               </div>
-              <Button className="w-full">Report Incident</Button>
+              <Button className="w-full" onClick={handleSubmit}>Report Incident</Button>
             </div>
           </DialogContent>
         </Dialog>

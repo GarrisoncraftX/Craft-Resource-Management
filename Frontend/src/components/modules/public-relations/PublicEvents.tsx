@@ -1,58 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, MapPin, Users, Clock, Plus, BarChart3, TrendingUp } from 'lucide-react';
+import { Calendar, MapPin, Users, Plus, BarChart3, TrendingUp } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-
-const publicEvents = [
-  {
-    id: 1,
-    title: 'Town Hall Meeting',
-    date: '2024-01-25',
-    time: '18:00',
-    location: 'City Hall Auditorium',
-    type: 'Meeting',
-    status: 'Upcoming',
-    expectedAttendees: 200,
-    registeredAttendees: 145,
-    budget: 2500,
-    description: 'Monthly town hall meeting to discuss community issues and updates'
-  },
-  {
-    id: 2,
-    title: 'Community Festival',
-    date: '2024-02-15',
-    time: '10:00',
-    location: 'Central Park',
-    type: 'Festival',
-    status: 'Planning',
-    expectedAttendees: 1000,
-    registeredAttendees: 0,
-    budget: 15000,
-    description: 'Annual community festival with local vendors and entertainment'
-  },
-  {
-    id: 3,
-    title: 'Budget Presentation',
-    date: '2024-01-20',
-    time: '14:00',
-    location: 'City Council Chambers',
-    type: 'Presentation',
-    status: 'Completed',
-    expectedAttendees: 50,
-    registeredAttendees: 48,
-    actualAttendees: 42,
-    budget: 800,
-    description: 'Annual budget presentation to the public'
-  }
-];
+import { publicRelationsApiService, type PublicEvent } from '@/services/nodejsbackendapi/publicRelationsApi';
+import { mockPublicEvents } from '@/services/mockData/pr';
+import { PublicEventFormDialog } from './PublicEventFormDialog';
 
 const eventTypeData = [
   { name: 'Meetings', value: 40, color: '#3b82f6' },
@@ -78,33 +35,36 @@ const budgetAnalysis = [
 ];
 
 export const PublicEvents: React.FC = () => {
-  const [events, setEvents] = useState(publicEvents);
+  const [events, setEvents] = useState<PublicEvent[]>(mockPublicEvents as PublicEvent[]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    loadPublicEvents();
+  }, []);
+
+  const loadPublicEvents = async () => {
+    try {
+      const data = await publicRelationsApiService.getPublicEvents();
+      setEvents(data);
+    } catch (error) {
+      console.error('Error loading public events:', error);
+      setEvents(mockPublicEvents as PublicEvent[]);
+    }
+  };
 
   const filteredEvents = events.filter(event =>
     event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    event.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
     event.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Completed': return 'bg-green-500';
-      case 'Upcoming': return 'bg-blue-500';
-      case 'Planning': return 'bg-orange-500';
-      case 'Cancelled': return 'bg-red-500';
+      case 'completed': return 'bg-green-500';
+      case 'planned': return 'bg-blue-500';
+      case 'ongoing': return 'bg-orange-500';
+      case 'cancelled': return 'bg-red-500';
       default: return 'bg-gray-500';
-    }
-  };
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'Meeting': return 'bg-blue-600';
-      case 'Festival': return 'bg-purple-600';
-      case 'Presentation': return 'bg-green-600';
-      case 'Workshop': return 'bg-orange-600';
-      default: return 'bg-gray-600';
     }
   };
 
@@ -116,7 +76,7 @@ export const PublicEvents: React.FC = () => {
             <h1 className="text-3xl font-bold tracking-tight">Public Events Management</h1>
             <p className="text-muted-foreground">Organize and manage community events and gatherings</p>
           </div>
-          <Button onClick={() => setShowAddEvent(true)} className="flex items-center gap-2">
+          <Button onClick={() => setDialogOpen(true)} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Create Event
           </Button>
@@ -162,7 +122,7 @@ export const PublicEvents: React.FC = () => {
                   <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{events.filter(e => e.status === 'Upcoming').length}</div>
+                  <div className="text-2xl font-bold">{events.filter(e => e.status === 'planned').length}</div>
                 </CardContent>
               </Card>
 
@@ -171,7 +131,7 @@ export const PublicEvents: React.FC = () => {
                   <CardTitle className="text-sm font-medium">This Month</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{events.filter(e => new Date(e.date).getMonth() === new Date().getMonth()).length}</div>
+                  <div className="text-2xl font-bold">{events.filter(e => new Date(e.eventDate).getMonth() === new Date().getMonth()).length}</div>
                 </CardContent>
               </Card>
             </div>
@@ -208,8 +168,8 @@ export const PublicEvents: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <div>{new Date(event.date).toLocaleDateString()}</div>
-                              <div className="text-sm text-muted-foreground">{event.time}</div>
+                              <div>{new Date(event.eventDate).toLocaleDateString()}</div>
+                              <div className="text-sm text-muted-foreground">{new Date(event.eventDate).toLocaleTimeString()}</div>
                             </div>
                           </div>
                         </TableCell>
@@ -220,8 +180,8 @@ export const PublicEvents: React.FC = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={getTypeColor(event.type)}>
-                            {event.type}
+                          <Badge>
+                            Event
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -435,6 +395,7 @@ export const PublicEvents: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
+      <PublicEventFormDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={loadPublicEvents} />
     </div>
   );
 };

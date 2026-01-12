@@ -10,12 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calculator, Building, FileText, DollarSign, Plus, Search } from 'lucide-react';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-
-// CHANGED: import backend helper
 import { fetchTaxAssessments } from '@/services/api';
+import { TaxAssessmentForm } from './TaxAssessmentForm';
 
 export const TaxAssessment: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [showAssessmentForm, setShowAssessmentForm] = useState(false);
 
   // fallback dummy data
   const dummyAssessments = [
@@ -30,38 +30,38 @@ export const TaxAssessment: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // load live data from backend
-  useEffect(() => {
+  const loadData = async () => {
     let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const resp = await fetchTaxAssessments();
-        console.log('Fetched tax assessments:', resp);
-        if (!cancelled && Array.isArray(resp) && resp.length > 0) {
-          // map backend shape to UI shape (tolerant mapping)
-          const mapped = resp.map((r: any) => ({
-            id: r.id ?? r.assessmentId ?? r.reference ?? `TA-${Math.random().toString(36).slice(2,8)}`,
-            property: r.propertyAddress ?? r.address ?? r.property ?? 'Unknown',
-            owner: r.ownerName ?? r.owner ?? r.owner_name ?? '',
-            type: r.propertyType ?? r.type ?? 'Unknown',
-            landValue: Number(r.landValue ?? r.land_value ?? r.land ?? 0),
-            improvementValue: Number(r.improvementValue ?? r.improvement_value ?? r.improvement ?? 0),
-            totalValue: Number(r.totalValue ?? r.total_value ?? r.assessedValue ?? 0),
-            taxRate: Number(r.taxRate ?? r.tax_rate ?? r.rate ?? 0),
-            annualTax: Number(r.annualTax ?? r.annual_tax ?? r.annualTaxAmount ?? 0),
-            status: r.status ?? r.state ?? 'Unknown',
-          }));
-          setAssessments(mapped);
-        }
-      } catch (err) {
-        console.warn('TaxAssessment: failed to fetch assessments — using fallback data.', err?.message ?? err);
-        setError(err?.message ?? 'Failed to fetch tax assessments');
-      } finally {
-        if (!cancelled) setLoading(false);
+    setLoading(true);
+    setError(null);
+    try {
+      const resp = await fetchTaxAssessments();
+      console.log('Fetched tax assessments:', resp);
+      if (!cancelled && Array.isArray(resp) && resp.length > 0) {
+        const mapped = resp.map((r: any) => ({
+          id: r.id ?? r.assessmentId ?? r.reference ?? `TA-${Math.random().toString(36).slice(2,8)}`,
+          property: r.propertyAddress ?? r.address ?? r.property ?? 'Unknown',
+          owner: r.ownerName ?? r.owner ?? r.owner_name ?? '',
+          type: r.propertyType ?? r.type ?? 'Unknown',
+          landValue: Number(r.landValue ?? r.land_value ?? r.land ?? 0),
+          improvementValue: Number(r.improvementValue ?? r.improvement_value ?? r.improvement ?? 0),
+          totalValue: Number(r.totalValue ?? r.total_value ?? r.assessedValue ?? 0),
+          taxRate: Number(r.taxRate ?? r.tax_rate ?? r.rate ?? 0),
+          annualTax: Number(r.annualTax ?? r.annual_tax ?? r.annualTaxAmount ?? 0),
+          status: r.status ?? r.state ?? 'Unknown',
+        }));
+        setAssessments(mapped);
       }
-    })();
-    return () => { cancelled = true; };
+    } catch (err) {
+      console.warn('TaxAssessment: failed to fetch assessments — using fallback data.', err?.message ?? err);
+      setError(err?.message ?? 'Failed to fetch tax assessments');
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
   // quick computed metrics for the header cards
@@ -209,6 +209,12 @@ export const TaxAssessment: React.FC = () => {
               <CardHeader>
                 <CardTitle>Property Assessment</CardTitle>
                 <CardDescription>Create new property assessment</CardDescription>
+                <PermissionGuard requiredPermissions={['revenue.assessment.create']}>
+                  <Button onClick={() => setShowAssessmentForm(true)}>
+                    <Calculator className="h-4 w-4 mr-2" />
+                    New Assessment
+                  </Button>
+                </PermissionGuard>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
@@ -392,6 +398,7 @@ export const TaxAssessment: React.FC = () => {
           </TabsContent>
         </Tabs>
       </main>
+      <TaxAssessmentForm open={showAssessmentForm} onOpenChange={setShowAssessmentForm} onSuccess={loadData} />
     </div>
   );
 };

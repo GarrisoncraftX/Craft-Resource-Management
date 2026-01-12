@@ -1,48 +1,45 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { FileText, Plus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus } from 'lucide-react';
+import { procurementApiService } from '@/services/nodejsbackendapi/procurementApi';
+import { mockTenders } from '@/services/mockData/procurement';
+import { TenderFormDialog } from './TenderFormDialog';
 
 export const Tendering: React.FC = () => {
-  const tenders = [
-    { id: 'TND-001', title: 'Office Furniture Supply', bidders: 8, deadline: '2024-02-15', status: 'Open', value: 45000 },
-    { id: 'TND-002', title: 'IT Equipment Procurement', bidders: 12, deadline: '2024-02-20', status: 'Evaluation', value: 125000 },
-  ];
+  const [tenders, setTenders] = useState<typeof mockTenders>(mockTenders);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    loadTenders();
+  }, []);
+
+  const loadTenders = async () => {
+    try {
+      const data = await procurementApiService.getTenders() as typeof mockTenders;
+      setTenders(data);
+    } catch (error) {
+      console.error('Error loading tenders:', error);
+      setTenders(mockTenders);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Create Tender</CardTitle>
-          <CardDescription>Publish a new solicitation</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex justify-between items-center">
             <div>
-              <Label htmlFor="title">Title</Label>
-              <Input id="title" placeholder="e.g., Office Furniture Supply" />
+              <CardTitle>Active Tenders</CardTitle>
+              <CardDescription>Monitor ongoing solicitations</CardDescription>
             </div>
-            <div>
-              <Label htmlFor="deadline">Deadline</Label>
-              <Input id="deadline" type="date" />
-            </div>
-            <div className="flex items-end">
-              <Button className="w-full">
-                <FileText className="h-4 w-4 mr-2" />
-                Publish
-              </Button>
-            </div>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Tender
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Active Tenders</CardTitle>
-          <CardDescription>Monitor ongoing solicitations</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -63,7 +60,7 @@ export const Tendering: React.FC = () => {
                   <TableCell>{t.title}</TableCell>
                   <TableCell>{t.bidders}</TableCell>
                   <TableCell>{t.deadline}</TableCell>
-                  <TableCell>{t.status}</TableCell>
+                  <TableCell><Badge>{t.status}</Badge></TableCell>
                   <TableCell>${t.value.toLocaleString()}</TableCell>
                 </TableRow>
               ))}
@@ -71,6 +68,7 @@ export const Tendering: React.FC = () => {
           </Table>
         </CardContent>
       </Card>
+      <TenderFormDialog open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={loadTenders} />
     </div>
   );
 };

@@ -8,31 +8,10 @@ import { Wrench } from 'lucide-react';
 
 import { fetchMaintenanceRecords, createMaintenanceRecord } from '@/services/api';
 import type { MaintenanceRecord } from '@/types/asset';
-
-/* Fallback dummy schedule data (preserved as UI fallback) */
-const dummySchedules: MaintenanceRecord[] = [
-	{
-		id: 1,
-		asset: 'Generator',
-		type: 'Inspection',
-		maintenanceDate: '2024-02-05',
-		performedBy: 'Power Systems',
-		status: 'Scheduled',
-		description: '',
-	},
-	{
-		id: 2,
-		asset: 'AC Unit',
-		type: 'Repair',
-		maintenanceDate: '2024-01-25',
-		performedBy: 'HVAC Services',
-		status: 'In Progress',
-		description: '',
-	},
-];
+import { mockMaintenanceRecords } from '@/services/mockData/assets';
 
 export const MaintenanceManagement: React.FC = () => {
-	const [schedules, setSchedules] = useState<MaintenanceRecord[]>(dummySchedules);
+	const [schedules, setSchedules] = useState<MaintenanceRecord[]>(mockMaintenanceRecords);
 	const [loading, setLoading] = useState<boolean>(true);
 	const [error, setError] = useState<string | null>(null);
 
@@ -52,20 +31,24 @@ export const MaintenanceManagement: React.FC = () => {
 				const resp = await fetchMaintenanceRecords();
 				console.log('Fetched maintenance records:', resp);
 				if (!cancelled && Array.isArray(resp) && resp.length > 0) {
-					const mapped: MaintenanceRecord[] = resp.map((r: any) => ({
-						id: r.id,
-						asset: r.asset?.assetName ?? r.asset?.assetTag ?? 'Unknown Asset',
-						type: r.type ?? r.taskType ?? '',
-						maintenanceDate: r.maintenanceDate ?? r.maintenance_date ?? r.date ?? '',
-						performedBy: r.performedBy ?? r.performed_by ?? '',
-						description: r.description ?? '',
-						status: r.status ?? 'Scheduled',
-					}));
+					const mapped: MaintenanceRecord[] = resp.map((r: unknown) => {
+						const record = r as Record<string, unknown>;
+						const asset = record.asset as Record<string, unknown> | undefined;
+						return {
+							id: record.id as number,
+							asset: asset?.assetName as string ?? asset?.assetTag as string ?? 'Unknown Asset',
+							type: record.type as string ?? record.taskType as string ?? '',
+							maintenanceDate: record.maintenanceDate as string ?? record.maintenance_date as string ?? record.date as string ?? '',
+							performedBy: record.performedBy as string ?? record.performed_by as string ?? '',
+							description: record.description as string ?? '',
+							status: record.status as string ?? 'Scheduled',
+						};
+					});
 					setSchedules(mapped);
 				}
-			} catch (err: any) {
-				console.warn('MaintenanceManagement: failed to fetch maintenance records — using fallback dummies.', err?.message ?? err);
-				setError(err?.message ?? 'Failed to fetch maintenance records');
+			} catch (err) {
+				console.warn('MaintenanceManagement: failed to fetch maintenance records — using fallback dummies.', err instanceof Error ? err.message : err);
+				setError(err instanceof Error ? err.message : 'Failed to fetch maintenance records');
 			} finally {
 				if (!cancelled) setLoading(false);
 			}
@@ -90,33 +73,32 @@ export const MaintenanceManagement: React.FC = () => {
 		}
 
 		try {
-			const created = await createMaintenanceRecord(payload);
-			// Map created response to UI shape (backend may return full MaintenanceRecord)
-		const item: MaintenanceRecord = {
-			id: created?.id ?? Math.floor(Math.random() * 100000),
-			asset: created?.asset?.assetName ?? created?.asset?.assetTag ?? `Asset ${payload.asset.id}`,
-			type: created?.type ?? type,
-			maintenanceDate: created?.maintenanceDate ?? payload.maintenanceDate,
-			performedBy: created?.performedBy ?? payload.performedBy ?? technician,
-			description: created?.description ?? description,
-			status: created?.status ?? 'Scheduled',
-		};
-		setSchedules(prev => [item, ...prev]);
-		setError(null);
-	} catch (err: any) {
-		console.warn('MaintenanceManagement: create failed; adding locally as fallback.', err?.message ?? err);
-		// Optimistic local add on failure
-		const local: MaintenanceRecord = {
-			id: Math.floor(Math.random() * 100000),
-			asset: `Asset ${assetId}`,
-			type,
-			maintenanceDate: date,
-			performedBy: technician,
-			description,
-			status: 'Scheduled',
-		};
-		setSchedules(prev => [local, ...prev]);
-			setError(err?.message ?? 'Failed to create maintenance record (saved locally)');
+			const created = await createMaintenanceRecord(payload) as unknown as Record<string, unknown>;
+			const createdAsset = created?.asset as Record<string, unknown> | undefined;
+			const item: MaintenanceRecord = {
+				id: created?.id as number ?? Math.floor(Math.random() * 100000),
+				asset: createdAsset?.assetName as string ?? createdAsset?.assetTag as string ?? `Asset ${payload.asset.id}`,
+				type: created?.type as string ?? type,
+				maintenanceDate: created?.maintenanceDate as string ?? payload.maintenanceDate,
+				performedBy: created?.performedBy as string ?? payload.performedBy ?? technician,
+				description: created?.description as string ?? description,
+				status: created?.status as string ?? 'Scheduled',
+			};
+			setSchedules(prev => [item, ...prev]);
+			setError(null);
+		} catch (err) {
+			console.warn('MaintenanceManagement: create failed; adding locally as fallback.', err instanceof Error ? err.message : err);
+			const local: MaintenanceRecord = {
+				id: Math.floor(Math.random() * 100000),
+				asset: `Asset ${assetId}`,
+				type,
+				maintenanceDate: date,
+				performedBy: technician,
+				description,
+				status: 'Scheduled',
+			};
+			setSchedules(prev => [local, ...prev]);
+			setError(err instanceof Error ? err.message : 'Failed to create maintenance record (saved locally)');
 		} finally {
 			// reset form
 			setAssetId('');

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import {  DollarSign, Users } from 'lucide-react';
+import { fetchDepartments, Department } from '@/services/api';
 
 interface ProcessPayrollFormProps {
   open: boolean;
@@ -31,6 +32,19 @@ export const ProcessPayrollForm: React.FC<ProcessPayrollFormProps> = ({
   });
 
   const [loading, setLoading] = useState(false);
+  const [departments, setDepartments] = useState<Department[]>([]);
+
+  useEffect(() => {
+    const loadDepartments = async () => {
+      try {
+        const data = await fetchDepartments();
+        setDepartments(data.filter(d => d.isActive));
+      } catch (error) {
+        console.error('Failed to load departments:', error);
+      }
+    };
+    if (open) loadDepartments();
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,10 +107,11 @@ export const ProcessPayrollForm: React.FC<ProcessPayrollFormProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
-                  <SelectItem value="hr">Human Resources</SelectItem>
-                  <SelectItem value="finance">Finance</SelectItem>
-                  <SelectItem value="it">IT</SelectItem>
-                  <SelectItem value="operations">Operations</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

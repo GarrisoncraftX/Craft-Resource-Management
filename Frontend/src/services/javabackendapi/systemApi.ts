@@ -67,3 +67,26 @@ class SystemApiService {
 }
 
 export const systemApiService = new SystemApiService();
+
+// ============================================================================
+// WRAPPER FUNCTIONS FOR BACKWARD COMPATIBILITY
+// ============================================================================
+export async function createSystem(record: SystemConfig) {
+  return systemApiService.createSystemConfig(record);
+}
+
+export async function fetchSystemByID(id: number | string) {
+  return systemApiService.getSystemConfigById(Number(id));
+}
+
+export async function fetchSystem() {
+  return systemApiService.getAllSystemConfigs();
+}
+
+export async function updateSystem(id: number | string, record: SystemConfig) {
+  return systemApiService.updateSystemConfig(Number(id), record);
+}
+
+export async function deleteSystem(id: number | string) {
+  return systemApiService.deleteSystemConfig(Number(id));
+}

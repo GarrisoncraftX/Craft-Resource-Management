@@ -1,45 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserPlus, Edit, Trash2, Lock, Unlock, Search } from 'lucide-react';
-
-const mockUsers = [
-  {
-    id: 1,
-    name: 'John Doe',
-    email: 'john.doe@company.com',
-    role: 'Admin',
-    status: 'Active',
-    lastLogin: '2024-01-15 10:30 AM',
-    department: 'IT'
-  },
-  {
-    id: 2,
-    name: 'Jane Smith',
-    email: 'jane.smith@company.com',
-    role: 'HR Manager',
-    status: 'Active',
-    lastLogin: '2024-01-14 2:15 PM',
-    department: 'Human Resources'
-  },
-  {
-    id: 3,
-    name: 'Mike Johnson',
-    email: 'mike.johnson@company.com',
-    role: 'Employee',
-    status: 'Locked',
-    lastLogin: '2024-01-10 9:00 AM',
-    department: 'Finance'
-  }
-];
+import { Edit, Trash2, Lock, Unlock, Search } from 'lucide-react';
+import { UserFormDialog } from './UserFormDialog';
+import { adminApiService } from '@/services/javabackendapi/adminApi';
+import type { User } from '@/services/mockData/admin';
 
 export const UserManagement: React.FC = () => {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const data = await adminApiService.getUsers();
+      setUsers(data);
+    };
+    fetchUsers();
+  }, []);
+
+  const handleUserCreated = (user: User) => {
+    setUsers(prev => [...prev, user]);
+  };
+
+  const handleEditUser = (user: User) => {
+    console.log('Edit user:', user);
+  };
+
+  const handleToggleStatus = async (userId: number) => {
+    try {
+      const updatedUser = await adminApiService.toggleUserStatus(userId);
+      setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+    } catch (error) {
+      console.error('Failed to toggle user status:', error);
+    }
+  };
+
+  const handleDeleteUser = async (userId: number) => {
+    if (confirm('Are you sure you want to delete this user?')) {
+      try {
+        await adminApiService.deleteUser(userId);
+        setUsers(prev => prev.filter(u => u.id !== userId));
+      } catch (error) {
+        console.error('Failed to delete user:', error);
+      }
+    }
+  };
 
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -76,8 +85,7 @@ export const UserManagement: React.FC = () => {
             <p className="text-muted-foreground">Manage system users and their access permissions</p>
           </div>
           <Button className="flex items-center gap-2">
-            <UserPlus className="h-4 w-4" />
-            Add New User
+            <UserFormDialog onUserCreated={handleUserCreated} />
           </Button>
         </div>
 
@@ -186,13 +194,13 @@ export const UserManagement: React.FC = () => {
                     <TableCell>{user.lastLogin}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditUser(user)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleToggleStatus(user.id)}>
                           {user.status === 'Locked' ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
+                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => handleDeleteUser(user.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

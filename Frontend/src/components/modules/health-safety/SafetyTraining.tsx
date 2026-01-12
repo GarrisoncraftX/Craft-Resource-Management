@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,65 +10,60 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BookOpen, Plus, Search, Users, Calendar, Clock, Award, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { healthSafetyApiService } from '@/services/pythonbackendapi/healthSafetyApi';
+import type { TrainingSession } from '@/services/mockData/health-safety';
+import { useToast } from '@/hooks/use-toast';
 
 export const SafetyTraining: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [trainingSessions, setTrainingSessions] = useState<TrainingSession[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    instructor: '',
+    type: '',
+    date: '',
+    duration: '',
+    capacity: '',
+    location: '',
+    description: ''
+  });
+  const { toast } = useToast();
 
-  const trainingSessions = [
-    {
-      id: 'ST-001',
-      title: 'Fire Safety & Evacuation',
-      instructor: 'John Smith',
-      type: 'Mandatory',
-      duration: '2 hours',
-      scheduledDate: '2024-01-25',
-      capacity: 30,
-      enrolled: 28,
-      status: 'Scheduled',
-      completionRate: 0,
-      location: 'Training Room A'
-    },
-    {
-      id: 'ST-002',
-      title: 'First Aid & CPR',
-      instructor: 'Sarah Johnson',
-      type: 'Certification',
-      duration: '4 hours',
-      scheduledDate: '2024-01-20',
-      capacity: 20,
-      enrolled: 20,
-      status: 'In Progress',
-      completionRate: 60,
-      location: 'Medical Center'
-    },
-    {
-      id: 'ST-003',
-      title: 'Chemical Handling Safety',
-      instructor: 'Dr. Lisa Chen',
-      type: 'Mandatory',
-      duration: '3 hours',
-      scheduledDate: '2024-01-15',
-      capacity: 25,
-      enrolled: 25,
-      status: 'Completed',
-      completionRate: 100,
-      location: 'Laboratory'
-    },
-    {
-      id: 'ST-004',
-      title: 'Equipment Safety Training',
-      instructor: 'Mike Davis',
-      type: 'Optional',
-      duration: '1.5 hours',
-      scheduledDate: '2024-01-30',
-      capacity: 15,
-      enrolled: 12,
+  useEffect(() => {
+    loadTrainingSessions();
+  }, []);
+
+  const loadTrainingSessions = async () => {
+    const data = await healthSafetyApiService.getTrainingSessions();
+    setTrainingSessions(data);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.title || !formData.instructor || !formData.type || !formData.date) {
+      toast({ title: 'Error', description: 'Please fill all required fields', variant: 'destructive' });
+      return;
+    }
+    const result = await healthSafetyApiService.scheduleTraining({
+      title: formData.title,
+      instructor: formData.instructor,
+      type: formData.type as any,
+      duration: formData.duration || '2 hours',
+      scheduledDate: formData.date,
+      capacity: parseInt(formData.capacity) || 30,
+      enrolled: 0,
       status: 'Open',
       completionRate: 0,
-      location: 'Workshop'
+      location: formData.location
+    });
+    if (result.success) {
+      toast({ title: 'Success', description: 'Training scheduled successfully' });
+      setIsOpen(false);
+      setFormData({ title: '', instructor: '', type: '', date: '', duration: '', capacity: '', location: '', description: '' });
+      loadTrainingSessions();
     }
-  ];
+  };
 
   const completionTrends = [
     { month: 'Jan', completed: 85, target: 90 },
@@ -127,7 +122,7 @@ export const SafetyTraining: React.FC = () => {
           <h1 className="text-3xl font-bold">Safety Training</h1>
           <p className="text-muted-foreground">Manage safety training programs and certifications</p>
         </div>
-        <Dialog>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -141,60 +136,60 @@ export const SafetyTraining: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="training-title">Training Title</Label>
-                <Input id="training-title" placeholder="Training session title" />
+                <Input id="training-title" placeholder="Training session title" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
               </div>
               <div>
                 <Label htmlFor="instructor">Instructor</Label>
-                <Select>
+                <Select value={formData.instructor} onValueChange={(v) => setFormData({...formData, instructor: v})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select instructor" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="john">John Smith</SelectItem>
-                    <SelectItem value="sarah">Sarah Johnson</SelectItem>
-                    <SelectItem value="lisa">Dr. Lisa Chen</SelectItem>
-                    <SelectItem value="mike">Mike Davis</SelectItem>
+                    <SelectItem value="John Smith">John Smith</SelectItem>
+                    <SelectItem value="Sarah Johnson">Sarah Johnson</SelectItem>
+                    <SelectItem value="Dr. Lisa Chen">Dr. Lisa Chen</SelectItem>
+                    <SelectItem value="Mike Davis">Mike Davis</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label htmlFor="type">Training Type</Label>
-                <Select>
+                <Select value={formData.type} onValueChange={(v) => setFormData({...formData, type: v})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="mandatory">Mandatory</SelectItem>
-                    <SelectItem value="certification">Certification</SelectItem>
-                    <SelectItem value="optional">Optional</SelectItem>
+                    <SelectItem value="Mandatory">Mandatory</SelectItem>
+                    <SelectItem value="Certification">Certification</SelectItem>
+                    <SelectItem value="Optional">Optional</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="date">Date</Label>
-                  <Input id="date" type="date" />
+                  <Input id="date" type="date" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
                 </div>
                 <div>
                   <Label htmlFor="duration">Duration</Label>
-                  <Input id="duration" placeholder="2 hours" />
+                  <Input id="duration" placeholder="2 hours" value={formData.duration} onChange={(e) => setFormData({...formData, duration: e.target.value})} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="capacity">Capacity</Label>
-                  <Input id="capacity" type="number" placeholder="30" />
+                  <Input id="capacity" type="number" placeholder="30" value={formData.capacity} onChange={(e) => setFormData({...formData, capacity: e.target.value})} />
                 </div>
                 <div>
                   <Label htmlFor="location">Location</Label>
-                  <Input id="location" placeholder="Training Room A" />
+                  <Input id="location" placeholder="Training Room A" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} />
                 </div>
               </div>
               <div>
                 <Label htmlFor="description">Description</Label>
-                <Textarea id="description" placeholder="Training description and objectives..." />
+                <Textarea id="description" placeholder="Training description and objectives..." value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
               </div>
-              <Button className="w-full">Schedule Training</Button>
+              <Button className="w-full" onClick={handleSubmit}>Schedule Training</Button>
             </div>
           </DialogContent>
         </Dialog>

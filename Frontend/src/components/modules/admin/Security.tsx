@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -7,8 +7,10 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, AlertTriangle, Lock, Users, Activity, Search } from 'lucide-react';
+import { Shield, AlertTriangle, Users, Activity, Search } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { adminApiService } from '@/services/javabackendapi/adminApi';
+import type { SecurityEvent } from '@/services/mockData/admin';
 
 const securityThreats = [
   { date: '2024-01', threats: 45, blocked: 42, severity: 'Medium' },
@@ -35,37 +37,8 @@ const threatTypes = [
   { name: 'Brute Force', value: 17, color: '#22c55e' }
 ];
 
-const mockSecurityEvents = [
-  {
-    id: 1,
-    type: 'Failed Login',
-    user: 'unknown@attacker.com',
-    timestamp: '2024-01-15 14:30:22',
-    severity: 'High',
-    status: 'Blocked',
-    ip: '192.168.1.100'
-  },
-  {
-    id: 2,
-    type: 'Privilege Escalation',
-    user: 'john.doe@company.com',
-    timestamp: '2024-01-15 13:45:15',
-    severity: 'Critical',
-    status: 'Investigating',
-    ip: '192.168.1.45'
-  },
-  {
-    id: 3,
-    type: 'Suspicious Activity',
-    user: 'jane.smith@company.com',
-    timestamp: '2024-01-15 12:20:08',
-    severity: 'Medium',
-    status: 'Resolved',
-    ip: '192.168.1.78'
-  }
-];
-
 export const Security: React.FC = () => {
+  const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>([]);
   const [settings, setSettings] = useState({
     autoBlock: true,
     emailAlerts: true,
@@ -75,7 +48,15 @@ export const Security: React.FC = () => {
   });
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredEvents = mockSecurityEvents.filter(event =>
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const data = await adminApiService.getSecurityEvents();
+      setSecurityEvents(data);
+    };
+    fetchEvents();
+  }, []);
+
+  const filteredEvents = securityEvents.filter(event =>
     event.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
     event.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
     event.ip.includes(searchTerm)

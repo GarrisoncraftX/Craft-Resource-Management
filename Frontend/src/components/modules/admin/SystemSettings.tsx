@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,26 +6,31 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Save, RefreshCw } from 'lucide-react';
+import { adminApiService } from '@/services/javabackendapi/adminApi';
 
 export const SystemSettings: React.FC = () => {
-  const [settings, setSettings] = useState({
-    organizationName: 'Your Organization',
-    systemTimezone: 'UTC',
-    dateFormat: 'YYYY-MM-DD',
-    currency: 'USD',
-    language: 'English',
-    sessionTimeout: '30',
-    maxLoginAttempts: '3',
-    passwordExpiry: '90',
-    enableTwoFactor: true,
-    enableAuditLog: true,
-    maintenanceMode: false,
-    backupFrequency: 'daily',
-    emailNotifications: true,
-    smsNotifications: false
-  });
+  const [settings, setSettings] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const data = await adminApiService.getSystemSettings();
+      setSettings(data);
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await adminApiService.updateSystemSettings(settings);
+    } finally {
+      setLoading(false);
+    };
+  };
+
+  if (!settings) return null;
 
   const handleSettingChange = (key: string, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }));
@@ -39,9 +44,9 @@ export const SystemSettings: React.FC = () => {
             <h1 className="text-3xl font-bold tracking-tight">System Settings</h1>
             <p className="text-muted-foreground">Configure system-wide settings and preferences</p>
           </div>
-          <Button className="flex items-center gap-2">
+          <Button className="flex items-center gap-2" onClick={handleSave} disabled={loading}>
             <Save className="h-4 w-4" />
-            Save Settings
+            {loading ? 'Saving...' : 'Save Settings'}
           </Button>
         </div>
 

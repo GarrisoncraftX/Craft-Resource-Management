@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DollarSign, TrendingUp, TrendingDown, BarChart3, PieChart, Target } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
+import { fetchRevenueCollections } from '@/services/api';
+import { mockRevenueStreams } from '@/services/mockData/revenue';
 
 const revenueStreams = [
   {
@@ -87,6 +89,43 @@ const forecastData = [
 export const RevenueTracking: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('monthly');
   const [selectedYear, setSelectedYear] = useState('2024');
+  const [revenueStreams, setRevenueStreams] = useState<any[]>(mockRevenueStreams);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const collections = await fetchRevenueCollections();
+        if (Array.isArray(collections) && collections.length > 0) {
+          // Aggregate collections by source
+          const aggregated = collections.reduce((acc: any, c: any) => {
+            const source = c.taxType || c.source || 'Other';
+            if (!acc[source]) acc[source] = { source, actual: 0, count: 0 };
+            acc[source].actual += Number(c.amount || 0);
+            acc[source].count++;
+            return acc;
+          }, {});
+          const streams = Object.values(aggregated).map((s: any, idx: number) => ({
+            id: idx + 1,
+            source: s.source,
+            budgeted: s.actual * 1.1,
+            actual: s.actual,
+            variance: s.actual * 0.1,
+            percentageComplete: 100,
+            lastUpdated: new Date().toISOString().split('T')[0],
+            status: 'On Track',
+          }));
+          if (streams.length > 0) setRevenueStreams(streams);
+        }
+      } catch (error) {
+        console.warn('Failed to load revenue collections, using fallback', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {

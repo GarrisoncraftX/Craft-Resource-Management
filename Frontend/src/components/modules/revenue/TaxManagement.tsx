@@ -8,9 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calculator, FileText, DollarSign, TrendingUp, BarChart3, Plus } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
-
-// CHANGED: load live data from backend
 import { fetchTaxAssessments, fetchRevenueCollections } from '@/services/api';
+import { RevenueCollectionForm } from './RevenueCollectionForm';
 
 const taxRecords = [
   {
@@ -78,64 +77,63 @@ const complianceMetrics = [
 ];
 
 export const TaxManagement: React.FC = () => {
-  // CHANGED: use state to hold live records and loading/error states
   const [taxRecordsState, setTaxRecords] = useState<any[]>(taxRecords);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCollectionForm, setShowCollectionForm] = useState(false);
+
+  const loadData = async () => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    try {
+      const [assessmentsResp, collectionsResp] = await Promise.allSettled([fetchTaxAssessments(), fetchRevenueCollections()]);
+      console.log('TaxManagement: fetched data', { assessmentsResp, collectionsResp });
+
+      let mapped: any[] = [];
+      if (assessmentsResp.status === 'fulfilled' && Array.isArray(assessmentsResp.value) && assessmentsResp.value.length > 0) {
+        mapped = assessmentsResp.value.map((r: any, idx: number) => {
+          const assessedValue = Number(r.totalValue ?? r.assessedValue ?? r.total_value ?? r.assessed_value ?? 0);
+          const taxAmount = Number(r.taxAmount ?? r.tax_amount ?? Math.round(assessedValue * (Number(r.taxRate ?? r.tax_rate ?? 0) / 100)));
+          return {
+            id: r.id ?? r.assessmentId ?? `TA-${idx}`,
+            taxpayerId: r.taxpayerId ?? r.ownerTaxId ?? r.owner_id ?? '',
+            taxpayerName: r.ownerName ?? r.owner ?? r.taxpayerName ?? 'Unknown',
+            taxType: r.propertyType ?? r.taxType ?? r.type ?? 'Property Tax',
+            assessedValue,
+            taxAmount,
+            dueDate: r.dueDate ?? r.due_date ?? r.due ?? null,
+            status: r.status ?? r.state ?? 'Pending',
+            paymentDate: r.paymentDate ?? r.paidAt ?? null
+          };
+        });
+      } else if (collectionsResp.status === 'fulfilled' && Array.isArray(collectionsResp.value)) {
+        mapped = collectionsResp.value.map((r: any, idx: number) => ({
+          id: r.id ?? `RC-${idx}`,
+          taxpayerId: r.payerId ?? r.taxpayerId ?? '',
+          taxpayerName: r.payerName ?? r.taxpayerName ?? 'Unknown',
+          taxType: r.taxType ?? r.type ?? 'General Tax',
+          assessedValue: Number(r.assessedValue ?? r.amount ?? 0),
+          taxAmount: Number(r.amount ?? r.taxAmount ?? 0),
+          dueDate: r.dueDate ?? r.due_date ?? null,
+          status: r.status ?? 'Unknown',
+          paymentDate: r.paidAt ?? r.paymentDate ?? null
+        }));
+      }
+
+      if (!cancelled && mapped.length > 0) setTaxRecords(mapped);
+    } catch (err: any) {
+      console.warn('TaxManagement: failed to load backend data', err?.message ?? err);
+      setError(err?.message ?? 'Failed to load tax records');
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // Prefer tax assessments for individual records, fallback to revenue collections if needed
-        const [assessmentsResp, collectionsResp] = await Promise.allSettled([fetchTaxAssessments(), fetchRevenueCollections()]);
-        console.log('TaxManagement: fetched data', { assessmentsResp, collectionsResp });
-
-        let mapped: any[] = [];
-        if (assessmentsResp.status === 'fulfilled' && Array.isArray(assessmentsResp.value) && assessmentsResp.value.length > 0) {
-          mapped = assessmentsResp.value.map((r: any, idx: number) => {
-            const assessedValue = Number(r.totalValue ?? r.assessedValue ?? r.total_value ?? r.assessed_value ?? 0);
-            const taxAmount = Number(r.taxAmount ?? r.tax_amount ?? Math.round(assessedValue * (Number(r.taxRate ?? r.tax_rate ?? 0) / 100)));
-            return {
-              id: r.id ?? r.assessmentId ?? `TA-${idx}`,
-              taxpayerId: r.taxpayerId ?? r.ownerTaxId ?? r.owner_id ?? '',
-              taxpayerName: r.ownerName ?? r.owner ?? r.taxpayerName ?? 'Unknown',
-              taxType: r.propertyType ?? r.taxType ?? r.type ?? 'Property Tax',
-              assessedValue,
-              taxAmount,
-              dueDate: r.dueDate ?? r.due_date ?? r.due ?? null,
-              status: r.status ?? r.state ?? 'Pending',
-              paymentDate: r.paymentDate ?? r.paidAt ?? null
-            };
-          });
-        } else if (collectionsResp.status === 'fulfilled' && Array.isArray(collectionsResp.value)) {
-          // Map revenue collections to the tax record shape as a fallback
-          mapped = collectionsResp.value.map((r: any, idx: number) => ({
-            id: r.id ?? `RC-${idx}`,
-            taxpayerId: r.payerId ?? r.taxpayerId ?? '',
-            taxpayerName: r.payerName ?? r.taxpayerName ?? 'Unknown',
-            taxType: r.taxType ?? r.type ?? 'General Tax',
-            assessedValue: Number(r.assessedValue ?? r.amount ?? 0),
-            taxAmount: Number(r.amount ?? r.taxAmount ?? 0),
-            dueDate: r.dueDate ?? r.due_date ?? null,
-            status: r.status ?? 'Unknown',
-            paymentDate: r.paidAt ?? r.paymentDate ?? null
-          }));
-        }
-
-        if (!cancelled && mapped.length > 0) setTaxRecords(mapped);
-      } catch (err: any) {
-        console.warn('TaxManagement: failed to load backend data', err?.message ?? err);
-        setError(err?.message ?? 'Failed to load tax records');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    loadData();
   }, []);
 
   const filteredRecords = taxRecordsState.filter(record => {
@@ -176,7 +174,7 @@ export const TaxManagement: React.FC = () => {
             <h1 className="text-3xl font-bold tracking-tight">Tax Management</h1>
             <p className="text-muted-foreground">Comprehensive tax administration and compliance management</p>
           </div>
-          <Button className="flex items-center gap-2">
+          <Button className="flex items-center gap-2" onClick={() => setShowCollectionForm(true)}>
             <Plus className="h-4 w-4" />
             Add Tax Record
           </Button>
@@ -558,6 +556,7 @@ export const TaxManagement: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
+      <RevenueCollectionForm open={showCollectionForm} onOpenChange={setShowCollectionForm} onSuccess={loadData} />
     </div>
   );
 };

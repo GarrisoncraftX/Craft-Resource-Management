@@ -72,6 +72,61 @@ class ReportsAnalyticsService:
             logger.error(f"Error getting report {report_id}: {e}")
             raise e
 
+    def delete_report(self, report_id, user_id):
+        try:
+            query = "DELETE FROM Report WHERE id = %s"
+            params = (report_id,)
+            self.db.execute_query(query, params, fetch=False)
+            audit_service.log_action(user_id, 'DELETE_REPORT', {'report_id': report_id})
+        except Exception as e:
+            logger.error(f"Error deleting report {report_id}: {e}")
+            raise e
+
+    def download_report(self, report_id):
+        try:
+            # Mock PDF generation - in production, retrieve actual file
+            return b'%PDF-1.4 Mock Report Content'
+        except Exception as e:
+            logger.error(f"Error downloading report {report_id}: {e}")
+            raise e
+
+    def get_monthly_trends(self):
+        try:
+            # Query actual data or return mock
+            return [
+                {'month': 'Jan', 'revenue': 450000, 'expenses': 320000, 'employees': 245, 'incidents': 3},
+                {'month': 'Feb', 'revenue': 480000, 'expenses': 335000, 'employees': 248, 'incidents': 2},
+                {'month': 'Mar', 'revenue': 520000, 'expenses': 348000, 'employees': 252, 'incidents': 1},
+                {'month': 'Apr', 'revenue': 490000, 'expenses': 342000, 'employees': 255, 'incidents': 4},
+                {'month': 'May', 'revenue': 530000, 'expenses': 356000, 'employees': 258, 'incidents': 2},
+                {'month': 'Jun', 'revenue': 560000, 'expenses': 365000, 'employees': 262, 'incidents': 1}
+            ]
+        except Exception as e:
+            logger.error(f"Error getting monthly trends: {e}")
+            raise e
+
+    def get_ai_insights(self):
+        try:
+            return [
+                {'id': 1, 'type': 'anomaly', 'severity': 'high', 'title': 'Unusual Spending Pattern Detected', 'description': 'Procurement expenses increased 25%', 'department': 'Procurement', 'confidence': 94, 'date': '2024-07-02'},
+                {'id': 2, 'type': 'prediction', 'severity': 'medium', 'title': 'Budget Overrun Forecast', 'description': 'HR projected to exceed budget by 8%', 'department': 'HR', 'confidence': 87, 'date': '2024-07-01'}
+            ]
+        except Exception as e:
+            logger.error(f"Error getting AI insights: {e}")
+            raise e
+
+    def get_kpis(self):
+        try:
+            return {
+                'totalRevenue': {'value': 560000, 'change': 5.8},
+                'activeEmployees': {'value': 262, 'change': 4},
+                'reportsGenerated': {'value': 47, 'period': 'This month'},
+                'systemEfficiency': {'value': 94.2, 'change': 2.1}
+            }
+        except Exception as e:
+            logger.error(f"Error getting KPIs: {e}")
+            raise e
+
     # Analytics related methods
     def get_attendance_analytics(self):
         try:

@@ -15,3 +15,10 @@ class SystemApiService {
 }
 
 export const systemApiService = new SystemApiService();
+
+// ============================================================================
+// WRAPPER FUNCTIONS FOR BACKWARD COMPATIBILITY
+// ============================================================================
+export async function fetchRecentActivities(userId: string): Promise<AuditLog[]> {
+  return systemApiService.getRecentActivities(userId);
+}
