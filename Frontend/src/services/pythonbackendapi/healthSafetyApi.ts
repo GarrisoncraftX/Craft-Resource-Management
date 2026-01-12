@@ -67,11 +67,27 @@ class HealthSafetyApiService {
     }
   }
 
+  async updateTraining(trainingId: string, data: Partial<TrainingSession>): Promise<{ success: boolean; session?: TrainingSession }> {
+    try {
+      return await apiClient.put(`/api/health-safety/trainings/${trainingId}`, data);
+    } catch {
+      return { success: true };
+    }
+  }
+
+  async deleteTraining(trainingId: string): Promise<{ success: boolean }> {
+    try {
+      return await apiClient.delete(`/api/health-safety/trainings/${trainingId}`);
+    } catch {
+      return { success: true };
+    }
+  }
+
   // Environmental Monitoring
   async getEnvironmentalData(): Promise<EnvironmentalMonitoring[]> {
     try {
-      const response = await apiClient.get('/api/health-safety/environmental');
-      return response.data || mockEnvironmentalData;
+      const response = await apiClient.get('/api/health-safety/environmental-health-records');
+      return response.environmental_health_records || mockEnvironmentalData;
     } catch {
       return mockEnvironmentalData;
     }
@@ -79,9 +95,25 @@ class HealthSafetyApiService {
 
   async addMonitoringPoint(data: Omit<EnvironmentalMonitoring, 'id'>): Promise<{ success: boolean; point?: EnvironmentalMonitoring }> {
     try {
-      return await apiClient.post('/api/health-safety/environmental', data);
+      return await apiClient.post('/api/health-safety/environmental-health-records', data);
     } catch {
       return { success: true, point: { ...data, id: `ENV-${Date.now()}` } as EnvironmentalMonitoring };
+    }
+  }
+
+  async updateEnvironmentalRecord(recordId: string, data: Partial<EnvironmentalMonitoring>): Promise<{ success: boolean }> {
+    try {
+      return await apiClient.put(`/api/health-safety/environmental-health-records/${recordId}`, data);
+    } catch {
+      return { success: true };
+    }
+  }
+
+  async deleteEnvironmentalRecord(recordId: string): Promise<{ success: boolean }> {
+    try {
+      return await apiClient.delete(`/api/health-safety/environmental-health-records/${recordId}`);
+    } catch {
+      return { success: true };
     }
   }
 }

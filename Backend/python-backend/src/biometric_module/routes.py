@@ -160,4 +160,9 @@ def get_attendance_method_statistics():
     response, status_code = biometric_controller.get_attendance_method_statistics()
     return jsonify(response), status_code
 
+@biometric_bp.route('/attendance/<int:attendance_id>/review', methods=['POST'])
+@auth_required
+def review_attendance(attendance_id):
+    response, status_code = biometric_controller.review_attendance(attendance_id)
+    return jsonify(response), status_code
 

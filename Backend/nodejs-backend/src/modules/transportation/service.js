@@ -1,5 +1,6 @@
 const { Vehicle, Driver, Trip, MaintenanceRecord, FuelRecord, Route } = require("./model")
 const { Op } = require('sequelize')
+const auditService = require("../audit/service")
 
 class TransportationService {
   async getVehicles() {
@@ -288,6 +289,146 @@ class TransportationService {
     if (!route) return null
     route.status = "inactive"
     await route.save()
+  }
+
+  async assignDriver(vehicleId, data) {
+    const vehicle = await Vehicle.findByPk(vehicleId)
+    if (!vehicle) return null
+    vehicle.assignedDriverId = data.driverId
+    await vehicle.save()
+    await auditService.logAction(data.userId, "ASSIGN_DRIVER", { vehicleId, driverId: data.driverId })
+    return vehicle
+  }
+
+  async unassignDriver(vehicleId, data) {
+    const vehicle = await Vehicle.findByPk(vehicleId)
+    if (!vehicle) return null
+    vehicle.assignedDriverId = null
+    await vehicle.save()
+    await auditService.logAction(data.userId, "UNASSIGN_DRIVER", { vehicleId })
+    return vehicle
+  }
+
+  async scheduleMaintenance(vehicleId, data) {
+    const maintenance = await MaintenanceRecord.create({
+      vehicleId,
+      type: data.type,
+      description: data.description,
+      scheduledDate: data.scheduledDate,
+      status: "scheduled",
+      createdAt: new Date()
+    })
+    await auditService.logAction(data.userId, "SCHEDULE_MAINTENANCE", { vehicleId, maintenanceId: maintenance.id })
+    return maintenance
+  }
+
+  async retireVehicle(id, data) {
+    const vehicle = await Vehicle.findByPk(id)
+    if (!vehicle) return null
+    vehicle.status = "retired"
+    await vehicle.save()
+    await auditService.logAction(data.userId, "RETIRE_VEHICLE", { vehicleId: id })
+    return vehicle
+  }
+
+  async assignVehicle(driverId, data) {
+    const driver = await Driver.findByPk(driverId)
+    if (!driver) return null
+    driver.assignedVehicleId = data.vehicleId
+    await driver.save()
+    await auditService.logAction(data.userId, "ASSIGN_VEHICLE", { driverId, vehicleId: data.vehicleId })
+    return driver
+  }
+
+  async unassignVehicle(driverId, data) {
+    const driver = await Driver.findByPk(driverId)
+    if (!driver) return null
+    driver.assignedVehicleId = null
+    await driver.save()
+    await auditService.logAction(data.userId, "UNASSIGN_VEHICLE", { driverId })
+    return driver
+  }
+
+  async suspendDriver(id, data) {
+    const driver = await Driver.findByPk(id)
+    if (!driver) return null
+    driver.status = "suspended"
+    await driver.save()
+    await auditService.logAction(data.userId, "SUSPEND_DRIVER", { driverId: id })
+    return driver
+  }
+
+  async reactivateDriver(id, data) {
+    const driver = await Driver.findByPk(id)
+    if (!driver) return null
+    driver.status = "active"
+    await driver.save()
+    await auditService.logAction(data.userId, "REACTIVATE_DRIVER", { driverId: id })
+    return driver
+  }
+
+  async startTrip(id, data) {
+    const trip = await Trip.findByPk(id)
+    if (!trip) return null
+    trip.status = "in_progress"
+    trip.actualStartTime = new Date()
+    await trip.save()
+    await auditService.logAction(data.userId, "START_TRIP", { tripId: id })
+    return trip
+  }
+
+  async completeTrip(id, data) {
+    const trip = await Trip.findByPk(id)
+    if (!trip) return null
+    trip.status = "completed"
+    trip.actualEndTime = new Date()
+    await trip.save()
+    await auditService.logAction(data.userId, "COMPLETE_TRIP", { tripId: id })
+    return trip
+  }
+
+  async cancelTrip(id, data) {
+    const trip = await Trip.findByPk(id)
+    if (!trip) return null
+    trip.status = "cancelled"
+    await trip.save()
+    await auditService.logAction(data.userId, "CANCEL_TRIP", { tripId: id })
+    return trip
+  }
+
+  async getMaintenanceRecordById(id) {
+    return await MaintenanceRecord.findByPk(id)
+  }
+
+  async getFuelRecordById(id) {
+    return await FuelRecord.findByPk(id)
+  }
+
+  async getMaintenanceCostAnalytics() {
+    const records = await MaintenanceRecord.findAll({
+      attributes: ['type', [sequelize.fn('SUM', sequelize.col('cost')), 'totalCost']],
+      group: ['type']
+    })
+    return records
+  }
+
+  async getTripAnalytics() {
+    const totalTrips = await Trip.count()
+    const completedTrips = await Trip.count({ where: { status: 'completed' } })
+    const inProgressTrips = await Trip.count({ where: { status: 'in_progress' } })
+    const cancelledTrips = await Trip.count({ where: { status: 'cancelled' } })
+    return { totalTrips, completedTrips, inProgressTrips, cancelledTrips }
+  }
+
+  async getRouteEfficiencyAnalytics() {
+    const routes = await Route.findAll({ where: { status: 'active' } })
+    return routes.map(r => ({
+      routeId: r.id,
+      name: r.name,
+      distance: r.distance,
+      estimatedDuration: r.estimatedDuration,
+      efficiency: r.distance / (r.estimatedDuration || 1)
+    }))
   }
 }
 

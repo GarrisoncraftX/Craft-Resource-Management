@@ -520,8 +520,162 @@ const hrCreateEmployee = async (firstName, lastName, email, departmentId, jobGra
   }
 };
 
+const getUserById = async (userId) => {
+  const user = await User.findByPk(userId, {
+    include: [
+      { model: Department, attributes: ['id', 'name'] },
+      { model: Role, attributes: ['id', 'name'] },
+    ],
+  });
+  if (!user) {
+    throw new Error('User not found');
+  }
+  return user;
+};
+
+const generateToken = (user) => {
+  return jwt.sign(
+    {
+      userId: user.id,
+      employeeId: user.employeeId,
+      departmentId: user.departmentId,
+      roleId: user.roleId,
+    },
+    process.env.JWT_SECRET || 'your-secret-key',
+    { expiresIn: '24h' }
+  );
+};
+
+const changePassword = async (userId, currentPassword, newPassword) => {
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const passwordMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!passwordMatch) {
+    throw new Error('Current password is incorrect');
+  }
+
+  validatePasswordLength(newPassword);
+  const newPasswordHash = await bcrypt.hash(newPassword, 10);
+  user.passwordHash = newPasswordHash;
+  user.defaultPasswordChanged = true;
+  await user.save();
+
+  await auditService.logAction(userId, 'CHANGE_PASSWORD', { userId });
+};
+
+const createPasswordResetToken = async (email) => {
+  const user = await User.findOne({ where: { email: email.toLowerCase() } });
+  if (!user) {
+    throw new Error('User with this email not found');
+  }
+
+  const defaultPassword = 'CRMSemp123!';
+  const newPasswordHash = await bcrypt.hash(defaultPassword, 10);
+  user.passwordHash = newPasswordHash;
+  user.defaultPasswordChanged = false;
+  await user.save();
+
+  await auditService.logAction(user.id, 'PASSWORD_RESET', { userId: user.id, email });
+  
+  return defaultPassword;
+};
+
+
+
+const createEmailVerificationToken = async (userId) => {
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  const verificationTokenHash = crypto.createHash('sha256').update(verificationToken).digest('hex');
+
+  user.emailVerificationToken = verificationTokenHash;
+  await user.save();
+
+  return verificationToken;
+};
+
+const verifyEmail = async (token) => {
+  const verificationTokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const user = await User.findOne({
+    where: { emailVerificationToken: verificationTokenHash },
+  });
+
+  if (!user) {
+    throw new Error('Invalid verification token');
+  }
+
+  user.emailVerified = true;
+  user.emailVerificationToken = null;
+  await user.save();
+
+  await auditService.logAction(user.id, 'EMAIL_VERIFIED', { userId: user.id });
+};
+
+const updateUserProfile = async (userId, updates) => {
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const allowedUpdates = ['firstName', 'lastName', 'middleName', 'phone', 'address', 'dateOfBirth'];
+  Object.keys(updates).forEach((key) => {
+    if (allowedUpdates.includes(key)) {
+      user[key] = updates[key];
+    }
+  });
+
+  if (updates.profileCompleted !== undefined) {
+    user.profileCompleted = updates.profileCompleted;
+  }
+
+  await user.save();
+  await auditService.logAction(userId, 'UPDATE_PROFILE', { userId, updates: Object.keys(updates) });
+
+  return user;
+};
+
+const getUserSessions = async (userId) => {
+  // Mock implementation - in production, store sessions in Redis or database
+  return [
+    {
+      id: '1',
+      userId,
+      device: 'Chrome on Windows',
+      ipAddress: '192.168.1.1',
+      lastActive: new Date(),
+      createdAt: new Date(),
+    },
+  ];
+};
+
+const revokeSession = async (userId, sessionId) => {
+  // Mock implementation - in production, remove from Redis or database
+  await auditService.logAction(userId, 'REVOKE_SESSION', { userId, sessionId });
+};
+
+const revokeAllSessions = async (userId) => {
+  // Mock implementation - in production, remove all sessions from Redis or database
+  await auditService.logAction(userId, 'REVOKE_ALL_SESSIONS', { userId });
+};
+
 module.exports = {
   register,
   signin,
   hrCreateEmployee,
+  getUserById,
+  generateToken,
+  changePassword,
+  createPasswordResetToken,
+  createEmailVerificationToken,
+  verifyEmail,
+  updateUserProfile,
+  getUserSessions,
+  revokeSession,
+  revokeAllSessions,
 };

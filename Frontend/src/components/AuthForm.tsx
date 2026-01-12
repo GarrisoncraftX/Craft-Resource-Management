@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { WebcamCapture } from './WebcamCapture';
+import { PasswordResetDialog } from './modules/admin/PasswordResetDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/utils/apiClient';
 import { Eye, EyeOff, AlertCircle, CheckCircle} from 'lucide-react';
@@ -21,6 +22,7 @@ const AuthForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   // Biometric states
   const [showWebcam, setShowWebcam] = useState(false);
@@ -260,6 +262,15 @@ const AuthForm: React.FC = () => {
                 >
                   {isLoading ? 'Signing In...' : 'Sign In'}
                 </Button>
+
+                <Button
+                  type="button"
+                  variant="link"
+                  className="w-full"
+                  onClick={() => setResetDialogOpen(true)}
+                >
+                  Forgot Password?
+                </Button>
           </form>
         </CardContent>
       </Card>
@@ -278,6 +289,8 @@ const AuthForm: React.FC = () => {
           clockInMethod={clockInData.clockInMethod}
         />
       )}
+
+      <PasswordResetDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen} />
     </div>
   );
 };

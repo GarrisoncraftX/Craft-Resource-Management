@@ -39,8 +39,8 @@ class AuthApiService {
     return apiClient.post('/api/auth/request-password-reset', resetData);
   }
 
-  async confirmPasswordReset(resetData: ConfirmResetPasswordRequest): Promise<void> {
-    return apiClient.post('/api/auth/confirm-password-reset', resetData);
+  async confirmPasswordReset(confirmData: ConfirmResetPasswordRequest): Promise<void> {
+    return apiClient.post('/api/auth/confirm-password-reset', confirmData);
   }
 
   // Email Verification

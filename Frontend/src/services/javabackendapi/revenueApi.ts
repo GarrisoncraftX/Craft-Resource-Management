@@ -1,5 +1,5 @@
 import { apiClient } from '@/utils/apiClient';
-import type { TaxAssessment, RevenueCollection } from '@/types/javabackendapi/revenueTypes';
+import type { TaxAssessment, RevenueCollection, BusinessPermit } from '@/types/javabackendapi/revenueTypes';
 
 class RevenueApiService {
   // TaxAssessment endpoints
@@ -42,6 +42,27 @@ class RevenueApiService {
 
   async deleteRevenueCollection(id: number): Promise<void> {
     return apiClient.delete(`/revenue/revenue-collections/${id}`);
+  }
+
+  // BusinessPermit endpoints
+  async createBusinessPermit(permit: BusinessPermit): Promise<BusinessPermit> {
+    return apiClient.post('/revenue/business-permits', permit);
+  }
+
+  async getAllBusinessPermits(): Promise<BusinessPermit[]> {
+    return apiClient.get('/revenue/business-permits');
+  }
+
+  async getBusinessPermitById(id: number): Promise<BusinessPermit> {
+    return apiClient.get(`/revenue/business-permits/${id}`);
+  }
+
+  async updateBusinessPermit(id: number, permit: BusinessPermit): Promise<BusinessPermit> {
+    return apiClient.put(`/revenue/business-permits/${id}`, permit);
+  }
+
+  async deleteBusinessPermit(id: number): Promise<void> {
+    return apiClient.delete(`/revenue/business-permits/${id}`);
   }
 }
 
@@ -88,4 +109,24 @@ export async function updateRevenueCollectionRecord(id: number | string, record:
 
 export async function deleteRevenueCollectionRecord(id: number | string) {
   return revenueApiService.deleteRevenueCollection(Number(id));
+}
+
+export async function createBusinessPermitRecord(record: BusinessPermit) {
+  return revenueApiService.createBusinessPermit(record);
+}
+
+export async function fetchBusinessPermits() {
+  return revenueApiService.getAllBusinessPermits();
+}
+
+export async function fetchBusinessPermitById(id: number | string) {
+  return revenueApiService.getBusinessPermitById(Number(id));
+}
+
+export async function updateBusinessPermitRecord(id: number | string, record: BusinessPermit) {
+  return revenueApiService.updateBusinessPermit(Number(id), record);
+}
+
+export async function deleteBusinessPermitRecord(id: number | string) {
+  return revenueApiService.deleteBusinessPermit(Number(id));
 }

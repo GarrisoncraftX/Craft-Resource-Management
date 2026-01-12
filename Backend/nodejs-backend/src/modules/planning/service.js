@@ -266,6 +266,166 @@ class PlanningService {
       developmentPermitId: id
     })
   }
+
+  async approveUrbanPlan(id, data) {
+    const urbanPlan = await UrbanPlan.findByPk(id)
+    if (!urbanPlan) return null
+    urbanPlan.status = "approved"
+    await urbanPlan.save()
+    await auditService.logAction(data.userId, "APPROVE_URBAN_PLAN", { urbanPlanId: id })
+    return urbanPlan
+  }
+
+  async archiveUrbanPlan(id, data) {
+    const urbanPlan = await UrbanPlan.findByPk(id)
+    if (!urbanPlan) return null
+    urbanPlan.status = "archived"
+    await urbanPlan.save()
+    await auditService.logAction(data.userId, "ARCHIVE_URBAN_PLAN", { urbanPlanId: id })
+    return urbanPlan
+  }
+
+  async addProjectMilestone(projectId, data) {
+    const project = await Project.findByPk(projectId)
+    if (!project) return null
+    const milestones = project.milestones || []
+    const milestone = { id: Date.now(), ...data, createdAt: new Date() }
+    milestones.push(milestone)
+    project.milestones = milestones
+    await project.save()
+    await auditService.logAction(data.userId, "ADD_PROJECT_MILESTONE", { projectId, milestone: data.name })
+    return milestone
+  }
+
+  async updateProjectMilestone(projectId, milestoneId, data) {
+    const project = await Project.findByPk(projectId)
+    if (!project) return null
+    const milestones = project.milestones || []
+    const index = milestones.findIndex(m => m.id == milestoneId)
+    if (index === -1) return null
+    milestones[index] = { ...milestones[index], ...data }
+    project.milestones = milestones
+    await project.save()
+    await auditService.logAction(data.userId, "UPDATE_PROJECT_MILESTONE", { projectId, milestoneId })
+    return milestones[index]
+  }
+
+  async completeProject(id, data) {
+    const project = await Project.findByPk(id)
+    if (!project) return null
+    project.status = "completed"
+    await project.save()
+    await auditService.logAction(data.userId, "COMPLETE_PROJECT", { projectId: id })
+    return project
+  }
+
+  async cancelProject(id, data) {
+    const project = await Project.findByPk(id)
+    if (!project) return null
+    project.status = "cancelled"
+    await project.save()
+    await auditService.logAction(data.userId, "CANCEL_PROJECT", { projectId: id })
+    return project
+  }
+
+  async approvePolicy(id, data) {
+    const policy = await Policy.findByPk(id)
+    if (!policy) return null
+    policy.status = "approved"
+    await policy.save()
+    await auditService.logAction(data.userId, "APPROVE_POLICY", { policyId: id })
+    return policy
+  }
+
+  async repealPolicy(id, data) {
+    const policy = await Policy.findByPk(id)
+    if (!policy) return null
+    policy.status = "repealed"
+    policy.isActive = false
+    await policy.save()
+    await auditService.logAction(data.userId, "REPEAL_POLICY", { policyId: id })
+    return policy
+  }
+
+  async updateGoalProgress(id, data) {
+    const goal = await StrategicGoal.findByPk(id)
+    if (!goal) return null
+    goal.progress = data.progress
+    await goal.save()
+    await auditService.logAction(data.userId, "UPDATE_GOAL_PROGRESS", { goalId: id, progress: data.progress })
+    return goal
+  }
+
+  async achieveStrategicGoal(id, data) {
+    const goal = await StrategicGoal.findByPk(id)
+    if (!goal) return null
+    goal.status = "achieved"
+    goal.progress = 100
+    await goal.save()
+    await auditService.logAction(data.userId, "ACHIEVE_STRATEGIC_GOAL", { goalId: id })
+    return goal
+  }
+
+  async approveDevelopmentPermit(id, data) {
+    const permit = await DevelopmentPermit.findByPk(id)
+    if (!permit) return null
+    permit.status = "approved"
+    await permit.save()
+    await auditService.logAction(data.userId, "APPROVE_DEVELOPMENT_PERMIT", { permitId: id })
+    return permit
+  }
+
+  async rejectDevelopmentPermit(id, data) {
+    const permit = await DevelopmentPermit.findByPk(id)
+    if (!permit) return null
+    permit.status = "rejected"
+    await permit.save()
+    await auditService.logAction(data.userId, "REJECT_DEVELOPMENT_PERMIT", { permitId: id })
+    return permit
+  }
+
+  async issueDevelopmentPermit(id, data) {
+    const permit = await DevelopmentPermit.findByPk(id)
+    if (!permit) return null
+    permit.status = "issued"
+    await permit.save()
+    await auditService.logAction(data.userId, "ISSUE_DEVELOPMENT_PERMIT", { permitId: id })
+    return permit
+  }
+
+  async getPlanningReport() {
+    const totalUrbanPlans = await UrbanPlan.count({ where: { isActive: true } })
+    const totalProjects = await Project.count({ where: { isActive: true } })
+    const totalPolicies = await Policy.count({ where: { isActive: true } })
+    const totalGoals = await StrategicGoal.count({ where: { isActive: true } })
+    const totalPermits = await DevelopmentPermit.count({ where: { isActive: true } })
+    return { totalUrbanPlans, totalProjects, totalPolicies, totalGoals, totalPermits }
+  }
+
+  async getProjectProgressAnalytics() {
+    const projects = await Project.findAll({ where: { isActive: true } })
+    const statusCounts = projects.reduce((acc, p) => {
+      acc[p.status] = (acc[p.status] || 0) + 1
+      return acc
+    }, {})
+    return statusCounts
+  }
+
+  async getPermitProcessingAnalytics() {
+    const permits = await DevelopmentPermit.findAll({ where: { isActive: true } })
+    const statusCounts = permits.reduce((acc, p) => {
+      acc[p.status] = (acc[p.status] || 0) + 1
+      return acc
+    }, {})
+    return statusCounts
+  }
+
+  async getGoalAchievementMetrics() {
+    const goals = await StrategicGoal.findAll({ where: { isActive: true } })
+    const achieved = goals.filter(g => g.status === "achieved").length
+    const inProgress = goals.filter(g => g.status !== "achieved").length
+    return { total: goals.length, achieved, inProgress }
+  }
 }
 
 module.exports = PlanningService

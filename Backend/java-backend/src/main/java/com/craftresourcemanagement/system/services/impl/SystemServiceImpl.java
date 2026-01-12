@@ -17,19 +17,22 @@ public class SystemServiceImpl implements SystemService {
     private final GuardPostRepository guardPostRepository;
     private final SOPRepository sopRepository;
     private final SecurityIncidentRepository securityIncidentRepository;
+    private final SupportTicketRepository supportTicketRepository;
 
     public SystemServiceImpl(SystemConfigRepository systemConfigRepository,
                              AuditLogRepository auditLogRepository,
                              AccessRuleRepository accessRuleRepository,
                              GuardPostRepository guardPostRepository,
                              SOPRepository sopRepository,
-                             SecurityIncidentRepository securityIncidentRepository) {
+                             SecurityIncidentRepository securityIncidentRepository,
+                             SupportTicketRepository supportTicketRepository) {
         this.systemConfigRepository = systemConfigRepository;
         this.auditLogRepository = auditLogRepository;
         this.accessRuleRepository = accessRuleRepository;
         this.guardPostRepository = guardPostRepository;
         this.sopRepository = sopRepository;
         this.securityIncidentRepository = securityIncidentRepository;
+        this.supportTicketRepository = supportTicketRepository;
     }
 
     // SystemConfig
@@ -148,5 +151,16 @@ public class SystemServiceImpl implements SystemService {
     @Override
     public List<SecurityIncident> getAllSecurityIncidents() {
         return securityIncidentRepository.findAll();
+    }
+
+    // Support Tickets
+    @Override
+    public SupportTicket createSupportTicket(SupportTicket ticket) {
+        return supportTicketRepository.save(ticket);
+    }
+
+    @Override
+    public List<SupportTicket> getAllSupportTickets() {
+        return supportTicketRepository.findAll();
     }
 }

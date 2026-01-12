@@ -165,6 +165,245 @@ class PublicRelationsController {
       next(error)
     }
   }
+
+  async getPressReleaseById(req, res, next) {
+    try {
+      const pressRelease = await publicRelationsService.getPressReleaseById(req.params.id)
+      if (!pressRelease) return res.status(404).json({ success: false, message: "Press release not found" })
+      res.json({ success: true, data: pressRelease })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async publishPressRelease(req, res, next) {
+    try {
+      const pressRelease = await publicRelationsService.publishPressRelease(req.params.id, req.body)
+      if (!pressRelease) return res.status(404).json({ success: false, message: "Press release not found" })
+      res.json({ success: true, data: pressRelease })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async archivePressRelease(req, res, next) {
+    try {
+      const pressRelease = await publicRelationsService.archivePressRelease(req.params.id, req.body)
+      if (!pressRelease) return res.status(404).json({ success: false, message: "Press release not found" })
+      res.json({ success: true, data: pressRelease })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getMediaContactById(req, res, next) {
+    try {
+      const contact = await publicRelationsService.getMediaContactById(req.params.id)
+      if (!contact) return res.status(404).json({ success: false, message: "Media contact not found" })
+      res.json({ success: true, data: contact })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async deactivateMediaContact(req, res, next) {
+    try {
+      const contact = await publicRelationsService.deactivateMediaContact(req.params.id, req.body)
+      if (!contact) return res.status(404).json({ success: false, message: "Media contact not found" })
+      res.json({ success: true, data: contact })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async logContact(req, res, next) {
+    try {
+      const log = await publicRelationsService.logContact(req.params.id, req.body)
+      res.status(201).json({ success: true, data: log })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getPublicEventById(req, res, next) {
+    try {
+      const event = await publicRelationsService.getPublicEventById(req.params.id)
+      if (!event) return res.status(404).json({ success: false, message: "Public event not found" })
+      res.json({ success: true, data: event })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async cancelPublicEvent(req, res, next) {
+    try {
+      const event = await publicRelationsService.cancelPublicEvent(req.params.id, req.body)
+      if (!event) return res.status(404).json({ success: false, message: "Public event not found" })
+      res.json({ success: true, data: event })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async addEventAttendee(req, res, next) {
+    try {
+      const attendee = await publicRelationsService.addEventAttendee(req.params.id, req.body)
+      res.status(201).json({ success: true, data: attendee })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async removeEventAttendee(req, res, next) {
+    try {
+      await publicRelationsService.removeEventAttendee(req.params.id, req.params.attendeeId, req.body)
+      res.status(204).end()
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getMediaKits(req, res, next) {
+    try {
+      const kits = await publicRelationsService.getMediaKits()
+      res.json({ success: true, data: kits })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async createMediaKit(req, res, next) {
+    try {
+      const kit = await publicRelationsService.createMediaKit(req.body)
+      res.status(201).json({ success: true, data: kit })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getMediaKitById(req, res, next) {
+    try {
+      const kit = await publicRelationsService.getMediaKitById(req.params.id)
+      if (!kit) return res.status(404).json({ success: false, message: "Media kit not found" })
+      res.json({ success: true, data: kit })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async updateMediaKit(req, res, next) {
+    try {
+      const kit = await publicRelationsService.updateMediaKit(req.params.id, req.body)
+      if (!kit) return res.status(404).json({ success: false, message: "Media kit not found" })
+      res.json({ success: true, data: kit })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async publishMediaKit(req, res, next) {
+    try {
+      const kit = await publicRelationsService.publishMediaKit(req.params.id, req.body)
+      if (!kit) return res.status(404).json({ success: false, message: "Media kit not found" })
+      res.json({ success: true, data: kit })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async archiveMediaKit(req, res, next) {
+    try {
+      const kit = await publicRelationsService.archiveMediaKit(req.params.id, req.body)
+      if (!kit) return res.status(404).json({ success: false, message: "Media kit not found" })
+      res.json({ success: true, data: kit })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getCrisisCommunications(req, res, next) {
+    try {
+      const communications = await publicRelationsService.getCrisisCommunications()
+      res.json({ success: true, data: communications })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async createCrisisCommunication(req, res, next) {
+    try {
+      const communication = await publicRelationsService.createCrisisCommunication(req.body)
+      res.status(201).json({ success: true, data: communication })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getCrisisCommunicationById(req, res, next) {
+    try {
+      const communication = await publicRelationsService.getCrisisCommunicationById(req.params.id)
+      if (!communication) return res.status(404).json({ success: false, message: "Crisis communication not found" })
+      res.json({ success: true, data: communication })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async updateCrisisCommunication(req, res, next) {
+    try {
+      const communication = await publicRelationsService.updateCrisisCommunication(req.params.id, req.body)
+      if (!communication) return res.status(404).json({ success: false, message: "Crisis communication not found" })
+      res.json({ success: true, data: communication })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async resolveCrisisCommunication(req, res, next) {
+    try {
+      const communication = await publicRelationsService.resolveCrisisCommunication(req.params.id, req.body)
+      if (!communication) return res.status(404).json({ success: false, message: "Crisis communication not found" })
+      res.json({ success: true, data: communication })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async addCrisisAction(req, res, next) {
+    try {
+      const action = await publicRelationsService.addCrisisAction(req.params.id, req.body)
+      res.status(201).json({ success: true, data: action })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getPublicRelationsReport(req, res, next) {
+    try {
+      const report = await publicRelationsService.getPublicRelationsReport()
+      res.json({ success: true, data: report })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getMediaCoverageAnalytics(req, res, next) {
+    try {
+      const analytics = await publicRelationsService.getMediaCoverageAnalytics()
+      res.json({ success: true, data: analytics })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getStakeholderEngagementMetrics(req, res, next) {
+    try {
+      const metrics = await publicRelationsService.getStakeholderEngagementMetrics()
+      res.json({ success: true, data: metrics })
+    } catch (error) {
+      next(error)
+    }
+  }
 }
 
 module.exports = new PublicRelationsController()

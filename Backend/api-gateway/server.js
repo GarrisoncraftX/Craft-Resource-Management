@@ -46,6 +46,7 @@ app.use((req, res, next) => {
 // Public routes that do not require JWT validation
 const publicRoutes = [
   "/api/auth/signin",
+  "/api/auth/login",
   "/api/auth/register",
   "/api/lookup",
   "/api/biometric/enroll",
@@ -147,7 +148,7 @@ const proxyRequest = async (req, res, targetUrl) => {
 app.use((req, res, next) => { 
   const path = req.path;
 
-  // Java Backend: HR, Finance, Assets, Legal, Revenue, System
+  // Java Backend: HR, Finance, Assets, Legal, Revenue, System, Admin
   if (path.startsWith("/hr/employees") || 
       path.startsWith("/hr/payroll") || 
       path.startsWith("/hr/dashboard-kpis") ||
@@ -155,7 +156,8 @@ app.use((req, res, next) => {
       path.startsWith("/assets") || 
       path.startsWith("/legal") || 
       path.startsWith("/revenue") ||
-      path.startsWith("/system")) {
+      path.startsWith("/system") ||
+      path.startsWith("/admin")) {
     return proxyRequest(req, res, javaBackend);
   }
   // Python Backend: Biometric, Attendance, Visitors, Dashboard, Health & Safety, Reports, Analytics

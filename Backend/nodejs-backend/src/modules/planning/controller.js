@@ -206,6 +206,221 @@ class PlanningController {
       next(error)
     }
   }
+
+  async getUrbanPlanById(req, res, next) {
+    try {
+      const urbanPlan = await planningService.getUrbanPlanById(req.params.id)
+      if (!urbanPlan) return res.status(404).json({ success: false, message: "Urban plan not found" })
+      res.json({ success: true, data: urbanPlan })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async approveUrbanPlan(req, res, next) {
+    try {
+      const urbanPlan = await planningService.approveUrbanPlan(req.params.id, req.body)
+      if (!urbanPlan) return res.status(404).json({ success: false, message: "Urban plan not found" })
+      res.json({ success: true, data: urbanPlan })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async archiveUrbanPlan(req, res, next) {
+    try {
+      const urbanPlan = await planningService.archiveUrbanPlan(req.params.id, req.body)
+      if (!urbanPlan) return res.status(404).json({ success: false, message: "Urban plan not found" })
+      res.json({ success: true, data: urbanPlan })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getProjectById(req, res, next) {
+    try {
+      const project = await planningService.getProjectById(req.params.id)
+      if (!project) return res.status(404).json({ success: false, message: "Project not found" })
+      res.json({ success: true, data: project })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async addProjectMilestone(req, res, next) {
+    try {
+      const milestone = await planningService.addProjectMilestone(req.params.projectId, req.body)
+      res.status(201).json({ success: true, data: milestone })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async updateProjectMilestone(req, res, next) {
+    try {
+      const milestone = await planningService.updateProjectMilestone(req.params.projectId, req.params.milestoneId, req.body)
+      if (!milestone) return res.status(404).json({ success: false, message: "Milestone not found" })
+      res.json({ success: true, data: milestone })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async completeProject(req, res, next) {
+    try {
+      const project = await planningService.completeProject(req.params.id, req.body)
+      if (!project) return res.status(404).json({ success: false, message: "Project not found" })
+      res.json({ success: true, data: project })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async cancelProject(req, res, next) {
+    try {
+      const project = await planningService.cancelProject(req.params.id, req.body)
+      if (!project) return res.status(404).json({ success: false, message: "Project not found" })
+      res.json({ success: true, data: project })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getPolicyById(req, res, next) {
+    try {
+      const policy = await planningService.getPolicyById(req.params.id)
+      if (!policy) return res.status(404).json({ success: false, message: "Policy not found" })
+      res.json({ success: true, data: policy })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async approvePolicy(req, res, next) {
+    try {
+      const policy = await planningService.approvePolicy(req.params.id, req.body)
+      if (!policy) return res.status(404).json({ success: false, message: "Policy not found" })
+      res.json({ success: true, data: policy })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async repealPolicy(req, res, next) {
+    try {
+      const policy = await planningService.repealPolicy(req.params.id, req.body)
+      if (!policy) return res.status(404).json({ success: false, message: "Policy not found" })
+      res.json({ success: true, data: policy })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getStrategicGoalById(req, res, next) {
+    try {
+      const goal = await planningService.getStrategicGoalById(req.params.id)
+      if (!goal) return res.status(404).json({ success: false, message: "Strategic goal not found" })
+      res.json({ success: true, data: goal })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async updateGoalProgress(req, res, next) {
+    try {
+      const goal = await planningService.updateGoalProgress(req.params.id, req.body)
+      if (!goal) return res.status(404).json({ success: false, message: "Strategic goal not found" })
+      res.json({ success: true, data: goal })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async achieveStrategicGoal(req, res, next) {
+    try {
+      const goal = await planningService.achieveStrategicGoal(req.params.id, req.body)
+      if (!goal) return res.status(404).json({ success: false, message: "Strategic goal not found" })
+      res.json({ success: true, data: goal })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getDevelopmentPermitById(req, res, next) {
+    try {
+      const permit = await planningService.getDevelopmentPermitById(req.params.id)
+      if (!permit) return res.status(404).json({ success: false, message: "Development permit not found" })
+      res.json({ success: true, data: permit })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async approveDevelopmentPermit(req, res, next) {
+    try {
+      const permit = await planningService.approveDevelopmentPermit(req.params.id, req.body)
+      if (!permit) return res.status(404).json({ success: false, message: "Development permit not found" })
+      res.json({ success: true, data: permit })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async rejectDevelopmentPermit(req, res, next) {
+    try {
+      const permit = await planningService.rejectDevelopmentPermit(req.params.id, req.body)
+      if (!permit) return res.status(404).json({ success: false, message: "Development permit not found" })
+      res.json({ success: true, data: permit })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async issueDevelopmentPermit(req, res, next) {
+    try {
+      const permit = await planningService.issueDevelopmentPermit(req.params.id, req.body)
+      if (!permit) return res.status(404).json({ success: false, message: "Development permit not found" })
+      res.json({ success: true, data: permit })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getPlanningReport(req, res, next) {
+    try {
+      const report = await planningService.getPlanningReport()
+      res.json({ success: true, data: report })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getProjectProgressAnalytics(req, res, next) {
+    try {
+      const analytics = await planningService.getProjectProgressAnalytics()
+      res.json({ success: true, data: analytics })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getPermitProcessingAnalytics(req, res, next) {
+    try {
+      const analytics = await planningService.getPermitProcessingAnalytics()
+      res.json({ success: true, data: analytics })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getGoalAchievementMetrics(req, res, next) {
+    try {
+      const metrics = await planningService.getGoalAchievementMetrics()
+      res.json({ success: true, data: metrics })
+    } catch (error) {
+      next(error)
+    }
+  }
 }
 
 module.exports = new PlanningController()

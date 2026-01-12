@@ -260,6 +260,61 @@ class CommunicationService {
             return { success: false, error: error.message };
         }
     }
+
+    async sendPasswordResetEmail(email, defaultPassword) {
+        try {
+            const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost'}`;
+            const subject = 'Password Reset - CraftResourceManagement';
+            const html = `
+                <h2>Password Reset Successful</h2>
+                <p>Your password has been reset to the default system password.</p>
+                <p><strong>Your new password is: CRMSemp123!</strong></p>
+                <p>Please use this password to login at: <a href="${loginUrl}">${loginUrl}</a></p>
+                <p><strong>Important:</strong> You will be required to change this password after logging in.</p>
+            `;
+
+            const mailOptions = {
+                from: process.env.MAIL_DEFAULT_SENDER || 'noreply@gmail.com',
+                to: email,
+                subject: subject,
+                html: html
+            };
+
+            const info = await this.transporter.sendMail(mailOptions);
+            this.logger.info('Password reset email sent', { to: email, messageId: info.messageId });
+            return { success: true, messageId: info.messageId };
+        } catch (error) {
+            this.logger.error('Failed to send password reset email', { email, error: error.message });
+            return { success: false, error: error.message };
+        }
+    }
+
+    async sendVerificationEmail(email, verificationToken) {
+        try {
+            const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+            const subject = 'Verify Your Email Address';
+            const html = `
+                <h2>Email Verification</h2>
+                <p>Please verify your email address by clicking the link below:</p>
+                <a href="${verifyUrl}">${verifyUrl}</a>
+                <p>If you didn't create an account, please ignore this email.</p>
+            `;
+
+            const mailOptions = {
+                from: process.env.MAIL_DEFAULT_SENDER || 'noreply@gmail.com',
+                to: email,
+                subject: subject,
+                html: html
+            };
+
+            const info = await this.transporter.sendMail(mailOptions);
+            this.logger.info('Verification email sent', { to: email, messageId: info.messageId });
+            return { success: true, messageId: info.messageId };
+        } catch (error) {
+            this.logger.error('Failed to send verification email', { email, error: error.message });
+            return { success: false, error: error.message };
+        }
+    }
 }
 
 module.exports = new CommunicationService();

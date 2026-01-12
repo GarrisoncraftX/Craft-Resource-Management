@@ -24,6 +24,10 @@ export { lookupApiService } from '@/services/nodejsbackendapi/lookupApi';
 // PYTHON BACKEND API SERVICES
 // ============================================================================
 export { attendanceApiService } from '@/services/pythonbackendapi/attendanceApi';
+export { healthSafetyApiService } from '@/services/pythonbackendapi/healthSafetyApi';
+export { reportsApiService } from '@/services/pythonbackendapi/reportsApi';
+export { visitorApiService } from '@/services/pythonbackendapi/visitorApi';
+export { dashboardApiService } from '@/services/pythonbackendapi/dashboardApi';
 
 // ============================================================================
 // JAVA BACKEND - HR & PAYROLL WRAPPER FUNCTIONS

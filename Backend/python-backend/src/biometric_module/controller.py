@@ -1106,3 +1106,30 @@ class BiometricController:
                 'success': False,
                 'message': 'Error retrieving attendance method statistics'
             }, 500
+
+    def review_attendance(self, attendance_id: int) -> tuple[Dict[str, Any], int]:
+        """Review and approve/reject attendance record"""
+        try:
+            data = request.get_json()
+            hr_user_id = data.get('hrUserId')
+            notes = data.get('notes', '')
+            
+            if not hr_user_id:
+                return {
+                    'success': False,
+                    'message': 'HR user ID is required'
+                }, 400
+            
+            # Update attendance record with review
+            self.biometric_model.review_attendance_record(attendance_id, hr_user_id, notes)
+            
+            return {
+                'success': True,
+                'message': 'Attendance reviewed successfully'
+            }, 200
+        except Exception as e:
+            logger.error(f"Error reviewing attendance: {e}")
+            return {
+                'success': False,
+                'message': 'Error reviewing attendance'
+            }, 500

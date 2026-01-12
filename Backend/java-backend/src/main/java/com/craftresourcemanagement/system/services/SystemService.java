@@ -36,4 +36,8 @@ public interface SystemService {
     // Security - Incidents
     SecurityIncident createSecurityIncident(SecurityIncident incident);
     List<SecurityIncident> getAllSecurityIncidents();
+
+    // Support Tickets
+    SupportTicket createSupportTicket(SupportTicket ticket);
+    List<SupportTicket> getAllSupportTickets();
 }

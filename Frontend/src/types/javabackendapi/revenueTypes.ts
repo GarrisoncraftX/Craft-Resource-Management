@@ -16,3 +16,16 @@ export interface RevenueCollection {
   paymentMethod: string;
   referenceNumber: string;
 }
+
+export interface BusinessPermit {
+  id?: number;
+  businessName: string;
+  businessType: string;
+  ownerName: string;
+  address: string;
+  permitNumber: string;
+  issueDate: string;
+  expiryDate: string;
+  status: string;
+  fee: number;
+}

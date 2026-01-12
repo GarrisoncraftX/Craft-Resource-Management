@@ -202,6 +202,162 @@ class PublicRelationsService {
       postId: id
     })
   }
+
+  async publishPressRelease(id, data) {
+    const pressRelease = await PressRelease.findByPk(id)
+    if (!pressRelease) return null
+    pressRelease.status = "published"
+    pressRelease.publishedDate = new Date()
+    await pressRelease.save()
+    await auditService.logAction(data.userId, "PUBLISH_PRESS_RELEASE", { pressReleaseId: id })
+    return pressRelease
+  }
+
+  async archivePressRelease(id, data) {
+    const pressRelease = await PressRelease.findByPk(id)
+    if (!pressRelease) return null
+    pressRelease.status = "archived"
+    await pressRelease.save()
+    await auditService.logAction(data.userId, "ARCHIVE_PRESS_RELEASE", { pressReleaseId: id })
+    return pressRelease
+  }
+
+  async deactivateMediaContact(id, data) {
+    const contact = await MediaContact.findByPk(id)
+    if (!contact) return null
+    contact.isActive = false
+    await contact.save()
+    await auditService.logAction(data.userId, "DEACTIVATE_MEDIA_CONTACT", { contactId: id })
+    return contact
+  }
+
+  async logContact(id, data) {
+    const contact = await MediaContact.findByPk(id)
+    if (!contact) return null
+    const logs = contact.contactLogs || []
+    const log = { date: new Date(), note: data.note, userId: data.userId }
+    logs.push(log)
+    contact.contactLogs = logs
+    await contact.save()
+    await auditService.logAction(data.userId, "LOG_MEDIA_CONTACT", { contactId: id })
+    return log
+  }
+
+  async cancelPublicEvent(id, data) {
+    const event = await PublicEvent.findByPk(id)
+    if (!event) return null
+    event.status = "cancelled"
+    await event.save()
+    await auditService.logAction(data.userId, "CANCEL_PUBLIC_EVENT", { eventId: id })
+    return event
+  }
+
+  async addEventAttendee(id, data) {
+    const event = await PublicEvent.findByPk(id)
+    if (!event) return null
+    const attendees = event.attendees || []
+    const attendee = { id: Date.now(), name: data.name, email: data.email, addedAt: new Date() }
+    attendees.push(attendee)
+    event.attendees = attendees
+    await event.save()
+    await auditService.logAction(data.userId, "ADD_EVENT_ATTENDEE", { eventId: id, attendeeName: data.name })
+    return attendee
+  }
+
+  async removeEventAttendee(eventId, attendeeId, data) {
+    const event = await PublicEvent.findByPk(eventId)
+    if (!event) return null
+    const attendees = event.attendees || []
+    event.attendees = attendees.filter(a => a.id != attendeeId)
+    await event.save()
+    await auditService.logAction(data.userId, "REMOVE_EVENT_ATTENDEE", { eventId, attendeeId })
+  }
+
+  async getMediaKits() {
+    return []
+  }
+
+  async createMediaKit(data) {
+    const kit = { id: Date.now(), title: data.title, description: data.description, status: "draft", createdAt: new Date() }
+    await auditService.logAction(data.userId, "CREATE_MEDIA_KIT", { kitId: kit.id })
+    return kit
+  }
+
+  async getMediaKitById(id) {
+    return { id, title: "Sample Media Kit", status: "draft" }
+  }
+
+  async updateMediaKit(id, data) {
+    const kit = { id, ...data, updatedAt: new Date() }
+    await auditService.logAction(data.userId, "UPDATE_MEDIA_KIT", { kitId: id })
+    return kit
+  }
+
+  async publishMediaKit(id, data) {
+    const kit = { id, status: "published", publishedAt: new Date() }
+    await auditService.logAction(data.userId, "PUBLISH_MEDIA_KIT", { kitId: id })
+    return kit
+  }
+
+  async archiveMediaKit(id, data) {
+    const kit = { id, status: "archived", archivedAt: new Date() }
+    await auditService.logAction(data.userId, "ARCHIVE_MEDIA_KIT", { kitId: id })
+    return kit
+  }
+
+  async getCrisisCommunications() {
+    return []
+  }
+
+  async createCrisisCommunication(data) {
+    const crisis = { id: Date.now(), title: data.title, severity: data.severity, status: "active", createdAt: new Date() }
+    await auditService.logAction(data.userId, "CREATE_CRISIS_COMMUNICATION", { crisisId: crisis.id })
+    return crisis
+  }
+
+  async getCrisisCommunicationById(id) {
+    return { id, title: "Sample Crisis", status: "active" }
+  }
+
+  async updateCrisisCommunication(id, data) {
+    const crisis = { id, ...data, updatedAt: new Date() }
+    await auditService.logAction(data.userId, "UPDATE_CRISIS_COMMUNICATION", { crisisId: id })
+    return crisis
+  }
+
+  async resolveCrisisCommunication(id, data) {
+    const crisis = { id, status: "resolved", resolvedAt: new Date() }
+    await auditService.logAction(data.userId, "RESOLVE_CRISIS_COMMUNICATION", { crisisId: id })
+    return crisis
+  }
+
+  async addCrisisAction(id, data) {
+    const action = { id: Date.now(), crisisId: id, action: data.action, takenAt: new Date() }
+    await auditService.logAction(data.userId, "ADD_CRISIS_ACTION", { crisisId: id })
+    return action
+  }
+
+  async getPublicRelationsReport() {
+    const totalPressReleases = await PressRelease.count({ where: { isActive: true } })
+    const totalMediaContacts = await MediaContact.count({ where: { isActive: true } })
+    const totalEvents = await PublicEvent.count({ where: { isActive: true } })
+    const totalPosts = await SocialMediaPost.count({ where: { isActive: true } })
+    return { totalPressReleases, totalMediaContacts, totalEvents, totalPosts }
+  }
+
+  async getMediaCoverageAnalytics() {
+    const pressReleases = await PressRelease.findAll({ where: { isActive: true } })
+    const published = pressReleases.filter(p => p.status === "published").length
+    const draft = pressReleases.filter(p => p.status === "draft").length
+    return { total: pressReleases.length, published, draft }
+  }
+
+  async getStakeholderEngagementMetrics() {
+    const events = await PublicEvent.findAll({ where: { isActive: true } })
+    const upcoming = events.filter(e => new Date(e.eventDate) > new Date()).length
+    const past = events.filter(e => new Date(e.eventDate) <= new Date()).length
+    return { totalEvents: events.length, upcoming, past }
+  }
 }
 
 module.exports = PublicRelationsService
