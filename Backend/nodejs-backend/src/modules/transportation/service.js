@@ -1,4 +1,4 @@
-const { Vehicle, Driver, Trip, MaintenanceRecord, FuelRecord } = require("./model")
+const { Vehicle, Driver, Trip, MaintenanceRecord, FuelRecord, Route } = require("./model")
 const { Op } = require('sequelize')
 
 class TransportationService {
@@ -255,6 +255,39 @@ class TransportationService {
 
   async getFuelEfficiencyAnalytics() {
     return []
+  }
+
+  async getRoutes() {
+    return await Route.findAll({
+      where: { status: "active" },
+      order: [["createdAt", "DESC"]],
+    })
+  }
+
+  async createRoute(data) {
+    return await Route.create({
+      name: data.name,
+      startLocation: data.startLocation,
+      endLocation: data.endLocation,
+      distance: data.distance,
+      estimatedDuration: data.estimatedDuration,
+      status: "active",
+      createdAt: new Date(),
+    })
+  }
+
+  async updateRoute(id, data) {
+    const route = await Route.findByPk(id)
+    if (!route) return null
+    await route.update(data)
+    return route
+  }
+
+  async deleteRoute(id) {
+    const route = await Route.findByPk(id)
+    if (!route) return null
+    route.status = "inactive"
+    await route.save()
   }
 }
 

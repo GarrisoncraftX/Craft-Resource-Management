@@ -32,4 +32,9 @@ router.get("/analytics/driver-performance", transportationController.getDriverPe
 router.get("/analytics/vehicle-utilization", transportationController.getVehicleUtilizationAnalytics.bind(transportationController))
 router.get("/analytics/fuel-efficiency", transportationController.getFuelEfficiencyAnalytics.bind(transportationController))
 
+router.get("/routes", transportationController.getRoutes.bind(transportationController))
+router.post("/routes", transportationController.createRoute.bind(transportationController))
+router.put("/routes/:id", transportationController.updateRoute.bind(transportationController))
+router.delete("/routes/:id", transportationController.deleteRoute.bind(transportationController))
+
 module.exports = router

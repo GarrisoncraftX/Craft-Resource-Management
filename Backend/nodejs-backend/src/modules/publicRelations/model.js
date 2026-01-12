@@ -129,8 +129,54 @@ const PublicEvent = sequelize.define("PublicEvent", {
   timestamps: false,
 })
 
+const SocialMediaPost = sequelize.define("SocialMediaPost", {
+  id: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    autoIncrement: true,
+    primaryKey: true,
+  },
+  platform: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+  },
+  content: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+  },
+  scheduledDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: "scheduled_date",
+  },
+  status: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    defaultValue: "draft",
+  },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+    field: "is_active",
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    field: "created_at",
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: "updated_at",
+  },
+}, {
+  tableName: "social_media_posts",
+  timestamps: false,
+})
+
 module.exports = {
   PressRelease,
   MediaContact,
   PublicEvent,
+  SocialMediaPost,
 }

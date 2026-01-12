@@ -2,6 +2,7 @@ package com.craftresourcemanagement.revenue.controllers;
 
 import com.craftresourcemanagement.revenue.entities.TaxAssessment;
 import com.craftresourcemanagement.revenue.entities.RevenueCollection;
+import com.craftresourcemanagement.revenue.entities.BusinessPermit;
 import com.craftresourcemanagement.revenue.services.RevenueService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -85,6 +86,41 @@ public class RevenueController {
     @DeleteMapping("/revenue-collections/{id}")
     public ResponseEntity<Void> deleteRevenueCollection(@PathVariable Long id) {
         revenueService.deleteRevenueCollection(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // BusinessPermit endpoints
+    @PostMapping("/business-permits")
+    public ResponseEntity<BusinessPermit> createBusinessPermit(@RequestBody BusinessPermit businessPermit) {
+        return ResponseEntity.ok(revenueService.createBusinessPermit(businessPermit));
+    }
+
+    @GetMapping("/business-permits")
+    public ResponseEntity<List<BusinessPermit>> getAllBusinessPermits() {
+        return ResponseEntity.ok(revenueService.getAllBusinessPermits());
+    }
+
+    @GetMapping("/business-permits/{id}")
+    public ResponseEntity<BusinessPermit> getBusinessPermitById(@PathVariable Long id) {
+        BusinessPermit businessPermit = revenueService.getBusinessPermitById(id);
+        if (businessPermit == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(businessPermit);
+    }
+
+    @PutMapping("/business-permits/{id}")
+    public ResponseEntity<BusinessPermit> updateBusinessPermit(@PathVariable Long id, @RequestBody BusinessPermit businessPermit) {
+        BusinessPermit updated = revenueService.updateBusinessPermit(id, businessPermit);
+        if (updated == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/business-permits/{id}")
+    public ResponseEntity<Void> deleteBusinessPermit(@PathVariable Long id) {
+        revenueService.deleteBusinessPermit(id);
         return ResponseEntity.noContent().build();
     }
 }

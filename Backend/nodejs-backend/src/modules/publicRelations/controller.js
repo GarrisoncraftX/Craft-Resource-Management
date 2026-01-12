@@ -124,6 +124,47 @@ class PublicRelationsController {
       next(error)
     }
   }
+
+  async getSocialMediaPosts(req, res, next) {
+    try {
+      const posts = await publicRelationsService.getSocialMediaPosts()
+      res.json({ success: true, data: posts })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async createSocialMediaPost(req, res, next) {
+    try {
+      const post = await publicRelationsService.createSocialMediaPost(req.body)
+      res.status(201).json({ success: true, data: post })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async updateSocialMediaPost(req, res, next) {
+    try {
+      const id = req.params.id
+      const updatedPost = await publicRelationsService.updateSocialMediaPost(id, req.body)
+      if (!updatedPost) {
+        return res.status(404).json({ success: false, message: "Social media post not found" })
+      }
+      res.json({ success: true, data: updatedPost })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async deleteSocialMediaPost(req, res, next) {
+    try {
+      const id = req.params.id
+      await publicRelationsService.deleteSocialMediaPost(id)
+      res.status(204).end()
+    } catch (error) {
+      next(error)
+    }
+  }
 }
 
 module.exports = new PublicRelationsController()

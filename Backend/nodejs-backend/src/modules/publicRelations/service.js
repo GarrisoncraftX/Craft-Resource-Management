@@ -1,4 +1,4 @@
-const { PressRelease, MediaContact, PublicEvent } = require("./model")
+const { PressRelease, MediaContact, PublicEvent, SocialMediaPost } = require("./model")
 const auditService = require("../audit/service")
 
 class PublicRelationsService {
@@ -153,6 +153,53 @@ class PublicRelationsService {
     await publicEvent.save()
     await auditService.logAction(null, "DELETE_PUBLIC_EVENT", {
       publicEventId: id
+    })
+  }
+
+  async getSocialMediaPosts() {
+    return await SocialMediaPost.findAll({
+      where: { isActive: true },
+      order: [["scheduledDate", "DESC"]],
+    })
+  }
+
+  async createSocialMediaPost(data) {
+    const post = await SocialMediaPost.create({
+      platform: data.platform,
+      content: data.content,
+      scheduledDate: data.scheduledDate,
+      status: data.status || "draft",
+      isActive: true,
+      createdAt: new Date(),
+    })
+    await auditService.logAction(data.userId, "CREATE_SOCIAL_MEDIA_POST", {
+      postId: post.id,
+      platform: data.platform
+    })
+    return post
+  }
+
+  async updateSocialMediaPost(id, data) {
+    const post = await SocialMediaPost.findByPk(id)
+    if (!post) return null
+    post.platform = data.platform
+    post.content = data.content
+    post.scheduledDate = data.scheduledDate
+    post.status = data.status
+    await post.save()
+    await auditService.logAction(data.userId, "UPDATE_SOCIAL_MEDIA_POST", {
+      postId: id
+    })
+    return post
+  }
+
+  async deleteSocialMediaPost(id) {
+    const post = await SocialMediaPost.findByPk(id)
+    if (!post) return null
+    post.isActive = false
+    await post.save()
+    await auditService.logAction(null, "DELETE_SOCIAL_MEDIA_POST", {
+      postId: id
     })
   }
 }

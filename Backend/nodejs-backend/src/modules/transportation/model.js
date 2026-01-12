@@ -267,10 +267,58 @@ FuelRecord.belongsTo(Vehicle, { foreignKey: "vehicle_id" })
 Driver.hasMany(FuelRecord, { foreignKey: "driver_id" })
 FuelRecord.belongsTo(Driver, { foreignKey: "driver_id" })
 
+const Route = sequelize.define("Route", {
+  id: {
+    type: DataTypes.STRING(50),
+    primaryKey: true,
+    defaultValue: DataTypes.UUIDV4
+  },
+  name: {
+    type: DataTypes.STRING(255),
+    allowNull: false
+  },
+  startLocation: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    field: "start_location"
+  },
+  endLocation: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    field: "end_location"
+  },
+  distance: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true
+  },
+  estimatedDuration: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: "estimated_duration"
+  },
+  status: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    defaultValue: "active"
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    field: "created_at"
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    field: "updated_at"
+  }
+}, {
+  tableName: "routes",
+  timestamps: true
+})
+
 module.exports = {
   Vehicle,
   Driver,
   Trip,
   MaintenanceRecord,
-  FuelRecord
+  FuelRecord,
+  Route
 }

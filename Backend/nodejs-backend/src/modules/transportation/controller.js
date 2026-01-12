@@ -236,6 +236,47 @@ class TransportationController {
       next(error)
     }
   }
+
+  async getRoutes(req, res, next) {
+    try {
+      const routes = await transportationService.getRoutes()
+      res.json({ success: true, data: routes })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async createRoute(req, res, next) {
+    try {
+      const route = await transportationService.createRoute(req.body)
+      res.status(201).json({ success: true, data: route })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async updateRoute(req, res, next) {
+    try {
+      const id = req.params.id
+      const route = await transportationService.updateRoute(id, req.body)
+      if (!route) {
+        return res.status(404).json({ success: false, message: "Route not found" })
+      }
+      res.json({ success: true, data: route })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async deleteRoute(req, res, next) {
+    try {
+      const id = req.params.id
+      await transportationService.deleteRoute(id)
+      res.status(204).end()
+    } catch (error) {
+      next(error)
+    }
+  }
 }
 
 module.exports = new TransportationController()

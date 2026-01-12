@@ -17,4 +17,9 @@ router.post("/public-events", publicRelationsController.createPublicEvent.bind(p
 router.put("/public-events/:id", publicRelationsController.updatePublicEvent.bind(publicRelationsController))
 router.delete("/public-events/:id", publicRelationsController.deletePublicEvent.bind(publicRelationsController))
 
+router.get("/social-media-posts", publicRelationsController.getSocialMediaPosts.bind(publicRelationsController))
+router.post("/social-media-posts", publicRelationsController.createSocialMediaPost.bind(publicRelationsController))
+router.put("/social-media-posts/:id", publicRelationsController.updateSocialMediaPost.bind(publicRelationsController))
+router.delete("/social-media-posts/:id", publicRelationsController.deleteSocialMediaPost.bind(publicRelationsController))
+
 module.exports = router

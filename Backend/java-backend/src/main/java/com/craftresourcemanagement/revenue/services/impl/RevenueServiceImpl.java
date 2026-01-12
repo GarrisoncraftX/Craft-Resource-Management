@@ -2,8 +2,10 @@ package com.craftresourcemanagement.revenue.services.impl;
 
 import com.craftresourcemanagement.revenue.entities.TaxAssessment;
 import com.craftresourcemanagement.revenue.entities.RevenueCollection;
+import com.craftresourcemanagement.revenue.entities.BusinessPermit;
 import com.craftresourcemanagement.revenue.repositories.TaxAssessmentRepository;
 import com.craftresourcemanagement.revenue.repositories.RevenueCollectionRepository;
+import com.craftresourcemanagement.revenue.repositories.BusinessPermitRepository;
 import com.craftresourcemanagement.revenue.services.RevenueService;
 import org.springframework.stereotype.Service;
 
@@ -15,11 +17,14 @@ public class RevenueServiceImpl implements RevenueService {
 
     private final TaxAssessmentRepository taxAssessmentRepository;
     private final RevenueCollectionRepository revenueCollectionRepository;
+    private final BusinessPermitRepository businessPermitRepository;
 
     public RevenueServiceImpl(TaxAssessmentRepository taxAssessmentRepository,
-                              RevenueCollectionRepository revenueCollectionRepository) {
+                              RevenueCollectionRepository revenueCollectionRepository,
+                              BusinessPermitRepository businessPermitRepository) {
         this.taxAssessmentRepository = taxAssessmentRepository;
         this.revenueCollectionRepository = revenueCollectionRepository;
+        this.businessPermitRepository = businessPermitRepository;
     }
 
     // TaxAssessment
@@ -90,5 +95,46 @@ public class RevenueServiceImpl implements RevenueService {
     @Override
     public void deleteRevenueCollection(Long id) {
         revenueCollectionRepository.deleteById(id);
+    }
+
+    // BusinessPermit
+    @Override
+    public BusinessPermit createBusinessPermit(BusinessPermit businessPermit) {
+        return businessPermitRepository.save(businessPermit);
+    }
+
+    @Override
+    public List<BusinessPermit> getAllBusinessPermits() {
+        return businessPermitRepository.findAll();
+    }
+
+    @Override
+    public BusinessPermit getBusinessPermitById(Long id) {
+        return businessPermitRepository.findById(id).orElse(null);
+    }
+
+    @Override
+    public BusinessPermit updateBusinessPermit(Long id, BusinessPermit businessPermit) {
+        Optional<BusinessPermit> existing = businessPermitRepository.findById(id);
+        if (existing.isPresent()) {
+            BusinessPermit toUpdate = existing.get();
+            toUpdate.setPermitNumber(businessPermit.getPermitNumber());
+            toUpdate.setBusinessName(businessPermit.getBusinessName());
+            toUpdate.setBusinessType(businessPermit.getBusinessType());
+            toUpdate.setOwnerName(businessPermit.getOwnerName());
+            toUpdate.setAddress(businessPermit.getAddress());
+            toUpdate.setContactNumber(businessPermit.getContactNumber());
+            toUpdate.setIssueDate(businessPermit.getIssueDate());
+            toUpdate.setExpiryDate(businessPermit.getExpiryDate());
+            toUpdate.setFee(businessPermit.getFee());
+            toUpdate.setStatus(businessPermit.getStatus());
+            return businessPermitRepository.save(toUpdate);
+        }
+        return null;
+    }
+
+    @Override
+    public void deleteBusinessPermit(Long id) {
+        businessPermitRepository.deleteById(id);
     }
 }
