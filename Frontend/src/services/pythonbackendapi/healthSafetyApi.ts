@@ -1,13 +1,15 @@
 import { apiClient } from '@/utils/apiClient';
+import type {
+  IncidentReport,
+  SafetyInspection,
+  TrainingSession,
+  EnvironmentalMonitoring
+} from '@/types/pythonbackendapi/healthSafetyTypes';
 import {
   mockIncidents,
   mockInspections,
   mockTrainingSessions,
-  mockEnvironmentalData,
-  type IncidentReport,
-  type SafetyInspection,
-  type TrainingSession,
-  type EnvironmentalMonitoring
+  mockEnvironmentalData
 } from '@/services/mockData/health-safety';
 
 class HealthSafetyApiService {

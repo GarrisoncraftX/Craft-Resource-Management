@@ -57,7 +57,7 @@ export interface BudgetItem {
   start_date?: string;
   end_date?: string;
   department_id?: number;
-  fiscal_year?: number;
+  fiscal_year?: string;
   total_amount?: number;
   allocated_amount?: number;
   remaining_amount?: number;

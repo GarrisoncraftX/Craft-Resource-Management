@@ -1,4 +1,5 @@
-const { Vehicle, Driver, Trip } = require("./model")
+const { Vehicle, Driver, Trip, MaintenanceRecord, FuelRecord } = require("./model")
+const { Op } = require('sequelize')
 
 class TransportationService {
   async getVehicles() {
@@ -161,6 +162,99 @@ class TransportationService {
     await auditService.logAction(null, "DELETE_TRIP", {
       tripId: id
     })
+  }
+
+  async getMaintenanceRecords(vehicleId) {
+    const where = vehicleId ? { vehicleId } : {}
+    return await MaintenanceRecord.findAll({ where, order: [["date", "DESC"]] })
+  }
+
+  async createMaintenanceRecord(data) {
+    return await MaintenanceRecord.create(data)
+  }
+
+  async updateMaintenanceRecord(id, data) {
+    const record = await MaintenanceRecord.findByPk(id)
+    if (!record) return null
+    await record.update(data)
+    return record
+  }
+
+  async getFuelRecords(vehicleId) {
+    const where = vehicleId ? { vehicleId } : {}
+    return await FuelRecord.findAll({ where, order: [["date", "DESC"]] })
+  }
+
+  async createFuelRecord(data) {
+    return await FuelRecord.create(data)
+  }
+
+  async updateFuelRecord(id, data) {
+    const record = await FuelRecord.findByPk(id)
+    if (!record) return null
+    await record.update(data)
+    return record
+  }
+
+  async getTransportationReport() {
+    const totalVehicles = await Vehicle.count()
+    const activeVehicles = await Vehicle.count({ where: { status: 'active' } })
+    const totalDrivers = await Driver.count()
+    const activeDrivers = await Driver.count({ where: { status: 'active' } })
+    const totalTrips = await Trip.count()
+    const completedTrips = await Trip.count({ where: { status: 'completed' } })
+    const totalFuelCost = await FuelRecord.sum('cost') || 0
+    const totalMaintenanceCost = await MaintenanceRecord.sum('cost') || 0
+
+    return {
+      totalVehicles,
+      activeVehicles,
+      totalDrivers,
+      activeDrivers,
+      totalTrips,
+      completedTrips,
+      totalFuelCost,
+      totalMaintenanceCost
+    }
+  }
+
+  async getFuelConsumptionAnalytics() {
+    const records = await FuelRecord.findAll({
+      attributes: [
+        [sequelize.fn('DATE_FORMAT', sequelize.col('date'), '%Y-%m'), 'month'],
+        [sequelize.fn('SUM', sequelize.col('quantity')), 'consumption'],
+        [sequelize.fn('SUM', sequelize.col('cost')), 'cost']
+      ],
+      group: ['month'],
+      order: [[sequelize.col('month'), 'ASC']],
+      limit: 6
+    })
+    return records
+  }
+
+  async getMaintenanceScheduleAnalytics() {
+    const records = await MaintenanceRecord.findAll({
+      attributes: [
+        [sequelize.fn('WEEK', sequelize.col('date')), 'week'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'scheduled']
+      ],
+      group: ['week'],
+      order: [[sequelize.col('week'), 'DESC']],
+      limit: 4
+    })
+    return records
+  }
+
+  async getDriverPerformanceAnalytics() {
+    return []
+  }
+
+  async getVehicleUtilizationAnalytics() {
+    return []
+  }
+
+  async getFuelEfficiencyAnalytics() {
+    return []
   }
 }
 

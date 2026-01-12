@@ -5,13 +5,13 @@ import type {
   LeaveBalance,
   LeaveRequestForm,
   LeaveApprovalAction
-} from '@/types/leave';
+} from '@/types/nodejsbackendapi/leaveTypes';
 import {
   mockLeaveTypes,
   mockLeaveRequests,
   mockLeaveBalances,
   mockLeaveStatistics
-} from '@/types/leave';
+} from '@/types/nodejsbackendapi/leaveTypes';
 
 class LeaveApiService {
   private useMockData = false;

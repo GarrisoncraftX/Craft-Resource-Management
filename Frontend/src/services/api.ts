@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 // ============================================================================
 // UNIFIED API EXPORTS
 // This file re-exports all backend API services and their wrapper functions
@@ -21,7 +19,6 @@ export { systemApiService as javaSystemApiService } from '@/services/javabackend
 // NODE.JS BACKEND API SERVICES
 // ============================================================================
 export { lookupApiService } from '@/services/nodejsbackendapi/lookupApi';
-export { systemApiService as nodeSystemApiService } from '@/services/nodejsbackendapi/systemApi';
 
 // ============================================================================
 // PYTHON BACKEND API SERVICES
@@ -112,7 +109,8 @@ export {
   fetchSystemByID,
   fetchSystem,
   updateSystem,
-  deleteSystem
+  deleteSystem,
+  fetchRecentActivities
 } from '@/services/javabackendapi/systemApi';
 
 // ============================================================================
@@ -122,13 +120,6 @@ export {
   fetchDepartments,
   fetchRoles
 } from '@/services/nodejsbackendapi/lookupApi';
-
-// ============================================================================
-// NODE.JS BACKEND - AUDIT LOG WRAPPER FUNCTIONS
-// ============================================================================
-export {
-  fetchRecentActivities
-} from '@/services/nodejsbackendapi/systemApi';
 
 // ============================================================================
 // PYTHON BACKEND - ATTENDANCE WRAPPER FUNCTIONS
@@ -153,3 +144,4 @@ export {
 export type { Department, Role, BudgetItem, Payslip, AuditLog } from '@/types/api';
 export type { Employee, UpdateEmployeeRequest } from '@/types/hr';
 export type { Asset } from '@/types/asset';
+

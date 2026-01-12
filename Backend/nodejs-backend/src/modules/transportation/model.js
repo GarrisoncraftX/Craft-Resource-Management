@@ -149,8 +149,128 @@ Trip.belongsTo(Vehicle, { foreignKey: "vehicle_id" })
 Driver.hasMany(Trip, { foreignKey: "driver_id" })
 Trip.belongsTo(Driver, { foreignKey: "driver_id" })
 
+const MaintenanceRecord = sequelize.define("MaintenanceRecord", {
+  id: {
+    type: DataTypes.STRING(50),
+    primaryKey: true,
+    defaultValue: DataTypes.UUIDV4
+  },
+  vehicleId: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    field: "vehicle_id"
+  },
+  maintenanceType: {
+    type: DataTypes.ENUM('routine', 'repair', 'emergency', 'inspection'),
+    allowNull: false,
+    field: "maintenance_type"
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: false
+  },
+  date: {
+    type: DataTypes.DATE,
+    allowNull: false
+  },
+  cost: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false
+  },
+  mileage: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  performedBy: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    field: "performed_by"
+  },
+  partsReplaced: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    field: "parts_replaced"
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    field: "created_at"
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    field: "updated_at"
+  }
+}, {
+  tableName: "maintenance_records",
+  timestamps: true
+})
+
+const FuelRecord = sequelize.define("FuelRecord", {
+  id: {
+    type: DataTypes.STRING(50),
+    primaryKey: true,
+    defaultValue: DataTypes.UUIDV4
+  },
+  vehicleId: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    field: "vehicle_id"
+  },
+  driverId: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    field: "driver_id"
+  },
+  date: {
+    type: DataTypes.DATE,
+    allowNull: false
+  },
+  fuelType: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    field: "fuel_type"
+  },
+  quantity: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false
+  },
+  cost: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false
+  },
+  mileage: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  station: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    field: "created_at"
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    field: "updated_at"
+  }
+}, {
+  tableName: "fuel_records",
+  timestamps: true
+})
+
+Vehicle.hasMany(MaintenanceRecord, { foreignKey: "vehicle_id" })
+MaintenanceRecord.belongsTo(Vehicle, { foreignKey: "vehicle_id" })
+
+Vehicle.hasMany(FuelRecord, { foreignKey: "vehicle_id" })
+FuelRecord.belongsTo(Vehicle, { foreignKey: "vehicle_id" })
+
+Driver.hasMany(FuelRecord, { foreignKey: "driver_id" })
+FuelRecord.belongsTo(Driver, { foreignKey: "driver_id" })
+
 module.exports = {
   Vehicle,
   Driver,
   Trip,
+  MaintenanceRecord,
+  FuelRecord
 }

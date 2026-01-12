@@ -90,3 +90,7 @@ export async function updateSystem(id: number | string, record: SystemConfig) {
 export async function deleteSystem(id: number | string) {
   return systemApiService.deleteSystemConfig(Number(id));
 }
+
+export async function fetchRecentActivities(userId: string): Promise<AuditLog[]> {
+  return systemApiService.getRecentAuditLogsForUser(userId);
+}

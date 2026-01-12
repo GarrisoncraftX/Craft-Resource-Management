@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarDays, Clock, CheckCircle, XCircle, Calendar as CalendarIcon, Filter } from 'lucide-react';
 import { leaveApiService } from '@/services/nodejsbackendapi/leaveApi';
-import type { LeaveRequest, LeaveBalance, LeaveStatistics, LeaveType } from '@/types/leave';
+import type { LeaveRequest, LeaveBalance, LeaveStatistics, LeaveType } from '@/types/nodejsbackendapi/leaveTypes';
 
 export const LeaveManagement: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());

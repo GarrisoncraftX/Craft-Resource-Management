@@ -1,78 +1,7 @@
 import { apiClient } from '@/utils/apiClient';
-import type { BudgetItem } from '@/types/api';
+import type { BudgetItem, BudgetResponse, Budget, BudgetRequest, JournalEntry, AccountPayable, AccountReceivable, ChartOfAccount } from '@/types/javabackendapi/financeTypes';
 
-// Types for Finance API
-export interface ChartOfAccount {
-  id?: number;
-  accountCode: string;
-  accountName: string;
-  accountType: string;
-  description?: string;
-  isActive: boolean;
-}
 
-export interface Budget {
-  id?: number;
-  budgetName: string;
-  amount: number;
-  startDate: string;
-  endDate: string;
-  description?: string;
-  departmentId: number;
-  spentAmount?: number;
-}
-
-export interface BudgetRequest {
-  id?: number;
-  departmentId: number;
-  requestedAmount: number;
-  justification: string;
-  status: string;
-  requestedDate: string;
-}
-
-export interface JournalEntry {
-  id?: number;
-  entryDate: string;
-  description: string;
-  amount: number;
-  accountCode: string;
-  debit: number;
-  credit: number;
-  reference?: string;
-  status: string;
-}
-
-export interface AccountPayable {
-  id?: number;
-  vendorId: number;
-  invoiceNumber: string;
-  amount: number;
-  dueDate: string;
-  status: string;
-  description?: string;
-}
-
-export interface AccountReceivable {
-  id?: number;
-  customerId: number;
-  invoiceNumber: string;
-  amount: number;
-  dueDate: string;
-  status: string;
-  description?: string;
-}
-
-export interface BudgetResponse {
-  id: number;
-  budgetName: string;
-  amount: number;
-  startDate: string;
-  endDate: string;
-  description?: string;
-  departmentId: number;
-  spentAmount: number;
-}
 
 class FinanceApiService {
   // Chart of Account endpoints
@@ -117,27 +46,6 @@ class FinanceApiService {
     return apiClient.delete(`/finance/budgets/${id}`);
   }
 
-  // Budget endpoints (from BudgetController)
-  async createBudgetAlt(budget: Budget): Promise<Budget> {
-    return apiClient.post('/api/budgets', budget);
-  }
-
-  async getAllBudgetsAlt(): Promise<BudgetResponse[]> {
-    return apiClient.get('/api/budgets');
-  }
-
-  async getBudgetByIdAlt(id: number): Promise<BudgetResponse> {
-    return apiClient.get(`/api/budgets/${id}`);
-  }
-
-  async updateBudgetAlt(id: number, budget: Budget): Promise<Budget> {
-    return apiClient.put(`/api/budgets/${id}`, budget);
-  }
-
-  async deleteBudgetAlt(id: number): Promise<void> {
-    return apiClient.delete(`/api/budgets/${id}`);
-  }
-
   // Budget Request endpoints
   async createBudgetRequest(request: BudgetRequest): Promise<BudgetRequest> {
     return apiClient.post('/finance/budget-requests', request);
@@ -178,27 +86,6 @@ class FinanceApiService {
 
   async deleteJournalEntry(id: number): Promise<void> {
     return apiClient.delete(`/finance/journal-entries/${id}`);
-  }
-
-  // Journal Entry endpoints (from JournalEntryController)
-  async createJournalEntryAlt(entry: JournalEntry): Promise<JournalEntry> {
-    return apiClient.post('/api/journal-entries', entry);
-  }
-
-  async getAllJournalEntriesAlt(): Promise<JournalEntry[]> {
-    return apiClient.get('/api/journal-entries');
-  }
-
-  async getJournalEntryByIdAlt(id: number): Promise<JournalEntry> {
-    return apiClient.get(`/api/journal-entries/${id}`);
-  }
-
-  async updateJournalEntryAlt(id: number, entry: JournalEntry): Promise<JournalEntry> {
-    return apiClient.put(`/api/journal-entries/${id}`, entry);
-  }
-
-  async deleteJournalEntryAlt(id: number): Promise<void> {
-    return apiClient.delete(`/api/journal-entries/${id}`);
   }
 
   // Account Payable endpoints
@@ -272,7 +159,7 @@ function mapToBackendBudget(budget: BudgetItem) {
   };
 }
 
-function mapToFrontendBudget(budget: any): BudgetItem {
+function mapToFrontendBudget(budget: BudgetResponse): BudgetItem {
   const budgetAmount = Number(budget.amount) || 0;
   const spentAmount = Number(budget.spentAmount) || 0;
   const remaining = budget.remaining_amount ?? budgetAmount - spentAmount;
@@ -292,7 +179,7 @@ function mapToFrontendBudget(budget: any): BudgetItem {
     remaining,
     fiscal_year: budget.fiscal_year,
     description: budget.description || '',
-    status: budget.status || 'On Track',
+    status: (budget.status as 'On Track' | 'Warning' | 'Over Budget') || 'On Track',
     created_by: budget.created_by,
     approved_by: budget.approved_by,
     approved_at: budget.approved_at,
@@ -311,14 +198,14 @@ function mapToFrontendBudget(budget: any): BudgetItem {
 // ============================================================================
 export async function createBudgetItem(budget: BudgetItem): Promise<BudgetItem> {
   const backendBudget = mapToBackendBudget(budget);
-  const response = await financeApiService.createBudget(backendBudget as any);
-  return mapToFrontendBudget(response);
+  const response = await financeApiService.createBudget(backendBudget as unknown as Budget);
+  return mapToFrontendBudget(response as BudgetResponse);
 }
 
 export async function updateBudgetItem(id: string | number, budget: BudgetItem): Promise<BudgetItem> {
   const backendBudget = mapToBackendBudget(budget);
-  const response = await financeApiService.updateBudget(Number(id), backendBudget as any);
-  return mapToFrontendBudget(response);
+  const response = await financeApiService.updateBudget(Number(id), backendBudget as unknown as Budget);
+  return mapToFrontendBudget(response as BudgetResponse);
 }
 
 export async function deleteBudgetItem(id: string | number): Promise<void> {

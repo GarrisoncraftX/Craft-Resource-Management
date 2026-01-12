@@ -86,6 +86,11 @@ const SafetyInspections = lazy(() => import("@/components/modules/health-safety/
 const SafetyTraining = lazy(() => import("@/components/modules/health-safety/SafetyTraining").then(module => ({ default: module.SafetyTraining })));
 const EnvironmentalHealth = lazy(() => import("@/components/modules/health-safety/EnvironmentalHealth").then(module => ({ default: module.EnvironmentalHealth })));
 const TransportationDashboard = lazy(() => import("@/components/modules/transportation/TransportationDashboard").then(module => ({ default: module.TransportationDashboard })));
+const FleetManagement = lazy(() => import("@/components/modules/transportation/FleetManagement").then(module => ({ default: module.FleetManagement })));
+const DriverManagement = lazy(() => import("@/components/modules/transportation/DriverManagement").then(module => ({ default: module.DriverManagement })));
+const VehicleMaintenance = lazy(() => import("@/components/modules/transportation/VehicleMaintenance").then(module => ({ default: module.VehicleMaintenance })));
+const FuelManagement = lazy(() => import("@/components/modules/transportation/FuelManagement").then(module => ({ default: module.FuelManagement })));
+const RouteManagement = lazy(() => import("@/components/modules/transportation/RouteManagement").then(module => ({ default: module.RouteManagement })));
 const ReportsDashboard = lazy(() => import("@/components/modules/reports/ReportsDashboard").then(module => ({ default: module.ReportsDashboard })));
 const FinancialReports = lazy(() => import("@/components/modules/finance/FinancialReports").then(module => ({ default: module.FinancialReports })));
 
@@ -315,6 +320,12 @@ const AppRoutes = () => {
 
       {/* Transportation Routes */}
       <Route path="/transportation" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><TransportationDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/transportation/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><TransportationDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/transportation/fleet" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><FleetManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/transportation/drivers" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><DriverManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/transportation/maintenance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><VehicleMaintenance /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/transportation/fuel" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><FuelManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/transportation/routes" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><RouteManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>

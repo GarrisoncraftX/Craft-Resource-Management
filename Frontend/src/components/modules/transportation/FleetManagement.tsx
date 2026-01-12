@@ -4,115 +4,38 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Truck, Plus, Search, MapPin, Calendar, Fuel, Settings, Eye } from 'lucide-react';
+import { Truck, Plus, Search, Fuel, Settings } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
+import { transportationApiService } from '@/services/nodejsbackendapi/transportationApi';
+import { VehicleFormDialog } from './VehicleFormDialog';
+import { mockTransportationData } from '@/services/mockData/transportation';
+import type { Vehicle } from '@/types/nodejsbackendapi/transportationTypes';
 
 export const FleetManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | undefined>();
 
-  const vehicles = [
-    {
-      id: 'VH-001',
-      vehicleNumber: 'TRK-015',
-      type: 'Truck',
-      make: 'Ford',
-      model: 'Transit',
-      year: 2022,
-      status: 'Active',
-      driver: 'John Smith',
-      mileage: 45000,
-      lastService: '2024-01-10',
-      nextService: '2024-04-10',
-      fuelEfficiency: 12.5,
-      location: 'Warehouse A'
-    },
-    {
-      id: 'VH-002',
-      vehicleNumber: 'SED-032',
-      type: 'Sedan',
-      make: 'Toyota',
-      model: 'Camry',
-      year: 2023,
-      status: 'Maintenance',
-      driver: 'Unassigned',
-      mileage: 28000,
-      lastService: '2024-01-15',
-      nextService: '2024-02-15',
-      fuelEfficiency: 8.2,
-      location: 'Service Center'
-    },
-    {
-      id: 'VH-003',
-      vehicleNumber: 'SUV-018',
-      type: 'SUV',
-      make: 'Honda',
-      model: 'CR-V',
-      year: 2021,
-      status: 'Available',
-      driver: 'Sarah Johnson',
-      mileage: 52000,
-      lastService: '2024-01-08',
-      nextService: '2024-03-08',
-      fuelEfficiency: 10.1,
-      location: 'Main Office'
-    },
-    {
-      id: 'VH-004',
-      vehicleNumber: 'VAN-025',
-      type: 'Van',
-      make: 'Mercedes',
-      model: 'Sprinter',
-      year: 2020,
-      status: 'Out of Service',
-      driver: 'Unassigned',
-      mileage: 78000,
-      lastService: '2024-01-12',
-      nextService: '2024-01-25',
-      fuelEfficiency: 15.8,
-      location: 'Repair Shop'
-    }
-  ];
-
-  const utilizationData = [
-    { month: 'Jan', active: 42, maintenance: 4, available: 2 },
-    { month: 'Feb', active: 45, maintenance: 2, available: 1 },
-    { month: 'Mar', active: 43, maintenance: 3, available: 2 },
-    { month: 'Apr', active: 46, maintenance: 1, available: 1 },
-    { month: 'May', active: 44, maintenance: 3, available: 1 },
-    { month: 'Jun', active: 47, maintenance: 1, available: 0 },
-  ];
-
-  const vehicleAgeDistribution = [
-    { age: '0-2 years', count: 18, fill: '#10b981' },
-    { age: '2-5 years', count: 22, fill: '#3b82f6' },
-    { age: '5-8 years', count: 6, fill: '#f59e0b' },
-    { age: '8+ years', count: 2, fill: '#ef4444' },
-  ];
-
-  const maintenanceCosts = [
-    { month: 'Jan', cost: 12500 },
-    { month: 'Feb', cost: 8900 },
-    { month: 'Mar', cost: 15200 },
-    { month: 'Apr', cost: 6700 },
-    { month: 'May', cost: 11800 },
-    { month: 'Jun', cost: 9200 },
-  ];
+  const { data: vehicles = [], isLoading } = useQuery({
+    queryKey: ['vehicles'],
+    queryFn: () => transportationApiService.getVehicles()
+  });
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      'Active': 'success',
-      'Available': 'secondary',
-      'Maintenance': 'warning',
-      'Out of Service': 'destructive'
+      'active': 'default',
+      'maintenance': 'secondary',
+      'out_of_service': 'destructive',
+      'retired': 'outline'
     } as const;
-    return <Badge variant={variants[status as keyof typeof variants] || 'outline'}>{status}</Badge>;
+    return <Badge variant={variants[status as keyof typeof variants] || 'outline'}>{status.replace('_', ' ')}</Badge>;
   };
 
-  const getServiceStatus = (nextService: string) => {
+  const getServiceStatus = (nextService?: string) => {
+    if (!nextService) return <Badge variant="outline">Not Scheduled</Badge>;
     const today = new Date();
     const serviceDate = new Date(nextService);
     const daysDiff = Math.ceil((serviceDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
@@ -120,20 +43,21 @@ export const FleetManagement: React.FC = () => {
     if (daysDiff < 0) {
       return <Badge variant="destructive">Overdue</Badge>;
     } else if (daysDiff <= 7) {
-      return <Badge variant="warning">Due Soon</Badge>;
+      return <Badge variant="secondary">Due Soon</Badge>;
     } else {
       return <Badge variant="outline">Scheduled</Badge>;
     }
   };
 
   const filteredVehicles = vehicles.filter(vehicle => {
-    const matchesSearch = vehicle.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = vehicle.registrationNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (vehicle.driver && vehicle.driver.toLowerCase().includes(searchTerm.toLowerCase()));
+                         vehicle.model.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || vehicle.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  if (isLoading) return <div className="p-6">Loading...</div>;
 
   return (
     <div className="p-6 space-y-6">
@@ -142,80 +66,11 @@ export const FleetManagement: React.FC = () => {
           <h1 className="text-3xl font-bold">Fleet Management</h1>
           <p className="text-muted-foreground">Manage vehicles, assignments, and utilization</p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Vehicle
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add New Vehicle</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="vehicle-number">Vehicle Number</Label>
-                <Input id="vehicle-number" placeholder="TRK-001" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="make">Make</Label>
-                  <Input id="make" placeholder="Ford" />
-                </div>
-                <div>
-                  <Label htmlFor="model">Model</Label>
-                  <Input id="model" placeholder="Transit" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="year">Year</Label>
-                  <Input id="year" type="number" placeholder="2024" />
-                </div>
-                <div>
-                  <Label htmlFor="type">Vehicle Type</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sedan">Sedan</SelectItem>
-                      <SelectItem value="suv">SUV</SelectItem>
-                      <SelectItem value="truck">Truck</SelectItem>
-                      <SelectItem value="van">Van</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="vin">VIN Number</Label>
-                <Input id="vin" placeholder="Vehicle identification number" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="mileage">Current Mileage</Label>
-                  <Input id="mileage" type="number" placeholder="25000" />
-                </div>
-                <div>
-                  <Label htmlFor="fuel-type">Fuel Type</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select fuel type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="gasoline">Gasoline</SelectItem>
-                      <SelectItem value="diesel">Diesel</SelectItem>
-                      <SelectItem value="hybrid">Hybrid</SelectItem>
-                      <SelectItem value="electric">Electric</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <Button className="w-full">Add Vehicle</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => { setSelectedVehicle(undefined); setDialogOpen(true); }}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Vehicle
+        </Button>
+        <VehicleFormDialog open={dialogOpen} onOpenChange={setDialogOpen} vehicle={selectedVehicle} />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -226,7 +81,7 @@ export const FleetManagement: React.FC = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={utilizationData}>
+              <BarChart data={mockTransportationData.utilizationData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
@@ -248,14 +103,14 @@ export const FleetManagement: React.FC = () => {
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
-                  data={vehicleAgeDistribution}
+                  data={mockTransportationData.vehicleAgeDistribution}
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
                   dataKey="count"
                   label={({ age, percent }) => `${age}: ${(percent * 100).toFixed(0)}%`}
                 >
-                  {vehicleAgeDistribution.map((entry, index) => (
+                  {mockTransportationData.vehicleAgeDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
                 </Pie>
@@ -272,7 +127,7 @@ export const FleetManagement: React.FC = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={maintenanceCosts}>
+              <LineChart data={mockTransportationData.maintenanceCosts}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
@@ -306,10 +161,10 @@ export const FleetManagement: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Available">Available</SelectItem>
-                <SelectItem value="Maintenance">Maintenance</SelectItem>
-                <SelectItem value="Out of Service">Out of Service</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+                <SelectItem value="out_of_service">Out of Service</SelectItem>
+                <SelectItem value="retired">Retired</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -318,50 +173,42 @@ export const FleetManagement: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Vehicle ID</TableHead>
+                <TableHead>Registration</TableHead>
                 <TableHead>Make/Model</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Driver</TableHead>
+                <TableHead>Fuel Type</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Mileage</TableHead>
-                <TableHead>Fuel Efficiency</TableHead>
+                <TableHead>Capacity</TableHead>
                 <TableHead>Next Service</TableHead>
-                <TableHead>Location</TableHead>
+                <TableHead>Department</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredVehicles.map((vehicle) => (
                 <TableRow key={vehicle.id}>
-                  <TableCell className="font-medium">{vehicle.vehicleNumber}</TableCell>
+                  <TableCell className="font-medium">{vehicle.registrationNumber}</TableCell>
                   <TableCell>{vehicle.make} {vehicle.model} ({vehicle.year})</TableCell>
-                  <TableCell>{vehicle.type}</TableCell>
-                  <TableCell>{vehicle.driver || 'Unassigned'}</TableCell>
-                  <TableCell>{getStatusBadge(vehicle.status)}</TableCell>
-                  <TableCell>{vehicle.mileage.toLocaleString()} km</TableCell>
+                  <TableCell>{vehicle.vehicleType}</TableCell>
                   <TableCell className="flex items-center gap-1">
                     <Fuel className="h-4 w-4" />
-                    {vehicle.fuelEfficiency}L/100km
+                    {vehicle.fuelType}
                   </TableCell>
+                  <TableCell>{getStatusBadge(vehicle.status)}</TableCell>
+                  <TableCell>{vehicle.mileage.toLocaleString()} km</TableCell>
+                  <TableCell>{vehicle.capacity} persons</TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <span className="text-sm">{vehicle.nextService}</span>
-                      {getServiceStatus(vehicle.nextService)}
+                      <span className="text-sm">{vehicle.nextMaintenanceDate || 'N/A'}</span>
+                      {getServiceStatus(vehicle.nextMaintenanceDate)}
                     </div>
                   </TableCell>
-                  <TableCell className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {vehicle.location}
-                  </TableCell>
+                  <TableCell>{vehicle.department}</TableCell>
                   <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Settings className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Button variant="outline" size="sm" onClick={() => { setSelectedVehicle(vehicle); setDialogOpen(true); }}>
+                      <Settings className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

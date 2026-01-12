@@ -1,70 +1,16 @@
 import { apiClient } from '@/utils/apiClient';
-
-// Types for Auth API
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  role?: string;
-  department?: string;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  department: string;
-  isActive: boolean;
-  lastLogin?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface AuthResponse {
-  user: User;
-  token: string;
-  refreshToken: string;
-}
-
-export interface RefreshTokenRequest {
-  refreshToken: string;
-}
-
-export interface ChangePasswordRequest {
-  currentPassword: string;
-  newPassword: string;
-}
-
-export interface ResetPasswordRequest {
-  email: string;
-}
-
-export interface ConfirmResetPasswordRequest {
-  token: string;
-  newPassword: string;
-}
-
-export interface VerifyEmailRequest {
-  token: string;
-}
-
-export interface Session {
-  id: string;
-  userId: string;
-  userAgent: string;
-  ipAddress: string;
-  createdAt: string;
-  lastActivity: string;
-  isActive: boolean;
-}
+import type {
+  LoginRequest,
+  RegisterRequest,
+  User,
+  AuthResponse,
+  RefreshTokenRequest,
+  ChangePasswordRequest,
+  ResetPasswordRequest,
+  ConfirmResetPasswordRequest,
+  VerifyEmailRequest,
+  Session
+} from '@/types/nodejsbackendapi/authTypes';
 
 class AuthApiService {
   // Authentication

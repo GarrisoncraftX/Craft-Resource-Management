@@ -124,6 +124,118 @@ class TransportationController {
       next(error)
     }
   }
+
+  async getMaintenanceRecords(req, res, next) {
+    try {
+      const { vehicleId } = req.query
+      const records = await transportationService.getMaintenanceRecords(vehicleId)
+      res.json({ success: true, data: records })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async createMaintenanceRecord(req, res, next) {
+    try {
+      const record = await transportationService.createMaintenanceRecord(req.body)
+      res.status(201).json({ success: true, data: record })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async updateMaintenanceRecord(req, res, next) {
+    try {
+      const id = req.params.id
+      const record = await transportationService.updateMaintenanceRecord(id, req.body)
+      res.json({ success: true, data: record })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getFuelRecords(req, res, next) {
+    try {
+      const { vehicleId } = req.query
+      const records = await transportationService.getFuelRecords(vehicleId)
+      res.json({ success: true, data: records })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async createFuelRecord(req, res, next) {
+    try {
+      const record = await transportationService.createFuelRecord(req.body)
+      res.status(201).json({ success: true, data: record })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async updateFuelRecord(req, res, next) {
+    try {
+      const id = req.params.id
+      const record = await transportationService.updateFuelRecord(id, req.body)
+      res.json({ success: true, data: record })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getTransportationReport(req, res, next) {
+    try {
+      const report = await transportationService.getTransportationReport()
+      res.json({ success: true, data: report })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getFuelConsumptionAnalytics(req, res, next) {
+    try {
+      const analytics = await transportationService.getFuelConsumptionAnalytics()
+      res.json({ success: true, data: analytics })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getMaintenanceScheduleAnalytics(req, res, next) {
+    try {
+      const analytics = await transportationService.getMaintenanceScheduleAnalytics()
+      res.json({ success: true, data: analytics })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getDriverPerformanceAnalytics(req, res, next) {
+    try {
+      const analytics = await transportationService.getDriverPerformanceAnalytics()
+      res.json({ success: true, data: analytics })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getVehicleUtilizationAnalytics(req, res, next) {
+    try {
+      const analytics = await transportationService.getVehicleUtilizationAnalytics()
+      res.json({ success: true, data: analytics })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async getFuelEfficiencyAnalytics(req, res, next) {
+    try {
+      const analytics = await transportationService.getFuelEfficiencyAnalytics()
+      res.json({ success: true, data: analytics })
+    } catch (error) {
+      next(error)
+    }
+  }
 }
 
 module.exports = new TransportationController()

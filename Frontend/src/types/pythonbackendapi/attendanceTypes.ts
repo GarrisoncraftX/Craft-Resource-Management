@@ -70,3 +70,41 @@ export interface AttendanceMethodStats {
   totalAttendances: number;
   manualPercentage: number;
 }
+
+export interface ManualFallbackAttendance extends AttendanceRecord {
+  manual_fallback_flag: true;
+  audit_notes?: string;
+}
+
+export interface AttendanceByMethod {
+  method: string;
+  attendances: AttendanceRecord[];
+}
+
+export interface AuditFlagResponse {
+  success: boolean;
+  message: string;
+  attendance?: AttendanceRecord;
+}
+
+export interface BuddyPunchFlagResponse {
+  success: boolean;
+  message: string;
+  attendance?: AttendanceRecord;
+}
+
+export interface AttendanceReviewResponse {
+  success: boolean;
+  message: string;
+  attendance?: AttendanceRecord;
+}
+
+export interface UIAttendanceRecord {
+  date: string;
+  checkIn: string;
+  checkOut: string;
+  totalHours: string;
+  status: string;
+  clock_in_method: string;
+  clock_out_method: string;
+}

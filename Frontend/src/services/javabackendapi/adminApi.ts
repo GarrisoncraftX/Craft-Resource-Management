@@ -1,18 +1,7 @@
 import { apiClient } from '@/utils/apiClient';
 import { mockUsers, mockAuditLogs, mockSecurityEvents, mockNotifications } from '@/services/mockData/admin';
 import type { User, AuditLog, SecurityEvent, Notification } from '@/services/mockData/admin';
-
-interface SupportTicket {
-  id: number;
-  title: string;
-  description: string;
-  priority: 'Low' | 'Medium' | 'High' | 'Critical';
-  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
-  assignedTo?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { SupportTicket } from '@/types/javabackendapi/adminTypes';
 
 class AdminApiService {
   private async handleApiCall<T>(apiCall: () => Promise<T>, fallback: T): Promise<T> {

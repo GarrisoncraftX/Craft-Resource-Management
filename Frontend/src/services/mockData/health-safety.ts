@@ -1,3 +1,10 @@
+import type {
+  IncidentReport,
+  SafetyInspection,
+  TrainingSession,
+  EnvironmentalMonitoring
+} from '@/types/pythonbackendapi/healthSafetyTypes';
+
 export interface IncidentReport {
   id: string;
   title: string;

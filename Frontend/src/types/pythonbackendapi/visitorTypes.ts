@@ -36,19 +36,6 @@ export interface QRToken {
   check_in_url: string;
 }
 
-export interface AttendanceRecord {
-  id?: number;
-  employee_id: string;
-  employee_name?: string;
-  clock_in_time?: string;
-  clock_out_time?: string;
-  date: string;
-  status: 'Clocked In' | 'Clocked Out';
-  verification_method: 'face_id' | 'qr_code' | 'manual';
-  created_at?: string;
-  updated_at?: string;
-}
-
 export interface EntryPass {
   visitor_id: string;
   visitor_name: string;

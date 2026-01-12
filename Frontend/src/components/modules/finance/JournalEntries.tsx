@@ -12,7 +12,7 @@ import { PermissionGuard } from '@/components/PermissionGuard';
 import { JournalEntryForm } from './JournalEntryForm';
 import { journalApi } from '@/services/javabackendapi/journalApi';
 import { fetchEmployees } from '@/services/api';
-import type { JournalEntry } from '@/types/journal';
+import type { JournalEntry } from '@/types/journalTypes';
 import type { Employee } from '@/types/hr';
 
 const getStatusBadgeVariant = (status: 'Draft' | 'Posted' | 'Approved'): 'default' | 'secondary' | 'outline' => {

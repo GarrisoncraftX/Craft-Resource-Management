@@ -1,25 +1,5 @@
 import { apiClient } from '@/utils/apiClient';
-
-// Types for Legal API
-export interface LegalCase {
-  id?: number;
-  caseNumber: string;
-  title: string;
-  description: string;
-  status: string;
-  assignedLawyer: string;
-  filingDate: string;
-  resolutionDate?: string;
-}
-
-export interface ComplianceRecord {
-  id?: number;
-  entity: string;
-  regulation: string;
-  complianceDate: string;
-  status: string;
-  notes?: string;
-}
+import type { LegalCase, ComplianceRecord } from '@/types/javabackendapi/legalTypes';
 
 class LegalApiService {
   // LegalCase endpoints

@@ -17,4 +17,19 @@ router.post("/trips", transportationController.createTrip.bind(transportationCon
 router.put("/trips/:id", transportationController.updateTrip.bind(transportationController))
 router.delete("/trips/:id", transportationController.deleteTrip.bind(transportationController))
 
+router.get("/maintenance-records", transportationController.getMaintenanceRecords.bind(transportationController))
+router.post("/maintenance-records", transportationController.createMaintenanceRecord.bind(transportationController))
+router.put("/maintenance-records/:id", transportationController.updateMaintenanceRecord.bind(transportationController))
+
+router.get("/fuel-records", transportationController.getFuelRecords.bind(transportationController))
+router.post("/fuel-records", transportationController.createFuelRecord.bind(transportationController))
+router.put("/fuel-records/:id", transportationController.updateFuelRecord.bind(transportationController))
+
+router.get("/reports/overview", transportationController.getTransportationReport.bind(transportationController))
+router.get("/analytics/fuel-consumption", transportationController.getFuelConsumptionAnalytics.bind(transportationController))
+router.get("/analytics/maintenance-schedule", transportationController.getMaintenanceScheduleAnalytics.bind(transportationController))
+router.get("/analytics/driver-performance", transportationController.getDriverPerformanceAnalytics.bind(transportationController))
+router.get("/analytics/vehicle-utilization", transportationController.getVehicleUtilizationAnalytics.bind(transportationController))
+router.get("/analytics/fuel-efficiency", transportationController.getFuelEfficiencyAnalytics.bind(transportationController))
+
 module.exports = router

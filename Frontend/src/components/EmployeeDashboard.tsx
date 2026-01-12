@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAuth } from '@/contexts/AuthContext';
 import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign, HelpCircle, Loader2, LogOut} from 'lucide-react';
 import { leaveApiService } from '@/services/nodejsbackendapi/leaveApi';
-import { LeaveBalance, LeaveRequest } from '@/types/leave';
+import { LeaveBalance, LeaveRequest } from '@/types/nodejsbackendapi/leaveTypes';
 import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData/hr';
 import { fetchAttendance, fetchPayslips, mapAttendanceToUI, mapPayrollToUI, Employee, fetchRecentActivities } from '@/services/api';
 import { attendanceApiService } from '@/services/pythonbackendapi/attendanceApi';

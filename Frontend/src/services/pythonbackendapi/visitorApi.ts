@@ -1,5 +1,5 @@
 import { apiClient } from '@/utils/apiClient';
-import type { Visitor, VisitorCheckInPayload, VisitorCheckOutPayload, QRToken, EntryPass } from '@/types/visitor';
+import type { Visitor, VisitorCheckInPayload, VisitorCheckOutPayload, QRToken, EntryPass } from '@/types/pythonbackendapi/visitorTypes';
 
 class VisitorApiService {
   // Generate dynamic QR token for kiosk

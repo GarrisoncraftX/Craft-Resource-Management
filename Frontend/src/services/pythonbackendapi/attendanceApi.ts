@@ -6,8 +6,16 @@ import type {
   AttendanceClockInPayload,
   AttendanceClockOutPayload,
   QRToken,
-  AttendanceStatus
-} from '@/types/attendance';
+  AttendanceStatus,
+  ManualFallbackAttendance,
+  AttendanceByMethod,
+  AuditFlagResponse,
+  BuddyPunchReport,
+  BuddyPunchFlagResponse,
+  AttendanceMethodStats,
+  AttendanceReviewResponse,
+  UIAttendanceRecord
+} from '@/types/pythonbackendapi/attendanceTypes';
 
 class AttendanceApiService {
   // Generate QR token for kiosk display
@@ -97,45 +105,45 @@ class AttendanceApiService {
   }
 
   // Manual fallback attendances
-  async getManualFallbackAttendances(): Promise<any[]> {
+  async getManualFallbackAttendances(): Promise<ManualFallbackAttendance[]> {
     const response = await apiClient.get('/api/attendance/manual-fallbacks');
     return response.attendances || [];
   }
 
-  async getAttendancesByMethod(method: string): Promise<any[]> {
+  async getAttendancesByMethod(method: string): Promise<AttendanceRecord[]> {
     const response = await apiClient.get(`/api/attendance/by-method/${method}`);
     return response.attendances || [];
   }
 
-  async flagAttendanceForAudit(attendanceId: number, auditNotes: string): Promise<any> {
+  async flagAttendanceForAudit(attendanceId: number, auditNotes: string): Promise<AuditFlagResponse> {
     return apiClient.post(`/api/attendance/${attendanceId}/flag-audit`, { auditNotes });
   }
 
-  async getManualFallbacksByDateRange(startDate: string, endDate: string): Promise<any[]> {
+  async getManualFallbacksByDateRange(startDate: string, endDate: string): Promise<ManualFallbackAttendance[]> {
     const response = await apiClient.get(`/api/attendance/manual-fallbacks/date-range?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
     return response.attendances || [];
   }
 
-  async getUserAttendanceByDateRange(userId: number, startDate: string, endDate: string): Promise<any[]> {
+  async getUserAttendanceByDateRange(userId: number, startDate: string, endDate: string): Promise<AttendanceRecord[]> {
     const response = await apiClient.get(`/api/attendance/user/${userId}/date-range?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
     return response.attendances || [];
   }
 
-  async getBuddyPunchReport(): Promise<any> {
+  async getBuddyPunchReport(): Promise<BuddyPunchReport> {
     const response = await apiClient.get('/api/attendance/buddy-punch-report');
     return response.report || {};
   }
 
-  async flagBuddyPunchRisk(attendanceId: number, reason: string): Promise<any> {
+  async flagBuddyPunchRisk(attendanceId: number, reason: string): Promise<BuddyPunchFlagResponse> {
     return apiClient.post(`/api/attendance/${attendanceId}/buddy-punch-flag`, { reason });
   }
 
-  async getAttendanceMethodStatistics(): Promise<any> {
+  async getAttendanceMethodStatistics(): Promise<AttendanceMethodStats> {
     const response = await apiClient.get('/api/attendance/method-statistics');
     return response.stats || {};
   }
 
-  async reviewAttendance(attendanceId: number, hrUserId: number, notes: string): Promise<any> {
+  async reviewAttendance(attendanceId: number, hrUserId: number, notes: string): Promise<AttendanceReviewResponse> {
     return apiClient.post(`/api/attendance/${attendanceId}/review`, { hrUserId, notes });
   }
 }
@@ -145,48 +153,48 @@ export const attendanceApiService = new AttendanceApiService();
 // ============================================================================
 // WRAPPER FUNCTIONS FOR BACKWARD COMPATIBILITY
 // ============================================================================
-export async function fetchAttendance(userId: string): Promise<any[]> {
+export async function fetchAttendance(userId: string): Promise<unknown[]> {
   return attendanceApiService.getAttendanceRecords({ user_id: userId });
 }
 
-export async function getManualFallbackAttendances(): Promise<any[]> {
+export async function getManualFallbackAttendances(): Promise<ManualFallbackAttendance[]> {
   return attendanceApiService.getManualFallbackAttendances();
 }
 
-export async function getAttendancesByMethod(method: string): Promise<any[]> {
+export async function getAttendancesByMethod(method: string): Promise<AttendanceRecord[]> {
   return attendanceApiService.getAttendancesByMethod(method);
 }
 
-export async function flagAttendanceForAudit(attendanceId: number, auditNotes: string): Promise<any> {
+export async function flagAttendanceForAudit(attendanceId: number, auditNotes: string): Promise<AuditFlagResponse> {
   return attendanceApiService.flagAttendanceForAudit(attendanceId, auditNotes);
 }
 
-export async function getManualFallbacksByDateRange(startDate: string, endDate: string): Promise<any[]> {
+export async function getManualFallbacksByDateRange(startDate: string, endDate: string): Promise<ManualFallbackAttendance[]> {
   return attendanceApiService.getManualFallbacksByDateRange(startDate, endDate);
 }
 
-export async function getUserAttendanceByDateRange(userId: number, startDate: string, endDate: string): Promise<any[]> {
+export async function getUserAttendanceByDateRange(userId: number, startDate: string, endDate: string): Promise<AttendanceRecord[]> {
   return attendanceApiService.getUserAttendanceByDateRange(userId, startDate, endDate);
 }
 
-export async function getBuddyPunchReport(): Promise<any> {
+export async function getBuddyPunchReport(): Promise<BuddyPunchReport> {
   return attendanceApiService.getBuddyPunchReport();
 }
 
-export async function flagBuddyPunchRisk(attendanceId: number, reason: string): Promise<any> {
+export async function flagBuddyPunchRisk(attendanceId: number, reason: string): Promise<BuddyPunchFlagResponse> {
   return attendanceApiService.flagBuddyPunchRisk(attendanceId, reason);
 }
 
-export async function getAttendanceMethodStatistics(): Promise<any> {
+export async function getAttendanceMethodStatistics(): Promise<AttendanceMethodStats> {
   return attendanceApiService.getAttendanceMethodStatistics();
 }
 
-export async function reviewAttendance(attendanceId: number, hrUserId: number, notes: string): Promise<any> {
+export async function reviewAttendance(attendanceId: number, hrUserId: number, notes: string): Promise<AttendanceReviewResponse> {
   return attendanceApiService.reviewAttendance(attendanceId, hrUserId, notes);
 }
 
-export const mapAttendanceToUI = (attendanceData: any[]) => {
-  return attendanceData.map((record: any) => {
+export const mapAttendanceToUI = (attendanceData: AttendanceRecord[]): UIAttendanceRecord[] => {
+  return attendanceData.map((record) => {
     const clockInDate = record.clock_in_time ? new Date(record.clock_in_time) : null;
     const clockOutDate = record.clock_out_time ? new Date(record.clock_out_time) : null;
     

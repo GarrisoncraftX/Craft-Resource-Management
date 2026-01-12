@@ -11,7 +11,7 @@ import {
   type AssetTrend,
   type MaintenanceCost
 } from '@/services/mockData/assets';
-import type { Asset, MaintenanceRecord, DisposalRecord } from '@/types/asset';
+import type { Asset, MaintenanceRecord, DisposalRecord } from '@/types/javabackendapi/assetTypes';
 
 class AssetApiService {
   private async handleApiCall<T>(apiCall: () => Promise<T>, fallback: T): Promise<T> {
@@ -257,7 +257,7 @@ export async function fetchAssetById(id: number | string): Promise<Asset> {
 }
 
 export async function createAssetRecord(asset: Partial<Asset>): Promise<Asset> {
-  return assetApiService.createAsset(asset as any);
+  return assetApiService.createAsset(asset as Omit<Asset, 'id'>);
 }
 
 export async function updateAssetRecord(id: number | string, asset: Partial<Asset>): Promise<Asset> {
@@ -272,12 +272,12 @@ export async function fetchMaintenanceRecords() {
   return assetApiService.getAllMaintenanceRecords();
 }
 
-export async function createMaintenanceRecordItem(record: unknown) {
-  return assetApiService.createMaintenanceRecord(record as any);
+export async function createMaintenanceRecordItem(record: MaintenanceRecord) {
+  return assetApiService.createMaintenanceRecord(record);
 }
 
 export async function updateMaintenanceRecordItem(id: number | string, record: unknown) {
-  return assetApiService.updateMaintenanceRecord(Number(id), record as any);
+  return assetApiService.updateMaintenanceRecord(Number(id), record);
 }
 
 export async function deleteMaintenanceRecordItem(id: number | string) {
@@ -288,12 +288,12 @@ export async function fetchDisposalRecords() {
   return assetApiService.getAllDisposalRecords();
 }
 
-export async function createDisposalRecordItem(record: unknown) {
-  return assetApiService.createDisposalRecord(record as any);
+export async function createDisposalRecordItem(record: DisposalRecord) {
+  return assetApiService.createDisposalRecord(record);
 }
 
 export async function updateDisposalRecordItem(id: number | string, record: unknown) {
-  return assetApiService.updateDisposalRecord(Number(id), record as any);
+  return assetApiService.updateDisposalRecord(Number(id), record);
 }
 
 export async function deleteDisposalRecordItem(id: number | string) {
@@ -304,6 +304,6 @@ export async function fetchAcquisitionRequests() {
   return assetApiService.getAcquisitionRequests();
 }
 
-export async function submitAcquisitionRequestItem(request: unknown) {
+export async function submitAcquisitionRequestItem(request: AcquisitionRequest) {
   return assetApiService.submitAcquisitionRequest(request);
 }

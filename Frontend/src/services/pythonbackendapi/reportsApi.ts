@@ -1,48 +1,5 @@
 import { apiClient } from '@/utils/apiClient';
-
-export interface ReportParams {
-  name: string;
-  type: string;
-  dataSources: string[];
-  dateRange: string;
-  format: string;
-  filters?: string;
-}
-
-export interface Report {
-  id: string;
-  name: string;
-  type: string;
-  generated: string;
-  status: string;
-  size: string;
-}
-
-export interface MonthlyTrend {
-  month: string;
-  revenue: number;
-  expenses: number;
-  employees: number;
-  incidents: number;
-}
-
-export interface AIInsight {
-  id: number;
-  type: string;
-  severity: string;
-  title: string;
-  description: string;
-  department: string;
-  confidence: number;
-  date: string;
-}
-
-export interface KPIData {
-  totalRevenue: { value: number; change: number };
-  activeEmployees: { value: number; change: number };
-  reportsGenerated: { value: number; period: string };
-  systemEfficiency: { value: number; change: number };
-}
+import type { ReportParams, Report, MonthlyTrend, AIInsight, KPIData } from '@/types/pythonbackendapi/reportsTypes';
 
 class ReportsApiService {
   async generateReport(params: ReportParams): Promise<Report> {
