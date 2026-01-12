@@ -63,6 +63,16 @@ export interface VerifyEmailRequest {
   token: string;
 }
 
+export interface AdminResetPasswordRequest {
+  userId: string;
+}
+
+export interface AdminResetPasswordResponse {
+  success: boolean;
+  message: string;
+  defaultPassword: string;
+}
+
 export interface Session {
   id: string;
   userId: string;

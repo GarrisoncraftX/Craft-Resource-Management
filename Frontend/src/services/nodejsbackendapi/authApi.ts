@@ -9,7 +9,9 @@ import type {
   ResetPasswordRequest,
   ConfirmResetPasswordRequest,
   VerifyEmailRequest,
-  Session
+  Session,
+  AdminResetPasswordRequest,
+  AdminResetPasswordResponse
 } from '@/types/nodejsbackendapi/authTypes';
 
 class AuthApiService {
@@ -72,6 +74,11 @@ class AuthApiService {
 
   async revokeAllSessions(): Promise<void> {
     return apiClient.post('/api/auth/sessions/revoke-all', {});
+  }
+
+  // Admin Operations
+  async adminResetPassword(data: AdminResetPasswordRequest): Promise<AdminResetPasswordResponse> {
+    return apiClient.post('/api/auth/admin/reset-password', data);
   }
 }
 

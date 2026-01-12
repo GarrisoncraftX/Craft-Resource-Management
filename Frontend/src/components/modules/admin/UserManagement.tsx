@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Edit, Trash2, Lock, Unlock, Search } from 'lucide-react';
 import { UserFormDialog } from './UserFormDialog';
+import { AdminResetPasswordDialog } from './AdminResetPasswordDialog';
 import { adminApiService } from '@/services/javabackendapi/adminApi';
 import type { User } from '@/services/mockData/admin';
 
@@ -197,6 +198,7 @@ export const UserManagement: React.FC = () => {
                         <Button variant="ghost" size="sm" onClick={() => handleEditUser(user)}>
                           <Edit className="h-4 w-4" />
                         </Button>
+                        <AdminResetPasswordDialog userId={user.id.toString()} userName={user.name} />
                         <Button variant="ghost" size="sm" onClick={() => handleToggleStatus(user.id)}>
                           {user.status === 'Locked' ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                         </Button>

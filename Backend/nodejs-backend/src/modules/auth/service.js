@@ -1,5 +1,5 @@
 const bcrypt = require('bcrypt');
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const User = require('./model');
@@ -664,6 +664,26 @@ const revokeAllSessions = async (userId) => {
   await auditService.logAction(userId, 'REVOKE_ALL_SESSIONS', { userId });
 };
 
+const adminResetPassword = async (adminUserId, targetUserId) => {
+  const targetUser = await User.findByPk(targetUserId);
+  if (!targetUser) {
+    throw new Error('Target user not found');
+  }
+
+  const defaultPassword = 'CRMSemp123!';
+  const newPasswordHash = await bcrypt.hash(defaultPassword, 10);
+  targetUser.passwordHash = newPasswordHash;
+  targetUser.defaultPasswordChanged = false;
+  await targetUser.save();
+
+  await auditService.logAction(adminUserId, 'ADMIN_PASSWORD_RESET', { 
+    targetUserId, 
+    targetEmployeeId: targetUser.employeeId 
+  });
+  
+  return defaultPassword;
+};
+
 module.exports = {
   register,
   signin,
@@ -678,4 +698,5 @@ module.exports = {
   getUserSessions,
   revokeSession,
   revokeAllSessions,
+  adminResetPassword,
 };

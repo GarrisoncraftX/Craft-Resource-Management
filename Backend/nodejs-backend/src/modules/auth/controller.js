@@ -202,6 +202,23 @@ const hrCreateEmployee = async (req, res) => {
   }
 };
 
+const adminResetPassword = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const adminUserId = req.user.userId || req.user.id;
+
+    const defaultPassword = await authService.adminResetPassword(adminUserId, userId);
+    res.json({ 
+      success: true, 
+      message: 'Password reset successfully',
+      defaultPassword 
+    });
+  } catch (error) {
+    console.error('Admin reset password error:', error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
 module.exports = {
   register,
   signin,
@@ -218,4 +235,5 @@ module.exports = {
   revokeSession,
   revokeAllSessions,
   hrCreateEmployee,
+  adminResetPassword,
 };

@@ -20,5 +20,6 @@ router.get('/sessions', validateToken, authController.getActiveSessions);
 router.delete('/sessions/:sessionId', validateToken, authController.revokeSession);
 router.post('/sessions/revoke-all', validateToken, authController.revokeAllSessions);
 router.post('/hr/create-employee', validateToken, authController.hrCreateEmployee);
+router.post('/admin/reset-password', validateToken, authController.adminResetPassword);
 
 module.exports = router;

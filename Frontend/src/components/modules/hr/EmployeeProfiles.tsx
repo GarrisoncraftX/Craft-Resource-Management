@@ -8,50 +8,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, Edit, Eye, UserPlus } from 'lucide-react';
 import { fetchEmployees } from '@/services/api';
 import { lookupApiService } from '@/services/nodejsbackendapi/lookupApi';
-import type { Employee } from '@/types/hr';
+import type { User } from '@/types/javabackendapi/hrTypes';
 import type { Department, Role } from '@/types/api';
 import { EditEmployeeDialog } from './EditEmployeeDialog';
 import { ViewEmployeeDialog } from './ViewEmployeeDialog';
 import { AddEmployeeForm } from './forms/AddEmployeeForm';
+import { AdminResetPasswordDialog } from '../admin/AdminResetPasswordDialog';
+import { mockEmployeeData } from '@/services/mockData/hr';
 
-const mockEmployeeData = [
-  { 
-    id: 'EMP001', 
-    name: 'John Doe', 
-    position: 'Software Engineer', 
-    department: 'IT', 
-    status: 'Active', 
-    hireDate: '2023-01-15',
-    email: 'john.doe@company.com',
-    phone: '+1 (555) 123-4567',
-    department_id: 3, 
-    role_id: 5 
-  },
-  {
-    id: 'EMP002',
-    name: 'Jane Smith',
-    position: 'HR Manager',
-    department: 'Human Resources',
-    status: 'Active',
-    hireDate: '2022-03-20',
-    email: 'jane.smith@company.com',
-    phone: '+1 (555) 234-5678',
-    department_id: 1,
-    role_id: 9 
-  },
-  {
-    id: 'EMP003',
-    name: 'Mike Johnson',
-    position: 'Finance Analyst',
-    department: 'Finance',
-    status: 'On Leave',
-    hireDate: '2023-06-10',
-    email: 'mike.johnson@company.com',
-    phone: '+1 (555) 345-6789',
-    department_id: 2, 
-    role_id: 5 
-  },
-];
+type Employee = User;
 
 export const EmployeeProfiles: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -79,9 +44,7 @@ export const EmployeeProfiles: React.FC = () => {
       } catch (error) {
         console.error('Failed to fetch data from database, using mock data as fallback:', error);
         setEmployees(mockEmployeeData.map(e => ({ 
-          id: e.id, 
-          tenantId: 0, 
-          employeeId: e.id, 
+          employeeId: e.id,
           firstName: e.name.split(' ')[0], 
           lastName: e.name.split(' ')[1], 
           email: e.email,
@@ -89,12 +52,8 @@ export const EmployeeProfiles: React.FC = () => {
           hireDate: e.hireDate, 
           departmentId: Number(e.department_id),
           roleId: Number(e.role_id),
-          isActive: e.status === 'Active' ? 1: 0, 
-          biometricEnrollmentStatus: 'NONE', 
-          failedLoginAttempts: 0, 
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString() 
-        })));
+          status: e.status
+        } as User)));
       } finally {
         setLoading(false);
       }
@@ -133,7 +92,7 @@ export const EmployeeProfiles: React.FC = () => {
   });
 
   const totalEmployees = employees.length;
-  const activeEmployees = employees.filter(e => e.isActive === 1).length;
+  const activeEmployees = employees.filter(e => e.status === 'Active').length;
   const onLeave = totalEmployees - activeEmployees;
   const newHires = employees.filter(e => {
     if (!e.hireDate) return false;
@@ -286,8 +245,8 @@ export const EmployeeProfiles: React.FC = () => {
                       })()}
                     </TableCell>
                     <TableCell>
-                      <Badge className={employee.isActive === 1 ? 'bg-green-500' : 'bg-red-500'}>
-                        {employee.isActive === 1 ? 'Active' : 'Inactive'}
+                      <Badge className={employee.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}>
+                        {employee.status || 'Inactive'}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -308,6 +267,10 @@ export const EmployeeProfiles: React.FC = () => {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
+                        <AdminResetPasswordDialog 
+                          userId={employee.id.toString()} 
+                          userName={`${employee.firstName} ${employee.lastName}`} 
+                        />
                       </div>
                     </TableCell>
                   </TableRow>

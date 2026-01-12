@@ -46,7 +46,7 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
         onOpenChange(false);
         resetForm();
       }, 1500);
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Failed to change password');
     } finally {
       setIsLoading(false);
