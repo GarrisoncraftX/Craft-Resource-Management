@@ -45,7 +45,7 @@ const AssetValuation = lazy(() => import("@/components/modules/assets/AssetValua
 //Employee Modules
 const EmployeeAccount = lazy(() => import("@/components/EmployeeAccount").then(module => ({ default: module.EmployeeAccount })));
 const EmployeeInfoDisplay = lazy(() => import("@/components/EmployeeInfoDisplay"));
-const EmployeeDashboard = lazy(() => import("@/components/EmployeeDashboard").then(module => ({ default: module.EmployeeDashboard })));
+const EmployeeDashboard = lazy(() => import("@/components/EmployeeDashboard"));
 const AttendanceKiosk = lazy(() => import("@/components/AttendanceKiosk").then(module => ({ default: module.AttendanceKiosk })));
 
 

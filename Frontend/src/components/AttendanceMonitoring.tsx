@@ -30,9 +30,18 @@ interface MethodStats {
   manualPercentage: number;
 }
 
+interface BuddyPunchReport {
+  id: number;
+  employee_id: string;
+  first_name: string;
+  last_name: string;
+  risk_count: number;
+}
+
 export function AttendanceMonitoring() {
   const [manualAttendances, setManualAttendances] = useState<ManualAttendance[]>([]);
   const [methodStats, setMethodStats] = useState<MethodStats | null>(null);
+  const [buddyPunchReport, setBuddyPunchReport] = useState<BuddyPunchReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [flaggingId, setFlaggingId] = useState<number | null>(null);
@@ -44,12 +53,14 @@ export function AttendanceMonitoring() {
   const loadAttendanceData = async () => {
     try {
       setLoading(true);
-      const [manualData, statsData] = await Promise.all([
+      const [manualData, statsData, reportData] = await Promise.all([
         getManualFallbackAttendances(),
         getAttendanceMethodStatistics(),
+        getBuddyPunchReport(),
       ]);
       setManualAttendances(manualData || []);
       setMethodStats(statsData);
+      setBuddyPunchReport(Array.isArray(reportData) ? reportData : []);
       setError(null);
     } catch (err) {
       setError('Failed to load attendance data');
@@ -168,7 +179,7 @@ export function AttendanceMonitoring() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleFlagBuddyPunch(typeof attendance.id === 'number' ? attendance.id : parseInt(String(attendance.id)))}
+                          onClick={() => handleFlagBuddyPunch(typeof attendance.id === 'number' ? attendance.id : Number.parseInt(String(attendance.id)))}
                           disabled={flaggingId === attendance.id}
                           className="text-red-600 hover:text-red-700"
                         >
@@ -183,6 +194,44 @@ export function AttendanceMonitoring() {
           )}
         </CardContent>
       </Card>
+
+      {/* Buddy Punch Risk Report */}
+      {buddyPunchReport.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-600" />
+              Buddy Punch Risk Report
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left">Employee ID</th>
+                    <th className="px-4 py-2 text-left">Name</th>
+                    <th className="px-4 py-2 text-left">Risk Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {buddyPunchReport.map((report) => (
+                    <tr key={report.id} className="border-b hover:bg-gray-50">
+                      <td className="px-4 py-2 font-medium">{report.employee_id}</td>
+                      <td className="px-4 py-2">{report.first_name} {report.last_name}</td>
+                      <td className="px-4 py-2">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                          {report.risk_count}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Buddy Punch Risk Alert */}
       {manualAttendances.length > 0 && (

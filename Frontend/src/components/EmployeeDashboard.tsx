@@ -20,6 +20,8 @@ import { DashboardKPIs } from '@/types/api';
 import { AttendanceRecord } from '@/types/pythonbackendapi/attendanceTypes';
 import { Payslip as JavaPayslip, User } from '@/types/javabackendapi/hrTypes';
 import { AuditLog as JavaAuditLog } from '@/services/javabackendapi/systemApi';
+import { formatAttendanceMethod } from '@/utils/attendanceUtils';
+
 
 
 const calculateFormattedLeaveBalance = (totalDays: number): string => {
@@ -59,7 +61,7 @@ const processLeaveBalances = (data: LeaveBalance[]): { totalLeaveBalance: number
   return { totalLeaveBalance, mostRecentBalances };
 };
 
-export const EmployeeDashboard: React.FC = () => {
+const EmployeeDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('attendance');
@@ -419,19 +421,21 @@ export const EmployeeDashboard: React.FC = () => {
                           <TableHead>Total Hours</TableHead>
                           <TableHead>Method</TableHead>
                           <TableHead>Status</TableHead>
-                          <TableHead>Actions</TableHead>
+                          {(attendanceError ? mapAttendanceToUI(mockAttendanceHistory as unknown as AttendanceRecord[]) : mapAttendanceToUI(attendanceData)).some(record => record.checkIn !== '-' && record.checkOut === '-') && (
+                            <TableHead>Actions</TableHead>
+                          )}
                         </TableRow>
                       </TableHeader>
                       <TableBody>{(attendanceError ? mapAttendanceToUI(mockAttendanceHistory as unknown as AttendanceRecord[]) : mapAttendanceToUI(attendanceData)).map((record, index) => (
-                        <TableRow key={record.date || index}>
+                        <TableRow key={`${record.date}-${index}`}>
                           <TableCell>{record.date}</TableCell>
-                          <TableCell>{record.checkIn}</TableCell>
+                          <TableCell>{(record.checkIn)}</TableCell>
                           <TableCell>{record.checkOut === '-' ? '-' : record.checkOut}</TableCell>
                           <TableCell>{record.totalHours}</TableCell>
                           <TableCell>
                             <div className="space-y-1">
-                              <div>In: {record.checkIn === '-' ? 'N/A' : record.clock_in_method || 'N/A'}</div>
-                              <div>Out: {record.checkOut === '-' ? 'N/A' : record.clock_out_method || 'N/A'}</div>
+                              <div>In: {formatAttendanceMethod(record.checkIn === '-' ? 'N/A' : record.clock_in_method || 'N/A')}</div>
+                              <div>Out: {formatAttendanceMethod(record.checkOut === '-' ? 'N/A' : record.clock_out_method || 'N/A')}</div>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -439,28 +443,30 @@ export const EmployeeDashboard: React.FC = () => {
                               {record.status}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            {record.checkIn !== '-' && record.checkOut === '-' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleCheckOut(record.date)}
-                              disabled={isCheckingOut === record.date}
-                            >
-                              {isCheckingOut === record.date ? (
-                                <>
-                                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                  Checking Out...
-                                </>
-                              ) : (
-                                <>
-                                  <LogOut className="mr-2 h-3 w-3" />
-                                  Check Out
-                                </>
+                          {(attendanceError ? mapAttendanceToUI(mockAttendanceHistory as unknown as AttendanceRecord[]) : mapAttendanceToUI(attendanceData)).some(r => r.checkIn !== '-' && r.checkOut === '-') && (
+                            <TableCell>
+                              {record.checkIn !== '-' && record.checkOut === '-' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleCheckOut(record.date)}
+                                disabled={isCheckingOut === record.date}
+                              >
+                                {isCheckingOut === record.date ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                    Checking Out...
+                                  </>
+                                ) : (
+                                  <>
+                                    <LogOut className="mr-2 h-3 w-3" />
+                                    Check Out
+                                  </>
+                                )}
+                              </Button>
                               )}
-                            </Button>
-                            )}
-                          </TableCell>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))}</TableBody>
                     </Table>
@@ -477,9 +483,9 @@ export const EmployeeDashboard: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="leave">
-            <Card className="bg-green-600 text-muted-foreground mb-4">
+            <Card className="bg-green-600 text-white mb-4">
               <CardHeader>
-                <CardTitle className="flex items-center text-muted-foreground">
+                <CardTitle className="flex items-center text-white">
                   <Calendar className="h-5 w-5 mr-2" />
                   My Leave Applications
                 </CardTitle>
@@ -531,9 +537,9 @@ export const EmployeeDashboard: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="payroll">
-            <Card className="bg-purple-600 text-muted-foreground mb-4">
+            <Card className="bg-purple-600 text-white mb-4">
               <CardHeader>
-                <CardTitle className="flex items-center text-muted-foreground">
+                <CardTitle className="flex items-center text-white">
                   <DollarSign className="h-5 w-5 mr-2" />
                   My Payroll History
                 </CardTitle>
@@ -671,3 +677,5 @@ export const EmployeeDashboard: React.FC = () => {
     </ModuleLayout>
   );
 };
+
+export default EmployeeDashboard;

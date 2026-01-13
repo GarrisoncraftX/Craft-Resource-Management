@@ -13,6 +13,7 @@ import type { AttendanceRecord as PythonAttendanceRecord } from '@/types/pythonb
 import type { AttendanceStats, AttendanceSearchParams } from '@/types/attendance';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { formatAttendanceMethod } from '@/utils/attendanceUtils';
 
 interface EmployeeAttendanceProps {
   moduleType: 'hr' | 'security';
@@ -393,8 +394,8 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
                       </TableCell>
                       <TableCell className="text-sm">
                         <div className="space-y-1">
-                          <div>In: {record.clock_in_time ? (record.clock_in_method || 'N/A') : 'N/A'}</div>
-                          <div>Out: {record.clock_out_time ? (record.clock_out_method || 'N/A') : 'N/A'}</div>
+                          <div>In: {formatAttendanceMethod(record.clock_in_method)}</div>
+                          <div>Out: {formatAttendanceMethod(record.clock_out_method)}</div>
                         </div>
                       </TableCell>
                     </TableRow>
