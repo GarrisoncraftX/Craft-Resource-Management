@@ -92,7 +92,7 @@ export const UserManagement: React.FC = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="bg-blue-500 text-white">
+          <Card className="bg-blue-500 text-muted-foreground">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
             </CardHeader>
@@ -101,7 +101,7 @@ export const UserManagement: React.FC = () => {
             </CardContent>
           </Card>
           
-          <Card className="bg-green-500 text-white">
+          <Card className="bg-green-500 text-muted-foreground">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Users</CardTitle>
             </CardHeader>
@@ -110,7 +110,7 @@ export const UserManagement: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-orange-500 text-white">
+          <Card className="bg-orange-500 text-muted-foreground">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Admins</CardTitle>
             </CardHeader>
@@ -119,7 +119,7 @@ export const UserManagement: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-red-500 text-white">
+          <Card className="bg-red-500 text-muted-foreground">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Locked Accounts</CardTitle>
             </CardHeader>

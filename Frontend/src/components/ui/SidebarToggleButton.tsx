@@ -9,7 +9,7 @@ const SidebarToggleButton: React.FC<SidebarToggleButtonProps> = ({ collapsed, to
   return (
     <button
       onClick={toggleSidebar}
-      className="flex items-center justify-center gap-2 p-3 border-t border-blue-700 text-blue-900 hover:bg-blue-900 hover:text-white transition-colors duration-200"
+      className="flex items-center justify-center gap-2 p-3 border-t border-blue-700 text-muted-foreground hover:bg-blue-900 hover:text-muted-foreground transition-colors duration-200"
       aria-label="Toggle sidebar"
     >
       {!collapsed ? (

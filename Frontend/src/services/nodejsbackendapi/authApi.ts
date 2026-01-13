@@ -7,7 +7,6 @@ import type {
   RefreshTokenRequest,
   ChangePasswordRequest,
   ResetPasswordRequest,
-  ConfirmResetPasswordRequest,
   VerifyEmailRequest,
   Session,
   AdminResetPasswordRequest,
@@ -18,6 +17,14 @@ class AuthApiService {
   // Authentication
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     return apiClient.post('/api/auth/login', credentials);
+  }
+
+  async signin(payload: { employeeId?: string; password?: string; biometric_type?: string; raw_data?: string }): Promise<{ user: User; token: string }> {
+    return apiClient.post('/api/auth/signin', payload);
+  }
+
+  async processQRAttendance(sessionToken: string): Promise<{ success: boolean; message?: string; action?: string; clock_in_time?: string; clock_in_method?: string }> {
+    return apiClient.post('/api/biometric/attendance/qr-scan', { session_token: sessionToken });
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
@@ -41,7 +48,7 @@ class AuthApiService {
     return apiClient.post('/api/auth/request-password-reset', resetData);
   }
 
-  async confirmPasswordReset(confirmData: ConfirmResetPasswordRequest): Promise<void> {
+  async confirmPasswordReset(confirmData: { token: string; newPassword: string }): Promise<void> {
     return apiClient.post('/api/auth/confirm-password-reset', confirmData);
   }
 

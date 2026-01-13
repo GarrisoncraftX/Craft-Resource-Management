@@ -19,6 +19,7 @@ export { systemApiService as javaSystemApiService } from '@/services/javabackend
 // NODE.JS BACKEND API SERVICES
 // ============================================================================
 export { lookupApiService } from '@/services/nodejsbackendapi/lookupApi';
+export { authApiService } from '@/services/nodejsbackendapi/authApi';
 
 // ============================================================================
 // PYTHON BACKEND API SERVICES

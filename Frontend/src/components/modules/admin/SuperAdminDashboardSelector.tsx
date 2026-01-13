@@ -138,7 +138,7 @@ export const SuperAdminDashboardSelector: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-blue-900">Super Admin Dashboard</h1>
+              <h1 className="text-2xl font-bold text-muted-foreground">Super Admin Dashboard</h1>
               <p className="text-gray-600">Select a department module to access</p>
             </div>
           </div>
@@ -147,7 +147,7 @@ export const SuperAdminDashboardSelector: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
-          <Card className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+          <Card className="bg-gradient-to-r from-blue-600 to-blue-700 text-muted-foreground">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Settings className="h-5 w-5 mr-2" />
@@ -166,7 +166,7 @@ export const SuperAdminDashboardSelector: React.FC = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <div className={`p-2 rounded-lg ${module.color} text-white mr-3`}>
+                    <div className={`p-2 rounded-lg ${module.color} text-muted-foreground mr-3`}>
                       <module.icon className="h-5 w-5" />
                     </div>
                     <div>

@@ -36,3 +36,72 @@ export const mockEmployeeData = [
     role_id: 5 
   },
 ];
+
+export const mockAttendanceHistory: Array<{
+  clock_in_time: string;
+  clock_out_time: string;
+  total_hours: number;
+  clock_in_method: string;
+  clock_out_method: string;
+}> = [
+  {
+    clock_in_time: '2024-01-15T08:00:00Z',
+    clock_out_time: '2024-01-15T17:00:00Z',
+    total_hours: 9,
+    clock_in_method: 'QR Code',
+    clock_out_method: 'Face Recognition'
+  },
+  {
+    clock_in_time: '2024-01-14T08:15:00Z',
+    clock_out_time: '2024-01-14T17:30:00Z',
+    total_hours: 9.25,
+    clock_in_method: 'Face Recognition',
+    clock_out_method: 'QR Code'
+  }
+];
+
+export const mockDashboardKPIs: { leaveBalance: number; attendance: number; overtime: number; lastPay: number; nextPayrollDate: string; pendingTasks: number } = {
+  leaveBalance: 15,
+  attendance: 95,
+  overtime: 12.5,
+  lastPay: 5722.92,
+  nextPayrollDate: '2024-02-15',
+  pendingTasks: 3
+};
+
+export const mockPayrollHistory = [
+  {
+    period: 'January 2024',
+    basicSalary: '$5,000.00',
+    allowances: '$500.00',
+    overtime: '$222.92',
+    deductions: '$0.00',
+    netPay: '$5,722.92',
+    status: 'Paid'
+  },
+  {
+    period: 'December 2023',
+    basicSalary: '$5,000.00',
+    allowances: '$500.00',
+    overtime: '$150.00',
+    deductions: '$0.00',
+    netPay: '$5,650.00',
+    status: 'Paid'
+  }
+];
+
+export const mockDepartments = [
+  { id: '1', name: 'Human Resources' },
+  { id: '2', name: 'Finance' },
+  { id: '3', name: 'IT' },
+  { id: '4', name: 'Operations' },
+  { id: '5', name: 'Sales' }
+];
+
+export const mockRoles = [
+  { id: '1', name: 'Manager' },
+  { id: '2', name: 'Team Lead' },
+  { id: '3', name: 'Senior' },
+  { id: '4', name: 'Junior' },
+  { id: '5', name: 'Analyst' }
+];

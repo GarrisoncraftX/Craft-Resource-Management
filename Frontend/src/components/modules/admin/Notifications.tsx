@@ -81,7 +81,7 @@ export const Notifications: React.FC = () => {
 
         {/* Notification Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="bg-blue-500 text-white">
+          <Card className="bg-blue-500 text-muted-foreground">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
               <Send className="h-4 w-4" />
@@ -92,7 +92,7 @@ export const Notifications: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-green-500 text-white">
+          <Card className="bg-green-500 text-muted-foreground">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
               <Mail className="h-4 w-4" />
@@ -103,7 +103,7 @@ export const Notifications: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-orange-500 text-white">
+          <Card className="bg-orange-500 text-muted-foreground">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Recipients</CardTitle>
               <Users className="h-4 w-4" />
@@ -114,7 +114,7 @@ export const Notifications: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-purple-500 text-white">
+          <Card className="bg-purple-500 text-muted-foreground">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending</CardTitle>
               <MessageSquare className="h-4 w-4" />

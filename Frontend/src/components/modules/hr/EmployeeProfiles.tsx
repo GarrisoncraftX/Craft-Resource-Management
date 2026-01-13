@@ -157,7 +157,7 @@ export const EmployeeProfiles: React.FC = () => {
 
         {/* Employee Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className='bg-blue-500 text-white'>
+          <Card className='bg-blue-500 text-muted-foreground'>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
             </CardHeader>
@@ -166,7 +166,7 @@ export const EmployeeProfiles: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className='bg-green-500 text-white'>
+          <Card className='bg-green-500 text-muted-foreground'>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Employees</CardTitle>
             </CardHeader>
@@ -175,7 +175,7 @@ export const EmployeeProfiles: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className='bg-yellow-500 text-white'>
+          <Card className='bg-yellow-500 text-muted-foreground'>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">New Hires (This Month)</CardTitle>
             </CardHeader>
@@ -184,7 +184,7 @@ export const EmployeeProfiles: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className='bg-red-500 text-white'>
+          <Card className='bg-red-500 text-muted-foreground'>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">On Leave</CardTitle>
             </CardHeader>
@@ -252,7 +252,7 @@ export const EmployeeProfiles: React.FC = () => {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Button 
-                          className='hover:bg-blue-300 hover:text-white' 
+                          className='hover:bg-blue-300 hover:text-muted-foreground' 
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleViewEmployee(employee)}
@@ -260,7 +260,7 @@ export const EmployeeProfiles: React.FC = () => {
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button 
-                          className='hover:bg-purple-300 hover:text-white' 
+                          className='hover:bg-purple-300 hover:text-muted-foreground' 
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleEditEmployee(employee)}

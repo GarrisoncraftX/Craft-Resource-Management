@@ -8,21 +8,15 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
-import { UnifySidebar, useBreadcrumb } from './UnifySidebar';
-import { 
-  Breadcrumb, 
-  BreadcrumbList, 
-  BreadcrumbItem, 
-  BreadcrumbLink, 
-  BreadcrumbSeparator, 
-  BreadcrumbPage 
-} from './breadcrumb';
-import { useNavigate, Link } from 'react-router-dom';
+import { UnifySidebar } from './UnifySidebar';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import bgImage from '../../../assets/bgimage.jpg';
+import logo from '../../../assets/logo.png';
 
 interface ModuleLayoutProps {
-  title: string;
+  title?: string;
   onViewDashboard: () => void;
   onLogout: () => void;
   isEmployeeDashboard?: boolean;
@@ -40,7 +34,6 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { breadcrumbs } = useBreadcrumb();
   const [currentTime, setCurrentTime] = React.useState(new Date());
 
   // Update time every second
@@ -67,49 +60,40 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div 
+      className="min-h-screen relative"
+      style={{
+        backgroundImage: `url(${bgImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }}
+    >
+      {/* Blurred overlay */}
+      <div className="fixed inset-0 backdrop-blur-md bg-background/5 z-0" />
+      
       {/* Fixed Navbar */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-card/95 backdrop-blur-sm border-b border-border z-50 shadow-sm">
         <div className="h-full px-4 flex items-center justify-between">
-          {/* Left Section - Logo & Breadcrumb */}
-          <div className="flex items-center gap-6">
+          {/* Left Section - Logo & Title */}
+          <div className="flex items-center gap-4">
             {/* Logo */}
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md">
-                <span className="text-primary-foreground font-bold text-sm">{title}</span>
+            <div className="flex items-center gap-3">
+              <img 
+                src={logo} 
+                alt="CRMS Logo" 
+                className="h-12 w-12 object-contain rounded-full"
+              />
+              <div className="hidden sm:block">
+                <h1 className="text-lg font-bold text-foreground leading-tight">
+                  Craft Resource Management System
+                </h1>
               </div>
             </div>
+            </div>
 
-            {/* Breadcrumb Navigation */}
-            <Breadcrumb className="hidden md:flex">
-              <BreadcrumbList>
-                {breadcrumbs.map((item, index) => {
-                  const isLast = index === breadcrumbs.length - 1;
-                  const isFirst = index === 0;
 
-                  return (
-                    <React.Fragment key={item.path}>
-                      <BreadcrumbItem>
-                        {isLast ? (
-                          <BreadcrumbPage className="text-primary font-medium">
-                            {item.label}
-                          </BreadcrumbPage>
-                        ) : (
-                          <BreadcrumbLink asChild>
-                            <Link to={item.path} className="flex items-center gap-1">
-                              {isFirst && <Home className="w-4 h-4" />}
-                              {item.label}
-                            </Link>
-                          </BreadcrumbLink>
-                        )}
-                      </BreadcrumbItem>
-                      {!isLast && <BreadcrumbSeparator />}
-                    </React.Fragment>
-                  );
-                })}
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
 
           {/* Right Section - Actions */}
           <div className="flex items-center gap-3">
@@ -121,7 +105,6 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
 
             {/* Action Icons */}
             <div className="flex items-center gap-1">
-              
               <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-accent">
                 <Bell className="h-5 w-5 text-muted-foreground" />
                 <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full ring-2 ring-card" />
@@ -130,17 +113,6 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-2">
-              {user?.roleCode === 'SUPER_ADMIN' && title !== 'Admin Dashboard' && !isEmployeeDashboard && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleBackToAdmin}
-                  className="text-muted-foreground hover:text-foreground rounded-full"
-                >
-                  <Home className="h-4 w-4 mr-2" />
-                  Admin
-                </Button>
-              )}
 
               <Button
                 variant="ghost"
@@ -212,6 +184,8 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
                 </div>
 
                 <DropdownMenuItem onClick={() => navigate('/employee/info')} className="py-2">
+                  <User className="h-4 w-4 mr-2" />
+                  My Profile
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onLogout} className="text-destructive focus:text-destructive py-2">
@@ -228,7 +202,7 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
       {showSidebar && <UnifySidebar />}
 
       {/* Main Content */}
-      <main className={`pt-16 min-h-screen transition-all duration-300 ease-in-out ${showSidebar ? 'ml-16' : ''}`}>
+      <main className={`relative z-10 pt-16 min-h-screen transition-all duration-300 ease-in-out ${showSidebar ? 'ml-16' : ''}`}>
         <div className="p-6">
           {children}
         </div>

@@ -92,7 +92,7 @@ export const SupportTickets: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="bg-blue-500 text-white">
+          <Card className="bg-blue-500 text-muted-foreground">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
               <HelpCircle className="h-4 w-4" />
@@ -103,7 +103,7 @@ export const SupportTickets: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-yellow-500 text-white">
+          <Card className="bg-yellow-500 text-muted-foreground">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Open Tickets</CardTitle>
               <AlertCircle className="h-4 w-4" />
@@ -114,7 +114,7 @@ export const SupportTickets: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-green-500 text-white">
+          <Card className="bg-green-500 text-muted-foreground">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Resolved</CardTitle>
               <CheckCircle className="h-4 w-4" />
@@ -125,7 +125,7 @@ export const SupportTickets: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-purple-500 text-white">
+          <Card className="bg-purple-500 text-muted-foreground">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">In Progress</CardTitle>
               <Clock className="h-4 w-4" />

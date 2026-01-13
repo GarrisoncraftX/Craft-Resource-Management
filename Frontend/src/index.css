@@ -18,7 +18,7 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 217 91% 60%;
+    --primary: 217 91% 35%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 214 32% 91%;
@@ -35,19 +35,19 @@ All colors MUST be HSL.
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 217 91% 60%;
+    --ring: 217 91% 35%;
 
     --radius: 0.5rem;
 
     /* Sidebar - clean modern look */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary: 217 91% 35%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 214 95% 93%;
-    --sidebar-accent-foreground: 217 91% 60%;
+    --sidebar-accent-foreground: 217 91% 35%;
     --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 217 91% 35%;
   }
 
   .dark {

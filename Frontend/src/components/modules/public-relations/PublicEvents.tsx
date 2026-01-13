@@ -108,7 +108,7 @@ export const PublicEvents: React.FC = () => {
                 </Card>
               </div>
 
-              <Card className="bg-blue-500 text-white">
+              <Card className="bg-blue-500 text-muted-foreground">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Events</CardTitle>
                 </CardHeader>
@@ -117,7 +117,7 @@ export const PublicEvents: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-green-500 text-white">
+              <Card className="bg-green-500 text-muted-foreground">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
                 </CardHeader>
@@ -126,7 +126,7 @@ export const PublicEvents: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-purple-500 text-white">
+              <Card className="bg-purple-500 text-muted-foreground">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">This Month</CardTitle>
                 </CardHeader>
@@ -356,7 +356,7 @@ export const PublicEvents: React.FC = () => {
 
             {/* Budget Summary */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card className="bg-blue-500 text-white">
+              <Card className="bg-blue-500 text-muted-foreground">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Budget</CardTitle>
                 </CardHeader>
@@ -365,7 +365,7 @@ export const PublicEvents: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-green-500 text-white">
+              <Card className="bg-green-500 text-muted-foreground">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Used</CardTitle>
                 </CardHeader>
@@ -374,7 +374,7 @@ export const PublicEvents: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-orange-500 text-white">
+              <Card className="bg-orange-500 text-muted-foreground">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Remaining</CardTitle>
                 </CardHeader>
@@ -383,7 +383,7 @@ export const PublicEvents: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-purple-500 text-white">
+              <Card className="bg-purple-500 text-muted-foreground">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Utilization</CardTitle>
                 </CardHeader>

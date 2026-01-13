@@ -136,12 +136,12 @@ export const AttendanceKiosk: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-900 to-indigo-900 flex items-center justify-center p-4">
       <div className="max-w-6xl w-full space-y-6">
         {/* Breadcrumb Navigation */}
-        <div className="flex items-center space-x-2 text-white/80 text-sm">
+        <div className="flex items-center space-x-2 text-muted-foreground/80 text-sm">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate('/')}
-            className="text-white/80 hover:text-white hover:bg-white/10 p-2"
+            className="text-muted-foreground/80 hover:text-muted-foreground hover:bg-white/10 p-2"
           >
             <Home className="h-4 w-4 mr-1" />
             Dashboard
@@ -151,16 +151,16 @@ export const AttendanceKiosk: React.FC = () => {
             variant="ghost"
             size="sm"
             onClick={() => navigate(-1)}
-            className="text-white/80 hover:text-white hover:bg-white/10 p-2"
+            className="text-muted-foreground/80 hover:text-muted-foreground hover:bg-white/10 p-2"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back
           </Button>
           <span>/</span>
-          <span className="text-white">Attendance Kiosk</span>
+          <span className="text-muted-foreground">Attendance Kiosk</span>
         </div>
 
-        <div className="text-center text-white space-y-2">
+        <div className="text-center text-muted-foreground space-y-2">
           <div className="flex items-center justify-center mb-4">
             <Clock className="h-12 w-12 mr-3" />
             <h1 className="text-5xl font-bold">Employee Attendance</h1>
@@ -213,7 +213,7 @@ export const AttendanceKiosk: React.FC = () => {
             </Tabs>
 
             <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-900 text-center">
+              <p className="text-sm text-muted-foreground text-center">
                 <strong>Security:</strong> AES-256 Encrypted | <strong>Audit:</strong> Fully Logged
               </p>
             </div>

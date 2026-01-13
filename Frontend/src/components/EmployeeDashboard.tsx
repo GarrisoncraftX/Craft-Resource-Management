@@ -12,11 +12,14 @@ import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign, HelpCircl
 import { leaveApiService } from '@/services/nodejsbackendapi/leaveApi';
 import { LeaveBalance, LeaveRequest } from '@/types/nodejsbackendapi/leaveTypes';
 import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData/hr';
-import { fetchAttendance, fetchPayslips, mapAttendanceToUI, mapPayrollToUI, Employee, fetchRecentActivities } from '@/services/api';
+import { fetchAttendance, fetchPayslips, mapAttendanceToUI, mapPayrollToUI, fetchRecentActivities } from '@/services/api';
 import { attendanceApiService } from '@/services/pythonbackendapi/attendanceApi';
 import LeaveRequestForm from './modules/hr/LeaveRequestForm';
 import { ITSupportForm } from './modules/hr/ITSupportForm';
-import { AttendancePayload, DashboardKPIs, Payslip, AuditLog } from '@/types/api';
+import { DashboardKPIs } from '@/types/api';
+import { AttendanceRecord } from '@/types/pythonbackendapi/attendanceTypes';
+import { Payslip as JavaPayslip, User } from '@/types/javabackendapi/hrTypes';
+import { AuditLog as JavaAuditLog } from '@/services/javabackendapi/systemApi';
 
 
 const calculateFormattedLeaveBalance = (totalDays: number): string => {
@@ -65,9 +68,9 @@ export const EmployeeDashboard: React.FC = () => {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [isLeaveRequestFormOpen, setIsLeaveRequestFormOpen] = useState(false);
   const [isITSupportFormOpen, setIsITSupportFormOpen] = useState(false);
-  const [employeeData, setEmployeeData] = useState<Employee | null>(null);
-  const [attendanceData, setAttendanceData] = useState<AttendancePayload[]>([]);
-  const [payrollData, setPayrollData] = useState<Payslip[]>([]);
+  const [employeeData] = useState<User | null>(null);
+  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
+  const [payrollData, setPayrollData] = useState<JavaPayslip[]>([]);
   const [recentActivities, setRecentActivities] = useState<{ id: string; message: string; timestamp: string; color: string }[]>([]);
   const [isCheckingOut, setIsCheckingOut] = useState<string | null>(null);
   const [attendanceError, setAttendanceError] = useState(false);
@@ -91,7 +94,7 @@ export const EmployeeDashboard: React.FC = () => {
   const refreshAttendance = useCallback(async () => {
     if (!user?.userId) return;
     try {
-      const attendanceResponse = await fetchAttendance(user.userId);
+      const attendanceResponse = await fetchAttendance(user.userId) as AttendanceRecord[];
       setAttendanceData(attendanceResponse);
     } catch (error) {
       console.error('Failed to refresh attendance data:', error);
@@ -167,7 +170,11 @@ export const EmployeeDashboard: React.FC = () => {
     const fetchDashboardData = async () => {
       if (!user?.userId) {
         console.error('User or User ID is undefined, skipping API call.');
-        setDashboardKPIs(mockDashboardKPIs);
+        setDashboardKPIs({
+          ...mockDashboardKPIs,
+          nextPayrollDate: mockDashboardKPIs.nextPayrollDate || 'N/A',
+          pendingTasks: mockDashboardKPIs.pendingTasks || 0
+        });
         setFormattedLeaveBalance(calculateFormattedLeaveBalance(mockDashboardKPIs.leaveBalance));
         return;
       }
@@ -183,6 +190,8 @@ export const EmployeeDashboard: React.FC = () => {
         setDashboardKPIs((prev) => ({
           ...(prev || mockDashboardKPIs),
           leaveBalance: totalLeaveBalance,
+          nextPayrollDate: prev?.nextPayrollDate || mockDashboardKPIs.nextPayrollDate || 'N/A',
+          pendingTasks: prev?.pendingTasks || mockDashboardKPIs.pendingTasks || 0,
         }));
         setFormattedLeaveBalance(formattedBalance);
 
@@ -193,7 +202,7 @@ export const EmployeeDashboard: React.FC = () => {
 
         // Fetch attendance data
         try {
-          const attendanceResponse = await fetchAttendance(user.userId);
+          const attendanceResponse = await fetchAttendance(user.userId) as AttendanceRecord[];
           console.log("Attendace records", attendanceResponse)
           setAttendanceData(attendanceResponse);
           setAttendanceError(false);
@@ -216,8 +225,8 @@ export const EmployeeDashboard: React.FC = () => {
         // Fetch recent activities from audit logs
         const auditLogsResponse = await fetchRecentActivities(user.userId);
         console.log("Audit logs response", auditLogsResponse);
-        const activities = auditLogsResponse.map((log: AuditLog) => ({
-          id: `audit-${log.id}`,
+        const activities = auditLogsResponse.map((log: JavaAuditLog) => ({
+          id: `audit-${log.id || 'unknown'}`,
           message: log.action,
           timestamp: log.timestamp,
           color: 'bg-green-500'
@@ -226,7 +235,11 @@ export const EmployeeDashboard: React.FC = () => {
 
       } catch (error) {
         console.error('Failed to fetch dashboard data, using mock data fallback.', error);
-        setDashboardKPIs(mockDashboardKPIs);
+        setDashboardKPIs({
+          ...mockDashboardKPIs,
+          nextPayrollDate: 'N/A',
+          pendingTasks: 0
+        });
         setFormattedLeaveBalance(calculateFormattedLeaveBalance(mockDashboardKPIs.leaveBalance));
         setLeaveRequests([]);
         setRecentActivities([]);
@@ -248,7 +261,6 @@ export const EmployeeDashboard: React.FC = () => {
 
   return (
     <ModuleLayout
-      title="CRM"
       onViewDashboard={handleViewSystem}
       onLogout={handleLogout}
       isEmployeeDashboard={true}
@@ -256,8 +268,8 @@ export const EmployeeDashboard: React.FC = () => {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
-          <h1 className="text-4xl font-bold text-blue-600 mb-2">Employee Portal</h1>
-          <p className="text-gray-600">Welcome back, {user.firstName} {user.lastName}</p>
+          <h1 className="text-4xl font-bold text-white mb-2">Employee Portal</h1>
+          <p className="text-white">Welcome back, {user.firstName} {user.lastName}</p>
         </div>
 
         <Card className="mb-6 bg-gradient-to-r from-blue-600 to-blue-700">
@@ -360,7 +372,7 @@ export const EmployeeDashboard: React.FC = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="flex w-full overflow-x-auto justify-between border-b p-0 h-auto rounded-none bg-transparent">
+          <TabsList className="flex w-full overflow-x-auto justify-between border-b p-0 h-auto rounded-none">
             <TabsTrigger value="attendance" className="whitespace-nowrap px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 font-semibold transition-colors">
               <Clock className="h-4 w-4 mr-2" />
               Attendance
@@ -410,16 +422,16 @@ export const EmployeeDashboard: React.FC = () => {
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
-                      <TableBody>{(attendanceError ? mapAttendanceToUI(mockAttendanceHistory) : mapAttendanceToUI(attendanceData)).map((record, index) => (
+                      <TableBody>{(attendanceError ? mapAttendanceToUI(mockAttendanceHistory as unknown as AttendanceRecord[]) : mapAttendanceToUI(attendanceData)).map((record, index) => (
                         <TableRow key={record.date || index}>
                           <TableCell>{record.date}</TableCell>
                           <TableCell>{record.checkIn}</TableCell>
-                          <TableCell>{record.checkOut !== '-' ? record.checkOut : '-'}</TableCell>
+                          <TableCell>{record.checkOut === '-' ? '-' : record.checkOut}</TableCell>
                           <TableCell>{record.totalHours}</TableCell>
                           <TableCell>
                             <div className="space-y-1">
-                              <div>In: {record.checkIn !== '-' ? record.clock_in_method || 'N/A' : 'N/A'}</div>
-                              <div>Out: {record.checkOut !== '-' ? record.clock_out_method || 'N/A' : 'N/A'}</div>
+                              <div>In: {record.checkIn === '-' ? 'N/A' : record.clock_in_method || 'N/A'}</div>
+                              <div>Out: {record.checkOut === '-' ? 'N/A' : record.clock_out_method || 'N/A'}</div>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -465,9 +477,9 @@ export const EmployeeDashboard: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="leave">
-            <Card className="bg-green-600 text-white mb-4">
+            <Card className="bg-green-600 text-muted-foreground mb-4">
               <CardHeader>
-                <CardTitle className="flex items-center text-white">
+                <CardTitle className="flex items-center text-muted-foreground">
                   <Calendar className="h-5 w-5 mr-2" />
                   My Leave Applications
                 </CardTitle>
@@ -519,9 +531,9 @@ export const EmployeeDashboard: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="payroll">
-            <Card className="bg-purple-600 text-white mb-4">
+            <Card className="bg-purple-600 text-muted-foreground mb-4">
               <CardHeader>
-                <CardTitle className="flex items-center text-white">
+                <CardTitle className="flex items-center text-muted-foreground">
                   <DollarSign className="h-5 w-5 mr-2" />
                   My Payroll History
                 </CardTitle>
@@ -541,7 +553,7 @@ export const EmployeeDashboard: React.FC = () => {
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>{(payrollError ? mockPayrollHistory : mapPayrollToUI(payrollData)).map((payroll, index) => (
+                  <TableBody>{(payrollError ? mockPayrollHistory : mapPayrollToUI(payrollData as JavaPayslip[])).map((payroll, index) => (
                     <TableRow key={payroll.period || index}>
                       <TableCell>{payroll.period}</TableCell>
                       <TableCell>{payroll.basicSalary}</TableCell>

@@ -134,8 +134,8 @@ export const ChartOfAccounts: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-blue-900">Chart of Accounts</h2>
-          <p className="text-muted-foreground">Manage your organization's account structure</p>
+          <h2 className="text-2xl font-bold text-white">Chart of Accounts</h2>
+          <p className="text-white">Manage your organization's account structure</p>
           {error && <p className="text-destructive">{error}</p>}
           {loading && <p>Loading accounts...</p>}
         </div>

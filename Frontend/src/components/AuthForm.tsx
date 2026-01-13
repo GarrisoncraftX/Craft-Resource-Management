@@ -6,13 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { WebcamCapture } from './WebcamCapture';
 import { PasswordResetDialog } from './modules/admin/PasswordResetDialog';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/utils/apiClient';
-import { Eye, EyeOff, AlertCircle, CheckCircle} from 'lucide-react';
+import { authApiService } from '@/services/api';
+import { Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { ClockInSuccessModal } from './ClockInSuccessModal';
+import bgImage from '../../assets/bgimage.jpg';
+import logo from '../../assets/logo.png';
 
 
 const AuthForm: React.FC = () => {
@@ -24,9 +24,6 @@ const AuthForm: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
-  // Biometric states
-  const [showWebcam, setShowWebcam] = useState(false);
-  const [faceData, setFaceData] = useState('');
 
   // Modal states
   const [showClockInModal, setShowClockInModal] = useState(false);
@@ -61,20 +58,14 @@ const AuthForm: React.FC = () => {
 
     try {
       let payload: any = {};
-
-      if (faceData) {
-        payload = { biometric_type: 'face', raw_data: faceData };
-      } else {
-        // Standard username/password login
-        payload = {
+         payload = {
           employeeId: signinData.employeeId,
           password: signinData.password,
         };
-      }
-
-      const response = await apiClient.post('/api/auth/signin', payload);
+      
+      const response = await authApiService.signin(payload);
       // Extract token string from response.token object if needed
-      const token = typeof response.token === 'string' ? response.token : (response.token?.token ?? '');
+      const token = typeof response.token === 'string' ? response.token : (response.token as any)?.token ?? '';
 
       const userData = response.user ?? {
         user_id: '',
@@ -86,9 +77,11 @@ const AuthForm: React.FC = () => {
         email: '',
         department: '',
         role: '',
+        defaultPasswordChanged: false,
+        profileCompleted: false
       };
 
-      login(userData, token);
+      login(userData as any, token);
 
       console.log('User data after login:', userData);
       console.log('defaultPasswordChanged:', userData.defaultPasswordChanged);
@@ -99,16 +92,14 @@ const AuthForm: React.FC = () => {
       if (pendingToken) {
         // Process attendance directly after login
         try {
-          const attendanceResponse = await apiClient.post('/api/biometric/attendance/qr-scan', {
-            session_token: pendingToken,
-          });
+          const attendanceResponse = await authApiService.processQRAttendance(pendingToken);
 
           if (attendanceResponse.success) {
             // Show modal for successful clock-in
             if (attendanceResponse.action === 'clock_in') {
               setClockInData({
                 employeeData: {
-                  employeeId: userData.user_id || signinData.employeeId,
+                  employeeId: (userData as any).user_id || signinData.employeeId,
                   firstName: userData.firstName || '',
                   lastName: userData.lastName || '',
                   email: userData.email || '',
@@ -135,8 +126,8 @@ const AuthForm: React.FC = () => {
         }
       } else {
         // Check if user needs to complete profile setup
-        const needsPasswordChange = userData.defaultPasswordChanged === false;
-        const needsProfileCompletion = userData.profileCompleted === false;
+        const needsPasswordChange = (userData as any).defaultPasswordChanged === false;
+        const needsProfileCompletion = (userData as any).profileCompleted === false;
         
         console.log('needsPasswordChange:', needsPasswordChange);
         console.log('needsProfileCompletion:', needsProfileCompletion);
@@ -158,52 +149,116 @@ const AuthForm: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl shadow-xl">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-blue-900">
-            CraftResourceManagement
-          </CardTitle>
-          <CardDescription>
-            Secure access to your government resources
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Feedback Messages */}
-          {error && (
-            <Alert className="mb-4 border-red-200 bg-red-50">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">
-                {error}
-              </AlertDescription>
-            </Alert>
-          )}
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 md:p-8 relative"
+      style={{
+        backgroundImage: `url(${bgImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      {/* Blurred overlay */}
+      <div className="absolute inset-0 backdrop-blur-sm bg-background/5" />
+      
+      {/* Main content */}
+      <div className="relative z-10 w-full max-w-5xl">
+        <div className="flex flex-col lg:flex-row gap-0 items-stretch">
+          {/* Left side - Welcome section */}
+          <Card className="flex-1 rounded-t-2xl lg:rounded-l-2xl lg:rounded-tr-none border-0 shadow-2xl bg-primary/95 backdrop-blur-md">
+            <CardContent className="flex flex-col items-center justify-center p-8 lg:p-12 h-full">
+              <div className="text-center space-y-6">
+                <div className="space-y-3">
+                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-primary-foreground">
+                    Welcome Back
+                  </h1>
+                  <p className="text-primary-foreground/90 text-base md:text-lg max-w-md mx-auto leading-relaxed">
+                    Craft Resource Management System
+                  </p>
+                  <p className="text-primary-foreground/70 text-sm max-w-sm mx-auto">
+                    Your comprehensive solution for efficient government resource management
+                  </p>
+                </div>
+                <div className="pt-6 space-y-4">
+                  <div className="flex flex-col gap-4 text-sm text-primary-foreground/80">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-background/10 p-2 rounded-full">
+                        <CheckCircle className="h-5 w-5 text-primary-foreground" />
+                      </div>
+                      <span className="text-left">Secure & Reliable Access</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-background/10 p-2 rounded-full">
+                        <CheckCircle className="h-5 w-5 text-primary-foreground" />
+                      </div>
+                      <span className="text-left">Integrated Resource Management</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-background/10 p-2 rounded-full">
+                        <CheckCircle className="h-5 w-5 text-primary-foreground" />
+                      </div>
+                      <span className="text-left">Real-time Monitoring & Analytics</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          {success && (
-            <Alert className="mb-4 border-green-200 bg-green-50">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                {success}
-              </AlertDescription>
-            </Alert>
-          )}
+          {/* Right side - Sign in form */}
+          <Card className="flex-1 rounded-b-2xl lg:rounded-r-2xl lg:rounded-bl-none border-0 shadow-2xl bg-card/95 backdrop-blur-md">
+            <CardHeader className="text-center pb-2 pt-8">
+               <div className="flex justify-center">
+                    <img 
+                      src={logo} 
+                      alt="Craft Logo" 
+                      className="h-40 w-40 md:h-24 md:w-24 object-contain drop-shadow-2xl rounded-full"
+                    />
+                </div>
+              <CardTitle className="text-xl md:text-2xl font-bold text-foreground">
+                Sign In
+              </CardTitle>
+              <CardDescription className="text-muted-foreground">
+                Enter your credentials to access the system
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 md:p-8">
+              {/* Feedback Messages */}
+              {error && (
+                <Alert className="mb-4 border-destructive/50 bg-destructive/10">
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <AlertDescription className="text-destructive">
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              )}
 
-          {/* Sign In Form */}
-          <form onSubmit={handleSignin} className="space-y-4">
-                <div>
-                  <Label htmlFor="signin-employeeId">Employee ID</Label>
+              {success && (
+                <Alert className="mb-4 border-green-500/50 bg-green-500/10">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-700 dark:text-green-400">
+                    {success}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Sign In Form */}
+              <form onSubmit={handleSignin} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-employeeId" className="text-foreground font-medium">Employee ID</Label>
                   <Input
                     id="signin-employeeId"
                     type="text"
                     value={signinData.employeeId}
                     onChange={(e) => setSigninData({ ...signinData, employeeId: e.target.value })}
                     placeholder="Enter your Employee ID"
+                    className="h-11"
                     required
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="signin-password">Password</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="signin-password" className="text-foreground font-medium">Password</Label>
                   <div className="relative">
                     <Input
                       id="signin-password"
@@ -211,54 +266,25 @@ const AuthForm: React.FC = () => {
                       value={signinData.password}
                       onChange={(e) => setSigninData({ ...signinData, password: e.target.value })}
                       placeholder="Enter your password"
+                      className="h-11 pr-10"
                       required
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="absolute right-0 top-0 h-full px-3"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                       onClick={() => setShowPassword(!showPassword)}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                     </Button>
                   </div>
-                </div>
-
-                {/* Biometric Options for Sign In */}
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setShowWebcam(!showWebcam);
-                      }}
-                    >
-                      {showWebcam ? 'Hide' : 'Use'} Face ID
-                    </Button>
-                  </div>
-
-                  {showWebcam && (
-                    <div>
-                      <WebcamCapture onCapture={setFaceData} isActive={showWebcam} />
-                      {faceData && (
-                        <Badge className="mt-2 bg-green-100 text-green-800">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Face Captured
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-
-
                 </div>
 
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
                 >
                   {isLoading ? 'Signing In...' : 'Sign In'}
                 </Button>
@@ -266,14 +292,16 @@ const AuthForm: React.FC = () => {
                 <Button
                   type="button"
                   variant="link"
-                  className="w-full"
+                  className="w-full text-primary hover:text-primary/80"
                   onClick={() => setResetDialogOpen(true)}
                 >
                   Forgot Password?
                 </Button>
-          </form>
-        </CardContent>
-      </Card>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Clock In Success Modal */}
       {clockInData && (

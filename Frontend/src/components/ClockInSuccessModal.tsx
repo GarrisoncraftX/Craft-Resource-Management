@@ -59,13 +59,13 @@ export const ClockInSuccessModal: React.FC<ClockInSuccessModalProps> = ({
               {employeeData.profilePictureUrl ? (
                 <AvatarImage src={employeeData.profilePictureUrl} alt={`${employeeData.firstName} ${employeeData.lastName}`} />
               ) : (
-                <AvatarFallback className="text-xl font-bold bg-blue-500 text-white">
+                <AvatarFallback className="text-xl font-bold bg-blue-500 text-muted-foreground">
                   {employeeData.firstName?.charAt(0)}{employeeData.lastName?.charAt(0)}
                 </AvatarFallback>
               )}
             </Avatar>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-blue-900">
+              <h3 className="text-lg font-semibold text-muted-foreground">
                 {employeeData.firstName} {employeeData.lastName}
               </h3>
               <p className="text-sm text-blue-700">{employeeData.role}</p>

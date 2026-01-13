@@ -268,7 +268,7 @@ export function UnifySidebar() {
                 className={cn(
                   "w-12 h-12 rounded-xl flex flex-col items-center justify-center transition-all duration-300 ease-out",
                   isActive || isHovered
-                    ? `bg-gradient-to-br ${module.color} text-white shadow-lg scale-105`
+                    ? `bg-gradient-to-br ${module.color} text-muted-foreground shadow-lg scale-105`
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
@@ -369,31 +369,3 @@ export function UnifySidebar() {
   )
 }
 
-// Export function to get breadcrumb data
-export function useBreadcrumb() {
-  const location = useLocation()
-  
-  const getBreadcrumbs = () => {
-    const breadcrumbs: { label: string; path: string }[] = [
-      { label: "CRM", path: "/" }
-    ]
-
-    for (const module of modules) {
-      if (location.pathname.startsWith(module.url)) {
-        breadcrumbs.push({ label: module.title, path: module.url })
-        
-        for (const subItem of module.subItems) {
-          if (location.pathname === subItem.url) {
-            breadcrumbs.push({ label: subItem.title, path: subItem.url })
-            break
-          }
-        }
-        break
-      }
-    }
-
-    return breadcrumbs
-  }
-
-  return { breadcrumbs: getBreadcrumbs() }
-}

@@ -225,7 +225,7 @@ export const TaxManagement: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-blue-500 text-white">
+              <Card className="bg-blue-500 text-muted-foreground">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Records</CardTitle>
                   <FileText className="h-4 w-4" />
@@ -238,7 +238,7 @@ export const TaxManagement: React.FC = () => {
 
             {/* Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card className="bg-green-500 text-white">
+              <Card className="bg-green-500 text-muted-foreground">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Collected</CardTitle>
                   <DollarSign className="h-4 w-4" />
@@ -251,7 +251,7 @@ export const TaxManagement: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-yellow-500 text-white">
+              <Card className="bg-yellow-500 text-muted-foreground">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Pending</CardTitle>
                   <Calculator className="h-4 w-4" />
@@ -264,7 +264,7 @@ export const TaxManagement: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-red-500 text-white">
+              <Card className="bg-red-500 text-muted-foreground">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Overdue</CardTitle>
                   <TrendingUp className="h-4 w-4" />
@@ -277,7 +277,7 @@ export const TaxManagement: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-purple-500 text-white">
+              <Card className="bg-purple-500 text-muted-foreground">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Collection Rate</CardTitle>
                   <BarChart3 className="h-4 w-4" />

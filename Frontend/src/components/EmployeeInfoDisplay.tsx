@@ -115,7 +115,7 @@ const EmployeeInfoDisplay: React.FC = () => {
                             {employeeData.profilePictureUrl ? (
                                 <AvatarImage src={employeeData.profilePictureUrl} alt={`${employeeData.firstName} ${employeeData.lastName}`} />
                             ) : (
-                                <AvatarFallback className="text-5xl font-extrabold bg-blue-600 text-white">
+                                <AvatarFallback className="text-5xl font-extrabold bg-blue-600 text-muted-foreground">
                                     {employeeData.firstName?.charAt(0)}{employeeData.lastName?.charAt(0)}
                                 </AvatarFallback>
                             )}
