@@ -192,7 +192,7 @@ const AuthForm: React.FC = () => {
                   <div>
                     <h3 className="text-primary-foreground font-semibold text-lg mb-2">All-in-One Platform</h3>
                     <p className="text-primary-foreground/70 text-sm leading-relaxed">
-                      Manage attendance, procurement, inventory, HR, and more from a single unified dashboard designed for efficiency.
+                      Manage smart attendance, procurement, inventory, HR, and more from a single unified system designed for efficiency.
                     </p>
                   </div>
                 </div>
