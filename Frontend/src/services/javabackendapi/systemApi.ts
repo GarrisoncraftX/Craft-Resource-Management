@@ -91,6 +91,6 @@ export async function deleteSystem(id: number | string) {
   return systemApiService.deleteSystemConfig(Number(id));
 }
 
-export async function fetchRecentActivities(userId: string): Promise<AuditLog[]> {
-  return systemApiService.getRecentAuditLogsForUser(userId);
+export async function fetchRecentActivities(userId: string | number): Promise<AuditLog[]> {
+  return systemApiService.getRecentAuditLogsForUser(String(userId));
 }

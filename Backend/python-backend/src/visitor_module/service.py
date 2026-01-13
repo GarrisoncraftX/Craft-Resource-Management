@@ -46,6 +46,9 @@ class VisitorService:
                 frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
             check_in_url = f"{frontend_url}/visitor-checkin?token={token}"
 
+            # Log QR token generation
+            audit_service.log_action(None, 'GENERATE_QR_TOKEN', {'token': token, 'expires_at': expires_at.isoformat()})
+
             return {
                 'token': token,
                 'expires_at': expires_at.isoformat(),

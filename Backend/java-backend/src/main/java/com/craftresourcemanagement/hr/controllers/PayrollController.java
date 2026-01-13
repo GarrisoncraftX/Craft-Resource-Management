@@ -3,6 +3,8 @@ package com.craftresourcemanagement.hr.controllers;
 import com.craftresourcemanagement.hr.entities.*;
 import com.craftresourcemanagement.hr.services.PayrollService;
 import com.craftresourcemanagement.hr.services.EmployeeService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +15,7 @@ import java.util.Optional;
 @RequestMapping("/hr/payroll")
 public class PayrollController {
 
+    private static final Logger logger = LoggerFactory.getLogger(PayrollController.class);
     private final PayrollService payrollService;
     private final EmployeeService employeeService;
 
@@ -68,8 +71,7 @@ public class PayrollController {
             List<Payslip> payslips = payrollService.getAllPayslips();
             return ResponseEntity.ok(payslips);
         } catch (Exception e) {
-            System.err.println("Error fetching payslips: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error fetching payslips: {}", e.getMessage(), e);
             return ResponseEntity.ok(new java.util.ArrayList<>());
         }
     }
@@ -277,13 +279,14 @@ public class PayrollController {
     public ResponseEntity<List<Payslip>> getPayslipsByUser(@PathVariable Long userId) {
         Optional<User> userOpt = employeeService.findById(userId);
         if (userOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body(null);
+            return ResponseEntity.badRequest().build();
         }
         try {
             List<Payslip> payslips = payrollService.getPayslipsByUser(userOpt.get());
             return ResponseEntity.ok(payslips);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(null);
+            logger.error("Error fetching payslips for user {}: {}", userId, e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
         }
     }
 }

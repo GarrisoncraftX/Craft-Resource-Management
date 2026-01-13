@@ -1,5 +1,4 @@
 const cloudinary = require('cloudinary').v2;
-const fs = require('fs');
 const { logger } = require('./logger');
 
 cloudinary.config({
@@ -9,15 +8,21 @@ cloudinary.config({
 });
 
 class CloudinaryService {
-  async uploadFile(filePath, options = {}) {
+  async uploadFile(fileBuffer, options = {}) {
     try {
-      const result = await cloudinary.uploader.upload(filePath, {
-        resource_type: 'auto',
-        ...options,
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { resource_type: 'auto', ...options },
+          (error, result) => {
+            if (error) reject(error);
+            else {
+              logger.info(`File uploaded to Cloudinary: ${result.secure_url}`);
+              resolve(result.secure_url);
+            }
+          }
+        );
+        uploadStream.end(fileBuffer);
       });
-
-      logger.info(`File uploaded to Cloudinary: ${result.secure_url}`);
-      return result.secure_url;
     } catch (error) {
       logger.error('Failed to upload file to Cloudinary:', error);
       throw new Error('File upload failed');
@@ -25,19 +30,8 @@ class CloudinaryService {
   }
 
   async uploadMultipleFiles(files) {
-    const uploadPromises = files.map(file => this.uploadFile(file.path));
-    const results = await Promise.all(uploadPromises);
-
-    // Clean up uploaded files from local storage
-    files.forEach(file => {
-      try {
-        fs.unlinkSync(file.path);
-      } catch (err) {
-        logger.error('Failed to delete local file:', err);
-      }
-    });
-
-    return results;
+    const uploadPromises = files.map(file => this.uploadFile(file.buffer));
+    return await Promise.all(uploadPromises);
   }
 }
 

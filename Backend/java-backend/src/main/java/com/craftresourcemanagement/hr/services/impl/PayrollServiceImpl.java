@@ -3,8 +3,8 @@ package com.craftresourcemanagement.hr.services.impl;
 import com.craftresourcemanagement.hr.entities.*;
 import com.craftresourcemanagement.hr.repositories.*;
 import com.craftresourcemanagement.hr.services.PayrollService;
+import com.craftresourcemanagement.utils.AuditClient;
 import com.craftresourcemanagement.utils.OpenAIClient;
-import com.craftresourcemanagement.utils.OpenAIClientException;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -29,6 +29,7 @@ public class PayrollServiceImpl implements PayrollService {
     private final PerformanceReviewRepository performanceReviewRepository;
 
     private final OpenAIClient openAIClient;
+    private final AuditClient auditClient;
 
     @Value("${openai.api.key}")
     private String openAIKey;
@@ -40,7 +41,8 @@ public class PayrollServiceImpl implements PayrollService {
             TrainingCourseRepository trainingCourseRepository,
             EmployeeTrainingRepository employeeTrainingRepository,
             PerformanceReviewRepository performanceReviewRepository,
-            OpenAIClient openAIClient) {
+            OpenAIClient openAIClient,
+            AuditClient auditClient) {
         this.payrollRunRepository = payrollRunRepository;
         this.payslipRepository = payslipRepository;
         this.benefitPlanRepository = benefitPlanRepository;
@@ -49,12 +51,15 @@ public class PayrollServiceImpl implements PayrollService {
         this.employeeTrainingRepository = employeeTrainingRepository;
         this.performanceReviewRepository = performanceReviewRepository;
         this.openAIClient = openAIClient;
+        this.auditClient = auditClient;
     }
 
     // PayrollRun
     @Override
     public PayrollRun createPayrollRun(PayrollRun payrollRun) {
-        return payrollRunRepository.save(payrollRun);
+        PayrollRun saved = payrollRunRepository.save(payrollRun);
+        auditClient.logAction("SYSTEM", "CREATE_PAYROLL_RUN", "Run Date: " + saved.getRunDate());
+        return saved;
     }
 
     @Override
@@ -87,10 +92,9 @@ public class PayrollServiceImpl implements PayrollService {
     // Payslip
     @Override
     public Payslip createPayslip(Payslip payslip) {
-        Payslip savedPayslip = payslipRepository.save(payslip);
-        // After saving, call NLP analysis AI
-        analyzePerformanceReview(savedPayslip);
-        return savedPayslip;
+        Payslip saved = payslipRepository.save(payslip);
+        auditClient.logAction(payslip.getUser().getId(), "CREATE_PAYSLIP", "Period: " + saved.getPayPeriodStart() + " to " + saved.getPayPeriodEnd());
+        return saved;
     }
 
     @Override
@@ -116,10 +120,7 @@ public class PayrollServiceImpl implements PayrollService {
             toUpdate.setNetPay(payslip.getNetPay());
             toUpdate.setTaxDeductions(payslip.getTaxDeductions());
             toUpdate.setOtherDeductions(payslip.getOtherDeductions());
-            Payslip updatedPayslip = payslipRepository.save(toUpdate);
-            // After update, call NLP analysis AI
-            analyzePerformanceReview(updatedPayslip);
-            return updatedPayslip;
+            return payslipRepository.save(toUpdate);
         }
         return null;
     }
@@ -271,7 +272,10 @@ public class PayrollServiceImpl implements PayrollService {
     // PerformanceReview
     @Override
     public PerformanceReview createPerformanceReview(PerformanceReview performanceReview) {
-        return performanceReviewRepository.save(performanceReview);
+        PerformanceReview saved = performanceReviewRepository.save(performanceReview);
+        auditClient.logAction(performanceReview.getReviewer(), "CREATE_PERFORMANCE_REVIEW", "Employee ID: " + saved.getUser().getId());
+        analyzePerformanceReview(saved);
+        return saved;
     }
 
     @Override
@@ -308,20 +312,23 @@ public class PayrollServiceImpl implements PayrollService {
         return payslipRepository.findByUserOrderByPayPeriodEndDesc(user);
     }
 
-    private void analyzePerformanceReview(Payslip payslip) {
+    private void analyzePerformanceReview(PerformanceReview review) {
+        if (review == null || review.getReviewText() == null || review.getReviewText().isEmpty()) {
+            return;
+        }
         // Prepare prompt for NLP analysis
         String prompt = "Analyze the provided performance review text. Determine the overall sentiment (e.g., 'Positive', 'Neutral', 'Needs Improvement'), identify recurring themes, and pinpoint specific strengths and areas for development. Provide a concise summary of the analysis. If actionable insights or areas for growth are identified, present them in a supportive and constructive manner. Prioritize clarity, conciseness, and a humane tone in your response: "
-                + payslip.toString();
+                + review.getReviewText();
         try {
             String response = openAIClient.callOpenAIAPI(openAIKey, prompt);
             logger.info("NLP analysis result: {}", response);
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new OpenAIClientException("Payroll processing interrupted unexpectedly.", e);
+            logger.error("Performance review analysis interrupted: {}", e.getMessage());
 
         } catch (Exception e) {
-            logger.error("Error during payroll processing: {}", e.getMessage());
+            logger.error("Error during performance review analysis: {}", e.getMessage());
         }
 
     }

@@ -567,11 +567,17 @@ const changePassword = async (userId, currentPassword, newPassword) => {
 };
 
 const createPasswordResetToken = async (email) => {
-  const user = await User.findOne({ where: { email: email.toLowerCase() } });
-  if (!user) {
+  const users = await User.findAll({ where: { email: email.toLowerCase() } });
+  
+  if (users.length === 0) {
     throw new Error('User with this email not found');
   }
+  
+  if (users.length > 1) {
+    throw new Error('Multiple accounts found with this email. Please contact administrator.');
+  }
 
+  const user = users[0];
   const defaultPassword = 'CRMSemp123!';
   const newPasswordHash = await bcrypt.hash(defaultPassword, 10);
   user.passwordHash = newPasswordHash;

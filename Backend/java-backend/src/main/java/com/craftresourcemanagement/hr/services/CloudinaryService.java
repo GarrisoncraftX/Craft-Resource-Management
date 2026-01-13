@@ -31,7 +31,7 @@ public class CloudinaryService {
     public String uploadImage(MultipartFile file) throws IOException {
         try {
             logger.info("Uploading image to Cloudinary: {}", file.getOriginalFilename());
-            Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
             String url = (String) uploadResult.get("url");
             logger.info("Image uploaded successfully: {}", url);
             return url;

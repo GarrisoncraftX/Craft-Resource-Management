@@ -2,10 +2,17 @@ package com.craftresourcemanagement.system.controllers;
 
 import com.craftresourcemanagement.system.entities.*;
 import com.craftresourcemanagement.system.services.SystemService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/system")
@@ -52,15 +59,33 @@ public class SystemController {
         return ResponseEntity.noContent().build();
     }
 
-    // AuditLog endpoints
+    // AuditLog endpoints - Enhanced with pagination and filtering
     @PostMapping("/audit-logs")
     public ResponseEntity<AuditLog> createAuditLog(@RequestBody AuditLog auditLog) {
         return ResponseEntity.ok(systemService.createAuditLog(auditLog));
     }
 
     @GetMapping("/audit-logs")
-    public ResponseEntity<List<AuditLog>> getAllAuditLogs() {
-        return ResponseEntity.ok(systemService.getAllAuditLogs());
+    public ResponseEntity<Page<AuditLog>> getAllAuditLogs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(systemService.getAllAuditLogsPaginated(pageable));
+    }
+
+    @GetMapping("/audit-logs/search")
+    public ResponseEntity<Page<AuditLog>> searchAuditLogs(
+            @RequestParam(required = false) String performedBy,
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) String serviceName,
+            @RequestParam(required = false) String entityType,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(systemService.searchAuditLogs(
+            performedBy, action, serviceName, entityType, startDate, endDate, pageable));
     }
 
     @GetMapping("/audit-logs/{id}")
@@ -90,6 +115,48 @@ public class SystemController {
     @GetMapping("/audit-logs/user/{performedBy}/recent")
     public ResponseEntity<List<AuditLog>> getRecentAuditLogsForUser(@PathVariable String performedBy) {
         return ResponseEntity.ok(systemService.getRecentAuditLogsForUser(performedBy));
+    }
+
+    @GetMapping("/audit-logs/user/{performedBy}")
+    public ResponseEntity<Page<AuditLog>> getAuditLogsForUser(
+            @PathVariable String performedBy,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(systemService.getAuditLogsForUser(performedBy, startDate, endDate, pageable));
+    }
+
+    @GetMapping("/audit-logs/entity/{entityType}/{entityId}")
+    public ResponseEntity<Page<AuditLog>> getAuditLogsForEntity(
+            @PathVariable String entityType,
+            @PathVariable String entityId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(systemService.getAuditLogsForEntity(entityType, entityId, pageable));
+    }
+
+    @GetMapping("/audit-logs/analytics/top-actions")
+    public ResponseEntity<List<Map<String, Object>>> getTopActions(
+            @RequestParam(defaultValue = "7") int days) {
+        return ResponseEntity.ok(systemService.getTopActions(days));
+    }
+
+    @GetMapping("/audit-logs/analytics/top-users")
+    public ResponseEntity<List<Map<String, Object>>> getTopUsers(
+            @RequestParam(defaultValue = "7") int days) {
+        return ResponseEntity.ok(systemService.getTopUsers(days));
+    }
+
+    @GetMapping("/audit-logs/analytics/statistics")
+    public ResponseEntity<Map<String, Object>> getAuditStatistics(
+            @RequestParam(required = false) String performedBy,
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+        return ResponseEntity.ok(systemService.getAuditStatistics(performedBy, action, startDate, endDate));
     }
 
     // Security - Access Rules

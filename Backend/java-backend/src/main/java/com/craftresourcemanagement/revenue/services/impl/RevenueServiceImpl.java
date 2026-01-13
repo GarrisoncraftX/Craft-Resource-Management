@@ -7,6 +7,7 @@ import com.craftresourcemanagement.revenue.repositories.TaxAssessmentRepository;
 import com.craftresourcemanagement.revenue.repositories.RevenueCollectionRepository;
 import com.craftresourcemanagement.revenue.repositories.BusinessPermitRepository;
 import com.craftresourcemanagement.revenue.services.RevenueService;
+import com.craftresourcemanagement.utils.AuditClient;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,19 +19,24 @@ public class RevenueServiceImpl implements RevenueService {
     private final TaxAssessmentRepository taxAssessmentRepository;
     private final RevenueCollectionRepository revenueCollectionRepository;
     private final BusinessPermitRepository businessPermitRepository;
+    private final AuditClient auditClient;
 
     public RevenueServiceImpl(TaxAssessmentRepository taxAssessmentRepository,
                               RevenueCollectionRepository revenueCollectionRepository,
-                              BusinessPermitRepository businessPermitRepository) {
+                              BusinessPermitRepository businessPermitRepository,
+                              AuditClient auditClient) {
         this.taxAssessmentRepository = taxAssessmentRepository;
         this.revenueCollectionRepository = revenueCollectionRepository;
         this.businessPermitRepository = businessPermitRepository;
+        this.auditClient = auditClient;
     }
 
     // TaxAssessment
     @Override
     public TaxAssessment createTaxAssessment(TaxAssessment taxAssessment) {
-        return taxAssessmentRepository.save(taxAssessment);
+        TaxAssessment saved = taxAssessmentRepository.save(taxAssessment);
+        auditClient.logAction("SYSTEM", "CREATE_TAX_ASSESSMENT", "Taxpayer: " + saved.getTaxpayerId() + ", Amount: " + saved.getAssessedAmount());
+        return saved;
     }
 
     @Override
@@ -52,7 +58,9 @@ public class RevenueServiceImpl implements RevenueService {
             toUpdate.setAssessmentDate(taxAssessment.getAssessmentDate());
             toUpdate.setAssessedAmount(taxAssessment.getAssessedAmount());
             toUpdate.setStatus(taxAssessment.getStatus());
-            return taxAssessmentRepository.save(toUpdate);
+            TaxAssessment updated = taxAssessmentRepository.save(toUpdate);
+            auditClient.logAction("SYSTEM", "UPDATE_TAX_ASSESSMENT", "Taxpayer: " + updated.getTaxpayerId() + ", Status: " + updated.getStatus());
+            return updated;
         }
         return null;
     }
@@ -65,7 +73,9 @@ public class RevenueServiceImpl implements RevenueService {
     // RevenueCollection
     @Override
     public RevenueCollection createRevenueCollection(RevenueCollection revenueCollection) {
-        return revenueCollectionRepository.save(revenueCollection);
+        RevenueCollection saved = revenueCollectionRepository.save(revenueCollection);
+        auditClient.logAction("SYSTEM", "CREATE_REVENUE_COLLECTION", "Payer: " + saved.getPayerId() + ", Amount: " + saved.getAmountCollected());
+        return saved;
     }
 
     @Override
@@ -100,7 +110,9 @@ public class RevenueServiceImpl implements RevenueService {
     // BusinessPermit
     @Override
     public BusinessPermit createBusinessPermit(BusinessPermit businessPermit) {
-        return businessPermitRepository.save(businessPermit);
+        BusinessPermit saved = businessPermitRepository.save(businessPermit);
+        auditClient.logAction("SYSTEM", "CREATE_BUSINESS_PERMIT", "Permit: " + saved.getPermitNumber() + ", Business: " + saved.getBusinessName());
+        return saved;
     }
 
     @Override
@@ -128,7 +140,9 @@ public class RevenueServiceImpl implements RevenueService {
             toUpdate.setExpiryDate(businessPermit.getExpiryDate());
             toUpdate.setFee(businessPermit.getFee());
             toUpdate.setStatus(businessPermit.getStatus());
-            return businessPermitRepository.save(toUpdate);
+            BusinessPermit updated = businessPermitRepository.save(toUpdate);
+            auditClient.logAction("SYSTEM", "UPDATE_BUSINESS_PERMIT", "Permit: " + updated.getPermitNumber() + ", Status: " + updated.getStatus());
+            return updated;
         }
         return null;
     }

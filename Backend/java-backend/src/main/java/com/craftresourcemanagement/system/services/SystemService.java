@@ -1,8 +1,12 @@
 package com.craftresourcemanagement.system.services;
 
 import com.craftresourcemanagement.system.entities.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public interface SystemService {
 
@@ -13,11 +17,19 @@ public interface SystemService {
     SystemConfig updateSystemConfig(Long id, SystemConfig systemConfig);
     void deleteSystemConfig(Long id);
 
-    // AuditLog
+    // AuditLog - Enhanced
     AuditLog createAuditLog(AuditLog auditLog);
     List<AuditLog> getAllAuditLogs();
+    Page<AuditLog> getAllAuditLogsPaginated(Pageable pageable);
     AuditLog getAuditLogById(Long id);
     List<AuditLog> getRecentAuditLogsForUser(String performedBy);
+    Page<AuditLog> getAuditLogsForUser(String performedBy, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+    Page<AuditLog> getAuditLogsForEntity(String entityType, String entityId, Pageable pageable);
+    Page<AuditLog> searchAuditLogs(String performedBy, String action, String serviceName, 
+                                   String entityType, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+    List<Map<String, Object>> getTopActions(int days);
+    List<Map<String, Object>> getTopUsers(int days);
+    Map<String, Object> getAuditStatistics(String performedBy, String action, LocalDateTime startDate, LocalDateTime endDate);
     AuditLog updateAuditLog(Long id, AuditLog auditLog);
     void deleteAuditLog(Long id);
 

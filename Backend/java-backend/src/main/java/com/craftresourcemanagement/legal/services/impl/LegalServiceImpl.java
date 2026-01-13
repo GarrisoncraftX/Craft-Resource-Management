@@ -5,6 +5,7 @@ import com.craftresourcemanagement.legal.entities.ComplianceRecord;
 import com.craftresourcemanagement.legal.repositories.LegalCaseRepository;
 import com.craftresourcemanagement.legal.repositories.ComplianceRecordRepository;
 import com.craftresourcemanagement.legal.services.LegalService;
+import com.craftresourcemanagement.utils.AuditClient;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,17 +16,22 @@ public class LegalServiceImpl implements LegalService {
 
     private final LegalCaseRepository legalCaseRepository;
     private final ComplianceRecordRepository complianceRecordRepository;
+    private final AuditClient auditClient;
 
     public LegalServiceImpl(LegalCaseRepository legalCaseRepository,
-                            ComplianceRecordRepository complianceRecordRepository) {
+                            ComplianceRecordRepository complianceRecordRepository,
+                            AuditClient auditClient) {
         this.legalCaseRepository = legalCaseRepository;
         this.complianceRecordRepository = complianceRecordRepository;
+        this.auditClient = auditClient;
     }
 
     // LegalCase
     @Override
     public LegalCase createLegalCase(LegalCase legalCase) {
-        return legalCaseRepository.save(legalCase);
+        LegalCase saved = legalCaseRepository.save(legalCase);
+        auditClient.logAction(legalCase.getAssignedTo(), "CREATE_LEGAL_CASE", "Case: " + saved.getCaseNumber());
+        return saved;
     }
 
     @Override
@@ -50,20 +56,27 @@ public class LegalServiceImpl implements LegalService {
             toUpdate.setEndDate(legalCase.getEndDate());
             toUpdate.setStatus(legalCase.getStatus());
             toUpdate.setAssignedTo(legalCase.getAssignedTo());
-            return legalCaseRepository.save(toUpdate);
+            LegalCase updated = legalCaseRepository.save(toUpdate);
+            auditClient.logAction(legalCase.getAssignedTo(), "UPDATE_LEGAL_CASE", "Case: " + updated.getCaseNumber() + ", Status: " + updated.getStatus());
+            return updated;
         }
         return null;
     }
 
     @Override
     public void deleteLegalCase(Long id) {
+        legalCaseRepository.findById(id).ifPresent(legalCase -> 
+            auditClient.logAction(legalCase.getAssignedTo(), "DELETE_LEGAL_CASE", "Case: " + legalCase.getCaseNumber())
+        );
         legalCaseRepository.deleteById(id);
     }
 
     // ComplianceRecord
     @Override
     public ComplianceRecord createComplianceRecord(ComplianceRecord complianceRecord) {
-        return complianceRecordRepository.save(complianceRecord);
+        ComplianceRecord saved = complianceRecordRepository.save(complianceRecord);
+        auditClient.logAction(complianceRecord.getResponsiblePerson(), "CREATE_COMPLIANCE_RECORD", "Type: " + saved.getComplianceType());
+        return saved;
     }
 
     @Override
@@ -85,7 +98,9 @@ public class LegalServiceImpl implements LegalService {
             toUpdate.setComplianceDate(complianceRecord.getComplianceDate());
             toUpdate.setDescription(complianceRecord.getDescription());
             toUpdate.setResponsiblePerson(complianceRecord.getResponsiblePerson());
-            return complianceRecordRepository.save(toUpdate);
+            ComplianceRecord updated = complianceRecordRepository.save(toUpdate);
+            auditClient.logAction(complianceRecord.getResponsiblePerson(), "UPDATE_COMPLIANCE_RECORD", "Type: " + updated.getComplianceType());
+            return updated;
         }
         return null;
     }

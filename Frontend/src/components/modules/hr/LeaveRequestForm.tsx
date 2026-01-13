@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { leaveApiService } from '@/services/nodejsbackendapi/leaveApi';
 import { LeaveType } from '@/types/nodejsbackendapi/leaveTypes';
+import { useToast } from '@/components/ui/use-toast';
 
 interface LeaveRequestFormProps {
   userId: number;
@@ -12,6 +13,7 @@ interface LeaveRequestFormProps {
 }
 
 const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({ userId, isOpen, onClose, onSuccess }) => {
+  const { toast } = useToast();
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [leaveTypeId, setLeaveTypeId] = useState<number | null>(null);
   const [startDate, setStartDate] = useState<string>('');
@@ -116,10 +118,20 @@ const LeaveRequestForm: React.FC<LeaveRequestFormProps> = ({ userId, isOpen, onC
         });
         await leaveApiService.createLeaveRequest(formData);
       }
+      toast({
+        title: 'Success',
+        description: 'Leave request submitted successfully.',
+      });
       onSuccess();
       onClose();
     } catch (err) {
-      setError('Error submitting leave request.');
+      const errorMessage = err instanceof Error ? err.message : 'Error submitting leave request.';
+      setError(errorMessage);
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
       console.error(err);
     } finally {
       setIsSubmitting(false);

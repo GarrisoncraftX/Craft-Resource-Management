@@ -5,6 +5,7 @@ import com.craftresourcemanagement.finance.repositories.*;
 import com.craftresourcemanagement.finance.services.FinanceService;
 import com.craftresourcemanagement.finance.dto.BudgetResponse;
 import com.craftresourcemanagement.utils.OpenAIClient;
+import com.craftresourcemanagement.utils.AuditClient;
 import com.craftresourcemanagement.utils.OpenAIClientException;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +22,7 @@ import java.math.BigDecimal;
 public class FinanceServiceImpl implements FinanceService {
 
     private static final Logger logger = LoggerFactory.getLogger(FinanceServiceImpl.class);
+    private static final String SYSTEM_USER = "SYSTEM";
 
     private final ChartOfAccountRepository chartOfAccountRepository;
     private final BudgetRepository budgetRepository;
@@ -31,6 +33,7 @@ public class FinanceServiceImpl implements FinanceService {
     private final DepartmentClient departmentClient;
 
     private final OpenAIClient openAIClient;
+    private final AuditClient auditClient;
 
     @Value("${openai.api.key}")
     private String openAIKey;
@@ -42,7 +45,8 @@ public class FinanceServiceImpl implements FinanceService {
                              AccountReceivableRepository accountReceivableRepository,
                              BudgetRequestRepository budgetRequestRepository,
                              OpenAIClient openAIClient,
-                             DepartmentClient departmentClient) {
+                             DepartmentClient departmentClient,
+                             AuditClient auditClient) {
         this.chartOfAccountRepository = chartOfAccountRepository;
         this.budgetRepository = budgetRepository;
         this.journalEntryRepository = journalEntryRepository;
@@ -51,6 +55,7 @@ public class FinanceServiceImpl implements FinanceService {
         this.budgetRequestRepository = budgetRequestRepository;
         this.openAIClient = openAIClient;
         this.departmentClient = departmentClient;
+        this.auditClient = auditClient;
     }
 
     // Chart of Account
@@ -99,7 +104,9 @@ public class FinanceServiceImpl implements FinanceService {
     // Budget
     @Override
     public Budget createBudget(Budget budget) {
-        return budgetRepository.save(budget);
+        Budget saved = budgetRepository.save(budget);
+        auditClient.logAction(budget.getCreatedBy(), "CREATE_BUDGET", "Budget: " + saved.getBudgetName() + ", Amount: " + saved.getAmount());
+        return saved;
     }
 
     private BigDecimal calculateRemainingAmount(Budget budget) {
@@ -185,7 +192,9 @@ public class FinanceServiceImpl implements FinanceService {
             toUpdate.setApprovedAt(budget.getApprovedAt());
             toUpdate.setCreatedAt(budget.getCreatedAt());
             toUpdate.setUpdatedAt(budget.getUpdatedAt());
-            return budgetRepository.save(toUpdate);
+            Budget updated = budgetRepository.save(toUpdate);
+            auditClient.logAction(SYSTEM_USER, "UPDATE_BUDGET", "Budget: " + updated.getBudgetName());
+            return updated;
         }
         return null;
     }
@@ -199,7 +208,7 @@ public class FinanceServiceImpl implements FinanceService {
     @Override
     public JournalEntry createJournalEntry(JournalEntry journalEntry) {
         JournalEntry savedEntry = journalEntryRepository.save(journalEntry);
-        // After saving, call anomaly detection AI
+        auditClient.logAction(SYSTEM_USER, "CREATE_JOURNAL_ENTRY", "Account: " + savedEntry.getAccountCode() + ", Amount: " + savedEntry.getAmount());
         detectAnomaly(savedEntry);
         return savedEntry;
     }
@@ -224,7 +233,7 @@ public class FinanceServiceImpl implements FinanceService {
             toUpdate.setAmount(journalEntry.getAmount());
             toUpdate.setAccountCode(journalEntry.getAccountCode());
             JournalEntry updatedEntry = journalEntryRepository.save(toUpdate);
-            // After update, call anomaly detection AI
+            auditClient.logAction(SYSTEM_USER, "UPDATE_JOURNAL_ENTRY", "Account: " + updatedEntry.getAccountCode());
             detectAnomaly(updatedEntry);
             return updatedEntry;
         }

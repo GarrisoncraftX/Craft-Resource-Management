@@ -31,13 +31,13 @@ export class ApiClient {
     }
   }
 
-  private getHeaders(): HeadersInit {
+  private getHeaders(skipAuth = false): HeadersInit {
     const token = localStorage.getItem('craft_token');
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
     
-    if (token) {
+    if (token && !skipAuth) {
       headers.Authorization = `Bearer ${token}`;
     }
     
@@ -99,8 +99,8 @@ export class ApiClient {
     return this.handleResponse(response);
   }
 
-  async post(endpoint: string, data: any) {
-    const headers = this.getHeaders();
+  async post(endpoint: string, data: any, options?: { skipAuth?: boolean }) {
+    const headers = this.getHeaders(options?.skipAuth);
     const body = data instanceof FormData ? data : JSON.stringify(data);
     if (data instanceof FormData) {
       delete headers['Content-Type'];

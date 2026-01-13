@@ -3,6 +3,7 @@ package com.craftresourcemanagement.hr.services.impl;
 import com.craftresourcemanagement.hr.entities.User;
 import com.craftresourcemanagement.hr.repositories.UserRepository;
 import com.craftresourcemanagement.hr.services.EmployeeService;
+import com.craftresourcemanagement.utils.AuditClient;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -18,20 +19,23 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final EntityManager entityManager;
+    private final AuditClient auditClient;
 
-    public EmployeeServiceImpl(UserRepository userRepository, EntityManager entityManager) {
+    public EmployeeServiceImpl(UserRepository userRepository, EntityManager entityManager, AuditClient auditClient) {
         this.userRepository = userRepository;
         this.entityManager = entityManager;
+        this.auditClient = auditClient;
         this.passwordEncoder = new BCryptPasswordEncoder();
     }
 
     @Override
     public User registerEmployee(User user) {
         if (user.getId() == null) {
-            // Pillar 1: Use stored procedure for new employee provisioning
-            return provisionNewEmployee(user);
+            User newUser = provisionNewEmployee(user);
+            auditClient.logAction(newUser.getId(), "EMPLOYEE_PROVISIONED", 
+                "Employee: " + newUser.getEmployeeId() + ", Email: " + newUser.getEmail());
+            return newUser;
         } else {
-            // Update existing employee
             if (user.getPassword() != null && !user.getPassword().isEmpty()) {
                 user.setPassword(passwordEncoder.encode(user.getPassword()));
                 user.setDefaultPasswordChanged(true);
@@ -42,13 +46,15 @@ public class EmployeeServiceImpl implements EmployeeService {
                 }
             }
 
-            // Check if profile is completed for activation
             if (user.getAccountNumber() != null && !user.getAccountNumber().isEmpty() &&
                 user.getMomoNumber() != null && !user.getMomoNumber().isEmpty()) {
                 user.setProfileCompleted(true);
             }
 
-            return userRepository.save(user);
+            User updatedUser = userRepository.save(user);
+            auditClient.logAction(updatedUser.getId(), "Employee Updated Their Profile Info", 
+                "Employee: " + updatedUser.getEmployeeId());
+            return updatedUser;
         }
     }
 

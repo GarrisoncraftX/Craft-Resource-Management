@@ -79,9 +79,22 @@ const EmployeeDashboard: React.FC = () => {
   const [payrollError, setPayrollError] = useState(false);
 
 
-  const handleCheckIn = useCallback(() => {
-    navigate('/kiosk-interface', { state: { mode: 'SCANNER' } });
-  }, [navigate]);
+
+  const refreshRecentActivities = useCallback(async () => {
+    if (!user?.userId) return;
+    try {
+      const auditLogsResponse = await fetchRecentActivities(user.userId);
+      const activities = auditLogsResponse.map((log: JavaAuditLog) => ({
+        id: `audit-${log.id || 'unknown'}`,
+        message: log.action,
+        timestamp: log.timestamp,
+        color: 'bg-green-500'
+      }));
+      setRecentActivities(activities.slice(0, 5));
+    } catch (error) {
+      console.error('Failed to refresh recent activities:', error);
+    }
+  }, [user?.userId]);
 
   const refreshLeaveRequests = useCallback(async () => {
     if (!user?.userId) return;
@@ -114,8 +127,8 @@ const EmployeeDashboard: React.FC = () => {
       });
 
       if (response.success) {
-        // Refresh attendance data
         await refreshAttendance();
+        await refreshRecentActivities();
       } else {
         console.error('Checkout failed:', response.message);
       }
@@ -124,7 +137,7 @@ const EmployeeDashboard: React.FC = () => {
     } finally {
       setIsCheckingOut(null);
     }
-  }, [user?.userId, refreshAttendance]);
+  }, [user?.userId, refreshAttendance, refreshRecentActivities]);
 
   const getModuleRoute = useCallback((departmentCode: string, roleCode: string) => {
     const departmentRoutes: Record<string, string> = {
@@ -233,7 +246,7 @@ const EmployeeDashboard: React.FC = () => {
           timestamp: log.timestamp,
           color: 'bg-green-500'
         }));
-        setRecentActivities(activities.slice(0, 4));
+        setRecentActivities(activities.slice(0, 5));
 
       } catch (error) {
         console.error('Failed to fetch dashboard data, using mock data fallback.', error);
@@ -404,14 +417,6 @@ const EmployeeDashboard: React.FC = () => {
                 </Card>
                 <Card>
                   <CardContent className="p-0">
-                    <div className="flex justify-end p-4 bg-gray-50">
-                      <div className="space-x-2">
-                        <Button onClick={handleCheckIn} className="bg-green-600 hover:bg-green-700">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Check In
-                        </Button>
-                      </div>
-                    </div>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -634,9 +639,14 @@ const EmployeeDashboard: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center text-green-600">
-                <Clock className="h-5 w-5 mr-2" />
-                Recent Activities
+              <CardTitle className="flex items-center justify-between text-green-600">
+                <div className="flex items-center">
+                  <Clock className="h-5 w-5 mr-2" />
+                  Recent Activities
+                </div>
+                <Button onClick={refreshRecentActivities} variant="ghost" size="sm">
+                  Refresh
+                </Button>
               </CardTitle>
               <CardDescription>
                 Your latest system activities
@@ -667,12 +677,16 @@ const EmployeeDashboard: React.FC = () => {
         onSuccess={() => {
           setIsLeaveRequestFormOpen(false);
           refreshLeaveRequests();
+          refreshRecentActivities();
         }}
       />
       <ITSupportForm
         isOpen={isITSupportFormOpen}
         onClose={() => setIsITSupportFormOpen(false)}
-        onSuccess={() => setIsITSupportFormOpen(false)}
+        onSuccess={() => {
+          setIsITSupportFormOpen(false);
+          refreshRecentActivities();
+        }}
       />
     </ModuleLayout>
   );

@@ -2,6 +2,7 @@ const nodemailer = require('nodemailer');
 const winston = require('winston');
 const twilio = require('twilio');
 const communicationModel = require('./model');
+const auditService = require('../audit/service');
 
 class CommunicationService {
     constructor() {
@@ -59,6 +60,9 @@ class CommunicationService {
                 subject: subject,
                 messageId: info.messageId
             });
+
+            // Log email sending to audit
+            await auditService.logAction(null, 'SEND_EMAIL', { to, subject });
 
             return {
                 success: true,
@@ -136,6 +140,9 @@ class CommunicationService {
                 messageId: smsResponse.sid,
                 status: smsResponse.status
             });
+
+            // Log SMS sending to audit
+            await auditService.logAction(null, 'SEND_SMS', { to });
 
             return {
                 success: true,

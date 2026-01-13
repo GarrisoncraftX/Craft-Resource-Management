@@ -7,8 +7,8 @@ const LeaveService = require("./service")
 const leaveService = new LeaveService()
 const leaveController = new LeaveController(leaveService)
 
-// Configure multer for file uploads
-const upload = multer({ dest: 'uploads/' })
+// Configure multer for file uploads (memory storage for direct Cloudinary upload)
+const upload = multer({ storage: multer.memoryStorage() })
 
 router.get("/types", leaveController.getLeaveTypes.bind(leaveController))
 router.post("/types", leaveController.createLeaveType.bind(leaveController))

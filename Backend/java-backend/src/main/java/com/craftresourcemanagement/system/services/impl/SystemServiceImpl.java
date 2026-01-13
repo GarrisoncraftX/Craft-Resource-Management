@@ -3,9 +3,15 @@ package com.craftresourcemanagement.system.services.impl;
 import com.craftresourcemanagement.system.entities.*;
 import com.craftresourcemanagement.system.repositories.*;
 import com.craftresourcemanagement.system.services.SystemService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -69,9 +75,12 @@ public class SystemServiceImpl implements SystemService {
         systemConfigRepository.deleteById(id);
     }
 
-    // AuditLog
+    // AuditLog - Enhanced Implementation
     @Override
     public AuditLog createAuditLog(AuditLog auditLog) {
+        if (auditLog.getTimestamp() == null) {
+            auditLog.setTimestamp(LocalDateTime.now());
+        }
         return auditLogRepository.save(auditLog);
     }
 
@@ -81,13 +90,106 @@ public class SystemServiceImpl implements SystemService {
     }
 
     @Override
+    public Page<AuditLog> getAllAuditLogsPaginated(Pageable pageable) {
+        return auditLogRepository.findAll(pageable);
+    }
+
+    @Override
     public AuditLog getAuditLogById(Long id) {
         return auditLogRepository.findById(id).orElse(null);
     }
 
     @Override
     public List<AuditLog> getRecentAuditLogsForUser(String performedBy) {
-        return auditLogRepository.findTop4ByPerformedByOrderByTimestampDesc(performedBy);
+        return auditLogRepository.findTop5ByPerformedByOrderByTimestampDesc(performedBy);
+    }
+
+    @Override
+    public Page<AuditLog> getAuditLogsForUser(String performedBy, LocalDateTime startDate, 
+                                              LocalDateTime endDate, Pageable pageable) {
+        if (startDate != null && endDate != null) {
+            return auditLogRepository.findByPerformedByAndTimestampBetweenOrderByTimestampDesc(
+                performedBy, startDate, endDate, pageable);
+        }
+        return auditLogRepository.findByPerformedByOrderByTimestampDesc(performedBy, pageable);
+    }
+
+    @Override
+    public Page<AuditLog> getAuditLogsForEntity(String entityType, String entityId, Pageable pageable) {
+        return auditLogRepository.findByEntityTypeAndEntityIdOrderByTimestampDesc(
+            entityType, entityId, pageable);
+    }
+
+    @Override
+    public Page<AuditLog> searchAuditLogs(String performedBy, String action, String serviceName,
+                                          String entityType, LocalDateTime startDate, 
+                                          LocalDateTime endDate, Pageable pageable) {
+        return auditLogRepository.searchAuditLogs(
+            performedBy, action, serviceName, entityType, startDate, endDate, pageable);
+    }
+
+    @Override
+    public List<Map<String, Object>> getTopActions(int days) {
+        LocalDateTime since = LocalDateTime.now().minusDays(days);
+        List<Object[]> results = auditLogRepository.getTopActionsSince(since);
+        List<Map<String, Object>> topActions = new ArrayList<>();
+        
+        for (Object[] result : results) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("action", result[0]);
+            map.put("count", result[1]);
+            topActions.add(map);
+        }
+        
+        return topActions;
+    }
+
+    @Override
+    public List<Map<String, Object>> getTopUsers(int days) {
+        LocalDateTime since = LocalDateTime.now().minusDays(days);
+        List<Object[]> results = auditLogRepository.getTopUsersSince(since);
+        List<Map<String, Object>> topUsers = new ArrayList<>();
+        
+        for (Object[] result : results) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("user", result[0]);
+            map.put("count", result[1]);
+            topUsers.add(map);
+        }
+        
+        return topUsers;
+    }
+
+    @Override
+    public Map<String, Object> getAuditStatistics(String performedBy, String action,
+                                                   LocalDateTime startDate, LocalDateTime endDate) {
+        Map<String, Object> stats = new HashMap<>();
+        
+        if (startDate == null) {
+            startDate = LocalDateTime.now().minusDays(30);
+        }
+        if (endDate == null) {
+            endDate = LocalDateTime.now();
+        }
+        
+        long totalCount;
+        if (performedBy != null) {
+            totalCount = auditLogRepository.countByPerformedByAndTimestampBetween(
+                performedBy, startDate, endDate);
+            stats.put("user", performedBy);
+        } else if (action != null) {
+            totalCount = auditLogRepository.countByActionAndTimestampBetween(
+                action, startDate, endDate);
+            stats.put("action", action);
+        } else {
+            totalCount = auditLogRepository.count();
+        }
+        
+        stats.put("totalCount", totalCount);
+        stats.put("startDate", startDate);
+        stats.put("endDate", endDate);
+        
+        return stats;
     }
 
     @Override

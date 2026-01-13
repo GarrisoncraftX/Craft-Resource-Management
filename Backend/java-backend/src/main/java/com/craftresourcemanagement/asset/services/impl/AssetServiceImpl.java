@@ -7,6 +7,7 @@ import com.craftresourcemanagement.asset.repositories.AssetRepository;
 import com.craftresourcemanagement.asset.repositories.MaintenanceRecordRepository;
 import com.craftresourcemanagement.asset.repositories.DisposalRecordRepository;
 import com.craftresourcemanagement.asset.services.AssetService;
+import com.craftresourcemanagement.utils.AuditClient;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,19 +19,24 @@ public class AssetServiceImpl implements AssetService {
     private final AssetRepository assetRepository;
     private final MaintenanceRecordRepository maintenanceRecordRepository;
     private final DisposalRecordRepository disposalRecordRepository;
+    private final AuditClient auditClient;
 
     public AssetServiceImpl(AssetRepository assetRepository,
                             MaintenanceRecordRepository maintenanceRecordRepository,
-                            DisposalRecordRepository disposalRecordRepository) {
+                            DisposalRecordRepository disposalRecordRepository,
+                            AuditClient auditClient) {
         this.assetRepository = assetRepository;
         this.maintenanceRecordRepository = maintenanceRecordRepository;
         this.disposalRecordRepository = disposalRecordRepository;
+        this.auditClient = auditClient;
     }
 
     // Asset
     @Override
     public Asset createAsset(Asset asset) {
-        return assetRepository.save(asset);
+        Asset saved = assetRepository.save(asset);
+        auditClient.logAction("SYSTEM", "CREATE_ASSET", "Asset: " + saved.getAssetTag());
+        return saved;
     }
 
     @Override
@@ -56,20 +62,27 @@ public class AssetServiceImpl implements AssetService {
             toUpdate.setCurrentValue(asset.getCurrentValue());
             toUpdate.setLocation(asset.getLocation());
             toUpdate.setStatus(asset.getStatus());
-            return assetRepository.save(toUpdate);
+            Asset updated = assetRepository.save(toUpdate);
+            auditClient.logAction("SYSTEM", "UPDATE_ASSET", "Asset: " + updated.getAssetTag());
+            return updated;
         }
         return null;
     }
 
     @Override
     public void deleteAsset(Long id) {
+        assetRepository.findById(id).ifPresent(asset -> 
+            auditClient.logAction("SYSTEM", "DELETE_ASSET", "Asset: " + asset.getAssetTag())
+        );
         assetRepository.deleteById(id);
     }
 
     // MaintenanceRecord
     @Override
     public MaintenanceRecord createMaintenanceRecord(MaintenanceRecord record) {
-        return maintenanceRecordRepository.save(record);
+        MaintenanceRecord saved = maintenanceRecordRepository.save(record);
+        auditClient.logAction(record.getPerformedBy(), "CREATE_MAINTENANCE_RECORD", "Asset ID: " + saved.getAsset().getId());
+        return saved;
     }
 
     @Override
@@ -104,7 +117,9 @@ public class AssetServiceImpl implements AssetService {
     // DisposalRecord
     @Override
     public DisposalRecord createDisposalRecord(DisposalRecord record) {
-        return disposalRecordRepository.save(record);
+        DisposalRecord saved = disposalRecordRepository.save(record);
+        auditClient.logAction(record.getDisposedBy(), "CREATE_DISPOSAL_RECORD", "Asset ID: " + saved.getAsset().getId() + ", Reason: " + saved.getReason());
+        return saved;
     }
 
     @Override
