@@ -98,7 +98,7 @@ export const MediaRelations: React.FC = () => {
                 </Card>
               </div>
 
-              <Card className="bg-blue-500 text-muted-foreground">
+              <Card className="bg-blue-500 text-white">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Contacts</CardTitle>
                 </CardHeader>
@@ -107,7 +107,7 @@ export const MediaRelations: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-green-500 text-muted-foreground">
+              <Card className="bg-green-500 text-white">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Active Contacts</CardTitle>
                 </CardHeader>
@@ -116,7 +116,7 @@ export const MediaRelations: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-purple-500 text-muted-foreground">
+              <Card className="bg-purple-500 text-white">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Media Types</CardTitle>
                 </CardHeader>

@@ -88,7 +88,7 @@ export const Security: React.FC = () => {
 
         {/* Security Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="bg-red-500 text-muted-foreground">
+          <Card className="bg-red-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Threats</CardTitle>
               <AlertTriangle className="h-4 w-4" />
@@ -99,7 +99,7 @@ export const Security: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-green-500 text-muted-foreground">
+          <Card className="bg-green-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Blocked Attacks</CardTitle>
               <Shield className="h-4 w-4" />
@@ -110,7 +110,7 @@ export const Security: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-blue-500 text-muted-foreground">
+          <Card className="bg-blue-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
               <Users className="h-4 w-4" />
@@ -121,7 +121,7 @@ export const Security: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-orange-500 text-muted-foreground">
+          <Card className="bg-orange-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Security Score</CardTitle>
               <Activity className="h-4 w-4" />

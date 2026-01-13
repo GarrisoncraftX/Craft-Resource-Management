@@ -175,7 +175,7 @@ export const RevenueTracking: React.FC = () => {
 
         {/* Key Performance Indicators */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="bg-blue-500 text-muted-foreground">
+          <Card className="bg-blue-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Revenue YTD</CardTitle>
               <DollarSign className="h-4 w-4" />
@@ -188,7 +188,7 @@ export const RevenueTracking: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-green-500 text-muted-foreground">
+          <Card className="bg-green-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Budget Performance</CardTitle>
               <Target className="h-4 w-4" />
@@ -201,7 +201,7 @@ export const RevenueTracking: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-purple-500 text-muted-foreground">
+          <Card className="bg-purple-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Growth Rate</CardTitle>
               <TrendingUp className="h-4 w-4" />
@@ -212,7 +212,7 @@ export const RevenueTracking: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-orange-500 text-muted-foreground">
+          <Card className="bg-orange-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Forecast Accuracy</CardTitle>
               <BarChart3 className="h-4 w-4" />

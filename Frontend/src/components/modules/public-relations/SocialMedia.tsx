@@ -101,7 +101,7 @@ export const SocialMedia: React.FC = () => {
             {/* Platform Overview */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               {platformData.map((platform) => (
-                <Card key={platform.name} className="text-muted-foreground" style={{ backgroundColor: platform.color }}>
+                <Card key={platform.name} className="text-white" style={{ backgroundColor: platform.color }}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">{platform.name}</CardTitle>
                   </CardHeader>

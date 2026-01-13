@@ -9,9 +9,9 @@ export const VisitorKiosk: React.FC = () => {
       <div className="max-w-4xl w-full">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <Building2 className="h-16 w-16 text-muted-foreground" />
+            <Building2 className="h-16 w-16 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-muted-foreground mb-2">
+          <h1 className="text-4xl font-bold text-white mb-2">
             Welcome to Our Facility
           </h1>
           <p className="text-xl text-blue-100">
@@ -33,24 +33,24 @@ export const VisitorKiosk: React.FC = () => {
             <QRCodeDisplay type="visitor" refreshInterval={300000} />
             
             <div className="mt-8 p-6 bg-blue-50 rounded-lg">
-              <h3 className="font-semibold text-muted-foreground mb-3 text-center">
+              <h3 className="font-semibold text-blue-900 mb-3 text-center">
                 Check-In Steps:
               </h3>
               <ol className="space-y-2 text-sm text-blue-800">
                 <li className="flex items-start">
-                  <span className="font-bold mr-2 bg-blue-600 text-muted-foreground rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">1</span>
+                  <span className="font-bold mr-2 bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">1</span>
                   <span>Open your phone's camera or QR code scanner</span>
                 </li>
                 <li className="flex items-start">
-                  <span className="font-bold mr-2 bg-blue-600 text-muted-foreground rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">2</span>
+                  <span className="font-bold mr-2 bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">2</span>
                   <span>Point at the QR code displayed above</span>
                 </li>
                 <li className="flex items-start">
-                  <span className="font-bold mr-2 bg-blue-600 text-muted-foreground rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">3</span>
+                  <span className="font-bold mr-2 bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">3</span>
                   <span>Fill out the check-in form on your phone</span>
                 </li>
                 <li className="flex items-start">
-                  <span className="font-bold mr-2 bg-blue-600 text-muted-foreground rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">4</span>
+                  <span className="font-bold mr-2 bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">4</span>
                   <span>Wait for confirmation - your host will be notified</span>
                 </li>
               </ol>

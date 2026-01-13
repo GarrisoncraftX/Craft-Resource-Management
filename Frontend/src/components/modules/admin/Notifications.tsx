@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search } from 'lucide-react';
+import { Search, Send, Mail, Users, MessageSquare} from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { NotificationFormDialog } from './NotificationFormDialog';
 import { adminApiService } from '@/services/javabackendapi/adminApi';
@@ -81,7 +80,7 @@ export const Notifications: React.FC = () => {
 
         {/* Notification Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="bg-blue-500 text-muted-foreground">
+          <Card className="bg-blue-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
               <Send className="h-4 w-4" />
@@ -92,7 +91,7 @@ export const Notifications: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-green-500 text-muted-foreground">
+          <Card className="bg-green-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
               <Mail className="h-4 w-4" />
@@ -103,7 +102,7 @@ export const Notifications: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-orange-500 text-muted-foreground">
+          <Card className="bg-orange-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Recipients</CardTitle>
               <Users className="h-4 w-4" />
@@ -114,7 +113,7 @@ export const Notifications: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-purple-500 text-muted-foreground">
+          <Card className="bg-purple-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending</CardTitle>
               <MessageSquare className="h-4 w-4" />

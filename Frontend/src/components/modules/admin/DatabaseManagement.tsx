@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Database, RefreshCw, Download, Trash2, Archive, HardDrive } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import {  Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { systemApiService } from '@/services/javabackendapi/systemApiService';
 import type { DatabaseTable, BackupRecord } from '@/services/mockData/system';
 
@@ -75,7 +75,7 @@ const storageUsage = [
 
         {/* Database Status Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="bg-blue-500 text-muted-foreground">
+          <Card className="bg-blue-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Connection Status</CardTitle>
               <Database className="h-4 w-4" />
@@ -86,7 +86,7 @@ const storageUsage = [
             </CardContent>
           </Card>
 
-          <Card className="bg-green-500 text-muted-foreground">
+          <Card className="bg-green-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Database Health</CardTitle>
               <HardDrive className="h-4 w-4" />
@@ -97,7 +97,7 @@ const storageUsage = [
             </CardContent>
           </Card>
 
-          <Card className="bg-orange-500 text-muted-foreground">
+          <Card className="bg-orange-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Records</CardTitle>
               <Archive className="h-4 w-4" />
@@ -108,7 +108,7 @@ const storageUsage = [
             </CardContent>
           </Card>
 
-          <Card className="bg-purple-500 text-muted-foreground">
+          <Card className="bg-purple-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Storage Used</CardTitle>
               <HardDrive className="h-4 w-4" />

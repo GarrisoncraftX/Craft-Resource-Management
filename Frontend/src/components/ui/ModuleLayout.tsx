@@ -8,12 +8,12 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
-import { UnifySidebar } from './UnifySidebar';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate} from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import bgImage from '../../../assets/bgimage.jpg';
 import logo from '../../../assets/logo.png';
+import { UnifySidebar } from './UnifySidebar';
 
 interface ModuleLayoutProps {
   title?: string;
@@ -71,7 +71,7 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
       }}
     >
       {/* Blurred overlay */}
-      <div className="fixed inset-0 backdrop-blur-md bg-background/5 z-0" />
+      <div className="fixed inset-0 backdrop-blur-md bg-background/10 z-0" />
       
       {/* Fixed Navbar */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-card/95 backdrop-blur-sm border-b border-border z-50 shadow-sm">
@@ -83,17 +83,18 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
               <img 
                 src={logo} 
                 alt="CRMS Logo" 
-                className="h-12 w-12 object-contain rounded-full"
+                className="h-10 w-10 object-contain rounded-full"
               />
               <div className="hidden sm:block">
                 <h1 className="text-lg font-bold text-foreground leading-tight">
                   Craft Resource Management System
                 </h1>
               </div>
+              <div className="sm:hidden">
+                <h1 className="text-lg font-bold text-foreground">CRMS</h1>
+              </div>
             </div>
-            </div>
-
-
+          </div>
 
           {/* Right Section - Actions */}
           <div className="flex items-center gap-3">
@@ -113,6 +114,17 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-2">
+              {user?.roleCode === 'SUPER_ADMIN' && title !== 'Admin Dashboard' && !isEmployeeDashboard && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleBackToAdmin}
+                  className="text-muted-foreground hover:text-foreground rounded-full"
+                >
+                  <Home className="h-4 w-4 mr-2" />
+                  Admin
+                </Button>
+              )}
 
               <Button
                 variant="ghost"

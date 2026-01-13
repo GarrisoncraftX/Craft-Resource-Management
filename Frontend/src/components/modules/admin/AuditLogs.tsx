@@ -99,7 +99,7 @@ export const AuditLogs: React.FC = () => {
 
         {/* Audit Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="bg-blue-500 text-muted-foreground">
+          <Card className="bg-blue-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Events</CardTitle>
               <FileText className="h-4 w-4" />
@@ -110,7 +110,7 @@ export const AuditLogs: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-green-500 text-muted-foreground">
+          <Card className="bg-green-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Security Events</CardTitle>
               <Eye className="h-4 w-4" />
@@ -121,7 +121,7 @@ export const AuditLogs: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-yellow-500 text-muted-foreground">
+          <Card className="bg-yellow-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Warning Events</CardTitle>
               <Search className="h-4 w-4" />
@@ -132,7 +132,7 @@ export const AuditLogs: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-red-500 text-muted-foreground">
+          <Card className="bg-red-500 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Critical Events</CardTitle>
               <Calendar className="h-4 w-4" />
