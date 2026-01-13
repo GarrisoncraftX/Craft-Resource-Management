@@ -42,60 +42,60 @@ export const ClockInSuccessModal: React.FC<ClockInSuccessModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <div className="flex items-center justify-center mb-4">
-            <CheckCircle className="h-16 w-16 text-green-600" />
+          <div className="flex items-center justify-center mb-2 sm:mb-4">
+            <CheckCircle className="h-12 w-12 sm:h-16 sm:w-16 text-green-600" />
           </div>
-          <DialogTitle className="text-center text-2xl font-bold text-green-700">
+          <DialogTitle className="text-center text-xl sm:text-2xl font-bold text-green-700">
             Clock In Successful!
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-3 sm:space-y-4">
           {/* Employee Profile Section */}
-          <div className="flex items-center space-x-4 p-4 bg-blue-50 rounded-lg">
-            <Avatar className="h-16 w-16 ring-4 ring-blue-200">
+          <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
+            <Avatar className="h-12 w-12 sm:h-16 sm:w-16 ring-2 sm:ring-4 ring-blue-200 flex-shrink-0">
               {employeeData.profilePictureUrl ? (
                 <AvatarImage src={employeeData.profilePictureUrl} alt={`${employeeData.firstName} ${employeeData.lastName}`} />
               ) : (
-                <AvatarFallback className="text-xl font-bold bg-blue-500 text-white">
+                <AvatarFallback className="text-lg sm:text-xl font-bold bg-blue-500 text-white">
                   {employeeData.firstName?.charAt(0)}{employeeData.lastName?.charAt(0)}
                 </AvatarFallback>
               )}
             </Avatar>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-blue-900">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base sm:text-lg font-semibold text-blue-900 truncate">
                 {employeeData.firstName} {employeeData.lastName}
               </h3>
-              <p className="text-sm text-blue-700">{employeeData.role}</p>
-              <p className="text-sm text-blue-600">{employeeData.department}</p>
+              <p className="text-xs sm:text-sm text-blue-700 truncate">{employeeData.role}</p>
+              <p className="text-xs sm:text-sm text-blue-600 truncate">{employeeData.department}</p>
             </div>
           </div>
 
           {/* Clock In Details */}
-          <div className="space-y-3">
-            <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
-              <Clock className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-green-800">Clock In Time</p>
-                <p className="text-sm text-green-700">{formatTime(clockInTime)}</p>
+          <div className="space-y-2">
+            <div className="flex items-start space-x-2 sm:space-x-3 p-2 sm:p-3 bg-green-50 rounded-lg">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-green-800">Clock In Time</p>
+                <p className="text-xs sm:text-sm text-green-700 break-words">{formatTime(clockInTime)}</p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
-              <User className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm font-medium text-blue-800">Employee ID</p>
-                <p className="text-sm text-blue-700">{employeeData.employeeId}</p>
+            <div className="flex items-start space-x-2 sm:space-x-3 p-2 sm:p-3 bg-blue-50 rounded-lg">
+              <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-blue-800">Employee ID</p>
+                <p className="text-xs sm:text-sm text-blue-700 break-words">{employeeData.employeeId}</p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-3 p-3 bg-purple-50 rounded-lg">
-              <MapPin className="h-5 w-5 text-purple-600" />
-              <div>
-                <p className="text-sm font-medium text-purple-800">Clock In Method</p>
-                <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+            <div className="flex items-start space-x-2 sm:space-x-3 p-2 sm:p-3 bg-purple-50 rounded-lg">
+              <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-purple-800">Clock In Method</p>
+                <Badge variant="secondary" className="bg-purple-100 text-purple-800 text-xs mt-1">
                   {clockInMethod}
                 </Badge>
               </div>
@@ -103,21 +103,19 @@ export const ClockInSuccessModal: React.FC<ClockInSuccessModalProps> = ({
           </div>
 
           {/* Success Message */}
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <p className="text-green-800 font-medium">
+          <div className="text-center p-3 bg-green-50 rounded-lg">
+            <p className="text-sm sm:text-base text-green-800 font-medium">
               Welcome to work! You have successfully clocked in.
             </p>
-            <p className="text-sm text-green-700 mt-1">
+            <p className="text-xs sm:text-sm text-green-700 mt-1">
               Don't forget to clock out at the end of your shift.
             </p>
           </div>
 
           {/* Close Button */}
-          <div className="flex justify-center">
-            <Button onClick={onClose} className="w-full bg-green-600 hover:bg-green-700">
-              Continue to Dashboard
-            </Button>
-          </div>
+          <Button onClick={onClose} className="w-full bg-green-600 hover:bg-green-700 text-sm sm:text-base">
+            Continue to Dashboard
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

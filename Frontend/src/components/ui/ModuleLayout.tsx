@@ -11,8 +11,8 @@ import {
 import { useNavigate} from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import bgImage from '../../../assets/bgimage.jpg';
-import logo from '../../../assets/logo.png';
+import bgImage from '@/assets/bgimage.jpg';
+import logo from '@/assets/logo.png';
 import { UnifySidebar } from './UnifySidebar';
 
 interface ModuleLayoutProps {

@@ -6,13 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 import { PasswordResetDialog } from './modules/admin/PasswordResetDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { authApiService } from '@/services/api';
 import { Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { ClockInSuccessModal } from './ClockInSuccessModal';
-import bgImage from '../../assets/bgimage.jpg';
-import logo from '../../assets/logo.png';
+import bgImage from '@/assets/bgimage.jpg';
+import logo from '@/assets/logo.png';
 
 
 const AuthForm: React.FC = () => {
@@ -166,39 +167,61 @@ const AuthForm: React.FC = () => {
         <div className="flex flex-col lg:flex-row gap-0 items-stretch">
           {/* Left side - Welcome section */}
           <Card className="flex-1 rounded-t-2xl lg:rounded-l-2xl lg:rounded-tr-none border-0 shadow-2xl bg-primary/95 backdrop-blur-md">
-            <CardContent className="flex flex-col items-center justify-center p-8 lg:p-12 h-full">
-              <div className="text-center space-y-6">
-                <div className="space-y-3">
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-primary-foreground">
-                    Welcome Back
+            <CardContent className="flex flex-col p-8 lg:p-12 h-full">
+              {/* Logo + Heading - Upper Left */}
+              <div className="flex items-start gap-4">
+                <img src={logo} alt="CRMS Logo" className="h-16 w-16 object-contain rounded-full" />
+                <div>
+                  <h1 className="text-2xl mt-4 md:text-3xl font-bold text-primary-foreground">
+                    Welcome to CRMS
                   </h1>
-                  <p className="text-primary-foreground/90 text-base md:text-lg max-w-md mx-auto leading-relaxed">
-                    Craft Resource Management System
-                  </p>
-                  <p className="text-primary-foreground/70 text-sm max-w-sm mx-auto">
-                    Your comprehensive solution for efficient government resource management
-                  </p>
                 </div>
-                <div className="pt-6 space-y-4">
-                  <div className="flex flex-col gap-4 text-sm text-primary-foreground/80">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-background/10 p-2 rounded-full">
-                        <CheckCircle className="h-5 w-5 text-primary-foreground" />
-                      </div>
-                      <span className="text-left">Secure & Reliable Access</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="bg-background/10 p-2 rounded-full">
-                        <CheckCircle className="h-5 w-5 text-primary-foreground" />
-                      </div>
-                      <span className="text-left">Integrated Resource Management</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="bg-background/10 p-2 rounded-full">
-                        <CheckCircle className="h-5 w-5 text-primary-foreground" />
-                      </div>
-                      <span className="text-left">Real-time Monitoring & Analytics</span>
-                    </div>
+              </div>
+
+              {/* Paragraph */}
+              <p className="text-primary-foreground/70 text-sm leading-relaxed mb-8">
+                Your comprehensive solution for efficient resource management. 
+              </p>
+
+              {/* Feature Card */}
+              <div className="bg-background/10 backdrop-blur-sm rounded-xl p-6 mb-6">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="bg-primary-foreground/20 p-2 rounded-lg">
+                    <CheckCircle className="h-6 w-6 text-primary-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="text-primary-foreground font-semibold text-lg mb-2">All-in-One Platform</h3>
+                    <p className="text-primary-foreground/70 text-sm leading-relaxed">
+                      Manage attendance, procurement, inventory, HR, and more from a single unified dashboard designed for efficiency.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Separator */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator className="bg-primary-foreground/20" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-primary/95 px-3 text-primary-foreground/60">KEY FEATURES</span>
+                </div>
+              </div>
+
+              {/* Bottom Card with Features */}
+              <div className="bg-background/10 backdrop-blur-sm rounded-xl p-6">
+                <div className="grid gap-3">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="h-5 w-5 text-primary-foreground flex-shrink-0" />
+                    <span className="text-primary-foreground/80 text-sm">Secure & Reliable Access Control</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="h-5 w-5 text-primary-foreground flex-shrink-0" />
+                    <span className="text-primary-foreground/80 text-sm">Real-time Monitoring & Analytics</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="h-5 w-5 text-primary-foreground flex-shrink-0" />
+                    <span className="text-primary-foreground/80 text-sm">Integrated Resource Management</span>
                   </div>
                 </div>
               </div>
@@ -212,11 +235,11 @@ const AuthForm: React.FC = () => {
                     <img 
                       src={logo} 
                       alt="Craft Logo" 
-                      className="h-40 w-40 md:h-24 md:w-24 object-contain drop-shadow-2xl rounded-full"
+                      className="h-24 w-24 md:h-20 md:w-20 lg:h-16 lg:w-16 object-contain drop-shadow-2xl rounded-full"
                     />
                 </div>
               <CardTitle className="text-xl md:text-2xl font-bold text-foreground">
-                Sign In
+                Sign In Your Account
               </CardTitle>
               <CardDescription className="text-muted-foreground">
                 Enter your credentials to access the system
