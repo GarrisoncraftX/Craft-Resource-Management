@@ -11,8 +11,12 @@ import {
 } from '@/services/api';
 
 interface ManualAttendance {
-  id: number;
-  user: { employee_id: string; first_name: string; last_name: string };
+  id: number | string;
+  user_id?: string;
+  employee_id?: string;
+  first_name?: string;
+  last_name?: string;
+  user?: { employee_id: string; first_name: string; last_name: string };
   clock_in_time: string;
   clock_out_time?: string;
   audit_notes?: string;
@@ -142,9 +146,9 @@ export function AttendanceMonitoring() {
                     <tr key={attendance.id} className="border-b hover:bg-gray-50">
                       <td className="px-4 py-2">
                         <div className="font-medium">
-                          {attendance.user.first_name} {attendance.user.last_name}
+                          {attendance.user?.first_name || attendance.first_name} {attendance.user?.last_name || attendance.last_name}
                         </div>
-                        <div className="text-xs text-gray-500">{attendance.user.employee_id}</div>
+                        <div className="text-xs text-gray-500">{attendance.user?.employee_id || attendance.employee_id}</div>
                       </td>
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-1">
@@ -164,7 +168,7 @@ export function AttendanceMonitoring() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleFlagBuddyPunch(attendance.id)}
+                          onClick={() => handleFlagBuddyPunch(typeof attendance.id === 'number' ? attendance.id : parseInt(String(attendance.id)))}
                           disabled={flaggingId === attendance.id}
                           className="text-red-600 hover:text-red-700"
                         >

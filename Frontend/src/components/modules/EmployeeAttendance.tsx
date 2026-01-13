@@ -9,7 +9,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, UserCheck, LogOut, Search, RefreshCw, QrCode, Clock, Users, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { attendanceApiService } from '@/services/pythonbackendapi/attendanceApi';
-import type { AttendanceRecord, AttendanceStats, AttendanceSearchParams } from '@/types/attendance';
+import type { AttendanceRecord as PythonAttendanceRecord } from '@/types/pythonbackendapi/attendanceTypes';
+import type { AttendanceStats, AttendanceSearchParams } from '@/types/attendance';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,8 +21,8 @@ interface EmployeeAttendanceProps {
 export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleType }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
-  const [checkedInEmployees, setCheckedInEmployees] = useState<AttendanceRecord[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<PythonAttendanceRecord[]>([]);
+  const [checkedInEmployees, setCheckedInEmployees] = useState<PythonAttendanceRecord[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [stats, setStats] = useState<AttendanceStats>({
     onTime: 0,

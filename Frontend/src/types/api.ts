@@ -228,9 +228,11 @@ export interface PayrollRun {
 export type PayrollStatus = 'Processed' | 'Pending' | 'Draft';
 
 export interface AuditLog {
-  id: number;
+  id?: number | string;
   action: string;
-  performedBy: string;
+  performedBy?: string;
   timestamp: string;
   details?: string;
+  user?: string;
+  resource?: string;
 }

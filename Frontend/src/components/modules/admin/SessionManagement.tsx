@@ -83,12 +83,12 @@ export function SessionManagement() {
               {sessions.map((session) => (
                 <div key={session.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    {getDeviceIcon(session.device)}
+                    {getDeviceIcon(session.userAgent || 'desktop')}
                     <div>
-                      <p className="font-medium">{session.device}</p>
+                      <p className="font-medium">{session.userAgent || 'Unknown Device'}</p>
                       <p className="text-sm text-gray-500">{session.ipAddress}</p>
                       <p className="text-xs text-gray-400">
-                        Last active: {new Date(session.lastActive).toLocaleString()}
+                        Last active: {new Date(session.lastActivity).toLocaleString()}
                       </p>
                     </div>
                   </div>

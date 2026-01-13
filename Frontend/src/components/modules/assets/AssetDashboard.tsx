@@ -24,8 +24,8 @@ export const AssetDashboard: React.FC = () => {
     const fetchData = async () => {
       try {
         const [assets, maintenance, stats, categories, trends, costs] = await Promise.all([
-          assetApiService.getAssets(),
-          assetApiService.getMaintenanceRecords(),
+          assetApiService.getAllAssets(),
+          assetApiService.getAllMaintenanceRecords(),
           assetApiService.getAssetStats(),
           assetApiService.getAssetsByCategory(),
           assetApiService.getAssetTrends(),

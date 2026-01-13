@@ -8,8 +8,9 @@ import { Plus } from 'lucide-react';
 import { fetchAcquisitionRequests, submitAcquisitionRequest } from '@/services/api';
 import { mockAcquisitionRequests } from '@/services/mockData/assets';
 
+
 export const AssetAcquisition: React.FC = () => {
-  const [requests, setRequests] = useState(mockAcquisitionRequests);
+  const [requests, setRequests] = useState<any[]>(mockAcquisitionRequests);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
