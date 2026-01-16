@@ -46,18 +46,21 @@ export class ApiClient {
 
   private async handleResponse(response: Response) {
     if (!response.ok) {
-      let errorMessage = `HTTP error! status: ${response.status}`;
+      let errorMessage = 'An error occurred. Please try again.';
       
       try {
         const errorData = await response.json();
-        errorMessage = errorData.message ?? errorData.error ?? errorMessage;
-      } catch {
+        console.log('Error response data:', errorData);
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch (parseError) {
+        console.error('Failed to parse error response:', parseError);
         errorMessage = response.statusText || errorMessage;
       }
-      if (response.status === 401) {
+      
+      if (response.status === 401 && !globalThis.location.pathname.includes('/signin')) {
         localStorage.removeItem('craft_token');
         localStorage.removeItem('craft_user');
-        globalThis.location.href = '/signin'; 
+        globalThis.location.href = '/signin';
       }
       
       const error = new Error(errorMessage);
@@ -106,13 +109,18 @@ export class ApiClient {
       delete headers['Content-Type'];
     }
 
-    const response = await this.fetchWithFallback(`${this.baseURL}${endpoint}`, {
-      method: 'POST',
-      headers,
-      body,
-    });
+    try {
+      const response = await this.fetchWithFallback(`${this.baseURL}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body,
+      });
 
-    return this.handleResponse(response);
+      return this.handleResponse(response);
+    } catch (error) {
+      console.error('POST request error:', error);
+      throw error;
+    }
   }
 
   async put(endpoint: string, data: any, options?: { headers?: HeadersInit }) {

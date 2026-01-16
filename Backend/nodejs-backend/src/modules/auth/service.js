@@ -354,7 +354,7 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
     });
 
     if (!user) {
-      throw new Error('Invalid credentials');
+      throw new Error('Invalid employee ID or password');
     }
 
     if (!user.isActive) {
@@ -395,7 +395,7 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
       }
 
       await user.save();
-      throw new Error('Invalid credentials');
+      throw new Error('Invalid employee ID or password');
     }
 
     // Reset failed login attempts on successful login

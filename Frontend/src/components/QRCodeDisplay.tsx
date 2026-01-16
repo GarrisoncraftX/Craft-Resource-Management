@@ -11,11 +11,13 @@ import { attendanceApiService } from '@/services/pythonbackendapi/attendanceApi'
 interface QRCodeDisplayProps {
   type?: 'attendance' | 'visitor';
   refreshInterval?: number;
+  onScanFailure?: () => void;
 }
 
 export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
   type = 'attendance',
-  refreshInterval = 3600000, 
+  refreshInterval = 3600000,
+  onScanFailure,
 }) => {
   const { toast } = useToast();
   const [qrData, setQrData] = useState<string>('');
@@ -55,6 +57,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
         description: error instanceof Error ? error.message : 'Failed to generate QR code',
         variant: 'destructive',
       });
+      onScanFailure?.();
     } finally {
       setIsLoading(false);
     }
@@ -184,7 +187,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
           <CardDescription>
             {type === 'visitor' 
               ? 'Visitors scan this code to begin check-in' 
-              : 'Show this QR code to the attendance scanner'}
+              : 'Scan this code to begin check-in for attendance'}
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center space-y-4">

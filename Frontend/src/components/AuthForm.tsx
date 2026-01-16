@@ -142,8 +142,10 @@ const AuthForm: React.FC = () => {
         }
       }
 
-    } catch (err) {
-      setError(err.message ?? 'Invalid credentials. Please try again.');
+    } catch (err: any) {
+      console.error('Signin error:', err);
+      const errorMessage = err?.message || err?.error || 'Invalid employee ID or password. Please try again.';
+      setError(errorMessage);
     }
 
     setIsLoading(false);

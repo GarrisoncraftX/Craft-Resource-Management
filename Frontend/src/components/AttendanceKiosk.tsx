@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Clock, KeyRound, CheckCircle, Loader2, QrCode, ArrowLeft, Home } from 'lucide-react';
+import { Clock, CheckCircle, Loader2, QrCode, ArrowLeft, Home } from 'lucide-react';
 import { apiClient } from '@/utils/apiClient';
 import { useToast } from '@/hooks/use-toast';
 import { PageLoadingSpinner } from '@/components/LoadingSpinner';
 import { QRCodeDisplay } from './QRCodeDisplay';
+import { ManualEntryModal } from './ManualEntryModal';
 import { useNavigate } from 'react-router-dom';
 
 export const AttendanceKiosk: React.FC = () => {
@@ -22,11 +20,7 @@ export const AttendanceKiosk: React.FC = () => {
   const [lastAction, setLastAction] = useState<'clock-in' | 'clock-out' | null>(null);
   const [employeeName, setEmployeeName] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
-
-  const [manualData, setManualData] = useState({
-    employeeId: '',
-    password: '',
-  });
+  const [showManualModal, setShowManualModal] = useState(false);
 
 
 
@@ -35,8 +29,8 @@ export const AttendanceKiosk: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const handleManualSubmit = async () => {
-    if (!manualData.employeeId || !manualData.password) {
+  const handleManualSubmit = async (employeeId: string, password: string) => {
+    if (!employeeId || !password) {
       toast({
         title: 'Missing Information',
         description: 'Please enter both Employee ID and Password',
@@ -44,7 +38,8 @@ export const AttendanceKiosk: React.FC = () => {
       });
       return;
     }
-    await processAttendance('manual', manualData);
+    await processAttendance('manual', { employeeId, password });
+    setShowManualModal(false);
   };
 
   const processAttendance = async (
@@ -79,7 +74,7 @@ export const AttendanceKiosk: React.FC = () => {
       setTimeout(() => {
         setLastAction(null);
         setEmployeeName('');
-        setManualData({ employeeId: '', password: '' });
+        setShowManualModal(false);
       }, 5000);
     } catch (error) {
       toast({
@@ -173,44 +168,21 @@ export const AttendanceKiosk: React.FC = () => {
           <CardHeader className="text-center border-b">
             <CardTitle className="text-2xl">Mark Your Attendance</CardTitle>
             <CardDescription className="text-base">
-              Enter your credentials to record attendance
+              Scan the QR code to record your attendance
             </CardDescription>
           </CardHeader>
-          <CardContent className="pt-6">
-            <Tabs defaultValue="manual">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="manual" className="text-base">
-                  <KeyRound className="mr-2 h-5 w-5" />
-                  Manual Entry
-                </TabsTrigger>
-                <TabsTrigger value="qr" className="text-base">
-                  <QrCode className="mr-2 h-5 w-5" />
-                  QR Code
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="manual" className="space-y-6">
-                <Alert><KeyRound className="h-4 w-4" /><AlertDescription>Enter your credentials to record attendance.</AlertDescription></Alert>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="employeeId" className="text-base">Employee ID</Label>
-                    <Input id="employeeId" placeholder="Enter employee ID" value={manualData.employeeId} onChange={(e) => setManualData({ ...manualData, employeeId: e.target.value })} className="h-12 text-lg" />
-                  </div>
-                  <div>
-                    <Label htmlFor="password" className="text-base">Password</Label>
-                    <Input id="password" type="password" placeholder="Enter password" value={manualData.password} onChange={(e) => setManualData({ ...manualData, password: e.target.value })} className="h-12 text-lg" />
-                  </div>
-                  <Button onClick={handleManualSubmit} size="lg" className="w-full h-16 text-lg" disabled={isProcessing}>
-                    {isProcessing ? <><Loader2 className="mr-2 h-6 w-6 animate-spin" />Processing...</> : 'Submit'}
-                  </Button>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="qr" className="space-y-6">
-                <Alert><QrCode className="h-4 w-4" /><AlertDescription>Generate QR code for attendance verification. Employees can scan this code with their mobile devices.</AlertDescription></Alert>
-                <QRCodeDisplay type="attendance" />
-              </TabsContent>
-            </Tabs>
+          <CardContent className="pt-6 space-y-6">
+            <QRCodeDisplay type="attendance" onScanFailure={() => setShowManualModal(true)} />
+            
+            <div className="text-center">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowManualModal(true)}
+                className="text-sm"
+              >
+                Having trouble? Try manual entry
+              </Button>
+            </div>
 
             <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-sm text-blue-900 text-center">
@@ -219,6 +191,13 @@ export const AttendanceKiosk: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        <ManualEntryModal
+          open={showManualModal}
+          onOpenChange={setShowManualModal}
+          onSubmit={handleManualSubmit}
+          isProcessing={isProcessing}
+        />
       </div>
     </div>
   );
