@@ -1,34 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface JournalLineItem {
-  id: string;
-  accountCode: string;
-  accountName: string;
-  debit: number;
-  credit: number;
-  description: string;
-}
-
-interface JournalEntry {
-  id: string;
-  entryDate: string;
-  reference: string;
-  description: string;
-  totalDebit: number;
-  totalCredit: number;
-  status: 'Draft' | 'Posted' | 'Approved';
-  createdBy: string;
-  entries: JournalLineItem[];
-  amount: number;
-  accountCode: string;
-}
+import { financeApiService } from '@/services/javabackendapi/financeApi';
+import type { ChartOfAccount } from '@/types/javabackendapi/financeTypes';
+import type { JournalEntry, JournalEntryLine } from '@/types/journalTypes';
 
 interface JournalEntryFormProps {
   entry?: JournalEntry;
@@ -37,12 +18,17 @@ interface JournalEntryFormProps {
 
 export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ entry, onSubmit }) => {
   const {user } = useAuth();
+  const [accounts, setAccounts] = useState<ChartOfAccount[]>([]);
   const [formData, setFormData] = useState({
     entryDate: entry?.entryDate || new Date().toISOString().split('T')[0],
     reference: entry?.reference || '',
     description: entry?.description || '',
-    entries: entry?.entries || [{ id: '1', accountCode: '', accountName: '', debit: 0, credit: 0, description: '' }],
+    entries: entry?.entries || [{ id: '1', accountCode: '', accountName: '', debit: 0, credit: 0, description: '' }] as JournalEntryLine[],
   });
+
+  useEffect(() => {
+    financeApiService.getAllChartOfAccounts().then(setAccounts).catch(console.error);
+  }, []);
 
   const addEntryLine = () => {
     setFormData({
@@ -52,9 +38,17 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ entry, onSub
   };
 
   const updateEntryLine = (index: number, field: string, value: string | number) => {
-    const updatedEntries = formData.entries.map((item, i) =>
-      i === index ? { ...item, [field]: value } : item
-    );
+    const updatedEntries = formData.entries.map((item, i) => {
+      if (i === index) {
+        const updated = { ...item, [field]: value };
+        if (field === 'accountCode') {
+          const account = accounts.find(a => a.accountCode === value);
+          if (account) updated.accountName = account.accountName;
+        }
+        return updated;
+      }
+      return item;
+    });
     setFormData({ ...formData, entries: updatedEntries });
   };
 
@@ -81,7 +75,7 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ entry, onSub
       totalDebit,
       totalCredit,
       status: 'Draft',
-      createdBy: user?.firstName + user?.lastName || 'Current User',
+      createdBy: String(user?.id || ''),
       amount: totalDebit,
       accountCode: formData.entries[0]?.accountCode || '',
     });
@@ -89,7 +83,7 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ entry, onSub
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <div>
           <Label htmlFor="date">Date</Label>
           <Input
@@ -97,16 +91,6 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ entry, onSub
             type="date"
             value={formData.entryDate}
             onChange={(e) => setFormData({ ...formData, entryDate: e.target.value })}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="reference">Reference</Label>
-          <Input
-            id="reference"
-            value={formData.reference}
-            onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-            placeholder="e.g., JE-001"
             required
           />
         </div>
@@ -135,23 +119,20 @@ export const JournalEntryForm: React.FC<JournalEntryFormProps> = ({ entry, onSub
         {formData.entries.map((lineItem, index) => (
           <Card key={lineItem.id} className="p-4">
             <div className="grid grid-cols-6 gap-4 items-end">
-              <div>
-                <Label>Account Code</Label>
-                <Input
-                  value={lineItem.accountCode}
-                  onChange={(e) => updateEntryLine(index, 'accountCode', e.target.value)}
-                  placeholder="1000"
-                  required
-                />
-              </div>
-              <div>
-                <Label>Account Name</Label>
-                <Input
-                  value={lineItem.accountName}
-                  onChange={(e) => updateEntryLine(index, 'accountName', e.target.value)}
-                  placeholder="Cash"
-                  required
-                />
+              <div className="col-span-2">
+                <Label>Account</Label>
+                <Select value={lineItem.accountCode} onValueChange={(v) => updateEntryLine(index, 'accountCode', v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map(acc => (
+                      <SelectItem key={acc.accountCode} value={acc.accountCode}>
+                        {acc.accountCode} - {acc.accountName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Debit</Label>

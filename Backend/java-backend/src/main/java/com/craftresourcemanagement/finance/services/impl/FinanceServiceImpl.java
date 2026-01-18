@@ -253,10 +253,26 @@ public class FinanceServiceImpl implements FinanceService {
     // Journal Entry
     @Override
     public JournalEntry createJournalEntry(JournalEntry journalEntry) {
+        // Auto-generate reference if not provided
+        if (journalEntry.getReference() == null || journalEntry.getReference().isEmpty()) {
+            journalEntry.setReference(generateJournalReference());
+        }
+        
+        // Set default status if not provided
+        if (journalEntry.getStatus() == null || journalEntry.getStatus().isEmpty()) {
+            journalEntry.setStatus("Draft");
+        }
+        
         JournalEntry savedEntry = journalEntryRepository.save(journalEntry);
         auditClient.logAction(SYSTEM_USER, "CREATE_JOURNAL_ENTRY", "Account: " + savedEntry.getAccountCode() + ", Amount: " + savedEntry.getAmount());
         detectAnomaly(savedEntry);
         return savedEntry;
+    }
+
+    private String generateJournalReference() {
+        String datePrefix = "JE-" + java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+        Long count = journalEntryRepository.countByReferencePrefix(datePrefix + "%");
+        return String.format("%s-%04d", datePrefix, count + 1);
     }
 
     @Override

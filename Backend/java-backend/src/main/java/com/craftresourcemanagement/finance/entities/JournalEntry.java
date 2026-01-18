@@ -24,6 +24,21 @@ public class JournalEntry {
     @Column(nullable = false)
     private String accountCode;
 
+    @Column(unique = true)
+    private String reference;
+
+    @Column(nullable = false)
+    private String status = "Draft";
+
+    @Column
+    private BigDecimal totalDebit;
+
+    @Column
+    private BigDecimal totalCredit;
+
+    @Column
+    private Long createdBy;
+
     // Getters and Setters
 
     public Long getId() {
@@ -60,5 +75,45 @@ public class JournalEntry {
 
     public void setAccountCode(String accountCode) {
         this.accountCode = accountCode;
+    }
+
+    public String getReference() {
+        return reference;
+    }
+
+    public void setReference(String reference) {
+        this.reference = reference;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public BigDecimal getTotalDebit() {
+        return totalDebit;
+    }
+
+    public void setTotalDebit(BigDecimal totalDebit) {
+        this.totalDebit = totalDebit;
+    }
+
+    public BigDecimal getTotalCredit() {
+        return totalCredit;
+    }
+
+    public void setTotalCredit(BigDecimal totalCredit) {
+        this.totalCredit = totalCredit;
+    }
+
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
     }
 }

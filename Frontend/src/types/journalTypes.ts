@@ -11,7 +11,10 @@ export interface JournalEntry {
   amount: number;
   debit?: number;
   credit?: number;
-  status?: string;
+  status?: 'Draft' | 'Posted' | 'Approved';
+  totalDebit?: number;
+  totalCredit?: number;
+  entries?: JournalEntryLine[];
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -21,6 +24,7 @@ export interface JournalEntryLine {
   id?: number | string;
   journalEntryId?: number | string;
   accountId?: number | string;
+  accountCode?: string;
   accountName?: string;
   debit?: number;
   credit?: number;

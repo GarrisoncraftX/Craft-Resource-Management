@@ -13,8 +13,10 @@ import { apiClient } from '@/utils/apiClient';
 import { AccountForm } from './AccountForm';
 import { Account } from '@/types/api'
 import { mockAccountData } from '@/services/mockData/mockData'
+import { useToast } from '@/hooks/use-toast'
 
 export const ChartOfAccounts: React.FC = () => {
+  const { toast } = useToast();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
@@ -87,11 +89,19 @@ export const ChartOfAccounts: React.FC = () => {
       const savedAccount = await apiClient.post('/finance/accounts', account);
       setAccounts(prev => [...prev, savedAccount]);
       setIsAddingAccount(false);
+      toast({
+        title: "Account created",
+        description: `${account.accountName} has been successfully added.`,
+      });
     } catch (err) {
       console.error("Failed to add account:", err); 
-      // fallback to local update
       setAccounts(prev => [...prev, account]);
       setIsAddingAccount(false);
+      toast({
+        title: "Account created",
+        description: `${account.accountName} has been added locally.`,
+        variant: "default",
+      });
     }
   };
 
@@ -105,13 +115,21 @@ export const ChartOfAccounts: React.FC = () => {
       const updatedAccount = await apiClient.put(`/finance/accounts/${account.id}`, account);
       setAccounts(prev => prev.map(acc => acc.id === account.id ? updatedAccount : acc));
       setEditingAccount(null);
-      setIsAddingAccount(false); 
+      setIsAddingAccount(false);
+      toast({
+        title: "Account updated",
+        description: `${account.accountName} has been successfully updated.`,
+      });
     } catch (err) {
       console.error("Failed to update account:", err); 
-      // fallback to local update
       setAccounts(prev => prev.map(acc => acc.id === account.id ? account : acc));
       setEditingAccount(null);
-      setIsAddingAccount(false); 
+      setIsAddingAccount(false);
+      toast({
+        title: "Account updated",
+        description: `${account.accountName} has been updated locally.`,
+        variant: "default",
+      });
     }
   };
 
@@ -121,12 +139,22 @@ export const ChartOfAccounts: React.FC = () => {
    * @param accountId The ID of the account to delete.
    */
   const handleDeleteAccount = async (accountId: string) => {
+    const account = accounts.find(acc => acc.id === accountId);
     try {
       await apiClient.delete(`/finance/accounts/${accountId}`);
       setAccounts(prev => prev.filter(acc => acc.id !== accountId));
+      toast({
+        title: "Account deleted",
+        description: `${account?.accountName || 'Account'} has been successfully deleted.`,
+      });
     } catch (err) {
       console.error("Failed to delete account:", err); 
       setAccounts(prev => prev.filter(acc => acc.id !== accountId));
+      toast({
+        title: "Account deleted",
+        description: `${account?.accountName || 'Account'} has been deleted locally.`,
+        variant: "default",
+      });
     }
   };
 

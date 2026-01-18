@@ -11,4 +11,7 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntry, Long
 
     @Query("SELECT SUM(j.amount) FROM JournalEntry j WHERE j.accountCode = :accountCode")
     Double calculateBalanceByAccountCode(@Param("accountCode") String accountCode);
+
+    @Query("SELECT COUNT(j) FROM JournalEntry j WHERE j.reference LIKE :prefix")
+    Long countByReferencePrefix(@Param("prefix") String prefix);
 }

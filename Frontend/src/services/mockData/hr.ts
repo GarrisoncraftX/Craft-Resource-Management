@@ -105,3 +105,12 @@ export const mockRoles = [
   { id: '4', name: 'Junior' },
   { id: '5', name: 'Analyst' }
 ];
+
+export const mockMonthlyTraining = [
+  { month: 'Jan', enrollments: 45, completions: 38 },
+  { month: 'Feb', enrollments: 52, completions: 45 },
+  { month: 'Mar', enrollments: 48, completions: 42 },
+  { month: 'Apr', enrollments: 61, completions: 55 },
+  { month: 'May', enrollments: 55, completions: 48 },
+  { month: 'Jun', enrollments: 67, completions: 60 }
+];

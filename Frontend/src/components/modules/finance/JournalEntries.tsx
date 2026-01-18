@@ -15,13 +15,13 @@ import { fetchEmployees } from '@/services/api';
 import type { JournalEntry } from '@/types/journalTypes';
 import type { Employee } from '@/types/hr';
 
-const getStatusBadgeVariant = (status: 'Draft' | 'Posted' | 'Approved'): 'default' | 'secondary' | 'outline' => {
+const getStatusBadgeVariant = (status?: 'Draft' | 'Posted' | 'Approved'): 'default' | 'secondary' | 'outline' => {
   const statusMap: Record<'Draft' | 'Posted' | 'Approved', 'default' | 'secondary' | 'outline'> = {
     'Posted': 'default',
     'Approved': 'secondary',
     'Draft': 'outline'
   };
-  return statusMap[status];
+  return status ? statusMap[status] : 'outline';
 };
 
 
@@ -31,6 +31,7 @@ export const JournalEntries: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [isAddingEntry, setIsAddingEntry] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -138,19 +139,20 @@ export const JournalEntries: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const getCreatorName = (createdBy: string) => {
+  const getCreatorName = (createdBy?: string | number) => {
+    if (!createdBy) return 'Unknown';
     const creator = employees.find(emp => emp.id == createdBy);
-    return creator ? `${creator.firstName} ${creator.lastName || ''}`.trim() : createdBy;
+    return creator ? `${creator.firstName} ${creator.lastName || ''}`.trim() : `${createdBy}`;
   };
 
   return (
-    <div className="space-y-6">
+    <>
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Journal Entries</h2>
-          <p className="text-muted-foreground">Manage accounting journal entries</p>
+          <h2 className="text-2xl font-bold text-white">Journal Entries</h2>
+          <p className="text-white">Manage accounting journal entries</p>
         </div>
-        <PermissionGuard requiredPermissions={['finance.journal.create']}>
+        <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
           <Dialog open={isAddingEntry} onOpenChange={setIsAddingEntry}>
             <DialogTrigger asChild>
               <Button disabled={loading}>
@@ -169,6 +171,29 @@ export const JournalEntries: React.FC = () => {
             </DialogContent>
           </Dialog>
         </PermissionGuard>
+      </div>
+
+      <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Journal Entry</DialogTitle>
+            <DialogDescription>
+              Update journal entry details
+            </DialogDescription>
+          </DialogHeader>
+          {editingEntry && (
+            <JournalEntryForm 
+              entry={editingEntry}
+              onSubmit={(data) => {
+                handleUpdateEntry(String(editingEntry.id), data);
+                setEditingEntry(null);
+              }} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <div className="space-y-6">
       </div>
 
       {error && (
@@ -246,7 +271,7 @@ export const JournalEntries: React.FC = () => {
                     <TableCell className="font-mono">{entry.reference}</TableCell>
                     <TableCell>{entry.description}</TableCell>
                     <TableCell className="text-right font-mono">
-                      ${entry.totalDebit?.toLocaleString() || '0'}
+                      ${Number(entry.totalDebit)?.toLocaleString() || '0'}
                     </TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(entry.status)}>
@@ -263,20 +288,21 @@ export const JournalEntries: React.FC = () => {
                         >
                           View
                         </Button>
-                        <PermissionGuard requiredPermissions={['finance.journal.update']}>
+                        <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => handleUpdateEntry(entry.id, entry)}
+                            onClick={() => setEditingEntry(entry)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                         </PermissionGuard>
-                        <PermissionGuard requiredPermissions={['finance.journal.delete']}>
+                        <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => handleDeleteEntry(entry.id)}
+                            className='text-destructive'
+                            onClick={() => handleDeleteEntry(String(entry.id))}
                           >
                             Delete
                           </Button>
@@ -297,7 +323,7 @@ export const JournalEntries: React.FC = () => {
             <DialogHeader>
               <DialogTitle>Journal Entry Details - {selectedEntry.reference}</DialogTitle>
               <DialogDescription>
-                Entry dated {new Date(selectedEntry.entryDate).toLocaleDateString()} created by {getCreatorName(selectedEntry.createdBy)}
+                Entry dated {selectedEntry.entryDate ? new Date(selectedEntry.entryDate).toLocaleDateString() : 'N/A'} created by {getCreatorName(selectedEntry.createdBy)}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -325,20 +351,20 @@ export const JournalEntries: React.FC = () => {
                       </TableCell>
                       <TableCell>{line.description}</TableCell>
                       <TableCell className="text-right font-mono">
-                        {line.debit > 0 ? `$${line.debit.toFixed(2)}` : '-'}
+                        {Number(line.debit) > 0 ? `$${Number(line.debit).toFixed(2)}` : '-'}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {line.credit > 0 ? `$${line.credit.toFixed(2)}` : '-'}
+                        {Number(line.credit) > 0 ? `$${Number(line.credit).toFixed(2)}` : '-'}
                       </TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="border-t-2">
                     <TableCell colSpan={2} className="font-medium">Totals</TableCell>
                     <TableCell className="text-right font-mono font-medium">
-                      ${selectedEntry.totalDebit?.toFixed(2) || '0.00'}
+                      {'$' + Number(selectedEntry.totalDebit || 0).toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right font-mono font-medium">
-                      ${selectedEntry.totalCredit?.toFixed(2) || '0.00'}
+                      {'$' + Number(selectedEntry.totalCredit || 0).toFixed(2)}
                     </TableCell>
                   </TableRow>
                 </TableBody>
@@ -347,6 +373,6 @@ export const JournalEntries: React.FC = () => {
           </DialogContent>
         </Dialog>
       )}
-    </div>
+    </>
   );
 };
