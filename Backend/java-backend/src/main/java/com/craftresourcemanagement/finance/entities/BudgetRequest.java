@@ -13,6 +13,8 @@ public class BudgetRequest {
 
     private String department;
 
+    private Long departmentId;
+
     private String category;
 
     private Double requestedAmount;
@@ -42,6 +44,14 @@ public class BudgetRequest {
 
     public void setDepartment(String department) {
         this.department = department;
+    }
+
+    public Long getDepartmentId() {
+        return departmentId;
+    }
+
+    public void setDepartmentId(Long departmentId) {
+        this.departmentId = departmentId;
     }
 
     public String getCategory() {

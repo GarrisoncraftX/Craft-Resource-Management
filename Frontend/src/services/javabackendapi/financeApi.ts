@@ -84,6 +84,14 @@ class FinanceApiService {
     return apiClient.delete(`/finance/budget-requests/${id}`);
   }
 
+  async approveBudgetRequest(id: number): Promise<BudgetRequestPayload> {
+    return apiClient.patch(`/finance/budget-requests/${id}/approve`, {});
+  }
+
+  async rejectBudgetRequest(id: number): Promise<BudgetRequestPayload> {
+    return apiClient.patch(`/finance/budget-requests/${id}/reject`, {});
+  }
+
   // Journal Entry endpoints
   async createJournalEntry(entry: JournalEntry): Promise<JournalEntry> {
     return apiClient.post('/finance/journal-entries', entry);
@@ -242,4 +250,12 @@ export async function fetchBudgetRequests(): Promise<ApiBudgetRequest[]> {
   }));
   
   return result;
+}
+
+export async function approveBudgetRequest(id: string | number): Promise<void> {
+  await financeApiService.approveBudgetRequest(Number(id));
+}
+
+export async function rejectBudgetRequest(id: string | number): Promise<void> {
+  await financeApiService.rejectBudgetRequest(Number(id));
 }

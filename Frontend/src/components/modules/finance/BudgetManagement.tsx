@@ -16,11 +16,13 @@ import { budgetManagementData, mockBudgetRequest } from '@/services/mockData/moc
 import { BudgetForm } from './BudgetForm';
 import { BudgetRequestForm } from './BudgetRequestForm';
 import { fetchDepartments } from '@/services/api';
-import { fetchBudgets, createBudgetItem, updateBudgetItem, deleteBudgetItem, fetchBudgetRequests } from '@/services/javabackendapi/financeApi';
+import { fetchBudgets, createBudgetItem, updateBudgetItem, deleteBudgetItem, fetchBudgetRequests, approveBudgetRequest, rejectBudgetRequest } from '@/services/javabackendapi/financeApi';
 import type { Department } from '@/types/api';
+import { useToast } from '@/hooks/use-toast';
 
 
 export const BudgetManagement: React.FC = () => {
+  const { toast } = useToast();
   const [budgets, setBudgets] = useState<BudgetItem[]>([]);
   const [budgetRequests, setBudgetRequests] = useState<BudgetRequest[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -125,11 +127,21 @@ export const BudgetManagement: React.FC = () => {
 
   const handleUpdateBudget = async (updatedBudget) => {
     try {
-      const savedBudget = await updateBudgetItem(updatedBudget.id, updatedBudget);
-      setBudgets(budgets.map(b => b.id === savedBudget.id ? savedBudget : b));
+      await updateBudgetItem(updatedBudget.id, updatedBudget);
+      const refreshedBudgets = await fetchBudgets();
+      setBudgets(refreshedBudgets);
       setEditedBudget(null);
+      toast({
+        title: "Budget Updated",
+        description: "Budget has been successfully updated.",
+      });
     } catch (error) {
       console.error("Failed to update budget", error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update budget. Please try again.",
+        variant: "destructive",
+      });
     }
   };
   
@@ -138,8 +150,17 @@ export const BudgetManagement: React.FC = () => {
       const savedBudget = await createBudgetItem(newBudget);
       setBudgets([...budgets, savedBudget]);
       setIsAddingBudget(false);
+     toast({
+        title: "Budget Created",
+        description: "Budget has been successfully created.",
+      });
     } catch (error) {
       console.error("Failed to create budget", error);
+      toast({
+        title: "Create Failed",
+        description: "Failed to create budget. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -147,8 +168,59 @@ export const BudgetManagement: React.FC = () => {
     try {
       await deleteBudgetItem(budgetId);
       setBudgets(budgets.filter(b => b.id !== budgetId));
+    toast({
+        title: "Budget Deleted",
+        description: "Budget has been successfully deleted.",
+      });
     } catch (error) {
       console.error("Failed to delete budget", error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete budget. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleApproveBudgetRequest = async (requestId: string) => {
+    try {
+      await approveBudgetRequest(requestId);
+      const [refreshedRequests, refreshedBudgets] = await Promise.all([
+        fetchBudgetRequests(),
+        fetchBudgets()
+      ]);
+      setBudgetRequests(refreshedRequests);
+      setBudgets(refreshedBudgets);
+      toast({
+        title: "Request Approved",
+        description: "Budget request approved and budget created.",
+      });
+    } catch (error) {
+      console.error("Failed to approve budget request", error);
+      toast({
+        title: "Approval Failed",
+        description: "Failed to approve budget request. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectBudgetRequest = async (requestId: string) => {
+    try {
+      await rejectBudgetRequest(requestId);
+      const refreshedRequests = await fetchBudgetRequests();
+      setBudgetRequests(refreshedRequests);
+      toast({
+        title: "Request Rejected",
+        description: "Budget request has been rejected.",
+      });
+    } catch (error) {
+      console.error("Failed to reject budget request", error);
+      toast({
+        title: "Rejection Failed",
+        description: "Failed to reject budget request. Please try again.",
+        variant: "destructive",
+      });
     }
   };
   
@@ -427,12 +499,12 @@ export const BudgetManagement: React.FC = () => {
                       <TableCell>
                         <div className="flex gap-2">
                           <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
-                            <Button variant="outline" size="sm" disabled={request.status !== 'Pending'}>
+                            <Button variant="outline" size="sm" disabled={request.status !== 'Pending'} onClick={() => handleApproveBudgetRequest(request.id)}>
                               Approve
                             </Button>
                           </PermissionGuard>
                           <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
-                            <Button variant="outline" size="sm" disabled={request.status !== 'Pending'}>
+                            <Button variant="outline" size="sm" disabled={request.status !== 'Pending'} onClick={() => handleRejectBudgetRequest(request.id)}>
                               Reject
                             </Button>
                           </PermissionGuard>

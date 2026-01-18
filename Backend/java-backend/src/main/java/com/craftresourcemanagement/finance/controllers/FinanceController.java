@@ -130,6 +130,46 @@ public class FinanceController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/budget-requests/{id}/approve")
+    public ResponseEntity<BudgetRequest> approveBudgetRequest(
+            @PathVariable Long id,
+            @RequestHeader(value = "x-user-id", required = false) String userId) {
+        BudgetRequest request = financeService.getBudgetRequestById(id);
+        if (request == null) {
+            return ResponseEntity.notFound().build();
+        }
+        request.setStatus("Approved");
+        BudgetRequest updated = financeService.updateBudgetRequest(id, request);
+        
+        // Create budget from approved request
+        Budget budget = new Budget();
+        budget.setBudgetName(request.getCategory() + " - " + request.getDepartment());
+        budget.setDescription(request.getJustification());
+        budget.setDepartmentId(request.getDepartmentId() != null ? request.getDepartmentId() : 1L);
+        budget.setFiscalYear(java.time.LocalDate.now().getYear());
+        budget.setStartDate(java.time.LocalDate.now());
+        budget.setEndDate(java.time.LocalDate.now().plusYears(1));
+        budget.setTotalAmount(java.math.BigDecimal.valueOf(request.getRequestedAmount()));
+        budget.setAllocatedAmount(java.math.BigDecimal.valueOf(request.getRequestedAmount()));
+        budget.setSpentAmount(java.math.BigDecimal.ZERO);
+        budget.setStatus("Active");
+        budget.setCreatedBy(userId != null ? Long.parseLong(userId) : 1L);
+        financeService.createBudget(budget);
+        
+        return ResponseEntity.ok(updated);
+    }
+
+    @PatchMapping("/budget-requests/{id}/reject")
+    public ResponseEntity<BudgetRequest> rejectBudgetRequest(@PathVariable Long id) {
+        BudgetRequest request = financeService.getBudgetRequestById(id);
+        if (request == null) {
+            return ResponseEntity.notFound().build();
+        }
+        request.setStatus("Rejected");
+        BudgetRequest updated = financeService.updateBudgetRequest(id, request);
+        return ResponseEntity.ok(updated);
+    }
+
     // Journal Entry endpoints
     @PostMapping("/journal-entries")
     public ResponseEntity<JournalEntry> createJournalEntry(@RequestBody JournalEntry journalEntry) {
