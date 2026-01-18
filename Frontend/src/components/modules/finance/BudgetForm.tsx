@@ -144,10 +144,11 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ budget, onSubmit, onCanc
           <Input
             id="budgetAmount"
             type="number"
-            value={formData.budgetAmount}
-            onChange={(e) => setFormData({ ...formData, budgetAmount: Number.parseFloat(e.target.value) })}
+            value={formData.budgetAmount || ''}
+            onChange={(e) => setFormData({ ...formData, budgetAmount: Number.parseFloat(e.target.value) || 0 })}
             placeholder="0.00"
             step="0.01"
+            min="0.01"
             required
           />
         </div>
@@ -156,10 +157,11 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({ budget, onSubmit, onCanc
           <Input
             id="spentAmount"
             type="number"
-            value={formData.spentAmount}
-            onChange={(e) => setFormData({ ...formData, spentAmount: Number.parseFloat(e.target.value) })}
+            value={formData.spentAmount || ''}
+            onChange={(e) => setFormData({ ...formData, spentAmount: Number.parseFloat(e.target.value) || 0 })}
             placeholder="0.00"
             step="0.01"
+            min="0"
             required
           />
         </div>

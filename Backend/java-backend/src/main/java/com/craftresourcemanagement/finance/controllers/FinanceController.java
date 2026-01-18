@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/finance")
@@ -91,6 +92,10 @@ public class FinanceController {
 
     @DeleteMapping("/budgets/{id}")
     public ResponseEntity<Void> deleteBudget(@PathVariable Long id) {
+        Budget budget = financeService.getBudgetById(id);
+        if (budget == null) {
+            return ResponseEntity.notFound().build();
+        }
         financeService.deleteBudget(id);
         return ResponseEntity.noContent().build();
     }
@@ -168,6 +173,33 @@ public class FinanceController {
         request.setStatus("Rejected");
         BudgetRequest updated = financeService.updateBudgetRequest(id, request);
         return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/budget-requests/migrate-approved")
+    public ResponseEntity<Map<String, Object>> migrateApprovedRequests(@RequestHeader(value = "x-user-id", required = false) String userId) {
+        List<BudgetRequest> approvedRequests = financeService.getAllBudgetRequests().stream()
+            .filter(r -> "Approved".equals(r.getStatus()))
+            .toList();
+        
+        int created = 0;
+        for (BudgetRequest request : approvedRequests) {
+            Budget budget = new Budget();
+            budget.setBudgetName(request.getCategory() + " - " + request.getDepartment());
+            budget.setDescription(request.getJustification());
+            budget.setDepartmentId(request.getDepartmentId() != null ? request.getDepartmentId() : 1L);
+            budget.setFiscalYear(java.time.LocalDate.now().getYear());
+            budget.setStartDate(request.getRequestDate() != null ? request.getRequestDate() : java.time.LocalDate.now());
+            budget.setEndDate(budget.getStartDate().plusYears(1));
+            budget.setTotalAmount(java.math.BigDecimal.valueOf(request.getRequestedAmount()));
+            budget.setAllocatedAmount(java.math.BigDecimal.valueOf(request.getRequestedAmount()));
+            budget.setSpentAmount(java.math.BigDecimal.ZERO);
+            budget.setStatus("Active");
+            budget.setCreatedBy(userId != null ? Long.parseLong(userId) : 1L);
+            financeService.createBudget(budget);
+            created++;
+        }
+        
+        return ResponseEntity.ok(Map.of("message", created + " budgets created from approved requests", "count", created));
     }
 
     // Journal Entry endpoints

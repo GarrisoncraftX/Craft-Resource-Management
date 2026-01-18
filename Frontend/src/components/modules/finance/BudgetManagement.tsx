@@ -16,7 +16,7 @@ import { budgetManagementData, mockBudgetRequest } from '@/services/mockData/moc
 import { BudgetForm } from './BudgetForm';
 import { BudgetRequestForm } from './BudgetRequestForm';
 import { fetchDepartments } from '@/services/api';
-import { fetchBudgets, createBudgetItem, updateBudgetItem, deleteBudgetItem, fetchBudgetRequests, approveBudgetRequest, rejectBudgetRequest } from '@/services/javabackendapi/financeApi';
+import { fetchBudgets, createBudgetItem, updateBudgetItem, deleteBudgetItem, fetchBudgetRequests, approveBudgetRequest, rejectBudgetRequest, migrateApprovedBudgetRequests } from '@/services/javabackendapi/financeApi';
 import type { Department } from '@/types/api';
 import { useToast } from '@/hooks/use-toast';
 
@@ -219,6 +219,25 @@ export const BudgetManagement: React.FC = () => {
       toast({
         title: "Rejection Failed",
         description: "Failed to reject budget request. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMigrateApprovedRequests = async () => {
+    try {
+      const result = await migrateApprovedBudgetRequests();
+      const refreshedBudgets = await fetchBudgets();
+      setBudgets(refreshedBudgets);
+      toast({
+        title: "Migration Complete",
+        description: result.message,
+      });
+    } catch (error) {
+      console.error("Failed to migrate approved requests", error);
+      toast({
+        title: "Migration Failed",
+        description: "Failed to migrate approved requests. Please try again.",
         variant: "destructive",
       });
     }
@@ -461,10 +480,19 @@ export const BudgetManagement: React.FC = () => {
         <TabsContent value="requests" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Budget Requests</CardTitle>
-              <CardDescription>
-                Pending and processed budget requests
-              </CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Budget Requests</CardTitle>
+                  <CardDescription>
+                    Pending and processed budget requests
+                  </CardDescription>
+                </div>
+                <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
+                  <Button variant="outline" size="sm" onClick={handleMigrateApprovedRequests}>
+                    Migrate Approved to Budgets
+                  </Button>
+                </PermissionGuard>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>

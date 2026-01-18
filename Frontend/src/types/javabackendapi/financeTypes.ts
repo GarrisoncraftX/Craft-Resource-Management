@@ -17,6 +17,7 @@ export interface Budget {
   description?: string;
   departmentId: number;
   spentAmount: number;
+  createdBy?: string;
 }
 
 export interface BudgetRequest {

@@ -92,6 +92,10 @@ class FinanceApiService {
     return apiClient.patch(`/finance/budget-requests/${id}/reject`, {});
   }
 
+  async migrateApprovedRequests(): Promise<{message: string; count: number}> {
+    return apiClient.post('/finance/budget-requests/migrate-approved', {});
+  }
+
   // Journal Entry endpoints
   async createJournalEntry(entry: JournalEntry): Promise<JournalEntry> {
     return apiClient.post('/finance/journal-entries', entry);
@@ -214,7 +218,28 @@ export async function fetchBudgets(): Promise<BudgetItem[]> {
 }
 
 export async function createBudgetItem(budget: Budget): Promise<BudgetItem> {
-  const response = await financeApiService.createBudget(budget);
+  const user = JSON.parse(localStorage.getItem('craft_user') || '{}');
+  const currentYear = new Date().getFullYear();
+  
+  // Ensure amount is a valid number
+  const amount = Number(budget.amount);
+  if (!amount || amount <= 0) {
+    throw new Error('Budget amount must be greater than zero');
+  }
+  
+  const budgetWithCreator = {
+    budgetName: budget.budgetName,
+    description: budget.description,
+    departmentId: budget.departmentId,
+    fiscalYear: currentYear,
+    startDate: budget.startDate,
+    endDate: budget.endDate,
+    totalAmount: amount,
+    spentAmount: Number(budget.spentAmount) || 0,
+    createdBy: user.id || 1
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const response = await financeApiService.createBudget(budgetWithCreator as any);
   const mapped = mapBudgetResponse(response);
   const departments = await fetchDepartments();
   const deptMap = new Map(departments.map((d: Department) => [d.id?.toString(), d.name]));
@@ -258,4 +283,8 @@ export async function approveBudgetRequest(id: string | number): Promise<void> {
 
 export async function rejectBudgetRequest(id: string | number): Promise<void> {
   await financeApiService.rejectBudgetRequest(Number(id));
+}
+
+export async function migrateApprovedBudgetRequests(): Promise<{message: string; count: number}> {
+  return financeApiService.migrateApprovedRequests();
 }
