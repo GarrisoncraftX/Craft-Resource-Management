@@ -13,10 +13,10 @@ import { Plus, Edit, Trash2, Search, TrendingUp, AlertTriangle, DollarSign, Cale
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { BudgetItem, BudgetRequest } from '@/types/api';
 import { budgetManagementData, mockBudgetRequest } from '@/services/mockData/mockData';
-import { apiClient } from '@/utils/apiClient';
 import { BudgetForm } from './BudgetForm';
 import { BudgetRequestForm } from './BudgetRequestForm';
-import { fetchDepartments, createBudget, updateBudget, deleteBudget } from '@/services/api';
+import { fetchDepartments } from '@/services/api';
+import { fetchBudgets, createBudgetItem, updateBudgetItem, deleteBudgetItem, fetchBudgetRequests } from '@/services/javabackendapi/financeApi';
 import type { Department } from '@/types/api';
 
 
@@ -60,36 +60,10 @@ export const BudgetManagement: React.FC = () => {
   };
 
   useEffect(() => {
-    /**
-     * Fetches budget data from the API or falls back to mock data.
-     */
-    const fetchBudgets = async () => {
+    const loadBudgets = async () => {
       try {
-        const Budgetdata = await apiClient.get('/finance/budgets');
-        console.log("Fetched Budget data from Api", Budgetdata)
-        // Use backend data directly with proper field mapping
-        const mappedBudgets = Budgetdata.map((budget: BudgetItem) => ({
-          id: budget.id?.toString() || '',
-          amount: Number(budget.amount) || 0,
-          budgetName: budget.budgetName || '',
-          departmentId: Number(budget.departmentId) || 0,
-          departmentName: budget.departmentName || '',
-          description: budget.description || '',
-          startDate: budget.startDate || '',
-          endDate: budget.endDate || '',
-          spentAmount: Number(budget.spentAmount) || 0,
-          remainingAmount: Number(budget.remainingAmount) || 0,
-          // Calculated fields
-          budgetAmount: Number(budget.amount) || 0,
-          remaining: Number(budget.remainingAmount) || 0,
-          percentage: budget.amount > 0 ? (budget.spentAmount / budget.amount) * 100 : 0,
-          period: budget.startDate && budget.endDate ? `${budget.startDate} to ${budget.endDate}` : '',
-          status: budget.amount > 0 ? (budget.spentAmount > budget.amount ? 'Over Budget' : 'On Track') : 'On Track',
-          lastUpdated: new Date().toISOString().split('T')[0],
-          category: budget.budgetName || 'General',
-          department: budget.departmentId?.toString() || '',
-        }));
-        setBudgets(mappedBudgets);
+        const data = await fetchBudgets();
+        setBudgets(data);
       } catch (error) {
         console.error("Failed to fetch budgets, using mock data:", error);
         setBudgets(budgetManagementData.map((item, index) => ({
@@ -115,27 +89,19 @@ export const BudgetManagement: React.FC = () => {
       }
     };
 
-    /** Fetches Departments data
-     * 
-     */
-
-     const fetchDepartmentsData = async () => {
-          try {
-            const departmentsData = await fetchDepartments();
-            setDepartments(departmentsData);
-          } catch (error) {
-            console.error("Failed to fetch departments", error);
-          }
-        };
-    /**
-     * Fetches budget request data from the API or falls back to mock data.
-     */
-    const fetchBudgetRequests = async () => {
+    const loadDepartments = async () => {
       try {
-        const data = await apiClient.get('/finance/budget-requests');
-        setBudgetRequests(data.map((request: BudgetRequest) => ({
-          ...request,
-        })));
+        const data = await fetchDepartments();
+        setDepartments(data);
+      } catch (error) {
+        console.error("Failed to fetch departments", error);
+      }
+    };
+
+    const loadBudgetRequests = async () => {
+      try {
+        const data = await fetchBudgetRequests();
+        setBudgetRequests(data);
       } catch (error) {
         console.error("Failed to fetch budget requests, using mock data:", error);
         setBudgetRequests(mockBudgetRequest.map(request => ({
@@ -145,9 +111,9 @@ export const BudgetManagement: React.FC = () => {
       }
     };
 
-    fetchBudgets();
-    fetchDepartmentsData();
-    fetchBudgetRequests();
+    loadBudgets();
+    loadDepartments();
+    loadBudgetRequests();
   }, []);
 
   const totalBudget = budgets.reduce((sum, budget) => sum + budget.budgetAmount, 0);
@@ -159,7 +125,7 @@ export const BudgetManagement: React.FC = () => {
 
   const handleUpdateBudget = async (updatedBudget) => {
     try {
-      const savedBudget = await updateBudget(updatedBudget.id, updatedBudget);
+      const savedBudget = await updateBudgetItem(updatedBudget.id, updatedBudget);
       setBudgets(budgets.map(b => b.id === savedBudget.id ? savedBudget : b));
       setEditedBudget(null);
     } catch (error) {
@@ -169,7 +135,7 @@ export const BudgetManagement: React.FC = () => {
   
   const handleCreateBudget = async (newBudget) => {
     try {
-      const savedBudget = await createBudget(newBudget);
+      const savedBudget = await createBudgetItem(newBudget);
       setBudgets([...budgets, savedBudget]);
       setIsAddingBudget(false);
     } catch (error) {
@@ -179,7 +145,7 @@ export const BudgetManagement: React.FC = () => {
 
   const handleDeleteBudget = async (budgetId) => {
     try {
-      await deleteBudget(budgetId);
+      await deleteBudgetItem(budgetId);
       setBudgets(budgets.filter(b => b.id !== budgetId));
     } catch (error) {
       console.error("Failed to delete budget", error);
@@ -193,8 +159,8 @@ export const BudgetManagement: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Budget Management</h2>
-          <p className="text-muted-foreground">Monitor and control organizational budgets</p>
+          <h2 className="text-2xl font-bold text-white">Budget Management</h2>
+          <p className="text-white">Monitor and control organizational budgets</p>
         </div>
         <div className="flex gap-2">
           <PermissionGuard requiredPermissions={['finance.manage_accounts']}>

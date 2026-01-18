@@ -27,6 +27,9 @@ public class ChartOfAccount {
     @Column(name = "is_active")
     private Boolean isActive;
 
+    @Column(name = "created_by")
+    private String createdBy;
+
     @Transient
     private Double balance;
 
@@ -88,5 +91,13 @@ public class ChartOfAccount {
 
     public void setBalance(Double balance) {
         this.balance = balance;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
     }
 }

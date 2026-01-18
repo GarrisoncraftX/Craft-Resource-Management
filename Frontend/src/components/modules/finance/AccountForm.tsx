@@ -9,11 +9,18 @@ interface AccountFormProps {
   account?: Account;
   onSubmit: (account: Account) => void;
   onCancel?: () => void;
+  accounts?: Account[];
 }
 
-export const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel }) => {
+export const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, accounts = [] }) => {
+  const generateNextCode = () => {
+    if (accounts.length === 0) return '1000';
+    const codes = accounts.map(a => parseInt(a.accountCode)).filter(c => !isNaN(c));
+    return codes.length > 0 ? (Math.max(...codes) + 1).toString() : '1000';
+  };
+
   const [formData, setFormData] = useState({
-    code: account?.accountCode || '',
+    code: account?.accountCode || generateNextCode(),
     name: account?.accountName || '',
     type: account?.accountType || 'Asset',
     description: account?.description || '',
@@ -29,8 +36,10 @@ export const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onC
         description: account.description || '',
         status: account.status || 'Active',
       });
+    } else {
+      setFormData(prev => ({ ...prev, code: generateNextCode() }));
     }
-  }, [account]);
+  }, [account, accounts]);
 
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -55,6 +64,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onC
             value={formData.code}
             onChange={(e) => setFormData({ ...formData, code: e.target.value })}
             placeholder="e.g., 1000"
+            disabled={!account}
             required
           />
         </div>

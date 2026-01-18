@@ -36,7 +36,7 @@ public class BudgetController {
             BudgetResponse response = new BudgetResponse.Builder()
                 .id(budget.getId())
                 .budgetName(budget.getBudgetName())
-                .amount(budget.getAmount())
+                .amount(budget.getTotalAmount())
                 .startDate(budget.getStartDate())
                 .endDate(budget.getEndDate())
                 .description(budget.getDescription())

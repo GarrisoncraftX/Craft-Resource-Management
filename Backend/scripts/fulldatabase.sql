@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jan 08, 2026 at 04:44 AM
+-- Generation Time: Jan 18, 2026 at 10:45 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,6 +20,131 @@ SET time_zone = "+00:00";
 --
 -- Database: `craft_resource_management`
 --
+
+DELIMITER $$
+--
+-- Procedures
+--
+CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `archive_old_audit_logs` (IN `days_to_keep` INT)   BEGIN
+    DECLARE archive_date DATETIME;
+    SET archive_date = DATE_SUB(NOW(), INTERVAL days_to_keep DAY);
+    
+    -- Insert old logs into archive
+    INSERT INTO audit_logs_archive 
+    SELECT *, NOW() as archived_at 
+    FROM audit_logs 
+    WHERE timestamp < archive_date;
+    
+    -- Delete archived logs from main table
+    DELETE FROM audit_logs 
+    WHERE timestamp < archive_date;
+    
+    SELECT CONCAT('Archived logs older than ', days_to_keep, ' days') as message;
+END$$
+
+CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `check_attendance_eligibility` (IN `p_user_id` INT, IN `p_check_date` DATE, OUT `p_eligible` BOOLEAN, OUT `p_reason` VARCHAR(255))   BEGIN
+    DECLARE blackout_count INT DEFAULT 0;
+    SELECT COUNT(*) INTO blackout_count
+    FROM leave_blackouts
+    WHERE user_id = p_user_id AND blackout_date = p_check_date;
+    
+    IF blackout_count > 0 THEN
+        SET p_eligible = FALSE;
+        SET p_reason = 'Employee on approved leave - check-in disabled';
+    ELSE
+        SET p_eligible = TRUE;
+        SET p_reason = 'Eligible for attendance';
+    END IF;
+END$$
+
+CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `check_department_capacity` (IN `p_department_id` INT, OUT `p_available_slots` INT, OUT `p_at_capacity` BOOLEAN)   BEGIN
+    DECLARE max_count INT;
+    DECLARE current_count INT;
+    
+    SELECT max_headcount, current_headcount INTO max_count, current_count
+    FROM departments WHERE id = p_department_id;
+    
+    SET p_available_slots = max_count - current_count;
+    SET p_at_capacity = (current_count >= max_count);
+END$$
+
+CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `hr_create_employee` (IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_email` VARCHAR(100), IN `p_department_id` INT, IN `p_job_grade_id` INT, IN `p_role_id` INT, IN `p_hr_user_id` INT, OUT `p_employee_id` VARCHAR(10), OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(255))   BEGIN
+    DECLARE dept_current INT DEFAULT 0;
+    DECLARE dept_max INT DEFAULT 0;
+    DECLARE new_emp_id VARCHAR(10);
+    DECLARE temp_password VARCHAR(255);
+    
+    SELECT current_headcount, max_headcount INTO dept_current, dept_max
+    FROM departments WHERE id = p_department_id;
+    
+    IF dept_current >= dept_max THEN
+        SET p_success = FALSE;
+        SET p_message = CONCAT('Department at maximum capacity (', dept_max, '). Cannot create new employee.');
+        SET p_employee_id = NULL;
+    ELSE
+        SET new_emp_id = generate_employee_id();
+        SET temp_password = SHA2(CONCAT(new_emp_id, 'CRMSemp123!'), 256);
+        
+        INSERT INTO users (
+            employee_id, first_name, last_name, email, 
+            department_id, job_grade_id, role_id, 
+            password, account_status, default_password_changed, profile_completed,
+            provisioned_by, provisioned_date, temporary_password
+        ) VALUES (
+            new_emp_id, p_first_name, p_last_name, p_email,
+            p_department_id, p_job_grade_id, p_role_id,
+            temp_password, 'PROVISIONED', FALSE, FALSE,
+            p_hr_user_id, NOW(), temp_password
+        );
+        
+        UPDATE departments SET current_headcount = current_headcount + 1 WHERE id = p_department_id;
+        
+        SET p_employee_id = new_emp_id;
+        SET p_success = TRUE;
+        SET p_message = CONCAT('Employee created successfully. Temporary Key: ', new_emp_id, ' + CRMSemp123!');
+    END IF;
+END$$
+
+CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `hr_promote_employee` (IN `p_user_id` INT, IN `p_new_grade_id` INT, IN `p_promoted_by` INT, OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(255))   BEGIN
+    DECLARE old_salary DECIMAL(12,2);
+    DECLARE new_salary DECIMAL(12,2);
+    
+    SELECT base_salary INTO old_salary FROM job_grades 
+    WHERE id = (SELECT job_grade_id FROM users WHERE id = p_user_id);
+    
+    SELECT base_salary INTO new_salary FROM job_grades WHERE id = p_new_grade_id;
+    
+    UPDATE users SET job_grade_id = p_new_grade_id WHERE id = p_user_id;
+    
+    SET p_success = TRUE;
+    SET p_message = CONCAT('Employee promoted. Salary updated from ', old_salary, ' to ', new_salary);
+END$$
+
+--
+-- Functions
+--
+CREATE DEFINER=`garrisonsayor`@`localhost` FUNCTION `generate_employee_id` () RETURNS VARCHAR(10) CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci DETERMINISTIC READS SQL DATA BEGIN
+    DECLARE next_number INT;
+    UPDATE `employee_id_sequence` SET `last_employee_number` = `last_employee_number` + 1 WHERE `id` = 1;
+    SELECT `last_employee_number` INTO next_number FROM `employee_id_sequence` WHERE `id` = 1;
+    RETURN CONCAT('EMP', LPAD(next_number, 3, '0'));
+END$$
+
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `access_rules`
+--
+
+CREATE TABLE `access_rules` (
+  `id` bigint(20) NOT NULL,
+  `door` varchar(255) NOT NULL,
+  `role` varchar(255) NOT NULL,
+  `schedule` varchar(255) NOT NULL,
+  `status` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -190,6 +315,24 @@ INSERT INTO `attendance` (`id`, `clock_in_time`, `clock_out_time`, `user_id`, `s
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `attendance_audit_log`
+--
+
+CREATE TABLE `attendance_audit_log` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `attendance_record_id` int(11) NOT NULL,
+  `check_in_method` varchar(50) NOT NULL,
+  `check_out_method` varchar(50) DEFAULT NULL,
+  `flagged_reason` varchar(255) DEFAULT NULL,
+  `reviewed_by` int(11) DEFAULT NULL,
+  `reviewed_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `attendance_records`
 --
 
@@ -198,8 +341,8 @@ CREATE TABLE `attendance_records` (
   `user_id` int(11) NOT NULL,
   `clock_in_time` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `clock_out_time` timestamp NULL DEFAULT NULL,
-  `clock_in_method` enum('manual','biometric_face','biometric_fingerprint','card') DEFAULT 'manual',
-  `clock_out_method` enum('manual','biometric_face','biometric_fingerprint','card') DEFAULT 'manual',
+  `clock_in_method` enum('manual','biometric_face','biometric_fingerprint','card','qr_scan') DEFAULT 'manual',
+  `clock_out_method` enum('manual','biometric_face','biometric_fingerprint','card','qr_scan') DEFAULT 'manual',
   `total_hours` decimal(4,2) DEFAULT 0.00,
   `overtime_hours` decimal(4,2) DEFAULT 0.00,
   `break_duration` int(11) DEFAULT 0,
@@ -210,26 +353,29 @@ CREATE TABLE `attendance_records` (
   `approved_by` int(11) DEFAULT NULL,
   `approved_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `flagged_for_review` tinyint(1) DEFAULT 0,
+  `buddy_punch_risk` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `attendance_records`
 --
 
-INSERT INTO `attendance_records` (`id`, `user_id`, `clock_in_time`, `clock_out_time`, `clock_in_method`, `clock_out_method`, `total_hours`, `overtime_hours`, `break_duration`, `location`, `ip_address`, `notes`, `status`, `approved_by`, `approved_at`, `created_at`, `updated_at`) VALUES
-(1, 9, '2024-12-01 06:00:00', '2024-12-01 15:00:00', 'manual', 'manual', 8.00, 0.00, 0, NULL, NULL, NULL, 'present', NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(2, 10, '2024-12-01 06:15:00', '2024-12-01 15:15:00', 'biometric_face', 'biometric_face', 8.00, 0.00, 0, NULL, NULL, NULL, 'late', NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(3, 11, '2024-12-01 06:00:00', '2024-12-01 16:00:00', 'manual', 'manual', 9.00, 0.00, 0, NULL, NULL, NULL, 'present', NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(4, 12, '2024-12-01 06:30:00', '2024-12-01 15:30:00', 'manual', 'manual', 8.00, 0.00, 0, NULL, NULL, NULL, 'late', NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(5, 9, '2024-12-02 06:00:00', '2024-12-02 15:00:00', 'manual', 'manual', 8.00, 0.00, 0, NULL, NULL, NULL, 'present', NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(6, 10, '2024-12-02 06:00:00', '2024-12-02 15:00:00', 'biometric_face', 'biometric_face', 8.00, 0.00, 0, NULL, NULL, NULL, 'present', NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(7, 11, '2024-12-02 06:00:00', '2024-12-02 15:30:00', 'manual', 'manual', 8.50, 0.00, 0, NULL, NULL, NULL, 'present', NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(8, 12, '2024-12-02 06:00:00', '2024-12-02 15:00:00', 'manual', 'manual', 8.00, 0.00, 0, NULL, NULL, NULL, 'present', NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(9, 2, '2025-12-18 17:23:34', '2025-12-18 17:23:34', '', '', 0.00, 0.00, 0, NULL, NULL, NULL, 'present', NULL, NULL, '2025-12-18 16:03:12', '2025-12-18 17:23:34'),
-(10, 3, '2025-12-29 11:59:25', '2025-12-29 15:29:25', '', '', 3.50, 0.00, 0, NULL, NULL, NULL, 'present', NULL, NULL, '2025-12-18 16:57:39', '2025-12-29 15:29:25'),
-(11, 1, '2025-12-29 12:19:11', '2025-12-29 12:19:11', '', 'manual', 0.00, 0.00, 0, NULL, NULL, NULL, 'present', NULL, NULL, '2025-12-29 12:18:35', '2025-12-29 12:19:11'),
-(12, 1, '2025-12-29 12:45:58', '2025-12-29 12:45:58', '', 'manual', 0.00, 0.00, 0, NULL, NULL, NULL, 'present', NULL, NULL, '2025-12-29 12:42:28', '2025-12-29 12:45:58');
+INSERT INTO `attendance_records` (`id`, `user_id`, `clock_in_time`, `clock_out_time`, `clock_in_method`, `clock_out_method`, `total_hours`, `overtime_hours`, `break_duration`, `location`, `ip_address`, `notes`, `status`, `approved_by`, `approved_at`, `created_at`, `updated_at`, `flagged_for_review`, `buddy_punch_risk`) VALUES
+(1, 9, '2026-01-05 06:00:00', '2026-01-05 15:00:00', 'manual', 'manual', 9.00, 1.00, 60, 'Main Office', '192.168.1.100', 'Regular work day', 'present', NULL, NULL, '2025-07-07 13:16:01', '2026-01-13 14:20:47', 0, 0),
+(2, 10, '2026-01-05 06:15:00', '2026-01-05 15:15:00', 'biometric_face', 'biometric_face', 9.00, 1.00, 60, 'Main Office', '192.168.1.101', 'Late arrival', 'late', NULL, NULL, '2025-07-07 13:16:01', '2026-01-13 14:20:47', 0, 0),
+(3, 11, '2026-01-05 06:00:00', '2026-01-05 16:00:00', 'qr_scan', 'qr_scan', 10.00, 2.00, 60, 'Main Office', '192.168.1.102', 'Overtime work', 'present', NULL, NULL, '2025-07-07 13:16:01', '2026-01-13 14:20:47', 0, 0),
+(4, 12, '2026-01-05 06:30:00', '2026-01-05 15:30:00', 'card', 'card', 9.00, 1.00, 60, 'Main Office', '192.168.1.103', 'Late arrival', 'late', NULL, NULL, '2025-07-07 13:16:01', '2026-01-13 14:20:47', 0, 0),
+(5, 9, '2026-01-06 06:00:00', '2026-01-06 15:00:00', 'manual', 'manual', 9.00, 1.00, 60, 'Main Office', '192.168.1.100', 'Regular work day', 'present', NULL, NULL, '2025-07-07 13:16:01', '2026-01-13 14:20:47', 0, 0),
+(6, 10, '2026-01-06 06:00:00', '2026-01-06 15:00:00', 'biometric_face', 'biometric_face', 9.00, 1.00, 60, 'Main Office', '192.168.1.101', 'Regular work day', 'present', NULL, NULL, '2025-07-07 13:16:01', '2026-01-13 14:20:47', 0, 0),
+(7, 11, '2026-01-06 06:00:00', '2026-01-06 15:30:00', 'qr_scan', 'qr_scan', 9.50, 1.50, 60, 'Main Office', '192.168.1.102', 'Extra work', 'present', NULL, NULL, '2025-07-07 13:16:01', '2026-01-13 14:20:47', 0, 0),
+(8, 12, '2026-01-06 06:00:00', '2026-01-06 15:00:00', 'card', 'card', 9.00, 1.00, 60, 'Main Office', '192.168.1.103', 'Regular work day', 'present', NULL, NULL, '2025-07-07 13:16:01', '2026-01-13 14:20:47', 0, 0),
+(9, 2, '2026-01-07 06:00:00', '2026-01-07 15:00:00', 'qr_scan', 'qr_scan', 9.00, 1.00, 60, 'Main Office', '192.168.1.104', 'Regular work day', 'present', NULL, NULL, '2025-12-18 16:03:12', '2026-01-13 14:20:47', 0, 0),
+(10, 3, '2026-01-07 06:00:00', '2026-01-07 15:00:00', 'qr_scan', 'qr_scan', 9.00, 1.00, 60, 'Main Office', '192.168.1.105', 'Regular work day', 'present', NULL, NULL, '2025-12-18 16:57:39', '2026-01-13 14:20:47', 0, 0),
+(11, 1, '2026-01-07 06:00:00', '2026-01-07 15:00:00', 'qr_scan', 'qr_scan', 9.00, 1.00, 60, 'Main Office', '192.168.1.106', 'Regular work day', 'present', NULL, NULL, '2025-12-29 12:18:35', '2026-01-13 15:00:25', 0, 0),
+(12, 1, '2026-01-07 06:00:00', '2026-01-07 15:00:00', 'qr_scan', 'qr_scan', 9.00, 1.00, 60, 'Main Office', '192.168.1.107', 'Regular work day', 'present', NULL, NULL, '2025-12-29 12:42:28', '2026-01-13 14:53:55', 0, 0),
+(13, 1, '2026-01-17 19:23:47', NULL, 'qr_scan', NULL, 0.00, 0.00, 0, NULL, NULL, NULL, 'present', NULL, NULL, '2026-01-17 18:56:48', '2026-01-17 19:23:47', 0, 0);
 
 --
 -- Triggers `attendance_records`
@@ -267,254 +413,320 @@ CREATE TABLE `audit_logs` (
   `ip_address` varchar(45) DEFAULT NULL,
   `user_agent` text DEFAULT NULL,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
-  `details` varchar(255) DEFAULT NULL,
-  `performed_by` varchar(255) NOT NULL
+  `details` text DEFAULT NULL,
+  `performed_by` varchar(255) NOT NULL,
+  `entity_id` varchar(255) DEFAULT NULL,
+  `entity_type` varchar(255) DEFAULT NULL,
+  `request_id` varchar(255) DEFAULT NULL,
+  `result` varchar(255) DEFAULT NULL,
+  `service_name` varchar(255) DEFAULT NULL,
+  `session_id` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `audit_logs`
 --
 
-INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `table_name`, `record_id`, `old_values`, `new_values`, `ip_address`, `user_agent`, `timestamp`, `details`, `performed_by`) VALUES
-(1, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 16:11:45', NULL, ''),
-(2, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 16:20:22', NULL, ''),
-(3, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 16:24:35', NULL, ''),
-(4, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 16:30:02', NULL, ''),
-(5, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 21:52:40', NULL, ''),
-(6, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 21:53:32', NULL, ''),
-(7, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 21:55:51', NULL, ''),
-(8, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 22:09:23', NULL, ''),
-(9, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 22:10:11', NULL, ''),
-(10, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 22:39:42', NULL, ''),
-(11, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 23:15:01', NULL, ''),
-(12, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 23:15:39', NULL, ''),
-(13, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 23:16:40', NULL, ''),
-(14, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 23:21:17', NULL, ''),
-(15, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 01:33:31', NULL, ''),
-(16, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 07:12:59', NULL, ''),
-(17, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 07:21:26', NULL, ''),
-(18, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 07:24:11', NULL, ''),
-(19, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 07:34:49', NULL, ''),
-(20, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 08:05:51', NULL, ''),
-(21, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 09:28:38', NULL, ''),
-(22, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 21:35:17', NULL, ''),
-(23, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-10 08:38:23', NULL, ''),
-(24, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-10 21:12:55', NULL, ''),
-(25, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-10 21:43:06', NULL, ''),
-(26, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-10 21:50:55', NULL, ''),
-(27, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-11 13:29:58', NULL, ''),
-(28, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-14 18:40:19', NULL, ''),
-(29, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-14 20:18:30', NULL, ''),
-(30, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-14 22:30:34', NULL, ''),
-(31, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-15 00:38:43', NULL, ''),
-(32, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-15 01:50:25', NULL, ''),
-(33, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-15 15:25:52', NULL, ''),
-(34, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-07-15 15:32:44', NULL, ''),
-(35, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-15 21:35:28', NULL, ''),
-(36, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-15 22:37:29', NULL, ''),
-(37, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-15 23:48:03', NULL, ''),
-(38, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 09:14:02', NULL, ''),
-(39, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 09:14:27', NULL, ''),
-(40, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 09:37:42', NULL, ''),
-(41, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 10:50:45', NULL, ''),
-(42, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 10:59:50', NULL, ''),
-(43, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 11:06:56', NULL, ''),
-(44, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 11:24:40', NULL, ''),
-(45, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 12:25:26', NULL, ''),
-(46, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 13:49:33', NULL, ''),
-(47, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 15:36:53', NULL, ''),
-(48, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-24 12:51:51', NULL, ''),
-(49, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-24 13:52:53', NULL, ''),
-(50, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-24 14:15:05', NULL, ''),
-(51, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-24 15:32:02', NULL, ''),
-(52, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-24 16:47:41', NULL, ''),
-(53, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-24 18:18:20', NULL, ''),
-(54, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-24 19:22:04', NULL, ''),
-(55, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-30 10:39:14', NULL, ''),
-(56, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-30 14:01:48', NULL, ''),
-(57, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-30 16:03:01', NULL, ''),
-(58, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-08-01 12:34:06', NULL, ''),
-(59, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-08-08 01:17:11', NULL, ''),
-(60, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-08-08 02:07:09', NULL, ''),
-(61, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-08-08 03:27:05', NULL, ''),
-(62, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-09-01 19:03:59', NULL, ''),
-(63, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-01 19:08:43', NULL, ''),
-(64, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-01 22:56:03', NULL, ''),
-(65, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-09-01 23:21:55', NULL, ''),
-(66, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-01 23:21:55', NULL, ''),
-(67, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-01 23:57:03', NULL, ''),
-(68, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-02 00:56:50', NULL, ''),
-(69, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-09-02 00:59:19', NULL, ''),
-(70, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-09-02 00:59:45', NULL, ''),
-(71, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-02 00:59:59', NULL, ''),
-(72, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-02 01:03:05', NULL, ''),
-(73, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-02 01:06:00', NULL, ''),
-(74, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-02 02:47:08', NULL, ''),
-(75, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-10 18:00:03', NULL, ''),
-(76, 22, 'UPDATE', 'users', 22, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-10 20:04:16', NULL, ''),
-(77, 23, 'UPDATE', 'users', 23, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-10 20:43:02', NULL, ''),
-(78, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-10 21:02:47', NULL, ''),
-(79, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-10 21:06:21', NULL, ''),
-(80, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-10 21:06:21', NULL, ''),
-(81, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-09-20 07:15:57', NULL, ''),
-(82, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-20 07:26:27', NULL, ''),
-(83, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-20 07:26:36', NULL, ''),
-(84, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-20 07:52:18', NULL, ''),
-(85, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-20 07:52:27', NULL, ''),
-(86, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-20 07:53:19', NULL, ''),
-(87, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-20 08:06:41', NULL, ''),
-(88, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-09-20 08:06:59', NULL, ''),
-(89, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-20 08:14:46', NULL, ''),
-(90, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-20 09:14:07', NULL, ''),
-(91, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-22 15:07:14', NULL, ''),
-(92, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-22 15:07:24', NULL, ''),
-(93, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-22 16:11:05', NULL, ''),
-(94, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-24 10:58:37', NULL, ''),
-(95, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-24 12:17:07', NULL, ''),
-(96, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-05 16:51:22', NULL, ''),
-(97, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-05 21:15:08', NULL, ''),
-(98, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-05 23:02:11', NULL, ''),
-(99, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 09:45:47', NULL, ''),
-(100, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 11:01:32', NULL, ''),
-(101, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 12:48:48', NULL, ''),
-(102, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 13:00:13', NULL, ''),
-(103, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 13:25:14', NULL, ''),
-(104, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 13:46:31', NULL, ''),
-(105, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 13:46:38', NULL, ''),
-(106, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 15:56:53', NULL, ''),
-(107, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 15:56:56', NULL, ''),
-(108, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 15:57:33', NULL, ''),
-(109, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 15:57:35', NULL, ''),
-(110, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 15:57:36', NULL, ''),
-(111, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:07:34', NULL, ''),
-(112, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:07:36', NULL, ''),
-(113, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:07:37', NULL, ''),
-(114, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:07:38', NULL, ''),
-(115, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:08:50', NULL, ''),
-(116, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:13:35', NULL, ''),
-(117, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:15:59', NULL, ''),
-(118, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-10-06 16:17:19', NULL, ''),
-(119, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:17:32', NULL, ''),
-(120, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:17:41', NULL, ''),
-(121, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:18:31', NULL, ''),
-(122, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:18:48', NULL, ''),
-(123, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:19:25', NULL, ''),
-(124, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:19:52', NULL, ''),
-(125, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:22:00', NULL, ''),
-(126, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:22:12', NULL, ''),
-(127, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 17:35:59', NULL, ''),
-(128, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 18:46:31', NULL, ''),
-(129, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-07 10:28:27', NULL, ''),
-(130, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-07 13:03:28', NULL, ''),
-(131, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-07 14:13:30', NULL, ''),
-(132, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-08 05:48:47', NULL, ''),
-(133, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-08 06:09:24', NULL, ''),
-(134, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-08 06:09:55', NULL, ''),
-(135, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:19:45', NULL, ''),
-(136, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:19:49', NULL, ''),
-(137, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:20:10', NULL, ''),
-(138, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:22:42', NULL, ''),
-(139, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:22:50', NULL, ''),
-(140, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:23:01', NULL, ''),
-(141, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:24:28', NULL, ''),
-(142, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:24:36', NULL, ''),
-(143, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:24:52', NULL, ''),
-(144, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:25:36', NULL, ''),
-(145, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:25:52', NULL, ''),
-(146, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:26:04', NULL, ''),
-(147, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:26:11', NULL, ''),
-(148, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:26:33', NULL, ''),
-(149, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:27:01', NULL, '');
-INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `table_name`, `record_id`, `old_values`, `new_values`, `ip_address`, `user_agent`, `timestamp`, `details`, `performed_by`) VALUES
-(150, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:27:33', NULL, ''),
-(151, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-10 13:55:19', NULL, ''),
-(152, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-19 18:43:51', NULL, ''),
-(153, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-19 18:55:08', NULL, ''),
-(154, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-22 23:35:34', NULL, ''),
-(155, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-23 00:40:09', NULL, ''),
-(156, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-12 18:37:48', NULL, ''),
-(157, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-12 19:38:07', NULL, ''),
-(158, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-12 21:04:04', NULL, ''),
-(159, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-13 12:04:20', NULL, ''),
-(160, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-14 22:35:47', NULL, ''),
-(161, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-18 11:09:24', NULL, ''),
-(162, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-18 11:53:22', NULL, ''),
-(163, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-19 07:04:08', NULL, ''),
-(164, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-19 08:18:39', NULL, ''),
-(165, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-19 09:55:29', NULL, ''),
-(166, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-20 11:41:54', NULL, ''),
-(167, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-20 12:42:50', NULL, ''),
-(168, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-20 16:08:32', NULL, ''),
-(169, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-29 05:55:04', NULL, ''),
-(170, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-11-29 05:55:28', NULL, ''),
-(171, 3, 'UPDATE', 'users', 3, '{\"employee_id\": \"EMP003\", \"email\": \"finance.head@craftresource.gov\", \"first_name\": \"Christopher\", \"last_name\": \"Leabon\"}', '{\"employee_id\": \"EMP003\", \"email\": \"finance.head@craftresource.gov\", \"first_name\": \"Christopher\", \"last_name\": \"Leabon\"}', NULL, NULL, '2025-11-29 05:57:42', NULL, ''),
-(172, 4, 'UPDATE', 'users', 4, '{\"employee_id\": \"EMP004\", \"email\": \"it.head@craftresource.gov\", \"first_name\": \"George\", \"last_name\": \"Kona\"}', '{\"employee_id\": \"EMP004\", \"email\": \"it.head@craftresource.gov\", \"first_name\": \"George\", \"last_name\": \"Kona\"}', NULL, NULL, '2025-11-29 05:57:53', NULL, ''),
-(173, 5, 'UPDATE', 'users', 5, '{\"employee_id\": \"EMP005\", \"email\": \"ops.head@craftresource.gov\", \"first_name\": \"Thomas\", \"last_name\": \"Sneh\"}', '{\"employee_id\": \"EMP005\", \"email\": \"ops.head@craftresource.gov\", \"first_name\": \"Thomas\", \"last_name\": \"Sneh\"}', NULL, NULL, '2025-11-29 05:58:03', NULL, ''),
-(174, 6, 'UPDATE', 'users', 6, '{\"employee_id\": \"EMP006\", \"email\": \"hr.manager@craftresource.gov\", \"first_name\": \"Jennifer\", \"last_name\": \"Davis\"}', '{\"employee_id\": \"EMP006\", \"email\": \"hr.manager@craftresource.gov\", \"first_name\": \"Jennifer\", \"last_name\": \"Davis\"}', NULL, NULL, '2025-11-29 05:58:09', NULL, ''),
-(175, 7, 'UPDATE', 'users', 7, '{\"employee_id\": \"EMP007\", \"email\": \"finance.manager@craftresource.gov\", \"first_name\": \"Robert\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP007\", \"email\": \"finance.manager@craftresource.gov\", \"first_name\": \"Robert\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-29 05:58:14', NULL, ''),
-(176, 8, 'UPDATE', 'users', 8, '{\"employee_id\": \"EMP008\", \"email\": \"it.manager@craftresource.gov\", \"first_name\": \"Amanda\", \"last_name\": \"Brown\"}', '{\"employee_id\": \"EMP008\", \"email\": \"it.manager@craftresource.gov\", \"first_name\": \"Amanda\", \"last_name\": \"Brown\"}', NULL, NULL, '2025-11-29 05:58:19', NULL, ''),
-(177, 9, 'UPDATE', 'users', 9, '{\"employee_id\": \"EMP009\", \"email\": \"john.doe@craftresource.gov\", \"first_name\": \"John\", \"last_name\": \"Doe\"}', '{\"employee_id\": \"EMP009\", \"email\": \"john.doe@craftresource.gov\", \"first_name\": \"John\", \"last_name\": \"Doe\"}', NULL, NULL, '2025-11-29 05:58:24', NULL, ''),
-(178, 10, 'UPDATE', 'users', 10, '{\"employee_id\": \"EMP010\", \"email\": \"jane.smith@craftresource.gov\", \"first_name\": \"Jane\", \"last_name\": \"Smith\"}', '{\"employee_id\": \"EMP010\", \"email\": \"jane.smith@craftresource.gov\", \"first_name\": \"Jane\", \"last_name\": \"Smith\"}', NULL, NULL, '2025-11-29 05:58:30', NULL, ''),
-(179, 11, 'UPDATE', 'users', 11, '{\"employee_id\": \"EMP011\", \"email\": \"mark.jones@craftresource.gov\", \"first_name\": \"Mark\", \"last_name\": \"Jones\"}', '{\"employee_id\": \"EMP011\", \"email\": \"mark.jones@craftresource.gov\", \"first_name\": \"Mark\", \"last_name\": \"Jones\"}', NULL, NULL, '2025-11-29 05:58:36', NULL, ''),
-(180, 12, 'UPDATE', 'users', 12, '{\"employee_id\": \"EMP012\", \"email\": \"emily.white@craftresource.gov\", \"first_name\": \"Emily\", \"last_name\": \"White\"}', '{\"employee_id\": \"EMP012\", \"email\": \"emily.white@craftresource.gov\", \"first_name\": \"Emily\", \"last_name\": \"White\"}', NULL, NULL, '2025-11-29 05:58:41', NULL, ''),
-(181, 13, 'UPDATE', 'users', 13, '{\"employee_id\": \"EMP013\", \"email\": \"alex.green@craftresource.gov\", \"first_name\": \"Alex\", \"last_name\": \"Green\"}', '{\"employee_id\": \"EMP013\", \"email\": \"alex.green@craftresource.gov\", \"first_name\": \"Alex\", \"last_name\": \"Green\"}', NULL, NULL, '2025-11-29 05:58:46', NULL, ''),
-(182, 14, 'UPDATE', 'users', 14, '{\"employee_id\": \"EMP014\", \"email\": \"maria.garcia@craftresource.gov\", \"first_name\": \"Maria\", \"last_name\": \"Garcia\"}', '{\"employee_id\": \"EMP014\", \"email\": \"maria.garcia@craftresource.gov\", \"first_name\": \"Maria\", \"last_name\": \"Garcia\"}', NULL, NULL, '2025-11-29 05:58:51', NULL, ''),
-(183, 15, 'UPDATE', 'users', 15, '{\"employee_id\": \"EMP015\", \"email\": \"chris.taylor@craftresource.gov\", \"first_name\": \"Chris\", \"last_name\": \"Taylor\"}', '{\"employee_id\": \"EMP015\", \"email\": \"chris.taylor@craftresource.gov\", \"first_name\": \"Chris\", \"last_name\": \"Taylor\"}', NULL, NULL, '2025-11-29 05:59:07', NULL, ''),
-(184, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-11-29 05:59:12', NULL, ''),
-(185, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-11-29 05:59:18', NULL, ''),
-(186, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-11-29 06:09:09', NULL, ''),
-(187, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-29 06:10:18', NULL, ''),
-(188, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-30 12:04:32', NULL, ''),
-(189, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-30 12:04:58', NULL, ''),
-(190, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-30 12:05:05', NULL, ''),
-(191, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-30 12:07:56', NULL, ''),
-(192, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-30 12:13:01', NULL, ''),
-(193, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-30 12:13:24', NULL, ''),
-(194, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-30 12:15:06', NULL, ''),
-(195, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-01 07:42:28', NULL, ''),
-(196, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-01 13:59:39', NULL, ''),
-(197, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-01 14:21:18', NULL, ''),
-(198, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-01 20:27:19', NULL, ''),
-(199, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-01 20:40:41', NULL, ''),
-(200, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-01 21:18:23', NULL, ''),
-(201, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-02 11:35:52', NULL, ''),
-(202, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-05 05:41:49', NULL, ''),
-(203, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-05 06:19:06', NULL, ''),
-(204, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-05 08:25:21', NULL, ''),
-(205, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-07 17:51:44', NULL, ''),
-(206, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-09 16:47:45', NULL, ''),
-(207, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-09 16:53:51', NULL, ''),
-(208, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-10 17:21:52', NULL, ''),
-(209, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-10 19:33:17', NULL, ''),
-(210, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 09:29:13', NULL, ''),
-(211, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 11:06:47', NULL, ''),
-(212, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 11:27:00', NULL, ''),
-(213, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 11:29:26', NULL, ''),
-(214, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 11:39:01', NULL, ''),
-(215, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 11:53:48', NULL, ''),
-(216, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 12:14:52', NULL, ''),
-(217, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 12:55:01', NULL, ''),
-(218, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 14:48:21', NULL, ''),
-(219, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 15:24:24', NULL, ''),
-(220, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 15:27:33', NULL, ''),
-(221, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-12-18 15:43:46', NULL, ''),
-(222, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-18 15:59:01', NULL, ''),
-(223, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-18 16:00:48', NULL, ''),
-(224, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-18 16:03:12', NULL, ''),
-(225, 3, 'UPDATE', 'users', 3, '{\"employee_id\": \"EMP003\", \"email\": \"finance.head@craftresource.gov\", \"first_name\": \"Christopher\", \"last_name\": \"Leabon\"}', '{\"employee_id\": \"EMP003\", \"email\": \"finance.head@craftresource.gov\", \"first_name\": \"Christopher\", \"last_name\": \"Leabon\"}', NULL, NULL, '2025-12-18 16:57:39', NULL, ''),
-(226, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-18 16:58:52', NULL, ''),
-(227, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 17:20:32', NULL, ''),
-(228, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 17:21:32', NULL, ''),
-(229, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-18 17:23:34', NULL, ''),
-(230, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-29 11:22:20', NULL, ''),
-(231, 3, 'UPDATE', 'users', 3, '{\"employee_id\": \"EMP003\", \"email\": \"finance.head@craftresource.gov\", \"first_name\": \"Christopher\", \"last_name\": \"Leabon\"}', '{\"employee_id\": \"EMP003\", \"email\": \"finance.head@craftresource.gov\", \"first_name\": \"Christopher\", \"last_name\": \"Leabon\"}', NULL, NULL, '2025-12-29 11:59:25', NULL, ''),
-(232, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-29 12:18:35', NULL, ''),
-(233, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-29 12:25:22', NULL, ''),
-(234, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-29 12:42:27', NULL, ''),
-(235, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-29 13:06:50', NULL, ''),
-(236, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-29 13:13:05', NULL, ''),
-(237, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-29 13:47:49', NULL, ''),
-(238, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-29 13:50:41', NULL, '');
+INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `table_name`, `record_id`, `old_values`, `new_values`, `ip_address`, `user_agent`, `timestamp`, `details`, `performed_by`, `entity_id`, `entity_type`, `request_id`, `result`, `service_name`, `session_id`) VALUES
+(1, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 16:11:45', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(2, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 16:20:22', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(3, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 16:24:35', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(4, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 16:30:02', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(5, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 21:52:40', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(6, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 21:53:32', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(7, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 21:55:51', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(8, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 22:09:23', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(9, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 22:10:11', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(10, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 22:39:42', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(11, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 23:15:01', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(12, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 23:15:39', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(13, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 23:16:40', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(14, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-07 23:21:17', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(15, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 01:33:31', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(16, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 07:12:59', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(17, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 07:21:26', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(18, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 07:24:11', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(19, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 07:34:49', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(20, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 08:05:51', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(21, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 09:28:38', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(22, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-08 21:35:17', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(23, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-10 08:38:23', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(24, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-10 21:12:55', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(25, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-10 21:43:06', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(26, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-10 21:50:55', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(27, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-11 13:29:58', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(28, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-14 18:40:19', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(29, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-14 20:18:30', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(30, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-14 22:30:34', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(31, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-15 00:38:43', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(32, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-15 01:50:25', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(33, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-15 15:25:52', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(34, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-07-15 15:32:44', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(35, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-15 21:35:28', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(36, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-15 22:37:29', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(37, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-15 23:48:03', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(38, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 09:14:02', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(39, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 09:14:27', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(40, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 09:37:42', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(41, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 10:50:45', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(42, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 10:59:50', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(43, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 11:06:56', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(44, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 11:24:40', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(45, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 12:25:26', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(46, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 13:49:33', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(47, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-16 15:36:53', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(48, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-24 12:51:51', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(49, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-24 13:52:53', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(50, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-24 14:15:05', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(51, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-24 15:32:02', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(52, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-24 16:47:41', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(53, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-24 18:18:20', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(54, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-24 19:22:04', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(55, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-30 10:39:14', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(56, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-30 14:01:48', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(57, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-07-30 16:03:01', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(58, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-08-01 12:34:06', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(59, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-08-08 01:17:11', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(60, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-08-08 02:07:09', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(61, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-08-08 03:27:05', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(62, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-09-01 19:03:59', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(63, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-01 19:08:43', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(64, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-01 22:56:03', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(65, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-09-01 23:21:55', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(66, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-01 23:21:55', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(67, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-01 23:57:03', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(68, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-02 00:56:50', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(69, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-09-02 00:59:19', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(70, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-09-02 00:59:45', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(71, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-02 00:59:59', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(72, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-02 01:03:05', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(73, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-02 01:06:00', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(74, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-02 02:47:08', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(75, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-10 18:00:03', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(76, 22, 'UPDATE', 'users', 22, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-10 20:04:16', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(77, 23, 'UPDATE', 'users', 23, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-10 20:43:02', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(78, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-10 21:02:47', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(79, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-10 21:06:21', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(80, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-10 21:06:21', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(81, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-09-20 07:15:57', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(82, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-20 07:26:27', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(83, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-09-20 07:26:36', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(84, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-20 07:52:18', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(85, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-20 07:52:27', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(86, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-20 07:53:19', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(87, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-20 08:06:41', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(88, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-09-20 08:06:59', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(89, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-20 08:14:46', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(90, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-20 09:14:07', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(91, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-22 15:07:14', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(92, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-22 15:07:24', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(93, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-22 16:11:05', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(94, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-24 10:58:37', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(95, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-09-24 12:17:07', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(96, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-05 16:51:22', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(97, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-05 21:15:08', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(98, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-05 23:02:11', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(99, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 09:45:47', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(100, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 11:01:32', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(101, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 12:48:48', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(102, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 13:00:13', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(103, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 13:25:14', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(104, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 13:46:31', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(105, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 13:46:38', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(106, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 15:56:53', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(107, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 15:56:56', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(108, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 15:57:33', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(109, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 15:57:35', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(110, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 15:57:36', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(111, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:07:34', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(112, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:07:36', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(113, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:07:37', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(114, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:07:38', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(115, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:08:50', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(116, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:13:35', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(117, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:15:59', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(118, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-10-06 16:17:19', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(119, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:17:32', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(120, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:17:41', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(121, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:18:31', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(122, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:18:48', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(123, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:19:25', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(124, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:19:52', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(125, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:22:00', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(126, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 16:22:12', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(127, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 17:35:59', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(128, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-06 18:46:31', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(129, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-07 10:28:27', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(130, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-07 13:03:28', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(131, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-07 14:13:30', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL);
+INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `table_name`, `record_id`, `old_values`, `new_values`, `ip_address`, `user_agent`, `timestamp`, `details`, `performed_by`, `entity_id`, `entity_type`, `request_id`, `result`, `service_name`, `session_id`) VALUES
+(132, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-08 05:48:47', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(133, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-08 06:09:24', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(134, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-08 06:09:55', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(135, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:19:45', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(136, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:19:49', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(137, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:20:10', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(138, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:22:42', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(139, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:22:50', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(140, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:23:01', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(141, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:24:28', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(142, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:24:36', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(143, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:24:52', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(144, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:25:36', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(145, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:25:52', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(146, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:26:04', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(147, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:26:11', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(148, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:26:33', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(149, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:27:01', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(150, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-09 15:27:33', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(151, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-10 13:55:19', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(152, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-19 18:43:51', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(153, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-19 18:55:08', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(154, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-22 23:35:34', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(155, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-10-23 00:40:09', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(156, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-12 18:37:48', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(157, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-12 19:38:07', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(158, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-12 21:04:04', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(159, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-13 12:04:20', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(160, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-14 22:35:47', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(161, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-18 11:09:24', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(162, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-18 11:53:22', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(163, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-19 07:04:08', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(164, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-19 08:18:39', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(165, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-19 09:55:29', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(166, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-20 11:41:54', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(167, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-20 12:42:50', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(168, 21, 'UPDATE', 'users', 21, '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP018\", \"email\": \"albertinewilson29@gmail.com\", \"first_name\": \"Albertine\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-20 16:08:32', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(169, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-29 05:55:04', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(170, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-11-29 05:55:28', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(171, 3, 'UPDATE', 'users', 3, '{\"employee_id\": \"EMP003\", \"email\": \"finance.head@craftresource.gov\", \"first_name\": \"Christopher\", \"last_name\": \"Leabon\"}', '{\"employee_id\": \"EMP003\", \"email\": \"finance.head@craftresource.gov\", \"first_name\": \"Christopher\", \"last_name\": \"Leabon\"}', NULL, NULL, '2025-11-29 05:57:42', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(172, 4, 'UPDATE', 'users', 4, '{\"employee_id\": \"EMP004\", \"email\": \"it.head@craftresource.gov\", \"first_name\": \"George\", \"last_name\": \"Kona\"}', '{\"employee_id\": \"EMP004\", \"email\": \"it.head@craftresource.gov\", \"first_name\": \"George\", \"last_name\": \"Kona\"}', NULL, NULL, '2025-11-29 05:57:53', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(173, 5, 'UPDATE', 'users', 5, '{\"employee_id\": \"EMP005\", \"email\": \"ops.head@craftresource.gov\", \"first_name\": \"Thomas\", \"last_name\": \"Sneh\"}', '{\"employee_id\": \"EMP005\", \"email\": \"ops.head@craftresource.gov\", \"first_name\": \"Thomas\", \"last_name\": \"Sneh\"}', NULL, NULL, '2025-11-29 05:58:03', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(174, 6, 'UPDATE', 'users', 6, '{\"employee_id\": \"EMP006\", \"email\": \"hr.manager@craftresource.gov\", \"first_name\": \"Jennifer\", \"last_name\": \"Davis\"}', '{\"employee_id\": \"EMP006\", \"email\": \"hr.manager@craftresource.gov\", \"first_name\": \"Jennifer\", \"last_name\": \"Davis\"}', NULL, NULL, '2025-11-29 05:58:09', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(175, 7, 'UPDATE', 'users', 7, '{\"employee_id\": \"EMP007\", \"email\": \"finance.manager@craftresource.gov\", \"first_name\": \"Robert\", \"last_name\": \"Wilson\"}', '{\"employee_id\": \"EMP007\", \"email\": \"finance.manager@craftresource.gov\", \"first_name\": \"Robert\", \"last_name\": \"Wilson\"}', NULL, NULL, '2025-11-29 05:58:14', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(176, 8, 'UPDATE', 'users', 8, '{\"employee_id\": \"EMP008\", \"email\": \"it.manager@craftresource.gov\", \"first_name\": \"Amanda\", \"last_name\": \"Brown\"}', '{\"employee_id\": \"EMP008\", \"email\": \"it.manager@craftresource.gov\", \"first_name\": \"Amanda\", \"last_name\": \"Brown\"}', NULL, NULL, '2025-11-29 05:58:19', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(177, 9, 'UPDATE', 'users', 9, '{\"employee_id\": \"EMP009\", \"email\": \"john.doe@craftresource.gov\", \"first_name\": \"John\", \"last_name\": \"Doe\"}', '{\"employee_id\": \"EMP009\", \"email\": \"john.doe@craftresource.gov\", \"first_name\": \"John\", \"last_name\": \"Doe\"}', NULL, NULL, '2025-11-29 05:58:24', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(178, 10, 'UPDATE', 'users', 10, '{\"employee_id\": \"EMP010\", \"email\": \"jane.smith@craftresource.gov\", \"first_name\": \"Jane\", \"last_name\": \"Smith\"}', '{\"employee_id\": \"EMP010\", \"email\": \"jane.smith@craftresource.gov\", \"first_name\": \"Jane\", \"last_name\": \"Smith\"}', NULL, NULL, '2025-11-29 05:58:30', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(179, 11, 'UPDATE', 'users', 11, '{\"employee_id\": \"EMP011\", \"email\": \"mark.jones@craftresource.gov\", \"first_name\": \"Mark\", \"last_name\": \"Jones\"}', '{\"employee_id\": \"EMP011\", \"email\": \"mark.jones@craftresource.gov\", \"first_name\": \"Mark\", \"last_name\": \"Jones\"}', NULL, NULL, '2025-11-29 05:58:36', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(180, 12, 'UPDATE', 'users', 12, '{\"employee_id\": \"EMP012\", \"email\": \"emily.white@craftresource.gov\", \"first_name\": \"Emily\", \"last_name\": \"White\"}', '{\"employee_id\": \"EMP012\", \"email\": \"emily.white@craftresource.gov\", \"first_name\": \"Emily\", \"last_name\": \"White\"}', NULL, NULL, '2025-11-29 05:58:41', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(181, 13, 'UPDATE', 'users', 13, '{\"employee_id\": \"EMP013\", \"email\": \"alex.green@craftresource.gov\", \"first_name\": \"Alex\", \"last_name\": \"Green\"}', '{\"employee_id\": \"EMP013\", \"email\": \"alex.green@craftresource.gov\", \"first_name\": \"Alex\", \"last_name\": \"Green\"}', NULL, NULL, '2025-11-29 05:58:46', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(182, 14, 'UPDATE', 'users', 14, '{\"employee_id\": \"EMP014\", \"email\": \"maria.garcia@craftresource.gov\", \"first_name\": \"Maria\", \"last_name\": \"Garcia\"}', '{\"employee_id\": \"EMP014\", \"email\": \"maria.garcia@craftresource.gov\", \"first_name\": \"Maria\", \"last_name\": \"Garcia\"}', NULL, NULL, '2025-11-29 05:58:51', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(183, 15, 'UPDATE', 'users', 15, '{\"employee_id\": \"EMP015\", \"email\": \"chris.taylor@craftresource.gov\", \"first_name\": \"Chris\", \"last_name\": \"Taylor\"}', '{\"employee_id\": \"EMP015\", \"email\": \"chris.taylor@craftresource.gov\", \"first_name\": \"Chris\", \"last_name\": \"Taylor\"}', NULL, NULL, '2025-11-29 05:59:07', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(184, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-11-29 05:59:12', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(185, 20, 'UPDATE', 'users', 20, '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', '{\"employee_id\": \"EMP017\", \"email\": \"issaadamx@gmail.com\", \"first_name\": \"Issa\", \"last_name\": \"Adams\"}', NULL, NULL, '2025-11-29 05:59:18', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(186, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-11-29 06:09:09', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(187, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-29 06:10:18', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(188, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-30 12:04:32', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(189, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-30 12:04:58', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(190, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-30 12:05:05', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(191, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-30 12:07:56', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(192, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-30 12:13:01', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(193, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-30 12:13:24', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(194, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-11-30 12:15:06', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(195, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-01 07:42:28', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(196, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-01 13:59:39', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(197, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-01 14:21:18', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(198, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-01 20:27:19', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(199, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-01 20:40:41', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(200, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-01 21:18:23', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(201, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-02 11:35:52', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(202, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-05 05:41:49', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(203, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-05 06:19:06', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(204, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-05 08:25:21', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(205, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-07 17:51:44', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(206, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-09 16:47:45', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(207, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-09 16:53:51', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(208, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-10 17:21:52', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(209, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-10 19:33:17', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(210, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 09:29:13', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(211, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 11:06:47', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(212, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 11:27:00', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(213, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 11:29:26', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(214, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 11:39:01', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(215, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 11:53:48', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(216, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 12:14:52', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(217, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 12:55:01', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(218, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 14:48:21', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(219, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 15:24:24', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(220, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 15:27:33', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(221, 19, 'UPDATE', 'users', 19, '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP016\", \"email\": \"garrisonsay@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2025-12-18 15:43:46', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(222, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-18 15:59:01', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(223, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-18 16:00:48', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(224, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-18 16:03:12', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(225, 3, 'UPDATE', 'users', 3, '{\"employee_id\": \"EMP003\", \"email\": \"finance.head@craftresource.gov\", \"first_name\": \"Christopher\", \"last_name\": \"Leabon\"}', '{\"employee_id\": \"EMP003\", \"email\": \"finance.head@craftresource.gov\", \"first_name\": \"Christopher\", \"last_name\": \"Leabon\"}', NULL, NULL, '2025-12-18 16:57:39', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(226, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-18 16:58:52', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(227, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 17:20:32', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(228, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-18 17:21:32', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(229, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-18 17:23:34', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(230, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-29 11:22:20', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(231, 3, 'UPDATE', 'users', 3, '{\"employee_id\": \"EMP003\", \"email\": \"finance.head@craftresource.gov\", \"first_name\": \"Christopher\", \"last_name\": \"Leabon\"}', '{\"employee_id\": \"EMP003\", \"email\": \"finance.head@craftresource.gov\", \"first_name\": \"Christopher\", \"last_name\": \"Leabon\"}', NULL, NULL, '2025-12-29 11:59:25', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(232, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-29 12:18:35', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(233, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-29 12:25:22', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(234, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-29 12:42:27', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(235, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-29 13:06:50', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(236, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-29 13:13:05', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(237, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2025-12-29 13:47:49', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(238, 2, 'UPDATE', 'users', 2, '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', '{\"employee_id\": \"EMP002\", \"email\": \"hr.head@craftresource.gov\", \"first_name\": \"Garrison\", \"last_name\": \"Sayor\"}', NULL, NULL, '2025-12-29 13:50:41', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(239, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2026-01-08 03:49:20', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(240, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2026-01-11 13:15:47', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(241, 23, 'UPDATE', 'users', 23, '{\"employee_id\": \"EMP022\", \"email\": \"sabbahkarsor@gmail.com\", \"first_name\": \"Crayton\", \"last_name\": \"Kamara\"}', '{\"employee_id\": \"EMP022\", \"email\": \"sabbahkarsor@gmail.com\", \"first_name\": \"Crayton\", \"last_name\": \"Kamara\"}', NULL, NULL, '2026-01-11 19:06:01', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(242, 23, 'UPDATE', 'users', 23, '{\"employee_id\": \"EMP022\", \"email\": \"sabbahkarsor@gmail.com\", \"first_name\": \"Crayton\", \"last_name\": \"Kamara\"}', '{\"employee_id\": \"EMP022\", \"email\": \"sabbahkarsor@gmail.com\", \"first_name\": \"Crayton\", \"last_name\": \"Kamara\"}', NULL, NULL, '2026-01-11 19:14:26', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(243, 23, 'UPDATE', 'users', 23, '{\"employee_id\": \"EMP022\", \"email\": \"sabbahkarsor@gmail.com\", \"first_name\": \"Crayton\", \"last_name\": \"Kamara\"}', '{\"employee_id\": \"EMP022\", \"email\": \"sabbahkarsor@gmail.com\", \"first_name\": \"Crayton\", \"last_name\": \"Kamara\"}', NULL, NULL, '2026-01-11 19:28:05', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(244, 23, 'UPDATE', 'users', 23, '{\"employee_id\": \"EMP022\", \"email\": \"sabbahkarsor@gmail.com\", \"first_name\": \"Crayton\", \"last_name\": \"Kamara\"}', '{\"employee_id\": \"EMP022\", \"email\": \"sabbahkarsor@gmail.com\", \"first_name\": \"Crayton\", \"last_name\": \"Kamara\"}', NULL, NULL, '2026-01-11 19:53:15', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(245, 23, 'UPDATE', 'users', 23, '{\"employee_id\": \"EMP022\", \"email\": \"sabbahkarsor@gmail.com\", \"first_name\": \"Crayton\", \"last_name\": \"Kamara\"}', '{\"employee_id\": \"EMP022\", \"email\": \"sabbahkarsor@gmail.com\", \"first_name\": \"Crayton\", \"last_name\": \"Kamara\"}', NULL, NULL, '2026-01-11 20:29:13', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(246, 23, 'UPDATE', 'users', 23, '{\"employee_id\": \"EMP022\", \"email\": \"sabbahkarsor@gmail.com\", \"first_name\": \"Crayton\", \"last_name\": \"Kamara\"}', '{\"employee_id\": \"EMP022\", \"email\": \"sabbahkarsor@gmail.com\", \"first_name\": \"Crayton\", \"last_name\": \"Kamara\"}', NULL, NULL, '2026-01-11 20:38:38', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(247, 23, 'UPDATE', 'users', 23, '{\"employee_id\": \"EMP022\", \"email\": \"sabbahkarsor@gmail.com\", \"first_name\": \"Crayton\", \"last_name\": \"Kamara\"}', '{\"employee_id\": \"EMP022\", \"email\": \"sabbahkarsor@gmail.com\", \"first_name\": \"Crayton\", \"last_name\": \"Kamara\"}', NULL, NULL, '2026-01-11 20:49:17', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(248, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2026-01-11 22:13:32', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(249, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2026-01-13 00:51:06', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(250, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2026-01-13 13:42:17', NULL, '', NULL, NULL, NULL, NULL, 'java-backend', NULL),
+(251, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2026-01-13 19:58:44', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(252, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2026-01-13 19:59:39', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(253, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2026-01-13 20:00:06', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(254, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2026-01-13 20:04:10', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(255, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2026-01-13 20:04:41', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(256, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2026-01-13 20:10:55', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(257, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', NULL, NULL, '2026-01-13 20:12:45', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(258, NULL, 'EMPLOYEE_UPDATED', NULL, NULL, NULL, NULL, NULL, NULL, '2026-01-13 20:12:45', 'Employee: EMP001', '1', NULL, NULL, NULL, 'success', 'java-backend', NULL),
+(259, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"System\", \"last_name\": \"Administrator\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-13 20:12:53', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(260, NULL, 'EMPLOYEE_UPDATED', NULL, NULL, NULL, NULL, NULL, NULL, '2026-01-13 20:12:53', 'Employee: EMP001', '1', NULL, NULL, NULL, 'success', 'java-backend', NULL);
+INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `table_name`, `record_id`, `old_values`, `new_values`, `ip_address`, `user_agent`, `timestamp`, `details`, `performed_by`, `entity_id`, `entity_type`, `request_id`, `result`, `service_name`, `session_id`) VALUES
+(261, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-16 15:05:02', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(262, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-16 15:09:08', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(263, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-16 15:12:27', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(264, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-16 15:20:39', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(265, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-16 15:27:21', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(266, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-16 15:29:02', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(267, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-16 15:29:16', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(268, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-16 15:29:32', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(269, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-16 15:30:04', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(270, NULL, 'Employee Updated Their Profile Info', NULL, NULL, NULL, NULL, NULL, NULL, '2026-01-16 15:30:04', 'Employee: EMP001', '1', NULL, NULL, NULL, 'success', 'java-backend', NULL),
+(271, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-16 15:30:40', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(272, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-17 18:44:00', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(273, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-17 18:44:43', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(274, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-17 18:56:48', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL),
+(275, 1, 'UPDATE', 'users', 1, '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', '{\"employee_id\": \"EMP001\", \"email\": \"garrisonsayor@gmail.com\", \"first_name\": \"Crafty\", \"last_name\": \"Dev\"}', NULL, NULL, '2026-01-17 19:01:17', NULL, '', NULL, NULL, NULL, NULL, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `audit_logs_archive`
+--
+
+CREATE TABLE `audit_logs_archive` (
+  `id` bigint(20) NOT NULL,
+  `action` varchar(255) NOT NULL,
+  `performed_by` varchar(255) NOT NULL,
+  `timestamp` datetime NOT NULL,
+  `details` text DEFAULT NULL,
+  `service_name` varchar(50) DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `request_id` varchar(100) DEFAULT NULL,
+  `session_id` varchar(100) DEFAULT NULL,
+  `entity_type` varchar(50) DEFAULT NULL,
+  `entity_id` varchar(100) DEFAULT NULL,
+  `result` varchar(20) DEFAULT NULL,
+  `archived_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -673,6 +885,36 @@ INSERT INTO `budget_requests` (`id`, `category`, `department`, `justification`, 
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `business_permits`
+--
+
+CREATE TABLE `business_permits` (
+  `id` bigint(20) NOT NULL,
+  `permit_number` varchar(255) NOT NULL,
+  `business_name` varchar(255) NOT NULL,
+  `business_type` varchar(255) DEFAULT NULL,
+  `owner_name` varchar(255) DEFAULT NULL,
+  `address` varchar(255) DEFAULT NULL,
+  `contact_number` varchar(255) DEFAULT NULL,
+  `issue_date` date DEFAULT NULL,
+  `expiry_date` date DEFAULT NULL,
+  `fee` decimal(10,2) DEFAULT NULL,
+  `status` varchar(255) DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `business_permits`
+--
+
+INSERT INTO `business_permits` (`id`, `permit_number`, `business_name`, `business_type`, `owner_name`, `address`, `contact_number`, `issue_date`, `expiry_date`, `fee`, `status`, `created_at`, `updated_at`) VALUES
+(1, 'BP-2024-001', 'Tech Solutions Inc', 'IT Services', 'John Doe', '123 Main St', '+1234567890', '2026-01-12', '2027-01-12', 500.00, 'active', '2026-01-12 22:21:37', NULL),
+(2, 'BP-2024-002', 'Green Grocers', 'Retail', 'Jane Smith', '456 Market Ave', '+0987654321', '2026-01-12', '2027-01-12', 300.00, 'active', '2026-01-12 22:21:37', NULL);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `chart_of_accounts`
 --
 
@@ -693,7 +935,7 @@ CREATE TABLE `chart_of_accounts` (
 --
 
 INSERT INTO `chart_of_accounts` (`id`, `account_code`, `account_name`, `account_type`, `description`, `is_active`, `created_by`, `created_at`, `updated_at`) VALUES
-(1, '1000', 'Current Assets', 'asset', 'Short term assets', 1, 1, '2025-07-07 13:16:00', '2025-07-24 16:08:13'),
+(1, '1000', 'Current Assets', 'asset', 'Short term asset', 1, 1, '2025-07-07 13:16:00', '2026-01-18 09:05:15'),
 (2, '1100', 'Cash and Cash Equivalents', 'asset', 'Cash accounts', 1, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00'),
 (3, '1110', 'Petty Cash', 'asset', 'Small cash fund', 1, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:01'),
 (4, '1120', 'Bank Account - Operating', 'asset', 'Main operating account', 1, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:01'),
@@ -723,7 +965,8 @@ INSERT INTO `chart_of_accounts` (`id`, `account_code`, `account_name`, `account_
 (28, '5500', 'Rent', 'expense', 'Office rent', 1, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:01'),
 (29, '5600', 'Professional Services', 'expense', 'Legal, consulting fees', 1, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:01'),
 (30, '5700', 'Travel and Transportation', 'expense', 'Business travel costs', 1, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:01'),
-(31, '5800', 'Training and Development', 'expense', 'Employee training', 1, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:01');
+(31, '5800', 'Training and Development', 'expense', 'Employee training', 1, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:01'),
+(32, '5802', 'Gas delivery', 'liability', 'Short term money owed Total', NULL, 1, '2026-01-17 20:23:04', '2026-01-17 20:23:04');
 
 -- --------------------------------------------------------
 
@@ -753,26 +996,28 @@ CREATE TABLE `departments` (
   `budget_allocation` decimal(15,2) DEFAULT 0.00,
   `is_active` tinyint(1) DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `max_headcount` int(11) DEFAULT 50,
+  `current_headcount` int(11) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `departments`
 --
 
-INSERT INTO `departments` (`id`, `name`, `description`, `head_of_department`, `budget_allocation`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'Human Resources', 'Manages employee relations, recruitment, and HR policies', 2, 500000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00'),
-(2, 'Finance', 'Handles financial planning, accounting, and budget management', 3, 750000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00'),
-(3, 'Information Technology', 'Manages IT infrastructure, software development, and technical support', 4, 1000000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00'),
-(4, 'Operations', 'Oversees daily operations and process management', 5, 800000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00'),
-(5, 'Legal Affairs', 'Handles legal matters, contracts, and compliance', NULL, 400000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00'),
-(6, 'Procurement', 'Manages purchasing, vendor relations, and supply chain', NULL, 600000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00'),
-(7, 'Asset Management', 'Tracks and maintains organizational assets', NULL, 300000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00'),
-(8, 'Public Relations', 'Manages public communications and media relations', NULL, 250000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00'),
-(9, 'Planning & Development', 'Strategic planning and organizational development', NULL, 450000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00'),
-(10, 'Transportation', 'Manages fleet and transportation services', NULL, 350000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00'),
-(11, 'Health & Safety', 'Ensures workplace safety and health compliance', NULL, 200000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00'),
-(12, 'Revenue & Tax', 'Handles revenue collection and tax management', NULL, 550000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00');
+INSERT INTO `departments` (`id`, `name`, `description`, `head_of_department`, `budget_allocation`, `is_active`, `created_at`, `updated_at`, `max_headcount`, `current_headcount`) VALUES
+(1, 'Human Resources', 'Manages employee relations, recruitment, and HR policies', 2, 500000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
+(2, 'Finance', 'Handles financial planning, accounting, and budget management', 3, 750000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
+(3, 'Information Technology', 'Manages IT infrastructure, software development, and technical support', 4, 1000000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
+(4, 'Operations', 'Oversees daily operations and process management', 5, 800000.00, 1, '2025-07-07 13:16:00', '2026-01-11 18:57:04', 50, 1),
+(5, 'Legal Affairs', 'Handles legal matters, contracts, and compliance', NULL, 400000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
+(6, 'Procurement', 'Manages purchasing, vendor relations, and supply chain', NULL, 600000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
+(7, 'Asset Management', 'Tracks and maintains organizational assets', NULL, 300000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
+(8, 'Public Relations', 'Manages public communications and media relations', NULL, 250000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
+(9, 'Planning & Development', 'Strategic planning and organizational development', NULL, 450000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
+(10, 'Transportation', 'Manages fleet and transportation services', NULL, 350000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
+(11, 'Health & Safety', 'Ensures workplace safety and health compliance', NULL, 200000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
+(12, 'Revenue & Tax', 'Handles revenue collection and tax management', NULL, 550000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0);
 
 -- --------------------------------------------------------
 
@@ -801,6 +1046,25 @@ CREATE TABLE `employee_benefits` (
   `benefit_plan_id` bigint(20) NOT NULL,
   `user_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `employee_id_sequence`
+--
+
+CREATE TABLE `employee_id_sequence` (
+  `id` int(11) NOT NULL,
+  `last_employee_number` int(11) NOT NULL DEFAULT 20,
+  `locked` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `employee_id_sequence`
+--
+
+INSERT INTO `employee_id_sequence` (`id`, `last_employee_number`, `locked`) VALUES
+(1, 22, 0);
 
 -- --------------------------------------------------------
 
@@ -840,6 +1104,20 @@ CREATE TABLE `generated_reports` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `guard_posts`
+--
+
+CREATE TABLE `guard_posts` (
+  `id` bigint(20) NOT NULL,
+  `guards` int(11) NOT NULL,
+  `post` varchar(255) NOT NULL,
+  `shift` varchar(255) NOT NULL,
+  `status` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `id_cards`
 --
 
@@ -859,6 +1137,32 @@ CREATE TABLE `id_cards` (
 
 INSERT INTO `id_cards` (`id`, `card_unique_identifier`, `holder_type`, `holder_id`, `issue_date`, `expiry_date`, `is_active`) VALUES
 (1, 'CARD001', 'EMPLOYEE', 1, '2025-01-01', '2027-01-01', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `job_grades`
+--
+
+CREATE TABLE `job_grades` (
+  `id` int(11) NOT NULL,
+  `grade_code` varchar(10) NOT NULL,
+  `grade_name` varchar(100) NOT NULL,
+  `base_salary` decimal(12,2) NOT NULL,
+  `allowances` decimal(12,2) DEFAULT 0.00,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `job_grades`
+--
+
+INSERT INTO `job_grades` (`id`, `grade_code`, `grade_name`, `base_salary`, `allowances`, `created_at`) VALUES
+(1, 'G1', 'Entry Level', 30000.00, 2000.00, '2026-01-11 11:20:23'),
+(2, 'G2', 'Junior', 45000.00, 3000.00, '2026-01-11 11:20:23'),
+(3, 'G3', 'Mid Level', 60000.00, 4000.00, '2026-01-11 11:20:23'),
+(4, 'G4', 'Senior', 80000.00, 5000.00, '2026-01-11 11:20:23'),
+(5, 'G5', 'Manager', 120000.00, 8000.00, '2026-01-11 11:20:23');
 
 -- --------------------------------------------------------
 
@@ -1261,6 +1565,20 @@ INSERT INTO `leave_balances` (`id`, `user_id`, `leave_type_id`, `year`, `allocat
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `leave_blackouts`
+--
+
+CREATE TABLE `leave_blackouts` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `leave_request_id` int(11) NOT NULL,
+  `blackout_date` date NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `leave_requests`
 --
 
@@ -1282,58 +1600,61 @@ CREATE TABLE `leave_requests` (
   `emergency_phone` varchar(20) DEFAULT NULL,
   `handover_notes` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `blackout_created` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `leave_requests`
 --
 
-INSERT INTO `leave_requests` (`id`, `user_id`, `leave_type_id`, `start_date`, `end_date`, `total_days`, `reason`, `status`, `supporting_documents`, `applied_at`, `reviewed_by`, `reviewed_at`, `review_comments`, `emergency_contact`, `emergency_phone`, `handover_notes`, `created_at`, `updated_at`) VALUES
-(1, 9, 1, '2024-12-15', '2024-12-19', 5.0, 'Family vacation', 'approved', NULL, '2025-07-07 13:16:01', 6, '2024-12-01 08:00:00', NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(2, 10, 2, '2024-12-10', '2024-12-10', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-07 13:16:01', 7, '2024-12-01 09:00:00', NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(3, 11, 1, '2024-12-20', '2024-12-31', 10.0, 'Year-end vacation', 'pending', NULL, '2025-07-07 13:16:01', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(4, 19, 3, '2024-12-12', '2024-12-12', 1.0, 'Personal matter', 'approved', NULL, '2025-07-07 13:16:01', 5, '2024-12-01 12:00:00', NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2025-07-15 00:44:37'),
-(5, 19, 1, '2025-07-17', '2025-08-02', 17.0, 'It\'s unplanned', 'pending', NULL, '2025-07-15 02:00:29', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:00:29', '2025-07-15 02:00:29'),
-(6, 1, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:11:53', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:11:53', '2025-07-15 02:11:53'),
-(7, 1, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:11:53', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:11:53', '2025-07-15 02:11:53'),
-(8, 1, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 10:26:15', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 10:26:15'),
-(9, 1, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 12:59:38', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 12:59:38'),
-(10, 2, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 13:00:11', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 13:00:11'),
-(11, 2, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 13:56:34', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 13:56:34'),
-(12, 3, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'rejected', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 14:14:13', 'Request rejected', NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 14:14:13'),
-(13, 3, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(14, 4, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(15, 4, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(16, 5, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(17, 5, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(18, 6, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(19, 6, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(20, 7, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(21, 7, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(22, 8, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(23, 8, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(24, 9, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(25, 9, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(26, 10, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(27, 10, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(28, 11, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(29, 11, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(30, 12, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(31, 12, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(32, 13, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(33, 13, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(34, 14, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(35, 14, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(36, 15, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(37, 15, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(38, 19, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(39, 19, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40'),
-(40, 19, 5, '2025-08-07', '2025-08-29', 23.0, 'Gonna be a father', 'approved', NULL, '2025-07-15 15:29:15', 1, '2025-09-24 10:22:05', NULL, NULL, NULL, NULL, '2025-07-15 15:29:15', '2025-09-24 10:22:05'),
-(41, 21, 1, '2025-11-20', '2025-11-22', 3.0, 'Vacation', 'approved', NULL, '2025-11-19 07:55:02', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-19 07:55:02', '2025-11-20 11:51:07'),
-(42, 21, 8, '2025-11-21', '2025-11-22', 2.0, 'Thesis defense', 'approved', NULL, '2025-11-20 12:00:35', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-20 12:00:35', '2025-11-20 12:15:37'),
-(43, 21, 4, '2025-11-21', '2026-01-22', 63.0, 'Birth', 'pending', NULL, '2025-11-20 12:18:08', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-20 12:18:08', '2025-11-20 12:18:08'),
-(44, 21, 8, '2025-11-21', '2025-11-22', 2.0, 'Sick', 'pending', NULL, '2025-11-20 16:01:05', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-20 16:01:05', '2025-11-20 16:01:05');
+INSERT INTO `leave_requests` (`id`, `user_id`, `leave_type_id`, `start_date`, `end_date`, `total_days`, `reason`, `status`, `supporting_documents`, `applied_at`, `reviewed_by`, `reviewed_at`, `review_comments`, `emergency_contact`, `emergency_phone`, `handover_notes`, `created_at`, `updated_at`, `blackout_created`) VALUES
+(1, 9, 1, '2024-12-15', '2024-12-19', 5.0, 'Family vacation', 'approved', NULL, '2025-07-07 13:16:01', 6, '2024-12-01 08:00:00', NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0),
+(2, 10, 2, '2024-12-10', '2024-12-10', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-07 13:16:01', 7, '2024-12-01 09:00:00', NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0),
+(3, 11, 1, '2024-12-20', '2024-12-31', 10.0, 'Year-end vacation', 'pending', NULL, '2025-07-07 13:16:01', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0),
+(4, 19, 3, '2024-12-12', '2024-12-12', 1.0, 'Personal matter', 'approved', NULL, '2025-07-07 13:16:01', 5, '2024-12-01 12:00:00', NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2025-07-15 00:44:37', 0),
+(5, 19, 1, '2025-07-17', '2025-08-02', 17.0, 'It\'s unplanned', 'pending', NULL, '2025-07-15 02:00:29', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:00:29', '2025-07-15 02:00:29', 0),
+(6, 1, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:11:53', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:11:53', '2025-07-15 02:11:53', 0),
+(7, 1, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:11:53', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:11:53', '2025-07-15 02:11:53', 0),
+(8, 1, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 10:26:15', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 10:26:15', 0),
+(9, 1, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 12:59:38', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 12:59:38', 0),
+(10, 2, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 13:00:11', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 13:00:11', 0),
+(11, 2, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 13:56:34', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 13:56:34', 0),
+(12, 3, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'rejected', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 14:14:13', 'Request rejected', NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 14:14:13', 0),
+(13, 3, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(14, 4, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(15, 4, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(16, 5, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(17, 5, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(18, 6, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(19, 6, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(20, 7, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(21, 7, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(22, 8, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(23, 8, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(24, 9, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(25, 9, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(26, 10, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(27, 10, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(28, 11, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(29, 11, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(30, 12, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(31, 12, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(32, 13, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(33, 13, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(34, 14, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(35, 14, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(36, 15, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(37, 15, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(38, 19, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(39, 19, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'pending', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-07-15 02:16:40', 0),
+(40, 19, 5, '2025-08-07', '2025-08-29', 23.0, 'Gonna be a father', 'approved', NULL, '2025-07-15 15:29:15', 1, '2025-09-24 10:22:05', NULL, NULL, NULL, NULL, '2025-07-15 15:29:15', '2025-09-24 10:22:05', 0),
+(41, 21, 1, '2025-11-20', '2025-11-22', 3.0, 'Vacation', 'approved', NULL, '2025-11-19 07:55:02', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-19 07:55:02', '2025-11-20 11:51:07', 0),
+(42, 21, 8, '2025-11-21', '2025-11-22', 2.0, 'Thesis defense', 'approved', NULL, '2025-11-20 12:00:35', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-20 12:00:35', '2025-11-20 12:15:37', 0),
+(43, 21, 4, '2025-11-21', '2026-01-22', 63.0, 'Birth', 'pending', NULL, '2025-11-20 12:18:08', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-20 12:18:08', '2025-11-20 12:18:08', 0),
+(44, 21, 8, '2025-11-21', '2025-11-22', 2.0, 'Sick', 'pending', NULL, '2025-11-20 16:01:05', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-20 16:01:05', '2025-11-20 16:01:05', 0),
+(45, 1, 1, '2026-01-14', '2026-01-23', 10.0, 'Going for break', 'pending', NULL, '2026-01-13 15:22:47', NULL, NULL, NULL, NULL, NULL, NULL, '2026-01-13 15:22:47', '2026-01-13 15:22:47', 0),
+(46, 1, 2, '2026-01-25', '2026-01-27', 3.0, 'On leave', 'pending', NULL, '2026-01-13 15:33:31', NULL, NULL, NULL, NULL, NULL, NULL, '2026-01-13 15:33:31', '2026-01-13 15:33:31', 0);
 
 --
 -- Triggers `leave_requests`
@@ -1463,48 +1784,21 @@ INSERT INTO `notifications` (`id`, `user_id`, `title`, `message`, `type`, `is_re
 --
 
 CREATE TABLE `payroll_runs` (
-  `id` bigint(20) NOT NULL,
-  `run_date` datetime(6) NOT NULL,
-  `status` varchar(255) NOT NULL
+  `id` int(11) NOT NULL,
+  `run_month` int(11) NOT NULL,
+  `run_year` int(11) NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `total_gross` decimal(15,2) DEFAULT 0.00,
+  `total_deductions` decimal(15,2) DEFAULT 0.00,
+  `total_net` decimal(15,2) DEFAULT 0.00,
+  `status` enum('DRAFT','PROCESSING','COMPLETED','CLOSED') DEFAULT 'DRAFT',
+  `created_by` int(11) NOT NULL,
+  `closed_by` int(11) DEFAULT NULL,
+  `closed_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `run_date` datetime(6) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `payroll_runs`
---
-
-INSERT INTO `payroll_runs` (`id`, `run_date`, `status`) VALUES
-(1, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(2, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(3, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(4, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(5, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(6, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(7, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(8, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(9, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(10, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(11, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(12, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(13, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(14, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(15, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(16, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(17, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(18, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(19, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(20, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(21, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(22, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(23, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(24, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(25, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(26, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(27, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(28, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(29, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(30, '2024-04-30 00:00:00.000000', 'COMPLETED'),
-(31, '2024-05-31 00:00:00.000000', 'COMPLETED'),
-(32, '2024-04-30 00:00:00.000000', 'COMPLETED');
 
 -- --------------------------------------------------------
 
@@ -1520,47 +1814,53 @@ CREATE TABLE `payslips` (
   `pay_period_end` date NOT NULL,
   `pay_period_start` date NOT NULL,
   `tax_deductions` decimal(38,2) NOT NULL,
-  `payroll_run_id` bigint(20) NOT NULL,
-  `user_id` int(11) NOT NULL
+  `payroll_run_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `user_id` int(11) NOT NULL,
+  `days_worked` int(11) DEFAULT 0,
+  `overtime_hours` decimal(5,2) DEFAULT 0.00,
+  `gross_salary` decimal(12,2) DEFAULT 0.00,
+  `tax_deduction` decimal(10,2) DEFAULT 0.00,
+  `pension_deduction` decimal(10,2) DEFAULT 0.00,
+  `net_salary` decimal(12,2) DEFAULT 0.00
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `payslips`
 --
 
-INSERT INTO `payslips` (`id`, `gross_pay`, `net_pay`, `other_deductions`, `pay_period_end`, `pay_period_start`, `tax_deductions`, `payroll_run_id`, `user_id`) VALUES
-(1, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 1, 1),
-(2, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 2, 1),
-(3, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 3, 2),
-(4, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 4, 2),
-(5, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 5, 3),
-(6, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 6, 3),
-(7, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 7, 4),
-(8, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 8, 4),
-(9, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 9, 5),
-(10, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 10, 5),
-(11, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 11, 6),
-(12, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 12, 6),
-(13, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 13, 7),
-(14, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 14, 7),
-(15, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 15, 8),
-(16, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 16, 8),
-(17, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 17, 9),
-(18, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 18, 9),
-(19, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 19, 10),
-(20, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 20, 10),
-(21, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 21, 11),
-(22, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 22, 11),
-(23, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 23, 12),
-(24, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 24, 12),
-(25, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 25, 13),
-(26, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 26, 13),
-(27, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 27, 14),
-(28, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 28, 14),
-(29, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 29, 15),
-(30, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 30, 15),
-(31, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, 31, 19),
-(32, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, 32, 19);
+INSERT INTO `payslips` (`id`, `gross_pay`, `net_pay`, `other_deductions`, `pay_period_end`, `pay_period_start`, `tax_deductions`, `payroll_run_id`, `user_id`, `days_worked`, `overtime_hours`, `gross_salary`, `tax_deduction`, `pension_deduction`, `net_salary`) VALUES
+(1, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 1, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(2, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 1, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(3, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 2, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(4, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 2, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(5, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 3, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(6, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 3, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(7, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 4, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(8, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 4, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(9, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 5, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(10, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 5, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(11, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 6, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(12, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 6, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(13, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 7, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(14, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 7, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(15, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 8, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(16, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 8, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(17, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 9, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(18, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 9, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(19, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 10, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(20, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 10, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(21, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 11, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(22, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 11, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(23, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 12, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(24, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 12, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(25, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 13, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(26, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 13, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(27, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 14, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(28, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 14, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(29, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 15, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(30, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 15, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(31, 6500.00, 5722.92, 350.00, '2024-05-31', '2024-05-01', 427.08, NULL, 19, 0, 0.00, 0.00, 0.00, 0.00, 0.00),
+(32, 6400.00, 5691.67, 350.00, '2024-04-30', '2024-04-01', 408.33, NULL, 19, 0, 0.00, 0.00, 0.00, 0.00, 0.00);
 
 -- --------------------------------------------------------
 
@@ -1634,6 +1934,38 @@ INSERT INTO `permissions` (`id`, `name`, `description`) VALUES
 (39, 'system.settings', 'Manage system settings'),
 (40, 'system.audit', 'View audit logs'),
 (41, 'system.backup', 'Perform system backups');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pfm_exports`
+--
+
+CREATE TABLE `pfm_exports` (
+  `id` int(11) NOT NULL,
+  `payroll_run_id` int(11) NOT NULL,
+  `export_date` date NOT NULL,
+  `total_amount` decimal(15,2) NOT NULL,
+  `journal_entry_data` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`journal_entry_data`)),
+  `export_status` enum('PENDING','EXPORTED','FAILED') DEFAULT 'PENDING',
+  `exported_by` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `position_slots`
+--
+
+CREATE TABLE `position_slots` (
+  `id` int(11) NOT NULL,
+  `department_id` int(11) NOT NULL,
+  `position_title` varchar(100) NOT NULL,
+  `total_slots` int(11) NOT NULL,
+  `filled_slots` int(11) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -1988,6 +2320,32 @@ INSERT INTO `role_permissions` (`id`, `role_id`, `permission_id`, `granted_at`, 
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `routes`
+--
+
+CREATE TABLE `routes` (
+  `id` varchar(50) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `start_location` varchar(255) NOT NULL,
+  `end_location` varchar(255) NOT NULL,
+  `distance` decimal(10,2) DEFAULT NULL,
+  `estimated_duration` int(11) DEFAULT NULL COMMENT 'Duration in minutes',
+  `status` varchar(50) NOT NULL DEFAULT 'active',
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `routes`
+--
+
+INSERT INTO `routes` (`id`, `name`, `start_location`, `end_location`, `distance`, `estimated_duration`, `status`, `created_at`, `updated_at`) VALUES
+('53459f7a-eff4-11f0-ad55-ac675de0e907', 'City Center to Industrial Zone', 'City Center', 'Industrial Zone', 15.50, 30, 'active', '2026-01-12 22:21:37', NULL),
+('5345abcd-eff4-11f0-ad55-ac675de0e907', 'Residential Area to Downtown', 'Residential Area', 'Downtown', 8.20, 20, 'active', '2026-01-12 22:21:37', NULL);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `safety_incidents`
 --
 
@@ -2032,6 +2390,81 @@ CREATE TABLE `safety_inspections` (
   `next_inspection_date` date DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `security_incidents`
+--
+
+CREATE TABLE `security_incidents` (
+  `id` bigint(20) NOT NULL,
+  `date` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `location` varchar(255) NOT NULL,
+  `severity` varchar(255) NOT NULL,
+  `status` varchar(255) NOT NULL,
+  `type` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `social_media_posts`
+--
+
+CREATE TABLE `social_media_posts` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `platform` varchar(50) NOT NULL,
+  `content` text NOT NULL,
+  `scheduled_date` datetime DEFAULT NULL,
+  `status` varchar(50) NOT NULL DEFAULT 'draft',
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `social_media_posts`
+--
+
+INSERT INTO `social_media_posts` (`id`, `platform`, `content`, `scheduled_date`, `status`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'Facebook', 'Welcome to our new community portal!', '2026-01-12 22:21:37', 'published', 1, '2026-01-12 22:21:37', NULL),
+(2, 'Twitter', 'Important announcement coming soon...', '2026-01-13 22:21:37', 'scheduled', 1, '2026-01-12 22:21:37', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sops`
+--
+
+CREATE TABLE `sops` (
+  `id` bigint(20) NOT NULL,
+  `category` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `last_updated` datetime(6) DEFAULT NULL,
+  `status` varchar(255) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `version` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `support_tickets`
+--
+
+CREATE TABLE `support_tickets` (
+  `id` bigint(20) NOT NULL,
+  `assigned_to` varchar(255) DEFAULT NULL,
+  `created_at` datetime(6) DEFAULT NULL,
+  `created_by` varchar(255) DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `priority` varchar(255) DEFAULT NULL,
+  `status` varchar(255) DEFAULT NULL,
+  `title` varchar(255) DEFAULT NULL,
+  `updated_at` datetime(6) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -2156,32 +2589,35 @@ CREATE TABLE `users` (
   `profile_completed` bit(1) DEFAULT NULL,
   `provisioned_by` int(11) DEFAULT NULL,
   `provisioned_date` datetime(6) DEFAULT NULL,
-  `temporary_password` varchar(255) DEFAULT NULL
+  `temporary_password` varchar(255) DEFAULT NULL,
+  `bank_account_number` varchar(50) DEFAULT NULL,
+  `personal_contact` varchar(20) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `employee_id`, `email`, `password`, `first_name`, `last_name`, `middle_name`, `phone`, `address`, `date_of_birth`, `hire_date`, `department_id`, `role_id`, `manager_id`, `salary`, `is_active`, `biometric_enrollment_status`, `last_login`, `failed_login_attempts`, `account_locked_until`, `password_reset_token`, `password_reset_expires`, `date_of_joining`, `account_number`, `momo_number`, `profile_picture_url`, `emergency_contact_name`, `emergency_contact_phone`, `created_at`, `updated_at`, `account_status`, `bank_name`, `default_password_changed`, `job_grade_id`, `profile_completed`, `provisioned_by`, `provisioned_date`, `temporary_password`) VALUES
-(1, 'EMP001', 'garrisonsayor@gmail.com', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'System', 'Administrator', NULL, '+250791955398', NULL, NULL, '2024-01-01', 3, 1, NULL, 120000.00, 1, 'NONE', '2025-12-29 13:47:49', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-12-29 13:47:49', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(2, 'EMP002', 'hr.head@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Garrison', 'Sayor', NULL, '+250791955398', NULL, NULL, '2024-01-15', 1, 2, NULL, 95000.00, 1, 'NONE', '2025-12-29 13:50:41', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-12-29 13:50:41', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(3, 'EMP003', 'finance.head@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Christopher', 'Leabon', NULL, '+1234567892', NULL, NULL, '2024-01-15', 2, 2, NULL, 98000.00, 1, 'NONE', '2025-12-29 11:59:25', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-12-29 11:59:25', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(4, 'EMP004', 'it.head@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'George', 'Kona', NULL, '+1234567893', NULL, NULL, '2024-01-15', 3, 2, NULL, 105000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:57:53', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(5, 'EMP005', 'ops.head@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Thomas', 'Sneh', NULL, '+1234567894', NULL, NULL, '2024-01-15', 4, 2, NULL, 92000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:03', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(6, 'EMP006', 'hr.manager@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Jennifer', 'Davis', NULL, '+1234567895', NULL, NULL, '2024-02-01', 1, 9, NULL, 75000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:09', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(7, 'EMP007', 'finance.manager@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Robert', 'Wilson', NULL, '+1234567896', NULL, NULL, '2024-02-01', 2, 10, NULL, 78000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:14', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(8, 'EMP008', 'it.manager@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Amanda', 'Brown', NULL, '+1234567897', NULL, NULL, '2024-02-01', 3, 11, NULL, 82000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:19', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(9, 'EMP009', 'john.doe@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'John', 'Doe', NULL, '+1234567898', NULL, NULL, '2024-03-01', 1, 5, NULL, 55000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:24', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(10, 'EMP010', 'jane.smith@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Jane', 'Smith', NULL, '+1234567899', NULL, NULL, '2024-03-01', 2, 5, NULL, 58000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:30', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(11, 'EMP011', 'mark.jones@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Mark', 'Jones', NULL, '+1234567800', NULL, NULL, '2024-03-15', 3, 5, NULL, 62000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:36', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(12, 'EMP012', 'emily.white@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Emily', 'White', NULL, '+1234567801', NULL, NULL, '2024-03-15', 4, 5, NULL, 54000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:41', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(13, 'EMP013', 'alex.green@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Alex', 'Green', NULL, '+1234567802', NULL, NULL, '2024-04-01', 5, 5, NULL, 59000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:46', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(14, 'EMP014', 'maria.garcia@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Maria', 'Garcia', NULL, '+1234567803', NULL, NULL, '2024-04-01', 6, 5, NULL, 56000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:51', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(15, 'EMP015', 'chris.taylor@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Chris', 'Taylor', NULL, '+1234567804', NULL, NULL, '2024-04-15', 7, 5, NULL, 57000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:59:07', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(19, 'EMP016', 'garrisonsay@gmail.com', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Crafty', 'Dev', NULL, NULL, NULL, NULL, '2024-01-01', 2, 5, NULL, NULL, 1, 'NONE', '2025-12-18 15:43:46', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 18:06:52', '2025-12-18 15:43:46', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(20, 'EMP017', 'issaadamx@gmail.com', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Issa', 'Adams', NULL, NULL, NULL, NULL, '2024-01-01', 1, 5, NULL, NULL, 1, 'NONE', '2025-10-06 16:17:19', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 17:32:26', '2025-11-29 07:59:18', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(21, 'EMP018', 'albertinewilson29@gmail.com', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Albertine', 'Wilson', 'Tenneh', '0790001273', 'Kanombe', '2003-01-05', '2025-09-10', 3, 1, NULL, NULL, 1, 'ENROLLED', '2025-11-20 16:08:32', 0, NULL, NULL, NULL, NULL, '4493339187', '0791955398', 'http://res.cloudinary.com/dgfeef4ot/image/upload/v1759757113/kkofine7tqq8wug8jesv.jpg', 'Garrison Nyunti Sayor III', '07919555398', '2025-09-10 23:06:21', '2025-11-20 16:08:32', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `users` (`id`, `employee_id`, `email`, `password`, `first_name`, `last_name`, `middle_name`, `phone`, `address`, `date_of_birth`, `hire_date`, `department_id`, `role_id`, `manager_id`, `salary`, `is_active`, `biometric_enrollment_status`, `last_login`, `failed_login_attempts`, `account_locked_until`, `password_reset_token`, `password_reset_expires`, `date_of_joining`, `account_number`, `momo_number`, `profile_picture_url`, `emergency_contact_name`, `emergency_contact_phone`, `created_at`, `updated_at`, `account_status`, `bank_name`, `default_password_changed`, `job_grade_id`, `profile_completed`, `provisioned_by`, `provisioned_date`, `temporary_password`, `bank_account_number`, `personal_contact`) VALUES
+(1, 'EMP001', 'garrisonsayor@gmail.com', '$2a$10$vK5ygC.jJ9Wcf1Zl85BFlu/w7Vt7sEeif6mNK9zWc2a3ZiGs6Q7Am', 'Crafty', 'Dev', 'Developer', '+250791955398', 'Kanombe', '2002-10-30', '2024-01-01', 3, 1, NULL, 120000.00, 1, 'NONE', '2026-01-17 19:01:17', 0, NULL, NULL, NULL, NULL, '100235367283', '0791955398', NULL, 'Albertine Wilson', '079001274', '2025-07-07 15:16:00', '2026-01-17 19:01:17', NULL, NULL, b'1', NULL, b'1', NULL, NULL, NULL, NULL, NULL),
+(2, 'EMP002', 'hr.head@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Garrison', 'Sayor', NULL, '+250791955398', NULL, NULL, '2024-01-15', 1, 2, NULL, 95000.00, 1, 'NONE', '2025-12-29 13:50:41', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-12-29 13:50:41', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(3, 'EMP003', 'finance.head@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Christopher', 'Leabon', NULL, '+1234567892', NULL, NULL, '2024-01-15', 2, 2, NULL, 98000.00, 1, 'NONE', '2025-12-29 11:59:25', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-12-29 11:59:25', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(4, 'EMP004', 'it.head@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'George', 'Kona', NULL, '+1234567893', NULL, NULL, '2024-01-15', 3, 2, NULL, 105000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:57:53', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(5, 'EMP005', 'ops.head@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Thomas', 'Sneh', NULL, '+1234567894', NULL, NULL, '2024-01-15', 4, 2, NULL, 92000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:03', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(6, 'EMP006', 'hr.manager@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Jennifer', 'Davis', NULL, '+1234567895', NULL, NULL, '2024-02-01', 1, 9, NULL, 75000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:09', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(7, 'EMP007', 'finance.manager@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Robert', 'Wilson', NULL, '+1234567896', NULL, NULL, '2024-02-01', 2, 10, NULL, 78000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:14', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(8, 'EMP008', 'it.manager@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Amanda', 'Brown', NULL, '+1234567897', NULL, NULL, '2024-02-01', 3, 11, NULL, 82000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:19', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(9, 'EMP009', 'john.doe@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'John', 'Doe', NULL, '+1234567898', NULL, NULL, '2024-03-01', 1, 5, NULL, 55000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:24', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(10, 'EMP010', 'jane.smith@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Jane', 'Smith', NULL, '+1234567899', NULL, NULL, '2024-03-01', 2, 5, NULL, 58000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:30', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(11, 'EMP011', 'mark.jones@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Mark', 'Jones', NULL, '+1234567800', NULL, NULL, '2024-03-15', 3, 5, NULL, 62000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:36', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(12, 'EMP012', 'emily.white@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Emily', 'White', NULL, '+1234567801', NULL, NULL, '2024-03-15', 4, 5, NULL, 54000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:41', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(13, 'EMP013', 'alex.green@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Alex', 'Green', NULL, '+1234567802', NULL, NULL, '2024-04-01', 5, 5, NULL, 59000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:46', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(14, 'EMP014', 'maria.garcia@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Maria', 'Garcia', NULL, '+1234567803', NULL, NULL, '2024-04-01', 6, 5, NULL, 56000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:58:51', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(15, 'EMP015', 'chris.taylor@craftresource.gov', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Chris', 'Taylor', NULL, '+1234567804', NULL, NULL, '2024-04-15', 7, 5, NULL, 57000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2025-11-29 07:59:07', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(19, 'EMP016', 'garrisonsay@gmail.com', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Crafty', 'Dev', NULL, NULL, NULL, NULL, '2024-01-01', 2, 5, NULL, NULL, 1, 'NONE', '2025-12-18 15:43:46', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 18:06:52', '2025-12-18 15:43:46', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(20, 'EMP017', 'issaadamx@gmail.com', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Issa', 'Adams', NULL, NULL, NULL, NULL, '2024-01-01', 1, 5, NULL, NULL, 1, 'NONE', '2025-10-06 16:17:19', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 17:32:26', '2025-11-29 07:59:18', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(21, 'EMP018', 'albertinewilson29@gmail.com', '$2b$10$1PUU//a7m8UhjBF5LCNW5OHR7AJc7h5NYj2TNKklwCAdL/zX.QxBO', 'Albertine', 'Wilson', 'Tenneh', '0790001273', 'Kanombe', '2003-01-05', '2025-09-10', 3, 1, NULL, NULL, 1, 'ENROLLED', '2025-11-20 16:08:32', 0, NULL, NULL, NULL, NULL, '4493339187', '0791955398', 'http://res.cloudinary.com/dgfeef4ot/image/upload/v1759757113/kkofine7tqq8wug8jesv.jpg', 'Garrison Nyunti Sayor III', '07919555398', '2025-09-10 23:06:21', '2025-11-20 16:08:32', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(23, 'EMP022', 'sabbahkarsor@gmail.com', '$2a$10$ZYqGXciWctWfiAXnnQG1/el2mRej8mY/.DGSQSLtM/0mKZwZsr3T2', 'Crayton', 'Kamara', 'Morientes', '0791374847', 'Sonatube', '2003-05-21', '2026-01-11', 4, 2, NULL, NULL, 1, 'NONE', '2026-01-11 20:49:17', 0, NULL, NULL, NULL, NULL, '100235367283', '0791374847', NULL, 'Garrison Sayor', '0791955398', '2026-01-11 20:57:03', '2026-01-11 20:49:17', 'PROVISIONED', NULL, b'1', 5, b'1', 1, '2026-01-11 20:57:03.000000', 'b7c030e6ad8a8350a68b2e6c955a3ae01d85d6e77e2c0f6f483dbfc691f29ac1', NULL, NULL);
 
 --
 -- Triggers `users`
@@ -2324,6 +2760,12 @@ INSERT INTO `visitor_logs` (`id`, `visitor_id`, `purpose`, `employee_to_visit_id
 --
 
 --
+-- Indexes for table `access_rules`
+--
+ALTER TABLE `access_rules`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `account_payables`
 --
 ALTER TABLE `account_payables`
@@ -2361,7 +2803,18 @@ ALTER TABLE `asset_categories`
 -- Indexes for table `attendance`
 --
 ALTER TABLE `attendance`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_manual_fallback` (`manual_fallback_flag`,`clock_in_time`),
+  ADD KEY `idx_flagged_review` (`flagged_for_review`,`flagged_at`),
+  ADD KEY `idx_clock_methods` (`clock_in_method`,`clock_out_method`);
+
+--
+-- Indexes for table `attendance_audit_log`
+--
+ALTER TABLE `attendance_audit_log`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_attendance_audit_user` (`user_id`),
+  ADD KEY `fk_attendance_audit_record` (`attendance_record_id`);
 
 --
 -- Indexes for table `attendance_records`
@@ -2380,7 +2833,26 @@ ALTER TABLE `audit_logs`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_user_action` (`user_id`,`action`),
   ADD KEY `idx_table_record` (`table_name`,`record_id`),
-  ADD KEY `idx_timestamp` (`timestamp`);
+  ADD KEY `idx_timestamp` (`timestamp`),
+  ADD KEY `idx_performed_by` (`performed_by`),
+  ADD KEY `idx_action` (`action`),
+  ADD KEY `idx_service_name` (`service_name`),
+  ADD KEY `idx_audit_performed_by` (`performed_by`),
+  ADD KEY `idx_audit_timestamp` (`timestamp`),
+  ADD KEY `idx_audit_action` (`action`),
+  ADD KEY `idx_audit_service_name` (`service_name`),
+  ADD KEY `idx_audit_entity` (`entity_type`,`entity_id`),
+  ADD KEY `idx_audit_result` (`result`),
+  ADD KEY `idx_audit_user_timestamp` (`performed_by`,`timestamp`),
+  ADD KEY `idx_audit_service_timestamp` (`service_name`,`timestamp`);
+
+--
+-- Indexes for table `audit_logs_archive`
+--
+ALTER TABLE `audit_logs_archive`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_archive_timestamp` (`timestamp`),
+  ADD KEY `idx_archive_performed_by` (`performed_by`);
 
 --
 -- Indexes for table `benefit_plans`
@@ -2434,6 +2906,17 @@ ALTER TABLE `budget_requests`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `business_permits`
+--
+ALTER TABLE `business_permits`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `permit_number` (`permit_number`),
+  ADD KEY `idx_permit_number` (`permit_number`),
+  ADD KEY `idx_business_name` (`business_name`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_expiry_date` (`expiry_date`);
+
+--
 -- Indexes for table `chart_of_accounts`
 --
 ALTER TABLE `chart_of_accounts`
@@ -2474,6 +2957,12 @@ ALTER TABLE `employee_benefits`
   ADD KEY `FK_employee_benefits_user_id` (`user_id`);
 
 --
+-- Indexes for table `employee_id_sequence`
+--
+ALTER TABLE `employee_id_sequence`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `employee_trainings`
 --
 ALTER TABLE `employee_trainings`
@@ -2491,6 +2980,12 @@ ALTER TABLE `generated_reports`
   ADD KEY `idx_generated_at` (`generated_at`);
 
 --
+-- Indexes for table `guard_posts`
+--
+ALTER TABLE `guard_posts`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `id_cards`
 --
 ALTER TABLE `id_cards`
@@ -2498,6 +2993,13 @@ ALTER TABLE `id_cards`
   ADD UNIQUE KEY `card_unique_identifier` (`card_unique_identifier`),
   ADD KEY `idx_id_cards_holder` (`holder_id`),
   ADD KEY `idx_id_cards_active` (`is_active`);
+
+--
+-- Indexes for table `job_grades`
+--
+ALTER TABLE `job_grades`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `grade_code` (`grade_code`);
 
 --
 -- Indexes for table `journal_entries`
@@ -2538,6 +3040,14 @@ ALTER TABLE `leave_balances`
   ADD UNIQUE KEY `unique_user_leave_year` (`user_id`,`leave_type_id`,`year`),
   ADD KEY `leave_type_id` (`leave_type_id`),
   ADD KEY `idx_user_year` (`user_id`,`year`);
+
+--
+-- Indexes for table `leave_blackouts`
+--
+ALTER TABLE `leave_blackouts`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_user_date` (`user_id`,`blackout_date`),
+  ADD KEY `fk_leave_blackouts_request` (`leave_request_id`);
 
 --
 -- Indexes for table `leave_requests`
@@ -2584,7 +3094,9 @@ ALTER TABLE `notifications`
 -- Indexes for table `payroll_runs`
 --
 ALTER TABLE `payroll_runs`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_payroll_runs_created_by` (`created_by`),
+  ADD KEY `fk_payroll_runs_closed_by` (`closed_by`);
 
 --
 -- Indexes for table `payslips`
@@ -2610,6 +3122,21 @@ ALTER TABLE `permissions`
   ADD UNIQUE KEY `name_2` (`name`),
   ADD UNIQUE KEY `name_3` (`name`),
   ADD UNIQUE KEY `name_4` (`name`);
+
+--
+-- Indexes for table `pfm_exports`
+--
+ALTER TABLE `pfm_exports`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_pfm_exports_payroll_run` (`payroll_run_id`),
+  ADD KEY `fk_pfm_exports_exported_by` (`exported_by`);
+
+--
+-- Indexes for table `position_slots`
+--
+ALTER TABLE `position_slots`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_position_slots_dept` (`department_id`);
 
 --
 -- Indexes for table `procurement_requests`
@@ -2674,6 +3201,14 @@ ALTER TABLE `role_permissions`
   ADD KEY `fk_role_permissions_permission` (`permission_id`);
 
 --
+-- Indexes for table `routes`
+--
+ALTER TABLE `routes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_name` (`name`);
+
+--
 -- Indexes for table `safety_incidents`
 --
 ALTER TABLE `safety_incidents`
@@ -2696,6 +3231,33 @@ ALTER TABLE `safety_inspections`
   ADD KEY `idx_inspection_date` (`inspection_date`),
   ADD KEY `idx_inspector` (`inspector_id`),
   ADD KEY `idx_status` (`status`);
+
+--
+-- Indexes for table `security_incidents`
+--
+ALTER TABLE `security_incidents`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `social_media_posts`
+--
+ALTER TABLE `social_media_posts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_platform` (`platform`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_scheduled_date` (`scheduled_date`);
+
+--
+-- Indexes for table `sops`
+--
+ALTER TABLE `sops`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `support_tickets`
+--
+ALTER TABLE `support_tickets`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `system_configs`
@@ -2739,7 +3301,9 @@ ALTER TABLE `users`
   ADD KEY `idx_email` (`email`),
   ADD KEY `idx_dept_role` (`department_id`,`role_id`),
   ADD KEY `idx_active` (`is_active`),
-  ADD KEY `idx_users_dept_active` (`department_id`,`is_active`);
+  ADD KEY `idx_users_dept_active` (`department_id`,`is_active`),
+  ADD KEY `fk_users_job_grade` (`job_grade_id`),
+  ADD KEY `fk_users_provisioned_by` (`provisioned_by`);
 
 --
 -- Indexes for table `vendors`
@@ -2789,6 +3353,12 @@ ALTER TABLE `visitor_logs`
 --
 
 --
+-- AUTO_INCREMENT for table `access_rules`
+--
+ALTER TABLE `access_rules`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `account_payables`
 --
 ALTER TABLE `account_payables`
@@ -2819,16 +3389,22 @@ ALTER TABLE `attendance`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
+-- AUTO_INCREMENT for table `attendance_audit_log`
+--
+ALTER TABLE `attendance_audit_log`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `attendance_records`
 --
 ALTER TABLE `attendance_records`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=239;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=276;
 
 --
 -- AUTO_INCREMENT for table `benefit_plans`
@@ -2867,10 +3443,16 @@ ALTER TABLE `budget_requests`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
+-- AUTO_INCREMENT for table `business_permits`
+--
+ALTER TABLE `business_permits`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
 -- AUTO_INCREMENT for table `chart_of_accounts`
 --
 ALTER TABLE `chart_of_accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
 --
 -- AUTO_INCREMENT for table `compliance_records`
@@ -2897,6 +3479,12 @@ ALTER TABLE `employee_benefits`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `employee_id_sequence`
+--
+ALTER TABLE `employee_id_sequence`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `employee_trainings`
 --
 ALTER TABLE `employee_trainings`
@@ -2909,10 +3497,22 @@ ALTER TABLE `generated_reports`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `guard_posts`
+--
+ALTER TABLE `guard_posts`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `id_cards`
 --
 ALTER TABLE `id_cards`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `job_grades`
+--
+ALTER TABLE `job_grades`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=127;
 
 --
 -- AUTO_INCREMENT for table `journal_entries`
@@ -2933,10 +3533,16 @@ ALTER TABLE `leave_balances`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=265;
 
 --
+-- AUTO_INCREMENT for table `leave_blackouts`
+--
+ALTER TABLE `leave_blackouts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `leave_requests`
 --
 ALTER TABLE `leave_requests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
 
 --
 -- AUTO_INCREMENT for table `leave_types`
@@ -2966,7 +3572,7 @@ ALTER TABLE `notifications`
 -- AUTO_INCREMENT for table `payroll_runs`
 --
 ALTER TABLE `payroll_runs`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `payslips`
@@ -2985,6 +3591,18 @@ ALTER TABLE `performance_reviews`
 --
 ALTER TABLE `permissions`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
+
+--
+-- AUTO_INCREMENT for table `pfm_exports`
+--
+ALTER TABLE `pfm_exports`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `position_slots`
+--
+ALTER TABLE `position_slots`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `procurement_requests`
@@ -3041,6 +3659,30 @@ ALTER TABLE `safety_inspections`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `security_incidents`
+--
+ALTER TABLE `security_incidents`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `social_media_posts`
+--
+ALTER TABLE `social_media_posts`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `sops`
+--
+ALTER TABLE `sops`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `support_tickets`
+--
+ALTER TABLE `support_tickets`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `system_configs`
 --
 ALTER TABLE `system_configs`
@@ -3068,7 +3710,7 @@ ALTER TABLE `training_courses`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `vendors`
@@ -3106,6 +3748,13 @@ ALTER TABLE `assets`
   ADD CONSTRAINT `assets_ibfk_2` FOREIGN KEY (`assigned_to`) REFERENCES `users` (`id`),
   ADD CONSTRAINT `assets_ibfk_3` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`),
   ADD CONSTRAINT `assets_ibfk_4` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `attendance_audit_log`
+--
+ALTER TABLE `attendance_audit_log`
+  ADD CONSTRAINT `fk_attendance_audit_record` FOREIGN KEY (`attendance_record_id`) REFERENCES `attendance_records` (`id`),
+  ADD CONSTRAINT `fk_attendance_audit_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
 
 --
 -- Constraints for table `attendance_records`
@@ -3208,6 +3857,13 @@ ALTER TABLE `leave_balances`
   ADD CONSTRAINT `leave_balances_ibfk_2` FOREIGN KEY (`leave_type_id`) REFERENCES `leave_types` (`id`);
 
 --
+-- Constraints for table `leave_blackouts`
+--
+ALTER TABLE `leave_blackouts`
+  ADD CONSTRAINT `fk_leave_blackouts_request` FOREIGN KEY (`leave_request_id`) REFERENCES `leave_requests` (`id`),
+  ADD CONSTRAINT `fk_leave_blackouts_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+
+--
 -- Constraints for table `leave_requests`
 --
 ALTER TABLE `leave_requests`
@@ -3222,17 +3878,36 @@ ALTER TABLE `notifications`
   ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
 
 --
+-- Constraints for table `payroll_runs`
+--
+ALTER TABLE `payroll_runs`
+  ADD CONSTRAINT `fk_payroll_runs_closed_by` FOREIGN KEY (`closed_by`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `fk_payroll_runs_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`);
+
+--
 -- Constraints for table `payslips`
 --
 ALTER TABLE `payslips`
-  ADD CONSTRAINT `FK_payslips_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
-  ADD CONSTRAINT `FKmaj3wje7q7n9vsjbjx91pmmrj` FOREIGN KEY (`payroll_run_id`) REFERENCES `payroll_runs` (`id`);
+  ADD CONSTRAINT `FK_payslips_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
 
 --
 -- Constraints for table `performance_reviews`
 --
 ALTER TABLE `performance_reviews`
   ADD CONSTRAINT `FK_performance_reviews_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `pfm_exports`
+--
+ALTER TABLE `pfm_exports`
+  ADD CONSTRAINT `fk_pfm_exports_exported_by` FOREIGN KEY (`exported_by`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `fk_pfm_exports_payroll_run` FOREIGN KEY (`payroll_run_id`) REFERENCES `payroll_runs` (`id`);
+
+--
+-- Constraints for table `position_slots`
+--
+ALTER TABLE `position_slots`
+  ADD CONSTRAINT `fk_position_slots_dept` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`);
 
 --
 -- Constraints for table `procurement_requests`
@@ -3285,6 +3960,8 @@ ALTER TABLE `system_settings`
 -- Constraints for table `users`
 --
 ALTER TABLE `users`
+  ADD CONSTRAINT `fk_users_job_grade` FOREIGN KEY (`job_grade_id`) REFERENCES `job_grades` (`id`),
+  ADD CONSTRAINT `fk_users_provisioned_by` FOREIGN KEY (`provisioned_by`) REFERENCES `users` (`id`),
   ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`),
   ADD CONSTRAINT `users_ibfk_2` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`),
   ADD CONSTRAINT `users_ibfk_3` FOREIGN KEY (`manager_id`) REFERENCES `users` (`id`);

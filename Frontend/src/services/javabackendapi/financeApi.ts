@@ -1,5 +1,22 @@
 import { apiClient } from '@/utils/apiClient';
-import type { BudgetItem, BudgetResponse, Budget, BudgetRequest, JournalEntry, AccountPayable, AccountReceivable, ChartOfAccount } from '@/types/javabackendapi/financeTypes';
+import type { BudgetItem, BudgetResponse, Budget, JournalEntry, AccountPayable, AccountReceivable, ChartOfAccount } from '@/types/javabackendapi/financeTypes';
+import type { BudgetRequest as ApiBudgetRequest, Department } from '@/types/api';
+import { fetchDepartments } from '@/services/nodejsbackendapi/lookupApi';
+
+interface BudgetRequestPayload {
+  id?: number;
+  department?: string;
+  departmentId?: number;
+  requestedAmount?: number;
+  requested_amount?: number;
+  justification?: string;
+  status?: string;
+  requestedDate?: string;
+  request_date?: string;
+  category?: string;
+  requestedBy?: string;
+  requested_by?: string;
+}
 
 
 
@@ -26,7 +43,7 @@ class FinanceApiService {
   }
 
   // Budget endpoints (from FinanceController)
-  async createBudget(budget: Budget): Promise<Budget> {
+  async createBudget(budget: Budget): Promise<BudgetResponse> {
     return apiClient.post('/finance/budgets', budget);
   }
 
@@ -34,11 +51,11 @@ class FinanceApiService {
     return apiClient.get('/finance/budgets');
   }
 
-  async getBudgetById(id: number): Promise<Budget> {
+  async getBudgetById(id: number): Promise<BudgetResponse> {
     return apiClient.get(`/finance/budgets/${id}`);
   }
 
-  async updateBudget(id: number, budget: Budget): Promise<Budget> {
+  async updateBudget(id: number, budget: Budget): Promise<BudgetResponse> {
     return apiClient.put(`/finance/budgets/${id}`, budget);
   }
 
@@ -47,19 +64,19 @@ class FinanceApiService {
   }
 
   // Budget Request endpoints
-  async createBudgetRequest(request: BudgetRequest): Promise<BudgetRequest> {
+  async createBudgetRequest(request: BudgetRequestPayload): Promise<BudgetRequestPayload> {
     return apiClient.post('/finance/budget-requests', request);
   }
 
-  async getAllBudgetRequests(): Promise<BudgetRequest[]> {
+  async getAllBudgetRequests(): Promise<BudgetRequestPayload[]> {
     return apiClient.get('/finance/budget-requests');
   }
 
-  async getBudgetRequestById(id: number): Promise<BudgetRequest> {
+  async getBudgetRequestById(id: number): Promise<BudgetRequestPayload> {
     return apiClient.get(`/finance/budget-requests/${id}`);
   }
 
-  async updateBudgetRequest(id: number, request: BudgetRequest): Promise<BudgetRequest> {
+  async updateBudgetRequest(id: number, request: BudgetRequestPayload): Promise<BudgetRequestPayload> {
     return apiClient.put(`/finance/budget-requests/${id}`, request);
   }
 
@@ -133,81 +150,96 @@ class FinanceApiService {
 
 export const financeApiService = new FinanceApiService();
 
+
+// ============================================================================
+// MAPPED BUDGET API FUNCTIONS
+// ============================================================================
+function calculateBudgetStatus(amount: number, spentAmount: number): 'On Track' | 'Warning' | 'Over Budget' {
+  if (amount === 0) return 'On Track';
+  if (spentAmount > amount) return 'Over Budget';
+  return 'On Track';
+}
+
+
 // ============================================================================
 // BUDGET MAPPING UTILITIES
 // ============================================================================
-function mapToBackendBudget(budget: BudgetItem) {
-  return {
-    id: budget.id,
-    budgetName: budget.category,
-    description: budget.description,
-    departmentId: Number(budget.department),
-    fiscal_year: budget.fiscal_year,
-    start_date: budget.startDate,
-    end_date: budget.endDate,
-    total_amount: budget.total_amount,
-    allocated_amount: budget.allocated_amount,
-    spent_amount: budget.spentAmount,
-    remaining_amount: budget.remaining_amount ?? budget.budgetAmount - budget.spentAmount,
-    status: budget.status ?? 'On Track',
-    amount: budget.budgetAmount,
-    created_by: budget.created_by,
-    approved_by: budget.approved_by,
-    approved_at: budget.approved_at,
-    created_at: budget.created_at,
-    updated_at: budget.updated_at,
-  };
-}
 
-function mapToFrontendBudget(budget: BudgetResponse): BudgetItem {
-  const budgetAmount = Number(budget.amount) || 0;
+
+function mapBudgetResponse(budget: BudgetResponse): BudgetItem {
+  const amount = Number(budget.amount) || 0;
   const spentAmount = Number(budget.spentAmount) || 0;
-  const remaining = budget.remaining_amount ?? budgetAmount - spentAmount;
-  const percentage = budgetAmount > 0 ? (spentAmount / budgetAmount) * 100 : 0;
-  const period = budget.start_date && budget.end_date ? `${budget.start_date} to ${budget.end_date}` : '';
-  const lastUpdated = budget.updated_at || '';
-
+  const remainingAmount = budget.remaining_amount !== undefined ? Number(budget.remaining_amount) : amount - spentAmount;
+  
   return {
     id: budget.id?.toString() || '',
-    department: budget.department_id ? budget.department_id.toString() : '',
-    category: budget.budget_name || '',
-    budgetAmount,
-    spentAmount,
-    remainingAmount: remaining,
-    total_amount: budget.total_amount,
-    allocated_amount: budget.allocated_amount,
-    remaining,
-    fiscal_year: budget.fiscal_year,
+    amount,
+    budgetName: budget.budgetName || budget.budget_name || '',
+    departmentId: Number(budget.departmentId || budget.department_id) || 0,
+    departmentName: '',
     description: budget.description || '',
-    status: (budget.status as 'On Track' | 'Warning' | 'Over Budget') || 'On Track',
-    created_by: budget.created_by,
-    approved_by: budget.approved_by,
-    approved_at: budget.approved_at,
-    created_at: budget.created_at,
-    updated_at: budget.updated_at,
-    startDate: budget.start_date || '',
-    endDate: budget.end_date || '',
-    percentage,
-    period,
-    lastUpdated,
+    startDate: budget.startDate || budget.start_date || '',
+    endDate: budget.endDate || budget.end_date || '',
+    spentAmount,
+    remainingAmount,
+    budgetAmount: amount,
+    remaining: remainingAmount,
+    percentage: amount > 0 ? (spentAmount / amount) * 100 : 0,
+    period: (budget.startDate || budget.start_date) && (budget.endDate || budget.end_date) ? `${budget.startDate || budget.start_date} to ${budget.endDate || budget.end_date}` : '',
+    status: calculateBudgetStatus(amount, spentAmount),
+    lastUpdated: new Date().toISOString().split('T')[0],
+    category: budget.budgetName || budget.budget_name || 'General',
+    department: (budget.departmentId || budget.department_id)?.toString() || '',
   };
 }
 
-// ============================================================================
-// WRAPPER FUNCTIONS FOR BACKWARD COMPATIBILITY
-// ============================================================================
-export async function createBudgetItem(budget: BudgetItem): Promise<BudgetItem> {
-  const backendBudget = mapToBackendBudget(budget);
-  const response = await financeApiService.createBudget(backendBudget as unknown as Budget);
-  return mapToFrontendBudget(response as BudgetResponse);
+export async function fetchBudgets(): Promise<BudgetItem[]> {
+  const data = await financeApiService.getAllBudgets();
+  const departments = await fetchDepartments();
+  const deptMap = new Map(departments.map((d: Department) => [d.id?.toString(), d.name]));
+  
+  return data.map(budget => {
+    const mapped = mapBudgetResponse(budget);
+    mapped.departmentName = deptMap.get(mapped.departmentId?.toString()) || '';
+    return mapped;
+  });
 }
 
-export async function updateBudgetItem(id: string | number, budget: BudgetItem): Promise<BudgetItem> {
-  const backendBudget = mapToBackendBudget(budget);
-  const response = await financeApiService.updateBudget(Number(id), backendBudget as unknown as Budget);
-  return mapToFrontendBudget(response as BudgetResponse);
+export async function createBudgetItem(budget: Budget): Promise<BudgetItem> {
+  const response = await financeApiService.createBudget(budget);
+  const mapped = mapBudgetResponse(response);
+  const departments = await fetchDepartments();
+  const deptMap = new Map(departments.map((d: Department) => [d.id?.toString(), d.name]));
+  mapped.departmentName = deptMap.get(mapped.departmentId?.toString()) || '';
+  return mapped;
+}
+
+export async function updateBudgetItem(id: string | number, budget: Budget): Promise<BudgetItem> {
+  const response = await financeApiService.updateBudget(Number(id), budget);
+  const mapped = mapBudgetResponse(response);
+  const departments = await fetchDepartments();
+  const deptMap = new Map(departments.map((d: Department) => [d.id?.toString(), d.name]));
+  mapped.departmentName = deptMap.get(mapped.departmentId?.toString()) || '';
+  return mapped;
 }
 
 export async function deleteBudgetItem(id: string | number): Promise<void> {
   return financeApiService.deleteBudget(Number(id));
+}
+
+export async function fetchBudgetRequests(): Promise<ApiBudgetRequest[]> {
+  const data = await financeApiService.getAllBudgetRequests();
+  
+  const result: ApiBudgetRequest[] = data.map((request: BudgetRequestPayload) => ({
+    id: request.id?.toString() || '',
+    department: request.department || '',
+    category: request.category || 'General',
+    requestedAmount: Number(request.requestedAmount || request.requested_amount) || 0,
+    justification: request.justification || '',
+    status: (request.status || 'Pending') as 'Pending' | 'Approved' | 'Rejected',
+    requestedBy: request.requestedBy || request.requested_by || 'Unknown',
+    requestDate: request.requestedDate || request.request_date || new Date().toISOString().split('T')[0],
+  }));
+  
+  return result;
 }

@@ -181,10 +181,10 @@ class BiometricModel:
             now = datetime.now()
 
             if action == 'clock_in':
-                # Insert new attendance record
+                # Insert new attendance record - explicitly set clock_out_method to NULL
                 query = """
-                    INSERT INTO attendance_records (user_id, clock_in_time, clock_in_method, status, created_at, updated_at)
-                    VALUES (%s, %s, %s, 'present', %s, %s)
+                    INSERT INTO attendance_records (user_id, clock_in_time, clock_in_method, clock_out_method, status, created_at, updated_at)
+                    VALUES (%s, %s, %s, NULL, 'present', %s, %s)
                 """
                 params = (user_id, now, method, now, now)
                 record_id = self.db.execute_query(query, params, fetch=False)

@@ -20,7 +20,12 @@ public class FinanceController {
 
     // Chart of Account endpoints
     @PostMapping("/accounts")
-    public ResponseEntity<ChartOfAccount> createChartOfAccount(@RequestBody ChartOfAccount coa) {
+    public ResponseEntity<ChartOfAccount> createChartOfAccount(
+            @RequestBody ChartOfAccount coa,
+            @RequestHeader(value = "x-user-id", required = false) String userId) {
+        if (userId != null) {
+            coa.setCreatedBy(userId);
+        }
         return ResponseEntity.ok(financeService.createChartOfAccount(coa));
     }
 

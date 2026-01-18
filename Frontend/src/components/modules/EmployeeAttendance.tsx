@@ -114,18 +114,23 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
 
   const formatTime = (dateString?: string) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleTimeString('en-US', {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
+      hour12: false,
+      timeZone: 'UTC'
     });
   };
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
+      timeZone: 'UTC'
     });
   };
 
@@ -395,7 +400,7 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
                       <TableCell className="text-sm">
                         <div className="space-y-1">
                           <div>In: {formatAttendanceMethod(record.clock_in_method)}</div>
-                          <div>Out: {formatAttendanceMethod(record.clock_out_method)}</div>
+                          <div>Out: {record.clock_out_time ? formatAttendanceMethod(record.clock_out_method) : '-'}</div>
                         </div>
                       </TableCell>
                     </TableRow>

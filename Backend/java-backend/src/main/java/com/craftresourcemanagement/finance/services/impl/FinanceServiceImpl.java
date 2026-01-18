@@ -104,8 +104,39 @@ public class FinanceServiceImpl implements FinanceService {
     // Budget
     @Override
     public Budget createBudget(Budget budget) {
+        // Validate required fields
+        if (budget.getBudgetName() == null || budget.getBudgetName().isEmpty()) {
+            throw new IllegalArgumentException("Budget name is required");
+        }
+        if (budget.getCreatedBy() == null) {
+            throw new IllegalArgumentException("Created by is required");
+        }
+        
+        // Ensure total_amount is set
+        if (budget.getTotalAmount() == null || budget.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Budget amount must be greater than zero");
+        }
+        
+        // Initialize spent_amount if null
+        if (budget.getSpentAmount() == null) {
+            budget.setSpentAmount(BigDecimal.ZERO);
+        }
+        
+        // Initialize allocated_amount if null
+        if (budget.getAllocatedAmount() == null) {
+            budget.setAllocatedAmount(BigDecimal.ZERO);
+        }
+        
+        // NEVER set remaining_amount - it's computed by DB
+        budget.setRemainingAmount(null);
+        
+        // Set default status if not provided
+        if (budget.getStatus() == null || budget.getStatus().isEmpty()) {
+            budget.setStatus("draft");
+        }
+        
         Budget saved = budgetRepository.save(budget);
-        auditClient.logAction(budget.getCreatedBy(), "CREATE_BUDGET", "Budget: " + saved.getBudgetName() + ", Amount: " + saved.getAmount());
+        auditClient.logAction(budget.getCreatedBy(), "CREATE_BUDGET", "Budget: " + saved.getBudgetName() + ", Amount: " + saved.getTotalAmount());
         return saved;
     }
 
@@ -114,27 +145,14 @@ public class FinanceServiceImpl implements FinanceService {
             return budget.getRemainingAmount();
         }
         
-        BigDecimal totalAmount;
-        if (budget.getTotalAmount() != null) {
-            totalAmount = budget.getTotalAmount();
-        } else if (budget.getAmount() != null) {
-            totalAmount = budget.getAmount();
-        } else {
-            totalAmount = BigDecimal.ZERO;
-        }
-                
-        BigDecimal spentAmount = budget.getSpentAmount() != null 
-            ? budget.getSpentAmount() 
-            : BigDecimal.ZERO;
+        BigDecimal totalAmount = budget.getTotalAmount() != null ? budget.getTotalAmount() : BigDecimal.ZERO;
+        BigDecimal spentAmount = budget.getSpentAmount() != null ? budget.getSpentAmount() : BigDecimal.ZERO;
             
         return totalAmount.subtract(spentAmount);
     }
     
     private BigDecimal getBudgetAmount(Budget budget) {
-        if (budget.getTotalAmount() != null) {
-            return budget.getTotalAmount();
-        }
-        return budget.getAmount() != null ? budget.getAmount() : BigDecimal.ZERO;
+        return budget.getTotalAmount() != null ? budget.getTotalAmount() : BigDecimal.ZERO;
     }
 
     @Override
@@ -175,23 +193,49 @@ public class FinanceServiceImpl implements FinanceService {
         Optional<Budget> existing = budgetRepository.findById(id);
         if (existing.isPresent()) {
             Budget toUpdate = existing.get();
-            toUpdate.setBudgetName(budget.getBudgetName());
-            toUpdate.setDescription(budget.getDescription());
-            toUpdate.setDepartmentId(budget.getDepartmentId());
-            toUpdate.setFiscalYear(budget.getFiscalYear());
-            toUpdate.setStartDate(budget.getStartDate());
-            toUpdate.setEndDate(budget.getEndDate());
-            toUpdate.setTotalAmount(budget.getTotalAmount());
-            toUpdate.setAllocatedAmount(budget.getAllocatedAmount());
-            toUpdate.setSpentAmount(budget.getSpentAmount());
-            toUpdate.setRemainingAmount(budget.getRemainingAmount());
-            toUpdate.setStatus(budget.getStatus());
-            toUpdate.setAmount(budget.getAmount());
-            toUpdate.setCreatedBy(budget.getCreatedBy());
-            toUpdate.setApprovedBy(budget.getApprovedBy());
-            toUpdate.setApprovedAt(budget.getApprovedAt());
-            toUpdate.setCreatedAt(budget.getCreatedAt());
-            toUpdate.setUpdatedAt(budget.getUpdatedAt());
+            
+            if (budget.getBudgetName() != null && !budget.getBudgetName().isEmpty()) {
+                toUpdate.setBudgetName(budget.getBudgetName());
+            }
+            if (budget.getDescription() != null) {
+                toUpdate.setDescription(budget.getDescription());
+            }
+            if (budget.getDepartmentId() != null) {
+                toUpdate.setDepartmentId(budget.getDepartmentId());
+            }
+            if (budget.getFiscalYear() != null) {
+                toUpdate.setFiscalYear(budget.getFiscalYear());
+            }
+            if (budget.getStartDate() != null) {
+                toUpdate.setStartDate(budget.getStartDate());
+            }
+            if (budget.getEndDate() != null) {
+                toUpdate.setEndDate(budget.getEndDate());
+            }
+            if (budget.getTotalAmount() != null) {
+                if (budget.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new IllegalArgumentException("Budget amount must be greater than zero");
+                }
+                toUpdate.setTotalAmount(budget.getTotalAmount());
+            }
+            if (budget.getAllocatedAmount() != null) {
+                toUpdate.setAllocatedAmount(budget.getAllocatedAmount());
+            }
+            if (budget.getSpentAmount() != null) {
+                toUpdate.setSpentAmount(budget.getSpentAmount());
+            }
+            toUpdate.setRemainingAmount(null);
+            
+            if (budget.getStatus() != null && !budget.getStatus().isEmpty()) {
+                toUpdate.setStatus(budget.getStatus());
+            }
+            if (budget.getApprovedBy() != null) {
+                toUpdate.setApprovedBy(budget.getApprovedBy());
+            }
+            if (budget.getApprovedAt() != null) {
+                toUpdate.setApprovedAt(budget.getApprovedAt());
+            }
+            
             Budget updated = budgetRepository.save(toUpdate);
             auditClient.logAction(SYSTEM_USER, "UPDATE_BUDGET", "Budget: " + updated.getBudgetName());
             return updated;

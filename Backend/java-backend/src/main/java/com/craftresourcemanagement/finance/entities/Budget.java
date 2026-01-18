@@ -22,16 +22,16 @@ public class Budget {
     @Column(name = "department_id")
     private Long departmentId;
 
-    @Column(name = "fiscal_year")
+    @Column(name = "fiscal_year", nullable = false)
     private Integer fiscalYear;
 
-    @Column(name = "start_date")
+    @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
-    @Column(name = "end_date")
+    @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
-    @Column(name = "total_amount")
+    @Column(name = "total_amount", nullable = false)
     private BigDecimal totalAmount;
 
     @Column(name = "allocated_amount")
@@ -40,13 +40,13 @@ public class Budget {
     @Column(name = "spent_amount")
     private BigDecimal spentAmount;
 
-    @Column(name = "remaining_amount")
+    @Column(name = "remaining_amount", insertable = false, updatable = false)
     private BigDecimal remainingAmount;
 
     @Column(name = "status")
     private String status;
 
-    @Column(name = "created_by")
+    @Column(name = "created_by", nullable = false)
     private Long createdBy;
 
     @Column(name = "approved_by")
@@ -60,9 +60,6 @@ public class Budget {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    @Column(name = "amount")
-    private BigDecimal amount;
 
     // Getters and Setters
 
@@ -196,13 +193,5 @@ public class Budget {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
-    }
-
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
     }
 }
