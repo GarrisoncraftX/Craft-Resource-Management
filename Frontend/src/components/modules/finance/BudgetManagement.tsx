@@ -289,8 +289,14 @@ export const BudgetManagement: React.FC = () => {
                     Submit a request for additional budget allocation
                   </DialogDescription>
                 </DialogHeader>
-                {/* Using the external BudgetRequestForm component */}
-                <BudgetRequestForm onSubmit={(request) => { setBudgetRequests([...budgetRequests, request]); setIsAddingRequest(false); }} onCancel={() => setIsAddingRequest(false)} />
+                <BudgetRequestForm 
+                  onSubmit={async () => {
+                    const refreshedRequests = await fetchBudgetRequests();
+                    setBudgetRequests(refreshedRequests);
+                    setIsAddingRequest(false);
+                  }} 
+                  onCancel={() => setIsAddingRequest(false)} 
+                />
               </DialogContent>
             </Dialog>
           </PermissionGuard>

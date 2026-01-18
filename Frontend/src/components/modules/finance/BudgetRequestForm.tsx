@@ -6,11 +6,14 @@ import { BudgetRequest, Department } from '@/types/api';
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchDepartments } from '@/services/api';
+import { financeApiService } from '@/services/javabackendapi/financeApi';
+import { useToast } from '@/hooks/use-toast';
 
 export const BudgetRequestForm: React.FC<{ onSubmit: (request: BudgetRequest) => void; onCancel: () => void }> = ({ onSubmit, onCancel }) => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isDepartmentsLoading, setIsDepartmentsLoading] = useState(false);
   const { user } = useAuth();
+  const { toast } = useToast();
 
 
   const [formData, setFormData] = useState({
@@ -37,14 +40,33 @@ export const BudgetRequestForm: React.FC<{ onSubmit: (request: BudgetRequest) =>
      fetchDepartmentsData();
    }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
-      ...formData,
-      status: 'Pending',
-      requestedBy: user?.firstName || 'Unknown User',
-      requestDate: new Date().toISOString().split('T')[0],
-    });
+    try {
+      await financeApiService.createBudgetRequest({
+        ...formData,
+        status: 'Pending',
+        requestedBy: user?.firstName || 'Unknown User',
+        request_date: new Date().toISOString().split('T')[0],
+      });
+      toast({
+        title: "Request Submitted",
+        description: "Budget request has been successfully submitted.",
+      });
+      onSubmit({
+        ...formData,
+        status: 'Pending',
+        requestedBy: user?.firstName || 'Unknown User',
+        requestDate: new Date().toISOString().split('T')[0],
+      });
+    } catch (error) {
+      console.error("Failed to create budget request", error);
+      toast({
+        title: "Submission Failed",
+        description: "Failed to submit budget request. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -96,7 +118,7 @@ export const BudgetRequestForm: React.FC<{ onSubmit: (request: BudgetRequest) =>
           id="requestedAmount"
           type="number"
           value={formData.requestedAmount}
-          onChange={(e) => setFormData({ ...formData, requestedAmount: parseFloat(e.target.value) })}
+          onChange={(e) => setFormData({ ...formData, requestedAmount: Number.parseFloat(e.target.value) })}
           placeholder="0.00"
           step="0.01"
           required

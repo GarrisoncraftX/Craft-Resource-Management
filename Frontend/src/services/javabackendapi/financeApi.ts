@@ -7,6 +7,7 @@ interface BudgetRequestPayload {
   id?: number;
   department?: string;
   departmentId?: number;
+  department_id?: number;
   requestedAmount?: number;
   requested_amount?: number;
   justification?: string;
@@ -262,17 +263,24 @@ export async function deleteBudgetItem(id: string | number): Promise<void> {
 
 export async function fetchBudgetRequests(): Promise<ApiBudgetRequest[]> {
   const data = await financeApiService.getAllBudgetRequests();
+  const departments = await fetchDepartments();
+  const deptMap = new Map(departments.map((d: Department) => [Number(d.id), d.name]));
   
-  const result: ApiBudgetRequest[] = data.map((request: BudgetRequestPayload) => ({
-    id: request.id?.toString() || '',
-    department: request.department || '',
-    category: request.category || 'General',
-    requestedAmount: Number(request.requestedAmount || request.requested_amount) || 0,
-    justification: request.justification || '',
-    status: (request.status || 'Pending') as 'Pending' | 'Approved' | 'Rejected',
-    requestedBy: request.requestedBy || request.requested_by || 'Unknown',
-    requestDate: request.requestedDate || request.request_date || new Date().toISOString().split('T')[0],
-  }));
+  const result: ApiBudgetRequest[] = data.map((request: BudgetRequestPayload) => {
+    const deptId = request.departmentId || request.department_id;
+    const deptName = deptId ? deptMap.get(Number(deptId)) : request.department;
+    
+    return {
+      id: request.id?.toString() || '',
+      department: deptName || '',
+      category: request.category || 'General',
+      requestedAmount: Number(request.requestedAmount || request.requested_amount) || 0,
+      justification: request.justification || '',
+      status: (request.status || 'Pending') as 'Pending' | 'Approved' | 'Rejected',
+      requestedBy: request.requestedBy || request.requested_by || 'Unknown',
+      requestDate: request.requestedDate || request.request_date || new Date().toISOString().split('T')[0],
+    };
+  });
   
   return result;
 }

@@ -10,6 +10,7 @@ import com.craftresourcemanagement.utils.OpenAIClientException;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ import java.util.Optional;
 import java.math.BigDecimal;
 
 @Service
+@Transactional
 public class FinanceServiceImpl implements FinanceService {
 
     private static final Logger logger = LoggerFactory.getLogger(FinanceServiceImpl.class);
@@ -362,7 +364,15 @@ public class FinanceServiceImpl implements FinanceService {
     // Budget Request
     @Override
     public BudgetRequest createBudgetRequest(BudgetRequest budgetRequest) {
-        return budgetRequestRepository.save(budgetRequest);
+        if (budgetRequest.getRequestDate() == null) {
+            budgetRequest.setRequestDate(java.time.LocalDate.now());
+        }
+        if (budgetRequest.getStatus() == null || budgetRequest.getStatus().isEmpty()) {
+            budgetRequest.setStatus("Pending");
+        }
+        BudgetRequest saved = budgetRequestRepository.save(budgetRequest);
+        auditClient.logAction(SYSTEM_USER, "CREATE_BUDGET_REQUEST", "Department: " + saved.getDepartment() + ", Amount: " + saved.getRequestedAmount());
+        return saved;
     }
 
     @Override
