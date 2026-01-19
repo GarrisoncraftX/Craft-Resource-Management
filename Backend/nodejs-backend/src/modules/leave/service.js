@@ -214,6 +214,24 @@ class LeaveService {
         throw new Error('Leave request is not in pending status');
       }
 
+      // Check for overlapping approved leaves
+      const overlappingLeave = await LeaveRequest.findOne({
+        where: {
+          userId: leaveRequest.userId,
+          status: 'approved',
+          [Op.or]: [
+            { startDate: { [Op.between]: [leaveRequest.startDate, leaveRequest.endDate] } },
+            { endDate: { [Op.between]: [leaveRequest.startDate, leaveRequest.endDate] } },
+            { [Op.and]: [{ startDate: { [Op.lte]: leaveRequest.startDate } }, { endDate: { [Op.gte]: leaveRequest.endDate } }] }
+          ]
+        },
+        transaction
+      });
+
+      if (overlappingLeave) {
+        throw new Error('User already has approved leave during this period');
+      }
+
       // Update leave request status
       leaveRequest.status = 'approved';
       leaveRequest.approvedAt = new Date();
