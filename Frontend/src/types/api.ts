@@ -173,6 +173,8 @@ export interface Invoice {
   category: string;
   paymentTerms: string;
   approvedBy?: string;
+  apAccountCode?: string;
+  expenseAccountCode?: string;
 }
 
 export interface Payslip {

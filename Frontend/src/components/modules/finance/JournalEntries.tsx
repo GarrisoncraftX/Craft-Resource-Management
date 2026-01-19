@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Edit, Search } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Plus, Edit, Search, MoreVertical } from 'lucide-react';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { JournalEntryForm } from './JournalEntryForm';
 import { journalApi } from '@/services/javabackendapi/journalApi';
@@ -129,7 +130,22 @@ export const JournalEntries: React.FC = () => {
 
   const handleViewEntry = (entry: JournalEntry) => {
     setSelectedEntry(entry);
-    
+  };
+
+  const handleStatusChange = async (id: string, newStatus: 'Draft' | 'Posted' | 'Approved') => {
+    try {
+      setLoading(true);
+      setError(null);
+      await journalApi.update(id, { status: newStatus });
+      setJournalEntries(journalEntries.map(entry => 
+        entry.id === id ? { ...entry, status: newStatus } : entry
+      ));
+    } catch (err) {
+      setError('Failed to update status');
+      console.error('Error updating status:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filteredEntries = journalEntries.filter(entry => {
@@ -280,34 +296,44 @@ export const JournalEntries: React.FC = () => {
                     </TableCell>
                     <TableCell>{getCreatorName(entry.createdBy)}</TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleViewEntry(entry)}
-                        >
-                          View
-                        </Button>
-                        <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setEditingEntry(entry)}
-                          >
-                            <Edit className="h-4 w-4" />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-4 w-4" />
                           </Button>
-                        </PermissionGuard>
-                        <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className='text-destructive'
-                            onClick={() => handleDeleteEntry(String(entry.id))}
-                          >
-                            Delete
-                          </Button>
-                        </PermissionGuard>
-                      </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewEntry(entry)}>
+                            View Details
+                          </DropdownMenuItem>
+                          <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
+                            <DropdownMenuItem onClick={() => setEditingEntry(entry)}>
+                              Edit Entry
+                            </DropdownMenuItem>
+                            {entry.status === 'Draft' && (
+                              <DropdownMenuItem onClick={() => handleStatusChange(String(entry.id), 'Posted')}>
+                                Post Entry
+                              </DropdownMenuItem>
+                            )}
+                            {entry.status === 'Posted' && (
+                              <DropdownMenuItem onClick={() => handleStatusChange(String(entry.id), 'Approved')}>
+                                Approve Entry
+                              </DropdownMenuItem>
+                            )}
+                            {(entry.status === 'Posted' || entry.status === 'Approved') && (
+                              <DropdownMenuItem onClick={() => handleStatusChange(String(entry.id), 'Draft')}>
+                                Revert to Draft
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => handleDeleteEntry(String(entry.id))}
+                            >
+                              Delete Entry
+                            </DropdownMenuItem>
+                          </PermissionGuard>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}

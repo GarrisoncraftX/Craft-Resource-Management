@@ -114,3 +114,21 @@ export const mockMonthlyTraining = [
   { month: 'May', enrollments: 55, completions: 48 },
   { month: 'Jun', enrollments: 67, completions: 60 }
 ];
+
+export const mockMonthlyPerformance = [
+  { month: 'Jan', avgRating: 4.2 },
+  { month: 'Feb', avgRating: 4.1 },
+  { month: 'Mar', avgRating: 4.3 },
+  { month: 'Apr', avgRating: 4.0 },
+  { month: 'May', avgRating: 4.4 },
+  { month: 'Jun', avgRating: 4.2 }
+];
+
+export const mockKpiData = [
+  { subject: 'Productivity', A: 85 },
+  { subject: 'Quality', A: 78 },
+  { subject: 'Efficiency', A: 92 },
+  { subject: 'Innovation', A: 67 },
+  { subject: 'Teamwork', A: 89 },
+  { subject: 'Communication', A: 74 }
+];

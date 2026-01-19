@@ -19,7 +19,9 @@ export interface JournalEntryCreate {
   accountCode: string;
 }
 
-export type JournalEntryUpdate = Partial<JournalEntryCreate>;
+export type JournalEntryUpdate = Partial<JournalEntryCreate> & {
+  status?: 'Draft' | 'Posted' | 'Approved';
+};
 
 export interface JournalLineItem {
   id: string;

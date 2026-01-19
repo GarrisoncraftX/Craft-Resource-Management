@@ -219,7 +219,7 @@ export const EmployeeProfiles: React.FC = () => {
                     <TableCell colSpan={7} className="text-center">Loading...</TableCell>
                   </TableRow>
                 ) : filteredEmployees.map((employee) => (
-                  <TableRow key={employee.id}>
+                  <TableRow key={employee.employeeId}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar>
@@ -267,9 +267,9 @@ export const EmployeeProfiles: React.FC = () => {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <AdminResetPasswordDialog 
-                          userId={employee.id.toString()} 
-                          userName={`${employee.firstName} ${employee.lastName}`} 
+                        <AdminResetPasswordDialog
+                          userId={employee.employeeId}
+                          userName={`${employee.firstName} ${employee.lastName}`}
                         />
                       </div>
                     </TableCell>

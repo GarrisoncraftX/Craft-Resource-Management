@@ -163,6 +163,79 @@ class FinanceApiService {
 
 export const financeApiService = new FinanceApiService();
 
+// ============================================================================
+// ACCOUNTS PAYABLE MAPPING
+// ============================================================================
+
+export interface MappedAccountPayable {
+  id: string;
+  invoiceNumber: string;
+  vendor: string;
+  amount: number;
+  dueDate: string;
+  status: string;
+  description: string;
+  issueDate: string;
+  category?: string;
+  paymentTerms?: string;
+  apAccountCode?: string;
+  expenseAccountCode?: string;
+}
+
+export async function fetchAccountPayables(): Promise<MappedAccountPayable[]> {
+  const data = await financeApiService.getAllAccountPayables();
+  return data.map(ap => ({
+    id: ap.id?.toString() || '',
+    invoiceNumber: ap.invoiceNumber,
+    vendor: ap.vendorId?.toString() || 'Unknown',
+    amount: ap.amount,
+    dueDate: ap.dueDate,
+    status: ap.status,
+    description: ap.description || '',
+    issueDate: ap.dueDate,
+    category: '',
+    paymentTerms: 'Net 30',
+  }));
+}
+
+// ============================================================================
+// ACCOUNTS RECEIVABLE MAPPING
+// ============================================================================
+
+export interface MappedAccountReceivable {
+  id: string;
+  invoiceNumber: string;
+  customer: string;
+  amount: number;
+  dueDate: string;
+  status: 'Draft' | 'Sent' | 'Paid' | 'Overdue' | 'Partial';
+  description: string;
+  issueDate: string;
+  amountPaid: number;
+  balance: number;
+  paymentTerms: string;
+  arAccountCode?: string;
+  revenueAccountCode?: string;
+  journalEntryId?: number;
+}
+
+export async function fetchAccountReceivables(): Promise<MappedAccountReceivable[]> {
+  const data = await financeApiService.getAllAccountReceivables();
+  return data.map(ar => ({
+    id: ar.id?.toString() || '',
+    invoiceNumber: ar.invoiceNumber,
+    customer: ar.customerId?.toString() || 'Unknown',
+    amount: ar.amount,
+    dueDate: ar.dueDate,
+    status: ar.status as MappedAccountReceivable['status'],
+    description: ar.description || '',
+    issueDate: ar.dueDate,
+    amountPaid: 0,
+    balance: ar.amount,
+    paymentTerms: 'Net 30',
+  }));
+}
+
 
 // ============================================================================
 // MAPPED BUDGET API FUNCTIONS

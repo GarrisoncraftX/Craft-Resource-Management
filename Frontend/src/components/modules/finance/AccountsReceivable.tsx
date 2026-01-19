@@ -9,54 +9,40 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Search, Receipt, Calendar, DollarSign, Send } from 'lucide-react';
 import { PermissionGuard } from '@/components/PermissionGuard';
-import { financeApiService, AccountReceivable } from '@/services/javabackendapi/financeApi';
+import { fetchAccountReceivables, type MappedAccountReceivable } from '@/services/javabackendapi/financeApi';
 import { mockCustomerInvoices } from '@/services/mockData/mockData';
-
-interface CustomerInvoice {
-  id: string;
-  invoiceNumber: string;
-  customer: string;
-  amount: number;
-  dueDate: string;
-  status: 'Draft' | 'Sent' | 'Paid' | 'Overdue' | 'Partial';
-  description: string;
-  issueDate: string;
-  amountPaid: number;
-  balance: number;
-  paymentTerms: string;
-}
+import { apiClient } from '@/utils/apiClient';
+import type { Account } from '@/types/api';
 
 export const AccountsReceivable: React.FC = () => {
-  const [invoices, setInvoices] = useState<CustomerInvoice[]>([]);
+  const [invoices, setInvoices] = useState<MappedAccountReceivable[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [isAddingInvoice, setIsAddingInvoice] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<CustomerInvoice | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<MappedAccountReceivable | null>(null);
   const [isPaymentDialog, setIsPaymentDialog] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(0);
 
   useEffect(() => {
     fetchInvoices();
+    fetchAccounts();
   }, []);
+
+  const fetchAccounts = async () => {
+    try {
+      const data = await apiClient.get('/finance/accounts');
+      setAccounts(data);
+    } catch (error) {
+      console.error('Failed to fetch accounts:', error);
+    }
+  };
 
   const fetchInvoices = async () => {
     try {
-      const data = await financeApiService.getAllAccountReceivables();
-      const mappedData: CustomerInvoice[] = data.map((item: AccountReceivable) => ({
-        id: item.id?.toString() || '',
-        invoiceNumber: item.invoiceNumber,
-        customer: item.customerId?.toString() || 'Unknown',
-        amount: item.amount,
-        dueDate: item.dueDate,
-        status: item.status as CustomerInvoice['status'],
-        description: item.description || '',
-        issueDate: item.dueDate,
-        amountPaid: 0,
-        balance: item.amount,
-        paymentTerms: 'Net 30',
-      }));
-      setInvoices(mappedData);
+      const data = await fetchAccountReceivables();
+      setInvoices(data);
     } catch (error) {
       console.error('Failed to fetch invoices, using mock data:', error);
       setInvoices(mockCustomerInvoices);
@@ -82,7 +68,7 @@ export const AccountsReceivable: React.FC = () => {
     }
   };
 
-  const InvoiceForm: React.FC<{ invoice?: CustomerInvoice; onSubmit: (invoice: CustomerInvoice) => void }> = ({ invoice, onSubmit }) => {
+  const InvoiceForm: React.FC<{ invoice?: MappedAccountReceivable; onSubmit: (invoice: MappedAccountReceivable) => void }> = ({ invoice, onSubmit }) => {
     const [formData, setFormData] = useState({
       invoiceNumber: invoice?.invoiceNumber || '',
       customer: invoice?.customer || '',
@@ -91,7 +77,12 @@ export const AccountsReceivable: React.FC = () => {
       description: invoice?.description || '',
       issueDate: invoice?.issueDate || new Date().toISOString().split('T')[0],
       paymentTerms: invoice?.paymentTerms || 'Net 30',
+      arAccountCode: invoice?.arAccountCode || '',
+      revenueAccountCode: invoice?.revenueAccountCode || '',
     });
+
+    const assetAccounts = accounts.filter(acc => acc.accountType.toLowerCase() === 'asset');
+    const revenueAccounts = accounts.filter(acc => acc.accountType.toLowerCase() === 'revenue');
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -194,6 +185,39 @@ export const AccountsReceivable: React.FC = () => {
           </div>
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="arAccountCode">AR Account (Asset)</Label>
+            <Select value={formData.arAccountCode} onValueChange={(value) => setFormData({ ...formData, arAccountCode: value })} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Select AR account" />
+              </SelectTrigger>
+              <SelectContent>
+                {assetAccounts.map(acc => (
+                  <SelectItem key={acc.id} value={acc.accountCode}>
+                    {acc.accountCode} - {acc.accountName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="revenueAccountCode">Revenue Account</Label>
+            <Select value={formData.revenueAccountCode} onValueChange={(value) => setFormData({ ...formData, revenueAccountCode: value })} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Select revenue account" />
+              </SelectTrigger>
+              <SelectContent>
+                {revenueAccounts.map(acc => (
+                  <SelectItem key={acc.id} value={acc.accountCode}>
+                    {acc.accountCode} - {acc.accountName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         <Button type="submit" className="w-full">
           {invoice ? 'Update Invoice' : 'Create Invoice'}
         </Button>
@@ -212,7 +236,7 @@ export const AccountsReceivable: React.FC = () => {
               ...inv,
               amountPaid: newAmountPaid,
               balance: newBalance,
-              status: (newBalance === 0 ? 'Paid' : 'Partial') as CustomerInvoice['status']
+              status: (newBalance === 0 ? 'Paid' : 'Partial') as MappedAccountReceivable['status']
             };
           }
           return inv;
@@ -248,7 +272,7 @@ export const AccountsReceivable: React.FC = () => {
                 id="paymentAmount"
                 type="number"
                 value={paymentAmount}
-                onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setPaymentAmount(Number.parseFloat(e.target.value) || 0)}
                 placeholder="0.00"
                 step="0.01"
                 max={selectedInvoice?.balance}
@@ -276,10 +300,10 @@ export const AccountsReceivable: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Accounts Receivable</h2>
-          <p className="text-muted-foreground">Manage customer invoices and payments</p>
+          <h2 className="text-2xl font-bold text-white">Accounts Receivable</h2>
+          <p className="text-muted-foreground text-white">Manage customer invoices and payments</p>
         </div>
-        <PermissionGuard requiredPermissions={['finance.receivable.create']}>
+        <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
           <Dialog open={isAddingInvoice} onOpenChange={setIsAddingInvoice}>
             <DialogTrigger asChild>
               <Button>
@@ -291,7 +315,7 @@ export const AccountsReceivable: React.FC = () => {
               <DialogHeader>
                 <DialogTitle>Create New Invoice</DialogTitle>
                 <DialogDescription>
-                  Create a new customer invoice
+                  Create a new customer invoice. Journal entries will be created when sent.
                 </DialogDescription>
               </DialogHeader>
               <InvoiceForm onSubmit={(invoice) => setInvoices([...invoices, invoice])} />
@@ -427,12 +451,12 @@ export const AccountsReceivable: React.FC = () => {
                       <Button variant="outline" size="sm" onClick={() => setSelectedInvoice(invoice)}>
                         View
                       </Button>
-                      <PermissionGuard requiredPermissions={['finance.receivable.send']}>
+                      <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
                         <Button variant="outline" size="sm" disabled={invoice.status !== 'Draft'}>
                           <Send className="h-4 w-4" />
                         </Button>
                       </PermissionGuard>
-                      <PermissionGuard requiredPermissions={['finance.receivable.payment']}>
+                      <PermissionGuard requiredPermissions={['finance_manage_accounts']}>
                         <Button 
                           variant="outline" 
                           size="sm" 

@@ -9,11 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Search, CreditCard, Calendar, DollarSign } from 'lucide-react';
 import { PermissionGuard } from '@/components/PermissionGuard';
-import { Invoice } from '@/types/api';
+import { Account } from '@/types/api';
 import { mockInvoice } from '@/services/mockData/mockData';
-import { financeApiService } from '@/services/javabackendapi/financeApi';
+import { fetchAccountPayables, type MappedAccountPayable } from '@/services/javabackendapi/financeApi';
+import { apiClient } from '@/utils/apiClient';
 
-const InvoiceForm: React.FC<{ invoice?: Invoice; onSubmit: (invoice: Invoice) => void; onCancel: () => void }> = ({ invoice, onSubmit, onCancel }) => {
+const InvoiceForm: React.FC<{ invoice?: MappedAccountPayable; onSubmit: (invoice: MappedAccountPayable) => void; onCancel: () => void; accounts: Account[] }> = ({ invoice, onSubmit, onCancel, accounts }) => {
   const [formData, setFormData] = useState({
     invoiceNumber: invoice?.invoiceNumber || '',
     vendor: invoice?.vendor || '',
@@ -23,7 +24,12 @@ const InvoiceForm: React.FC<{ invoice?: Invoice; onSubmit: (invoice: Invoice) =>
     issueDate: invoice?.issueDate || new Date().toISOString().split('T')[0],
     category: invoice?.category || '',
     paymentTerms: invoice?.paymentTerms || 'Net 30',
+    apAccountCode: invoice?.apAccountCode || '',
+    expenseAccountCode: invoice?.expenseAccountCode || '',
   });
+
+  const liabilityAccounts = accounts.filter(acc => acc.accountType.toLowerCase() === 'liability');
+  const expenseAccounts = accounts.filter(acc => acc.accountType.toLowerCase() === 'expense');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +72,7 @@ const InvoiceForm: React.FC<{ invoice?: Invoice; onSubmit: (invoice: Invoice) =>
             id="amount"
             type="number"
             value={formData.amount}
-            onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
+            onChange={(e) => setFormData({ ...formData, amount: Number.parseFloat(e.target.value) })}
             placeholder="0.00"
             step="0.01"
             required
@@ -129,6 +135,39 @@ const InvoiceForm: React.FC<{ invoice?: Invoice; onSubmit: (invoice: Invoice) =>
         </Select>
       </div>
 
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="apAccountCode">AP Account (Liability)</Label>
+          <Select value={formData.apAccountCode} onValueChange={(value) => setFormData({ ...formData, apAccountCode: value })} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Select AP account" />
+            </SelectTrigger>
+            <SelectContent>
+              {liabilityAccounts.map(acc => (
+                <SelectItem key={acc.id} value={acc.accountCode}>
+                  {acc.accountCode} - {acc.accountName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="expenseAccountCode">Expense Account</Label>
+          <Select value={formData.expenseAccountCode} onValueChange={(value) => setFormData({ ...formData, expenseAccountCode: value })} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Select expense account" />
+            </SelectTrigger>
+            <SelectContent>
+              {expenseAccounts.map(acc => (
+                <SelectItem key={acc.id} value={acc.accountCode}>
+                  {acc.accountCode} - {acc.accountName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div>
         <Label htmlFor="description">Description</Label>
         <Input
@@ -153,23 +192,34 @@ const InvoiceForm: React.FC<{ invoice?: Invoice; onSubmit: (invoice: Invoice) =>
 };
 
 export const AccountsPayable: React.FC = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<MappedAccountPayable[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [isAddingInvoice, setIsAddingInvoice] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<MappedAccountPayable | null>(null);
 
   useEffect(() => {
     fetchInvoices();
+    fetchAccounts();
   }, []);
+
+  const fetchAccounts = async () => {
+    try {
+      const data = await apiClient.get('/finance/accounts');
+      setAccounts(data);
+    } catch (error) {
+      console.error('Failed to fetch accounts:', error);
+    }
+  };
 
   const fetchInvoices = async () => {
     try {
       setLoading(true);
-      const data = await financeApiService.getAllAccountPayables();
-      setInvoices(data as unknown as Invoice[]);
+      const data = await fetchAccountPayables();
+      setInvoices(data);
     } catch (error) {
       console.error('Failed to fetch invoices, using mock data:', error);
       setInvoices(mockInvoice);
@@ -196,7 +246,7 @@ export const AccountsPayable: React.FC = () => {
     }
   };
 
-  const handleAddInvoice = (invoice: Invoice) => {
+  const handleAddInvoice = (invoice: MappedAccountPayable) => {
     setInvoices([...invoices, invoice]);
     setIsAddingInvoice(false);
   };
@@ -213,10 +263,10 @@ export const AccountsPayable: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Accounts Payable</h2>
-          <p className="text-muted-foreground">Manage vendor invoices and payments</p>
+          <h2 className="text-2xl font-bold text-white">Accounts Payable</h2>
+          <p className="text-muted-foreground text-white">Manage vendor invoices and payments</p>
         </div>
-        <PermissionGuard requiredPermissions={['finance.payable.create']}>
+        <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
           <Dialog open={isAddingInvoice} onOpenChange={setIsAddingInvoice}>
             <DialogTrigger asChild>
               <Button>
@@ -228,10 +278,10 @@ export const AccountsPayable: React.FC = () => {
               <DialogHeader>
                 <DialogTitle>Add New Invoice</DialogTitle>
                 <DialogDescription>
-                  Enter vendor invoice details for processing
+                  Enter vendor invoice details. Journal entries will be created when approved.
                 </DialogDescription>
               </DialogHeader>
-              <InvoiceForm onSubmit={handleAddInvoice} onCancel={handleCancelAddInvoice} />
+              <InvoiceForm onSubmit={handleAddInvoice} onCancel={handleCancelAddInvoice} accounts={accounts} />
             </DialogContent>
           </Dialog>
         </PermissionGuard>
@@ -357,12 +407,12 @@ export const AccountsPayable: React.FC = () => {
                       <Button variant="outline" size="sm" onClick={() => setSelectedInvoice(invoice)}>
                         View
                       </Button>
-                      <PermissionGuard requiredPermissions={['finance.payable.approve']}>
+                      <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
                         <Button variant="outline" size="sm" disabled={invoice.status !== 'Pending'}>
                           Approve
                         </Button>
                       </PermissionGuard>
-                      <PermissionGuard requiredPermissions={['finance.payable.pay']}>
+                      <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
                         <Button variant="outline" size="sm" disabled={invoice.status !== 'Approved'}>
                           Pay
                         </Button>

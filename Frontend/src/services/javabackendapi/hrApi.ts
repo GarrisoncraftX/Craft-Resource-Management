@@ -257,6 +257,8 @@ class HrApiService {
 
 export const hrApiService = new HrApiService();
 
+export type { User, PerformanceReview };
+
 // ============================================================================
 // WRAPPER FUNCTIONS FOR BACKWARD COMPATIBILITY
 // ============================================================================
