@@ -2,6 +2,7 @@ package com.craftresourcemanagement.finance.controllers;
 
 import com.craftresourcemanagement.finance.entities.*;
 import com.craftresourcemanagement.finance.services.FinanceService;
+import com.craftresourcemanagement.finance.services.AccountingIntegrationService;
 import com.craftresourcemanagement.finance.dto.BudgetResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,9 +15,11 @@ import java.util.Map;
 public class FinanceController {
 
     private final FinanceService financeService;
+    private final AccountingIntegrationService accountingIntegrationService;
 
-    public FinanceController(FinanceService financeService) {
+    public FinanceController(FinanceService financeService, AccountingIntegrationService accountingIntegrationService) {
         this.financeService = financeService;
+        this.accountingIntegrationService = accountingIntegrationService;
     }
 
     // Chart of Account endpoints
@@ -278,8 +281,18 @@ public class FinanceController {
         if (ap == null) {
             return ResponseEntity.notFound().build();
         }
-        ap.setStatus(statusUpdate.get("status"));
-        return ResponseEntity.ok(financeService.updateAccountPayable(id, ap));
+        String newStatus = statusUpdate.get("status");
+        ap.setStatus(newStatus);
+        AccountPayable updated = financeService.updateAccountPayable(id, ap);
+        
+        // Create journal entries based on status
+        if ("Approved".equals(newStatus)) {
+            accountingIntegrationService.createJournalEntryForPayable(updated);
+        } else if ("Paid".equals(newStatus)) {
+            accountingIntegrationService.createPaymentMadeEntry(updated);
+        }
+        
+        return ResponseEntity.ok(updated);
     }
 
     // Account Receivable endpoints
@@ -323,8 +336,16 @@ public class FinanceController {
         if (ar == null) {
             return ResponseEntity.notFound().build();
         }
-        ar.setStatus(statusUpdate.get("status"));
-        return ResponseEntity.ok(financeService.updateAccountReceivable(id, ar));
+        String newStatus = statusUpdate.get("status");
+        ar.setStatus(newStatus);
+        AccountReceivable updated = financeService.updateAccountReceivable(id, ar);
+        
+        // Create journal entry when invoice is sent
+        if ("Sent".equals(newStatus)) {
+            accountingIntegrationService.createJournalEntryForReceivable(updated);
+        }
+        
+        return ResponseEntity.ok(updated);
     }
 
     // Invoice Number Generation endpoints
