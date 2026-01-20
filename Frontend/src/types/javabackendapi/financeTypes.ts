@@ -78,9 +78,14 @@ export interface JournalEntry {
 
 export interface AccountPayable {
   id?: number;
-  vendorId: number;
+  vendorName: string;
   invoiceNumber: string;
   amount: number;
+  issueDate: string;
+  category: string;
+  paymentTerms: string;
+  apAccountCode: string;
+  expenseAccountCode: string;
   dueDate: string;
   status: string;
   description?: string;
@@ -88,7 +93,13 @@ export interface AccountPayable {
 
 export interface AccountReceivable {
   id?: number;
-  customerId: number;
+  customerName: string;
+  issueDate: string;
+  paymentTerms: string;
+  amountPaid: number;
+  arAccountCode: string;
+  revenueAccountCode: string;
+  balance: number;
   invoiceNumber: string;
   amount: number;
   dueDate: string;

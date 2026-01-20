@@ -111,21 +111,6 @@ const LeaveRequest = sequelize.define("LeaveRequest", {
     allowNull: false,
     field: "applied_at",
   },
-  reviewedBy: {
-    type: DataTypes.INTEGER.UNSIGNED,
-    allowNull: true,
-    field: "reviewed_by",
-  },
-  reviewedAt: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    field: "reviewed_at",
-  },
-  reviewComments: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-    field: "review_comments",
-  },
   emergencyContact: {
     type: DataTypes.STRING(100),
     allowNull: true,

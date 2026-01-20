@@ -85,7 +85,8 @@ class LeaveController {
   async getAllLeaveRequests(req, res, next) {
     try {
       const filters = req.query;
-      const leaveRequests = await this.leaveService.getAllLeaveRequests(filters);
+      const currentUserId = req.userContext?.userId;
+      const leaveRequests = await this.leaveService.getAllLeaveRequests(filters, currentUserId);
       res.json({ success: true, data: leaveRequests });
     } catch (error) {
       next(error);

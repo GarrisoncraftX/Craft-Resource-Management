@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Calculator, FileText, DollarSign, Users, Download } from 'lucide-react';
-import { fetchPayslips, fetchEmployees } from '@/services/api';
+import { fetchEmployees } from '@/services/api';
 import { mockPayslips } from '@/services/mockData/payroll';
-import { Payslip, PayrollStatus } from '@/types/api';
+import { Payslip as ApiPayslip, PayrollStatus } from '@/types/api';
 import { Employee } from '@/types/hr';
 import { ProcessPayrollForm } from './forms/ProcessPayrollForm';
 
@@ -23,7 +23,7 @@ interface PayrollDisplayData {
 
 export const PayrollProcessing: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
-  const [payslips, setPayslips] = useState<Payslip[]>([]);
+  const [payslips, setPayslips] = useState<ApiPayslip[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,19 +34,18 @@ export const PayrollProcessing: React.FC = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [payslipsData, employeesData] = await Promise.all([
-          fetchPayslips(),
-          fetchEmployees()
-        ]);
-        setPayslips(payslipsData);
+        const employeesData = await fetchEmployees();
         setEmployees(employeesData);
+        
+        // Use mock data for now since Java backend returns different structure
+        setPayslips(mockPayslips);
 
-        if (payslipsData.length > 0) {
-          const latestPeriod = payslipsData.reduce((latest, current) => {
+        if (mockPayslips.length > 0) {
+          const latestPeriod = mockPayslips.reduce((latest, current) => {
             const latestDate = new Date(latest.payPeriodEnd);
             const currentDate = new Date(current.payPeriodEnd);
             return currentDate > latestDate ? current : latest;
-          }, payslipsData[0]);
+          }, mockPayslips[0]);
           setSelectedPeriod(`${latestPeriod.payPeriodStart} - ${latestPeriod.payPeriodEnd}`);
         }
       } catch (err) {
@@ -120,7 +119,7 @@ export const PayrollProcessing: React.FC = () => {
       grossPay: payslip.grossPay ?? 0,
       deductions: (payslip.taxDeductions ?? 0) + (payslip.otherDeductions ?? 0),
       netPay: payslip.netPay ?? 0,
-      status: mapPayrollStatus(payslip.payrollRun.status),
+      status: mapPayrollStatus(payslip.payrollRun?.status ?? 'DRAFT'),
     })));
   }, [payslips, selectedPeriod, employees, getEmployeeName]);
 
@@ -329,7 +328,7 @@ export const PayrollProcessing: React.FC = () => {
         onOpenChange={setIsProcessPayrollOpen}
         onSuccess={() => {
           // Refresh payroll data after successful processing
-          window.location.reload();
+          globalThis.location.reload();
         }}
       />
     </div>

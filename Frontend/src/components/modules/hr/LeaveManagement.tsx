@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarDays, Clock, CheckCircle, XCircle, Calendar as CalendarIcon, Filter } from 'lucide-react';
+import { CalendarDays, Clock, CheckCircle, XCircle, Calendar as CalendarIcon, Filter, Eye } from 'lucide-react';
 import { leaveApiService } from '@/services/nodejsbackendapi/leaveApi';
 import type { LeaveRequest, LeaveBalance, LeaveStatistics, LeaveType } from '@/types/nodejsbackendapi/leaveTypes';
 
@@ -71,21 +71,46 @@ export const LeaveManagement: React.FC = () => {
   };
 
 
+  const [processingRequests, setProcessingRequests] = useState<Set<string>>(new Set());
+  const [viewingRequest, setViewingRequest] = useState<LeaveRequest | null>(null);
+
   const handleApproveRequest = async (requestId: string) => {
+    if (processingRequests.has(requestId)) return;
+    
+    setProcessingRequests(prev => new Set(prev).add(requestId));
     try {
       await leaveApiService.approveLeaveRequest(requestId);
       await loadData();
     } catch (err) {
+      const errorMsg = err?.response?.data?.message || err?.message || 'Failed to approve leave request';
+      setError(errorMsg);
       console.error('Error approving leave request:', err);
+    } finally {
+      setProcessingRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(requestId);
+        return newSet;
+      });
     }
   };
 
   const handleRejectRequest = async (requestId: string) => {
+    if (processingRequests.has(requestId)) return;
+    
+    setProcessingRequests(prev => new Set(prev).add(requestId));
     try {
       await leaveApiService.rejectLeaveRequest(requestId, 1, 'Request rejected');
       await loadData();
     } catch (err) {
+      const errorMsg = err?.response?.data?.message || err?.message || 'Failed to reject leave request';
+      setError(errorMsg);
       console.error('Error rejecting leave request:', err);
+    } finally {
+      setProcessingRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(requestId);
+        return newSet;
+      });
     }
   };
 
@@ -241,12 +266,20 @@ export const LeaveManagement: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setViewingRequest(request)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
                             {request.status === 'pending' && (
                               <>
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleApproveRequest(request.id)}
+                                  disabled={processingRequests.has(request.id)}
                                 >
                                   <CheckCircle className="h-4 w-4" />
                                 </Button>
@@ -254,12 +287,12 @@ export const LeaveManagement: React.FC = () => {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleRejectRequest(request.id)}
+                                  disabled={processingRequests.has(request.id)}
                                 >
                                   <XCircle className="h-4 w-4" />
                                 </Button>
                               </>
                             )}
-                            <Button variant="ghost" size="sm">View</Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -427,6 +460,66 @@ export const LeaveManagement: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {viewingRequest && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setViewingRequest(null)}>
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-xl font-bold">Leave Request Details</h2>
+              <Button variant="ghost" size="sm" onClick={() => setViewingRequest(null)}>✕</Button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Employee</p>
+                <p className="font-medium">{viewingRequest.User ? `${viewingRequest.User.firstName} ${viewingRequest.User.lastName}` : `Employee ${viewingRequest.userId}`}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Leave Type</p>
+                <p className="font-medium">{viewingRequest.leaveType?.name || `Leave Type ${viewingRequest.leaveTypeId}`}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Start Date</p>
+                  <p className="font-medium">{viewingRequest.startDate}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">End Date</p>
+                  <p className="font-medium">{viewingRequest.endDate}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Days</p>
+                <p className="font-medium">{viewingRequest.totalDays}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Reason</p>
+                <p className="font-medium">{viewingRequest.reason || 'No reason provided'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Supporting Documents</p>
+                {viewingRequest.supportingDocuments && viewingRequest.supportingDocuments.length > 0 ? (
+                  <div className="space-y-2">
+                    {viewingRequest.supportingDocuments.map((doc, idx) => (
+                      <a
+                        key={idx}
+                        href={doc}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2 border rounded hover:bg-gray-50"
+                      >
+                        <Eye className="h-4 w-4" />
+                        <span>Document {idx + 1}</span>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No documents uploaded</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

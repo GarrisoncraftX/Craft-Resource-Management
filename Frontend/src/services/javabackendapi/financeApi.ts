@@ -139,6 +139,10 @@ class FinanceApiService {
     return apiClient.delete(`/finance/account-payables/${id}`);
   }
 
+  async updateAccountPayableStatus(id: number, status: string): Promise<AccountPayable> {
+    return apiClient.patch(`/finance/account-payables/${id}/status`, { status });
+  }
+
   // Account Receivable endpoints
   async createAccountReceivable(ar: AccountReceivable): Promise<AccountReceivable> {
     return apiClient.post('/finance/account-receivables', ar);
@@ -158,6 +162,24 @@ class FinanceApiService {
 
   async deleteAccountReceivable(id: number): Promise<void> {
     return apiClient.delete(`/finance/account-receivables/${id}`);
+  }
+
+  async updateAccountReceivableStatus(id: number, status: string): Promise<AccountReceivable> {
+    return apiClient.patch(`/finance/account-receivables/${id}/status`, { status });
+  }
+
+  // Accounts endpoints
+  async getAllAccounts(): Promise<ChartOfAccount[]> {
+    return apiClient.get('/finance/accounts');
+  }
+
+  // Invoice Number Generation endpoints
+  async generateAccountPayableInvoiceNumber(): Promise<{invoiceNumber: string; type: string}> {
+    return apiClient.get('/finance/invoice-numbers/account-payable/generate');
+  }
+
+  async generateAccountReceivableInvoiceNumber(): Promise<{invoiceNumber: string; type: string}> {
+    return apiClient.get('/finance/invoice-numbers/account-receivable/generate');
   }
 }
 
@@ -187,7 +209,7 @@ export async function fetchAccountPayables(): Promise<MappedAccountPayable[]> {
   return data.map(ap => ({
     id: ap.id?.toString() || '',
     invoiceNumber: ap.invoiceNumber,
-    vendor: ap.vendorId?.toString() || 'Unknown',
+    vendor: ap.vendorName,
     amount: ap.amount,
     dueDate: ap.dueDate,
     status: ap.status,
@@ -224,7 +246,7 @@ export async function fetchAccountReceivables(): Promise<MappedAccountReceivable
   return data.map(ar => ({
     id: ar.id?.toString() || '',
     invoiceNumber: ar.invoiceNumber,
-    customer: ar.customerId?.toString() || 'Unknown',
+    customer: ar.customerName,
     amount: ar.amount,
     dueDate: ar.dueDate,
     status: ar.status as MappedAccountReceivable['status'],
@@ -368,4 +390,26 @@ export async function rejectBudgetRequest(id: string | number): Promise<void> {
 
 export async function migrateApprovedBudgetRequests(): Promise<{message: string; count: number}> {
   return financeApiService.migrateApprovedRequests();
+}
+
+// ============================================================================
+// INVOICE NUMBER GENERATION
+// ============================================================================
+
+export async function generateAccountPayableInvoiceNumber(): Promise<string> {
+  const response = await financeApiService.generateAccountPayableInvoiceNumber();
+  return response.invoiceNumber;
+}
+
+export async function generateAccountReceivableInvoiceNumber(): Promise<string> {
+  const response = await financeApiService.generateAccountReceivableInvoiceNumber();
+  return response.invoiceNumber;
+}
+
+// ============================================================================
+// ACCOUNTS FETCH
+// ============================================================================
+
+export async function fetchAccounts(): Promise<ChartOfAccount[]> {
+  return financeApiService.getAllAccounts();
 }

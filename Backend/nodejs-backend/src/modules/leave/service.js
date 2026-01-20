@@ -65,7 +65,7 @@ class LeaveService {
     })
   }
 
-  async getAllLeaveRequests(filters = {}) {
+  async getAllLeaveRequests(filters = {}, currentUserId = null) {
     // For HR to view all employees' leave requests
     const where = {}
     if (filters && filters.status) {
@@ -79,6 +79,10 @@ class LeaveService {
     }
     if (filters && filters.userId && filters.userId !== 'undefined') {
       where.userId = filters.userId
+    }
+    // Exclude current user's own leaves for transparency
+    if (currentUserId) {
+      where.userId = { [Op.ne]: currentUserId }
     }
 
 
@@ -234,8 +238,8 @@ class LeaveService {
 
       // Update leave request status
       leaveRequest.status = 'approved';
-      leaveRequest.approvedAt = new Date();
-      leaveRequest.approvedBy = approverId;
+      leaveRequest.reviewedAt = new Date();
+      leaveRequest.reviewedBy = approverId;
       await leaveRequest.save({ transaction });
 
       // Update leave balance
@@ -385,15 +389,14 @@ async getLeaveStatistics() {
         where: { status: "pending" }
       }),
 
-      // Count approved requests that are active today
+      // Count approved requests approved today (using updated_at as proxy)
       LeaveRequest.count({
         where: {
           status: "approved",
-          [Op.or]: [
-            { startDate: { [Op.lte]: startOfDay }, endDate: { [Op.gte]: startOfDay } },
-            { startDate: { [Op.between]: [startOfDay, endOfDay] } },
-            { endDate: { [Op.between]: [startOfDay, endOfDay] } }
-          ]
+          updatedAt: {
+            [Op.gte]: startOfDay,
+            [Op.lt]: endOfDay
+          }
         }
       }),
 

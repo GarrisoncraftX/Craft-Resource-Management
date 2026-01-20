@@ -155,44 +155,35 @@ class LeaveApiService {
   }
 
   async approveLeaveRequest(id: string, approverId: number = 1): Promise<LeaveRequest> {
-    return this.handleApiError(
-      async () => {
-        const response = await apiClient.post(`/api/leave/requests/${id}/approve`, { userId: approverId });
-        if (response?.success) {
-          return response.data;
-        } else {
-          throw new Error('Failed to approve leave request');
-        }
-      },
-      {
-        ...mockLeaveRequests.find(req => req.id === id)!,
-        status: 'approved' as const,
-        reviewedBy: approverId,
-        reviewedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+    try {
+      const response = await apiClient.post(`/api/leave/requests/${id}/approve`, { userId: approverId });
+      if (response?.success) {
+        return response.data;
+      } else {
+        throw new Error(response?.message || 'Failed to approve leave request');
       }
-    );
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
+    }
   }
 
   async rejectLeaveRequest(id: string, approverId: number = 1, reason?: string): Promise<LeaveRequest> {
-    return this.handleApiError(
-      async () => {
-        const response = await apiClient.post(`/api/leave/requests/${id}/reject`, { userId: approverId, reason });
-        if (response?.success) {
-          return response.data;
-        } else {
-          throw new Error('Failed to reject leave request');
-        }
-      },
-      {
-        ...mockLeaveRequests.find(req => req.id === id)!,
-        status: 'rejected' as const,
-        reviewedBy: approverId,
-        reviewComments: reason,
-        reviewedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+    try {
+      const response = await apiClient.post(`/api/leave/requests/${id}/reject`, { userId: approverId, reason });
+      if (response?.success) {
+        return response.data;
+      } else {
+        throw new Error(response?.message || 'Failed to reject leave request');
       }
-    );
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
+    }
   }
 
   // Leave Balances

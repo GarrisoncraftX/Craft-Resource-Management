@@ -272,6 +272,16 @@ public class FinanceController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/account-payables/{id}/status")
+    public ResponseEntity<AccountPayable> updateAccountPayableStatus(@PathVariable Long id, @RequestBody Map<String, String> statusUpdate) {
+        AccountPayable ap = financeService.getAccountPayableById(id);
+        if (ap == null) {
+            return ResponseEntity.notFound().build();
+        }
+        ap.setStatus(statusUpdate.get("status"));
+        return ResponseEntity.ok(financeService.updateAccountPayable(id, ap));
+    }
+
     // Account Receivable endpoints
     @PostMapping("/account-receivables")
     public ResponseEntity<AccountReceivable> createAccountReceivable(@RequestBody AccountReceivable ar) {
@@ -305,5 +315,28 @@ public class FinanceController {
     public ResponseEntity<Void> deleteAccountReceivable(@PathVariable Long id) {
         financeService.deleteAccountReceivable(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/account-receivables/{id}/status")
+    public ResponseEntity<AccountReceivable> updateAccountReceivableStatus(@PathVariable Long id, @RequestBody Map<String, String> statusUpdate) {
+        AccountReceivable ar = financeService.getAccountReceivableById(id);
+        if (ar == null) {
+            return ResponseEntity.notFound().build();
+        }
+        ar.setStatus(statusUpdate.get("status"));
+        return ResponseEntity.ok(financeService.updateAccountReceivable(id, ar));
+    }
+
+    // Invoice Number Generation endpoints
+    @GetMapping("/invoice-numbers/account-payable/generate")
+    public ResponseEntity<Map<String, String>> generateAccountPayableInvoiceNumber() {
+        String invoiceNumber = financeService.generateAccountPayableInvoiceNumber();
+        return ResponseEntity.ok(Map.of("invoiceNumber", invoiceNumber, "type", "Account Payable"));
+    }
+
+    @GetMapping("/invoice-numbers/account-receivable/generate")
+    public ResponseEntity<Map<String, String>> generateAccountReceivableInvoiceNumber() {
+        String invoiceNumber = financeService.generateAccountReceivableInvoiceNumber();
+        return ResponseEntity.ok(Map.of("invoiceNumber", invoiceNumber, "type", "Account Receivable"));
     }
 }

@@ -48,4 +48,8 @@ public interface FinanceService {
     AccountReceivable getAccountReceivableById(Long id);
     AccountReceivable updateAccountReceivable(Long id, AccountReceivable ar);
     void deleteAccountReceivable(Long id);
+
+    // Invoice Number Generation
+    String generateAccountPayableInvoiceNumber();
+    String generateAccountReceivableInvoiceNumber();
 }

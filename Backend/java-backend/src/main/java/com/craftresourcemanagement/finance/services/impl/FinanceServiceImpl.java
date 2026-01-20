@@ -3,6 +3,7 @@ package com.craftresourcemanagement.finance.services.impl;
 import com.craftresourcemanagement.finance.entities.*;
 import com.craftresourcemanagement.finance.repositories.*;
 import com.craftresourcemanagement.finance.services.FinanceService;
+import com.craftresourcemanagement.finance.services.InvoiceNumberService;
 import com.craftresourcemanagement.finance.dto.BudgetResponse;
 import com.craftresourcemanagement.utils.OpenAIClient;
 import com.craftresourcemanagement.utils.AuditClient;
@@ -33,6 +34,7 @@ public class FinanceServiceImpl implements FinanceService {
     private final AccountReceivableRepository accountReceivableRepository;
     private final BudgetRequestRepository budgetRequestRepository;
     private final DepartmentClient departmentClient;
+    private final InvoiceNumberService invoiceNumberService;
 
     private final OpenAIClient openAIClient;
     private final AuditClient auditClient;
@@ -48,7 +50,8 @@ public class FinanceServiceImpl implements FinanceService {
                              BudgetRequestRepository budgetRequestRepository,
                              OpenAIClient openAIClient,
                              DepartmentClient departmentClient,
-                             AuditClient auditClient) {
+                             AuditClient auditClient,
+                             InvoiceNumberService invoiceNumberService) {
         this.chartOfAccountRepository = chartOfAccountRepository;
         this.budgetRepository = budgetRepository;
         this.journalEntryRepository = journalEntryRepository;
@@ -58,6 +61,7 @@ public class FinanceServiceImpl implements FinanceService {
         this.openAIClient = openAIClient;
         this.departmentClient = departmentClient;
         this.auditClient = auditClient;
+        this.invoiceNumberService = invoiceNumberService;
     }
 
     // Chart of Account
@@ -310,7 +314,22 @@ public class FinanceServiceImpl implements FinanceService {
     // Account Payable
     @Override
     public AccountPayable createAccountPayable(AccountPayable ap) {
-        return accountPayableRepository.save(ap);
+        // Auto-generate invoice number if not provided
+        if (ap.getInvoiceNumber() == null || ap.getInvoiceNumber().isEmpty()) {
+            ap.setInvoiceNumber(invoiceNumberService.generateAccountPayableInvoiceNumber());
+        }
+        
+        // Set default values
+        if (ap.getCreatedAt() == null) {
+            ap.setCreatedAt(java.time.LocalDate.now());
+        }
+        if (ap.getIssueDate() == null) {
+            ap.setIssueDate(java.time.LocalDate.now());
+        }
+        
+        AccountPayable saved = accountPayableRepository.save(ap);
+        auditClient.logAction(SYSTEM_USER, "CREATE_ACCOUNT_PAYABLE", "Invoice: " + saved.getInvoiceNumber() + ", Vendor: " + saved.getVendorName() + ", Amount: " + saved.getAmount());
+        return saved;
     }
 
     @Override
@@ -328,11 +347,33 @@ public class FinanceServiceImpl implements FinanceService {
         Optional<AccountPayable> existing = accountPayableRepository.findById(id);
         if (existing.isPresent()) {
             AccountPayable toUpdate = existing.get();
-            toUpdate.setVendorName(ap.getVendorName());
-            toUpdate.setAmount(ap.getAmount());
-            toUpdate.setDueDate(ap.getDueDate());
-            toUpdate.setDescription(ap.getDescription());
-            return accountPayableRepository.save(toUpdate);
+            
+            // Don't allow invoice number to be changed once set
+            if (ap.getVendorName() != null) {
+                toUpdate.setVendorName(ap.getVendorName());
+            }
+            if (ap.getAmount() != null) {
+                toUpdate.setAmount(ap.getAmount());
+            }
+            if (ap.getDueDate() != null) {
+                toUpdate.setDueDate(ap.getDueDate());
+            }
+            if (ap.getDescription() != null) {
+                toUpdate.setDescription(ap.getDescription());
+            }
+            if (ap.getStatus() != null) {
+                toUpdate.setStatus(ap.getStatus());
+            }
+            if (ap.getCategory() != null) {
+                toUpdate.setCategory(ap.getCategory());
+            }
+            if (ap.getPaymentTerms() != null) {
+                toUpdate.setPaymentTerms(ap.getPaymentTerms());
+            }
+            
+            AccountPayable updated = accountPayableRepository.save(toUpdate);
+            auditClient.logAction(SYSTEM_USER, "UPDATE_ACCOUNT_PAYABLE", "Invoice: " + updated.getInvoiceNumber());
+            return updated;
         }
         return null;
     }
@@ -345,7 +386,25 @@ public class FinanceServiceImpl implements FinanceService {
     // Account Receivable
     @Override
     public AccountReceivable createAccountReceivable(AccountReceivable ar) {
-        return accountReceivableRepository.save(ar);
+        // Auto-generate invoice number if not provided
+        if (ar.getInvoiceNumber() == null || ar.getInvoiceNumber().isEmpty()) {
+            ar.setInvoiceNumber(invoiceNumberService.generateAccountReceivableInvoiceNumber());
+        }
+        
+        // Set default values
+        if (ar.getCreatedAt() == null) {
+            ar.setCreatedAt(java.time.LocalDate.now());
+        }
+        if (ar.getIssueDate() == null) {
+            ar.setIssueDate(java.time.LocalDate.now());
+        }
+        if (ar.getBalance() == null && ar.getAmount() != null) {
+            ar.setBalance(ar.getAmount().subtract(ar.getAmountPaid() != null ? ar.getAmountPaid() : java.math.BigDecimal.ZERO));
+        }
+        
+        AccountReceivable saved = accountReceivableRepository.save(ar);
+        auditClient.logAction(SYSTEM_USER, "CREATE_ACCOUNT_RECEIVABLE", "Invoice: " + saved.getInvoiceNumber() + ", Customer: " + saved.getCustomerName() + ", Amount: " + saved.getAmount());
+        return saved;
     }
 
     @Override
@@ -363,11 +422,38 @@ public class FinanceServiceImpl implements FinanceService {
         Optional<AccountReceivable> existing = accountReceivableRepository.findById(id);
         if (existing.isPresent()) {
             AccountReceivable toUpdate = existing.get();
-            toUpdate.setCustomerName(ar.getCustomerName());
-            toUpdate.setAmount(ar.getAmount());
-            toUpdate.setDueDate(ar.getDueDate());
-            toUpdate.setDescription(ar.getDescription());
-            return accountReceivableRepository.save(toUpdate);
+            
+            // Don't allow invoice number to be changed once set
+            if (ar.getCustomerName() != null) {
+                toUpdate.setCustomerName(ar.getCustomerName());
+            }
+            if (ar.getCustomerId() != null) {
+                toUpdate.setCustomerId(ar.getCustomerId());
+            }
+            if (ar.getAmount() != null) {
+                toUpdate.setAmount(ar.getAmount());
+            }
+            if (ar.getDueDate() != null) {
+                toUpdate.setDueDate(ar.getDueDate());
+            }
+            if (ar.getDescription() != null) {
+                toUpdate.setDescription(ar.getDescription());
+            }
+            if (ar.getStatus() != null) {
+                toUpdate.setStatus(ar.getStatus());
+            }
+            if (ar.getPaymentTerms() != null) {
+                toUpdate.setPaymentTerms(ar.getPaymentTerms());
+            }
+            if (ar.getAmountPaid() != null) {
+                toUpdate.setAmountPaid(ar.getAmountPaid());
+                // Recalculate balance
+                toUpdate.setBalance(toUpdate.getAmount().subtract(ar.getAmountPaid()));
+            }
+            
+            AccountReceivable updated = accountReceivableRepository.save(toUpdate);
+            auditClient.logAction(SYSTEM_USER, "UPDATE_ACCOUNT_RECEIVABLE", "Invoice: " + updated.getInvoiceNumber());
+            return updated;
         }
         return null;
     }
@@ -421,6 +507,17 @@ public class FinanceServiceImpl implements FinanceService {
     @Override
     public void deleteBudgetRequest(Long id) {
         budgetRequestRepository.deleteById(id);
+    }
+
+    // Invoice Number Generation
+    @Override
+    public String generateAccountPayableInvoiceNumber() {
+        return invoiceNumberService.generateAccountPayableInvoiceNumber();
+    }
+
+    @Override
+    public String generateAccountReceivableInvoiceNumber() {
+        return invoiceNumberService.generateAccountReceivableInvoiceNumber();
     }
 
     private void detectAnomaly(JournalEntry journalEntry) {

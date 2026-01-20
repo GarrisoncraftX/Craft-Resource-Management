@@ -74,9 +74,14 @@ class LookupService {
   }
 
   async getRoles() {
-    return await Role.findAll({
-      include: [{ model: Permission, as: 'permissions' }]
-    });
+    try {
+      return await Role.findAll({
+        include: [{ model: Permission, as: 'permissions', required: false }]
+      });
+    } catch (error) {
+      console.warn('Role-Permission association error, returning roles without permissions:', error.message);
+      return await Role.findAll();
+    }
   }
 
   async updateRole(id, data) {
