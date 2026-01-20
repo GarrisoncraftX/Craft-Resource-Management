@@ -9,7 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Service to integrate Accounts Payable/Receivable with Journal Entries
@@ -21,25 +22,51 @@ public class AccountingIntegrationService {
     @Autowired
     private JournalEntryRepository journalEntryRepository;
 
+    private String generateEntryNumber(String suffix) {
+        LocalDate now = LocalDate.now();
+        String dateStr = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        long count = journalEntryRepository.count() + 1;
+        return String.format("JE-%s-%03d-%s", dateStr, count, suffix);
+    }
+
     /**
      * Creates journal entry when an Account Payable is approved
      * Debit: Expense Account
      * Credit: Accounts Payable (Liability)
      */
     @Transactional
-    public JournalEntry createJournalEntryForPayable(AccountPayable payable) {
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(LocalDateTime.now());
-        entry.setDescription("AP Invoice: " + payable.getInvoiceNumber() + " - " + payable.getDescription());
-        entry.setAmount(payable.getAmount());
-        entry.setAccountCode(payable.getExpenseAccountCode());
-        entry.setReference("AP-" + payable.getInvoiceNumber());
-        entry.setStatus("Posted");
-        entry.setTotalDebit(payable.getAmount());
-        entry.setTotalCredit(payable.getAmount());
-        entry.setCreatedBy(payable.getCreatedBy());
+    public void createJournalEntryForPayable(AccountPayable payable) {
+        LocalDate now = LocalDate.now();
+        Long userId = payable.getCreatedBy() != null ? payable.getCreatedBy() : 1L;
+        String baseRef = "AP-" + payable.getInvoiceNumber();
         
-        return journalEntryRepository.save(entry);
+        // Debit: Expense Account
+        JournalEntry debit = new JournalEntry();
+        debit.setEntryNumber(generateEntryNumber("L01"));
+        debit.setEntryDate(now);
+        debit.setDescription("AP Invoice: " + payable.getInvoiceNumber() + " (Expense)");
+        debit.setAmount(payable.getAmount());
+        debit.setAccountCode(payable.getExpenseAccountCode());
+        debit.setReference(baseRef + "-DR");
+        debit.setStatus("posted");
+        debit.setTotalDebit(payable.getAmount());
+        debit.setTotalCredit(BigDecimal.ZERO);
+        debit.setCreatedBy(userId);
+        journalEntryRepository.save(debit);
+        
+        // Credit: Accounts Payable
+        JournalEntry credit = new JournalEntry();
+        credit.setEntryNumber(generateEntryNumber("L02"));
+        credit.setEntryDate(now);
+        credit.setDescription("AP Invoice: " + payable.getInvoiceNumber() + " (AP)");
+        credit.setAmount(payable.getAmount());
+        credit.setAccountCode(payable.getApAccountCode());
+        credit.setReference(baseRef + "-CR");
+        credit.setStatus("posted");
+        credit.setTotalDebit(BigDecimal.ZERO);
+        credit.setTotalCredit(payable.getAmount());
+        credit.setCreatedBy(userId);
+        journalEntryRepository.save(credit);
     }
 
     /**
@@ -48,19 +75,38 @@ public class AccountingIntegrationService {
      * Credit: Revenue Account
      */
     @Transactional
-    public JournalEntry createJournalEntryForReceivable(AccountReceivable receivable) {
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(LocalDateTime.now());
-        entry.setDescription("AR Invoice: " + receivable.getInvoiceNumber() + " - " + receivable.getDescription());
-        entry.setAmount(receivable.getAmount());
-        entry.setAccountCode(receivable.getArAccountCode());
-        entry.setReference("AR-" + receivable.getInvoiceNumber());
-        entry.setStatus("Posted");
-        entry.setTotalDebit(receivable.getAmount());
-        entry.setTotalCredit(receivable.getAmount());
-        entry.setCreatedBy(receivable.getCreatedBy());
+    public void createJournalEntryForReceivable(AccountReceivable receivable) {
+        LocalDate now = LocalDate.now();
+        Long userId = receivable.getCreatedBy() != null ? receivable.getCreatedBy() : 1L;
+        String baseRef = "AR-" + receivable.getInvoiceNumber();
         
-        return journalEntryRepository.save(entry);
+        // Debit: Accounts Receivable
+        JournalEntry debit = new JournalEntry();
+        debit.setEntryNumber(generateEntryNumber("L01"));
+        debit.setEntryDate(now);
+        debit.setDescription("AR Invoice: " + receivable.getInvoiceNumber() + " (AR)");
+        debit.setAmount(receivable.getAmount());
+        debit.setAccountCode(receivable.getArAccountCode());
+        debit.setReference(baseRef + "-DR");
+        debit.setStatus("posted");
+        debit.setTotalDebit(receivable.getAmount());
+        debit.setTotalCredit(BigDecimal.ZERO);
+        debit.setCreatedBy(userId);
+        journalEntryRepository.save(debit);
+        
+        // Credit: Revenue Account
+        JournalEntry credit = new JournalEntry();
+        credit.setEntryNumber(generateEntryNumber("L02"));
+        credit.setEntryDate(now);
+        credit.setDescription("AR Invoice: " + receivable.getInvoiceNumber() + " (Revenue)");
+        credit.setAmount(receivable.getAmount());
+        credit.setAccountCode(receivable.getRevenueAccountCode());
+        credit.setReference(baseRef + "-CR");
+        credit.setStatus("posted");
+        credit.setTotalDebit(BigDecimal.ZERO);
+        credit.setTotalCredit(receivable.getAmount());
+        credit.setCreatedBy(userId);
+        journalEntryRepository.save(credit);
     }
 
     /**
@@ -69,18 +115,38 @@ public class AccountingIntegrationService {
      * Credit: Accounts Receivable
      */
     @Transactional
-    public JournalEntry createPaymentReceivedEntry(AccountReceivable receivable, BigDecimal paymentAmount) {
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(LocalDateTime.now());
-        entry.setDescription("Payment received for Invoice: " + receivable.getInvoiceNumber());
-        entry.setAmount(paymentAmount);
-        entry.setAccountCode(receivable.getArAccountCode());
-        entry.setReference("PMT-" + receivable.getInvoiceNumber());
-        entry.setStatus("Posted");
-        entry.setTotalDebit(paymentAmount);
-        entry.setTotalCredit(paymentAmount);
+    public void createPaymentReceivedEntry(AccountReceivable receivable, BigDecimal paymentAmount) {
+        LocalDate now = LocalDate.now();
+        Long userId = receivable.getCreatedBy() != null ? receivable.getCreatedBy() : 1L;
+        String baseRef = "PMT-" + receivable.getInvoiceNumber();
         
-        return journalEntryRepository.save(entry);
+        // Debit: Bank Account
+        JournalEntry debit = new JournalEntry();
+        debit.setEntryNumber(generateEntryNumber("L01"));
+        debit.setEntryDate(now);
+        debit.setDescription("Payment received for Invoice: " + receivable.getInvoiceNumber() + " (Bank)");
+        debit.setAmount(paymentAmount);
+        debit.setAccountCode("1120"); // Bank Account
+        debit.setReference(baseRef + "-DR");
+        debit.setStatus("posted");
+        debit.setTotalDebit(paymentAmount);
+        debit.setTotalCredit(BigDecimal.ZERO);
+        debit.setCreatedBy(userId);
+        journalEntryRepository.save(debit);
+        
+        // Credit: Accounts Receivable
+        JournalEntry credit = new JournalEntry();
+        credit.setEntryNumber(generateEntryNumber("L02"));
+        credit.setEntryDate(now);
+        credit.setDescription("Payment received for Invoice: " + receivable.getInvoiceNumber() + " (AR)");
+        credit.setAmount(paymentAmount);
+        credit.setAccountCode(receivable.getArAccountCode());
+        credit.setReference(baseRef + "-CR");
+        credit.setStatus("posted");
+        credit.setTotalDebit(BigDecimal.ZERO);
+        credit.setTotalCredit(paymentAmount);
+        credit.setCreatedBy(userId);
+        journalEntryRepository.save(credit);
     }
 
     /**
@@ -89,17 +155,37 @@ public class AccountingIntegrationService {
      * Credit: Cash/Bank Account
      */
     @Transactional
-    public JournalEntry createPaymentMadeEntry(AccountPayable payable) {
-        JournalEntry entry = new JournalEntry();
-        entry.setEntryDate(LocalDateTime.now());
-        entry.setDescription("Payment made for Invoice: " + payable.getInvoiceNumber());
-        entry.setAmount(payable.getAmount());
-        entry.setAccountCode(payable.getApAccountCode());
-        entry.setReference("PMT-" + payable.getInvoiceNumber());
-        entry.setStatus("Posted");
-        entry.setTotalDebit(payable.getAmount());
-        entry.setTotalCredit(payable.getAmount());
+    public void createPaymentMadeEntry(AccountPayable payable) {
+        LocalDate now = LocalDate.now();
+        Long userId = payable.getCreatedBy() != null ? payable.getCreatedBy() : 1L;
+        String baseRef = "PMT-" + payable.getInvoiceNumber();
         
-        return journalEntryRepository.save(entry);
+        // Debit: Accounts Payable
+        JournalEntry debit = new JournalEntry();
+        debit.setEntryNumber(generateEntryNumber("L01"));
+        debit.setEntryDate(now);
+        debit.setDescription("Payment made for Invoice: " + payable.getInvoiceNumber() + " (AP)");
+        debit.setAmount(payable.getAmount());
+        debit.setAccountCode(payable.getApAccountCode());
+        debit.setReference(baseRef + "-DR");
+        debit.setStatus("posted");
+        debit.setTotalDebit(payable.getAmount());
+        debit.setTotalCredit(BigDecimal.ZERO);
+        debit.setCreatedBy(userId);
+        journalEntryRepository.save(debit);
+        
+        // Credit: Bank Account
+        JournalEntry credit = new JournalEntry();
+        credit.setEntryNumber(generateEntryNumber("L02"));
+        credit.setEntryDate(now);
+        credit.setDescription("Payment made for Invoice: " + payable.getInvoiceNumber() + " (Bank)");
+        credit.setAmount(payable.getAmount());
+        credit.setAccountCode("1120"); // Bank Account
+        credit.setReference(baseRef + "-CR");
+        credit.setStatus("posted");
+        credit.setTotalDebit(BigDecimal.ZERO);
+        credit.setTotalCredit(payable.getAmount());
+        credit.setCreatedBy(userId);
+        journalEntryRepository.save(credit);
     }
 }

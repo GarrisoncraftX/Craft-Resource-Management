@@ -27,6 +27,7 @@ export const AccountsReceivable: React.FC = () => {
   const [isPaymentDialog, setIsPaymentDialog] = useState(false);
   const [isViewDialog, setIsViewDialog] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(0);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchInvoices();
@@ -99,6 +100,8 @@ export const AccountsReceivable: React.FC = () => {
   };
 
   const handleSend = async (id: string) => {
+    if (processingId) return;
+    setProcessingId(id);
     try {
       await financeApiService.updateAccountReceivableStatus(Number(id), 'Sent');
       toast({ title: 'Success', description: 'Invoice sent successfully' });
@@ -106,6 +109,8 @@ export const AccountsReceivable: React.FC = () => {
     } catch (error) {
       console.error('Failed to send invoice:', error);
       toast({ title: 'Error', description: 'Failed to send invoice', variant: 'destructive' });
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -343,7 +348,7 @@ export const AccountsReceivable: React.FC = () => {
                         View
                       </Button>
                       <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
-                        <Button variant="outline" size="sm" disabled={invoice.status !== 'Draft'} onClick={() => handleSend(invoice.id)}>
+                        <Button variant="outline" size="sm" disabled={invoice.status !== 'Draft' || processingId === invoice.id} onClick={() => handleSend(invoice.id)}>
                           <Send className="h-4 w-4" />
                         </Button>
                       </PermissionGuard>

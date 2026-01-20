@@ -12,8 +12,11 @@ public class JournalEntry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private LocalDateTime entryDate;
+    @Column(name = "entry_number", nullable = false, unique = true)
+    private String entryNumber;
+
+    @Column(name = "entry_date", nullable = false)
+    private java.time.LocalDate entryDate;
 
     @Column(nullable = false)
     private String description;
@@ -45,11 +48,19 @@ public class JournalEntry {
         return id;
     }
 
-    public LocalDateTime getEntryDate() {
+    public String getEntryNumber() {
+        return entryNumber;
+    }
+
+    public void setEntryNumber(String entryNumber) {
+        this.entryNumber = entryNumber;
+    }
+
+    public java.time.LocalDate getEntryDate() {
         return entryDate;
     }
 
-    public void setEntryDate(LocalDateTime entryDate) {
+    public void setEntryDate(java.time.LocalDate entryDate) {
         this.entryDate = entryDate;
     }
 

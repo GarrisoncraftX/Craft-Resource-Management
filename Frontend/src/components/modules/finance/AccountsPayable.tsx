@@ -28,6 +28,7 @@ export const AccountsPayable: React.FC = () => {
   const [isAddingInvoice, setIsAddingInvoice] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<MappedAccountPayable | null>(null);
   const [isViewDialog, setIsViewDialog] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchInvoices();
@@ -92,8 +93,8 @@ export const AccountsPayable: React.FC = () => {
         expenseAccountCode: invoice.expenseAccountCode,
       });
       toast({ title: 'Success', description: 'Invoice created successfully' });
-      await fetchInvoices();
       setIsAddingInvoice(false);
+      await fetchInvoices();
     } catch (error) {
       console.error('Failed to create invoice:', error);
       toast({ title: 'Error', description: 'Failed to create invoice', variant: 'destructive' });
@@ -105,6 +106,8 @@ export const AccountsPayable: React.FC = () => {
   };
 
   const handleApprove = async (id: string) => {
+    if (processingId) return;
+    setProcessingId(id);
     try {
       await financeApiService.updateAccountPayableStatus(Number(id), 'Approved');
       toast({ title: 'Success', description: 'Invoice approved successfully' });
@@ -112,10 +115,14 @@ export const AccountsPayable: React.FC = () => {
     } catch (error) {
       console.error('Failed to approve invoice:', error);
       toast({ title: 'Error', description: 'Failed to approve invoice', variant: 'destructive' });
+    } finally {
+      setProcessingId(null);
     }
   };
 
   const handlePay = async (id: string) => {
+    if (processingId) return;
+    setProcessingId(id);
     try {
       await financeApiService.updateAccountPayableStatus(Number(id), 'Paid');
       toast({ title: 'Success', description: 'Invoice marked as paid' });
@@ -123,6 +130,8 @@ export const AccountsPayable: React.FC = () => {
     } catch (error) {
       console.error('Failed to pay invoice:', error);
       toast({ title: 'Error', description: 'Failed to pay invoice', variant: 'destructive' });
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -285,12 +294,12 @@ export const AccountsPayable: React.FC = () => {
                         View
                       </Button>
                       <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
-                        <Button variant="outline" size="sm" disabled={invoice.status !== 'Pending'} onClick={() => handleApprove(invoice.id)}>
+                        <Button variant="outline" size="sm" disabled={invoice.status !== 'Pending' || processingId === invoice.id} onClick={() => handleApprove(invoice.id)}>
                           Approve
                         </Button>
                       </PermissionGuard>
                       <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
-                        <Button variant="outline" size="sm" disabled={invoice.status !== 'Approved'} onClick={() => handlePay(invoice.id)}>
+                        <Button variant="outline" size="sm" disabled={invoice.status !== 'Approved' || processingId === invoice.id} onClick={() => handlePay(invoice.id)}>
                           Pay
                         </Button>
                       </PermissionGuard>
