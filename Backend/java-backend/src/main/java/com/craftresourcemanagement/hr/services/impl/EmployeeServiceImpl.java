@@ -36,6 +36,22 @@ public class EmployeeServiceImpl implements EmployeeService {
                 "Employee: " + newUser.getEmployeeId() + ", Email: " + newUser.getEmail());
             return newUser;
         } else {
+            // Validate role_id exists before updating
+            if (user.getRoleId() != null) {
+                try {
+                    String roleCheckQuery = "SELECT COUNT(*) FROM roles WHERE id = ?";
+                    Long roleCount = (Long) entityManager.createNativeQuery(roleCheckQuery)
+                        .setParameter(1, user.getRoleId())
+                        .getSingleResult();
+                    
+                    if (roleCount == 0) {
+                        throw new RuntimeException("Invalid role_id: " + user.getRoleId() + ". Role does not exist.");
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException("Error validating role_id: " + e.getMessage());
+                }
+            }
+            
             if (user.getPassword() != null && !user.getPassword().isEmpty()) {
                 user.setPassword(passwordEncoder.encode(user.getPassword()));
                 user.setDefaultPasswordChanged(true);

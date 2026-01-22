@@ -52,7 +52,8 @@ export const EmployeeProfiles: React.FC = () => {
           hireDate: e.hireDate, 
           departmentId: Number(e.department_id),
           roleId: Number(e.role_id),
-          status: e.status
+          accountStatus: e.status === 'Active' ? 'ACTIVE' : 'INACTIVE',
+          isActive: e.status === 'Active' ? 1 : 0
         } as User)));
       } finally {
         setLoading(false);
@@ -92,7 +93,7 @@ export const EmployeeProfiles: React.FC = () => {
   });
 
   const totalEmployees = employees.length;
-  const activeEmployees = employees.filter(e => e.status === 'Active').length;
+  const activeEmployees = employees.filter(e => e.accountStatus === 'ACTIVE' || e.isActive === 1).length;
   const onLeave = totalEmployees - activeEmployees;
   const newHires = employees.filter(e => {
     if (!e.hireDate) return false;
@@ -245,8 +246,8 @@ export const EmployeeProfiles: React.FC = () => {
                       })()}
                     </TableCell>
                     <TableCell>
-                      <Badge className={employee.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}>
-                        {employee.status || 'Inactive'}
+                      <Badge className={employee.accountStatus === 'ACTIVE' || employee.isActive === 1 ? 'bg-green-500' : 'bg-red-500'}>
+                        {employee.accountStatus === 'ACTIVE' || employee.isActive === 1 ? 'Active' : 'Inactive'}
                       </Badge>
                     </TableCell>
                     <TableCell>

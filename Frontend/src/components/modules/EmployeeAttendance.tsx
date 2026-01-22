@@ -14,6 +14,7 @@ import type { AttendanceStats, AttendanceSearchParams } from '@/types/attendance
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatAttendanceMethod } from '@/utils/attendanceUtils';
+import { fetchDepartments, type Department } from '@/services/nodejsbackendapi/lookupApi';
 
 interface EmployeeAttendanceProps {
   moduleType: 'hr' | 'security';
@@ -24,7 +25,7 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
   const { toast } = useToast();
   const [attendanceRecords, setAttendanceRecords] = useState<PythonAttendanceRecord[]>([]);
   const [checkedInEmployees, setCheckedInEmployees] = useState<PythonAttendanceRecord[]>([]);
-  const [departments, setDepartments] = useState<string[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [stats, setStats] = useState<AttendanceStats>({
     onTime: 0,
     late: 0,
@@ -49,22 +50,17 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
   const loadAttendanceData = async () => {
     try {
       setIsLoading(true);
-      const [recordsResponse, checkedInResponse, statsResponse] = await Promise.all([
+      const [recordsResponse, checkedInResponse, statsResponse, departmentsResponse] = await Promise.all([
         attendanceApiService.getAttendanceRecords(),
         attendanceApiService.getCheckedInEmployees(),
-        attendanceApiService.getAttendanceStats()
+        attendanceApiService.getAttendanceStats(),
+        fetchDepartments()
       ]);
 
       setAttendanceRecords(recordsResponse);
       setCheckedInEmployees(checkedInResponse);
       setStats(statsResponse);
-
-      if (recordsResponse) {
-        const uniqueDepartments = Array.from(
-          new Set(recordsResponse.map((r) => r.department).filter((d): d is string => !!d))
-        );
-        setDepartments(uniqueDepartments.sort());
-      }
+      setDepartments(departmentsResponse || []);
     } catch (error) {
       toast({
         title: 'Error',
@@ -160,8 +156,8 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">{moduleTitle}</h2>
-          <p className="text-muted-foreground">Manage employee attendance records</p>
+          <h2 className="text-2xl font-bold text-white">{moduleTitle}</h2>
+          <p className="text-muted-foreground text-white">Manage employee attendance records</p>
         </div>
         <Button onClick={() => navigate('/kiosk-interface', { state: { mode: 'GENERATOR' } })} size="lg">
           <QrCode className="mr-2 h-5 w-5" />
@@ -279,8 +275,8 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
                   {departments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept}
+                    <SelectItem key={dept.id} value={dept.name}>
+                      {dept.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -304,11 +300,12 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
                 onChange={(e) => setSearchParams({ ...searchParams, date_to: e.target.value })}
               />
             </div>
-            <div className="flex items-end gap-2">
+            <div className="flex items-end gap-2 flex-col">
               <Button onClick={handleSearch} className="flex-1">
                 <Search className="mr-2 h-4 w-4" />
                 Search
               </Button>
+            <div className="flex flex-1 gap-2">
               <Button onClick={loadAttendanceData} variant="outline">
                 <RefreshCw className="h-4 w-4" />
               </Button>
@@ -319,6 +316,7 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
                   <RefreshCw className="h-4 w-4" />
                 )}
               </Button>
+              </div>
             </div>
           </div>
         </CardContent>

@@ -19,7 +19,8 @@ export interface User {
   employeeId: string;
   profilePictureUrl?: string;
   hireDate: string;
-  status: string;
+  accountStatus?: string;
+  isActive?: number;
 }
 
 export interface UpdateEmployeeRequest {
@@ -40,7 +41,8 @@ export interface UpdateEmployeeRequest {
   email?: string;
   role?: string;
   department?: string;
-  status?: string;
+  accountStatus?: string;
+  isActive?: number;
   employeeId?: string;
   password?: string;
   confirmPassword?: string;

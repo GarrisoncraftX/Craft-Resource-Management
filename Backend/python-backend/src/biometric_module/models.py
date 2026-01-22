@@ -306,7 +306,8 @@ class BiometricModel:
                     ar.clock_out_method,
                     ar.total_hours,
                     ar.status,
-                    ar.created_at
+                    ar.created_at,
+                    u.account_status
                 FROM attendance_records ar
                 LEFT JOIN users u ON ar.user_id = u.id
                 LEFT JOIN departments d ON u.department_id = d.id
@@ -405,7 +406,8 @@ class BiometricModel:
                     u.employee_id,
                     d.name as department,
                     ar.clock_in_time,
-                    ar.clock_in_method
+                    ar.clock_in_method,
+                    u.account_status
                 FROM attendance_records ar
                 LEFT JOIN users u ON ar.user_id = u.id
                 LEFT JOIN departments d ON u.department_id = d.id
