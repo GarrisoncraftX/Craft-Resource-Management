@@ -3,6 +3,7 @@ const cors = require("cors")
 const dotenv  = require("dotenv")
 const multer = require("multer")
 const { errorHandler } = require("./src/middleware/errorHandler")
+const { sessionTracker } = require("./src/middleware/sessionTracker")
 
 // Import route modules
 const leaveRoutes = require("./src/modules/leave/routes")
@@ -27,6 +28,7 @@ const upload = multer({ dest: 'uploads/' })
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+app.use(sessionTracker)
 
 
 

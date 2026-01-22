@@ -52,10 +52,10 @@ export const UserManagement: React.FC = () => {
   };
 
   const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.department.toLowerCase().includes(searchTerm.toLowerCase())
+    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.role?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.department?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusColor = (status: string) => {
@@ -172,8 +172,8 @@ export const UserManagement: React.FC = () => {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={`/avatars/${user.id}.jpg`} />
-                          <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('').toUpperCase()}</AvatarFallback>
+                          {user.profilePictureUrl && <AvatarImage src={user.profilePictureUrl} alt={user.name} />}
+                          <AvatarFallback>{user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}</AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="font-medium">{user.name}</div>
@@ -182,23 +182,23 @@ export const UserManagement: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={getRoleColor(user.role)}>
-                        {user.role}
+                      <Badge className={getRoleColor(user.role || '')}>
+                        {user.role || 'N/A'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{user.department}</TableCell>
+                    <TableCell>{user.department || 'N/A'}</TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(user.status)}>
-                        {user.status}
+                      <Badge className={getStatusColor(user.status || '')}>
+                        {user.status || 'N/A'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{user.lastLogin}</TableCell>
+                    <TableCell>{user.lastLogin || 'N/A'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Button variant="ghost" size="sm" onClick={() => handleEditUser(user)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <AdminResetPasswordDialog userId={user.id.toString()} userName={user.name} />
+                        <AdminResetPasswordDialog userId={user.id.toString()} userName={user.name || 'User'} />
                         <Button variant="ghost" size="sm" onClick={() => handleToggleStatus(user.id)}>
                           {user.status === 'Locked' ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                         </Button>

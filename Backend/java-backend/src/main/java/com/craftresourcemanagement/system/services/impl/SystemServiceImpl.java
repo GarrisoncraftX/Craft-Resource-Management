@@ -3,6 +3,7 @@ package com.craftresourcemanagement.system.services.impl;
 import com.craftresourcemanagement.system.entities.*;
 import com.craftresourcemanagement.system.repositories.*;
 import com.craftresourcemanagement.system.services.SystemService;
+import com.craftresourcemanagement.hr.repositories.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,9 @@ public class SystemServiceImpl implements SystemService {
     private final SOPRepository sopRepository;
     private final SecurityIncidentRepository securityIncidentRepository;
     private final SupportTicketRepository supportTicketRepository;
+    private final ActiveSessionRepository activeSessionRepository;
+    private final UserRepository userRepository;
+    private final NotificationRepository notificationRepository;
 
     public SystemServiceImpl(SystemConfigRepository systemConfigRepository,
                              AuditLogRepository auditLogRepository,
@@ -31,7 +35,10 @@ public class SystemServiceImpl implements SystemService {
                              GuardPostRepository guardPostRepository,
                              SOPRepository sopRepository,
                              SecurityIncidentRepository securityIncidentRepository,
-                             SupportTicketRepository supportTicketRepository) {
+                             SupportTicketRepository supportTicketRepository,
+                             ActiveSessionRepository activeSessionRepository,
+                             UserRepository userRepository,
+                             NotificationRepository notificationRepository) {
         this.systemConfigRepository = systemConfigRepository;
         this.auditLogRepository = auditLogRepository;
         this.accessRuleRepository = accessRuleRepository;
@@ -39,6 +46,9 @@ public class SystemServiceImpl implements SystemService {
         this.sopRepository = sopRepository;
         this.securityIncidentRepository = securityIncidentRepository;
         this.supportTicketRepository = supportTicketRepository;
+        this.activeSessionRepository = activeSessionRepository;
+        this.userRepository = userRepository;
+        this.notificationRepository = notificationRepository;
     }
 
     // SystemConfig
@@ -165,29 +175,23 @@ public class SystemServiceImpl implements SystemService {
                                                    LocalDateTime startDate, LocalDateTime endDate) {
         Map<String, Object> stats = new HashMap<>();
         
-        if (startDate == null) {
-            startDate = LocalDateTime.now().minusDays(30);
-        }
-        if (endDate == null) {
-            endDate = LocalDateTime.now();
-        }
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime todayStart = now.toLocalDate().atStartOfDay();
+        LocalDateTime weekStart = now.minusDays(7);
         
-        long totalCount;
-        if (performedBy != null) {
-            totalCount = auditLogRepository.countByPerformedByAndTimestampBetween(
-                performedBy, startDate, endDate);
-            stats.put("user", performedBy);
-        } else if (action != null) {
-            totalCount = auditLogRepository.countByActionAndTimestampBetween(
-                action, startDate, endDate);
-            stats.put("action", action);
-        } else {
-            totalCount = auditLogRepository.count();
-        }
+        long totalLogs = auditLogRepository.count();
         
-        stats.put("totalCount", totalCount);
-        stats.put("startDate", startDate);
-        stats.put("endDate", endDate);
+        Page<AuditLog> todayPage = auditLogRepository.findByTimestampBetweenOrderByTimestampDesc(
+            todayStart, now, Pageable.unpaged());
+        long todayLogs = todayPage.getTotalElements();
+        
+        Page<AuditLog> weekPage = auditLogRepository.findByTimestampBetweenOrderByTimestampDesc(
+            weekStart, now, Pageable.unpaged());
+        long weekLogs = weekPage.getTotalElements();
+        
+        stats.put("totalLogs", totalLogs);
+        stats.put("todayLogs", todayLogs);
+        stats.put("weekLogs", weekLogs);
         
         return stats;
     }
@@ -264,5 +268,62 @@ public class SystemServiceImpl implements SystemService {
     @Override
     public List<SupportTicket> getAllSupportTickets() {
         return supportTicketRepository.findAll();
+    }
+
+    // Session Tracking
+    @Override
+    public ActiveSession createOrUpdateSession(ActiveSession session) {
+        session.setLastActivity(LocalDateTime.now());
+        ActiveSession saved = activeSessionRepository.save(session);
+        userRepository.findById(saved.getUserId()).ifPresent(user -> {
+            saved.setFirstName(user.getFirstName());
+            saved.setLastName(user.getLastName());
+        });
+        return saved;
+    }
+
+    @Override
+    public void deleteSession(String sessionId) {
+        activeSessionRepository.deleteById(sessionId);
+    }
+
+    @Override
+    public long getActiveSessionCount() {
+        return activeSessionRepository.count();
+    }
+
+    @Override
+    public void cleanupInactiveSessions(int timeoutMinutes) {
+        LocalDateTime threshold = LocalDateTime.now().minusMinutes(timeoutMinutes);
+        activeSessionRepository.deleteInactiveSessions(threshold);
+    }
+
+    // Notifications
+    @Override
+    public Notification createNotification(Notification notification) {
+        return notificationRepository.save(notification);
+    }
+
+    @Override
+    public List<Notification> getNotificationsByUserId(Long userId) {
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    @Override
+    public Notification markAsRead(Long id) {
+        return notificationRepository.findById(id).map(notification -> {
+            notification.setIsRead(true);
+            return notificationRepository.save(notification);
+        }).orElse(null);
+    }
+
+    @Override
+    public void deleteNotification(Long id) {
+        notificationRepository.deleteById(id);
+    }
+
+    @Override
+    public long getUnreadCount(Long userId) {
+        return notificationRepository.countByUserIdAndIsRead(userId, false);
     }
 }

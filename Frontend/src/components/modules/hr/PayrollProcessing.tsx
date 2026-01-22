@@ -6,20 +6,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Calculator, FileText, DollarSign, Users, Download } from 'lucide-react';
 import { fetchEmployees } from '@/services/api';
+import { hrApiService } from '@/services/javabackendapi/hrApi';
 import { mockPayslips } from '@/services/mockData/payroll';
-import { Payslip as ApiPayslip, PayrollStatus } from '@/types/api';
+import { Payslip as ApiPayslip, PayrollStatus, PayrollDisplayData } from '@/types/api';
 import { Employee } from '@/types/hr';
 import { ProcessPayrollForm } from './forms/ProcessPayrollForm';
+import { PayslipDetailsDialog } from './forms/PayslipDetailsDialog';
 
-interface PayrollDisplayData {
-  id: number;
-  employee: string;
-  period: string;
-  grossPay: number;
-  deductions: number;
-  netPay: number;
-  status: PayrollStatus;
-}
+
 
 export const PayrollProcessing: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
@@ -29,6 +23,9 @@ export const PayrollProcessing: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [displayedPayslips, setDisplayedPayslips] = useState<PayrollDisplayData[]>([]);
   const [isProcessPayrollOpen, setIsProcessPayrollOpen] = useState(false);
+  const [selectedPayslip, setSelectedPayslip] = useState<PayrollDisplayData | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,36 +34,24 @@ export const PayrollProcessing: React.FC = () => {
         const employeesData = await fetchEmployees();
         setEmployees(employeesData);
         
-        // Use mock data for now since Java backend returns different structure
-        setPayslips(mockPayslips);
+        // Fetch from Java backend
+        const payslipsData = await hrApiService.getAllPayslips();
+        
+        // Use real data from database, fallback to mock if empty
+        const dataToUse = payslipsData.length > 0 ? payslipsData as unknown as ApiPayslip[] : mockPayslips;
+        setPayslips(dataToUse);
 
-        if (mockPayslips.length > 0) {
-          const latestPeriod = mockPayslips.reduce((latest, current) => {
+        if (dataToUse.length > 0) {
+          const latestPeriod = dataToUse.reduce((latest, current) => {
             const latestDate = new Date(latest.payPeriodEnd);
             const currentDate = new Date(current.payPeriodEnd);
             return currentDate > latestDate ? current : latest;
-          }, mockPayslips[0]);
+          }, dataToUse[0]);
           setSelectedPeriod(`${latestPeriod.payPeriodStart} - ${latestPeriod.payPeriodEnd}`);
         }
       } catch (err) {
         console.error("Failed to fetch payroll data from database, using mock data as fallback:", err);
-        setError("Failed to load payroll data from database. Using mock data as fallback.");
         setPayslips(mockPayslips);
-        setEmployees(mockPayslips.map(p => ({ 
-          id: String(p.user_id), 
-          firstName: `Employee ${p.user_id}`, 
-          lastName: '', 
-          tenantId: 0, 
-          employeeId: `EMP${p.user_id}`, 
-          email: `employee${p.user_id}@example.com`, 
-          departmentId: 1, 
-          roleId: 1, 
-          isActive: 1, 
-          biometricEnrollmentStatus: 'NONE', 
-          failedLoginAttempts: 0, 
-          createdAt: '', 
-          updatedAt: '' 
-        } as Employee)));
 
         if (mockPayslips.length > 0) {
           const latestPeriod = mockPayslips.reduce((latest, current) => {
@@ -84,27 +69,55 @@ export const PayrollProcessing: React.FC = () => {
     fetchData();
   }, []);
 
-  const getEmployeeName = useCallback((userId: number | string) => {
-    const id = String(userId);
-    const employee = employees.find(emp => emp.id === id);
-    return employee ? `${employee.firstName} ${employee.lastName}` : `Unknown Employee (${userId})`;
+  const getEmployeeName = useCallback((payslip: ApiPayslip) => {
+    // Try to get name from payslip.user object first
+    if (payslip.user?.firstName && payslip.user?.lastName) {
+      return `${payslip.user.firstName} ${payslip.user.lastName}`;
+    }
+    
+    // Fallback to looking up by user_id or user.id
+    const userId = payslip.user_id || payslip.user?.id;
+    if (userId) {
+      const id = String(userId);
+      const employee = employees.find(emp => emp.id === id);
+      if (employee) {
+        return `${employee.firstName} ${employee.lastName}`;
+      }
+    }
+    
+    return `Unknown Employee (${userId || 'N/A'})`;
   }, [employees]);
 
   const uniquePeriods = useMemo(() => {
     return Array.from(new Set(payslips.map(p => `${p.payPeriodStart} - ${p.payPeriodEnd}`)));
   }, [payslips]);
 
-  const mapPayrollStatus = (backendStatus: string): PayrollStatus => {
-    switch (backendStatus) {
+  const mapPayrollStatus = (backendStatus?: string): PayrollStatus => {
+    const status = backendStatus?.toUpperCase();
+    switch (status) {
       case 'COMPLETED':
+      case 'PROCESSED':
         return 'Processed';
       case 'PENDING':
         return 'Pending';
       case 'DRAFT':
-        return 'Draft';
       default:
         return 'Draft';
     }
+  };
+
+  const handleViewDetails = (payslip: PayrollDisplayData) => {
+    setSelectedPayslip(payslip);
+    setIsDetailsOpen(true);
+  };
+
+  const handleEdit = (payslip: PayrollDisplayData) => {
+    setSelectedPayslip(payslip);
+    setIsEditOpen(true);
+  };
+
+  const refreshData = () => {
+    globalThis.location.reload();
   };
 
   useEffect(() => {
@@ -114,7 +127,7 @@ export const PayrollProcessing: React.FC = () => {
 
     setDisplayedPayslips(filtered.map(payslip => ({
       id: payslip.id,
-      employee: getEmployeeName(payslip.user.id),
+      employee: getEmployeeName(payslip),
       period: `${payslip.payPeriodStart} - ${payslip.payPeriodEnd}`,
       grossPay: payslip.grossPay ?? 0,
       deductions: (payslip.taxDeductions ?? 0) + (payslip.otherDeductions ?? 0),
@@ -127,6 +140,30 @@ export const PayrollProcessing: React.FC = () => {
   const totalDeductions = displayedPayslips.reduce((sum, p) => sum + p.deductions, 0);
   const totalNetPay = displayedPayslips.reduce((sum, p) => sum + p.netPay, 0);
   const employeesProcessed = new Set(displayedPayslips.map(p => p.employee)).size;
+  
+  // Calculate previous period metrics for comparison
+  const previousPeriodData = useMemo(() => {
+    const periods = Array.from(new Set(payslips.map(p => `${p.payPeriodStart} - ${p.payPeriodEnd}`))).sort();
+    const currentIndex = periods.indexOf(selectedPeriod);
+    if (currentIndex > 0) {
+      const prevPeriod = periods[currentIndex - 1];
+      const prevPayslips = payslips.filter(p => `${p.payPeriodStart} - ${p.payPeriodEnd}` === prevPeriod);
+      return {
+        grossPay: prevPayslips.reduce((sum, p) => sum + (p.grossPay ?? 0), 0),
+        employees: new Set(prevPayslips.map(p => getEmployeeName(p))).size
+      };
+    }
+    return { grossPay: 0, employees: 0 };
+  }, [payslips, selectedPeriod, getEmployeeName]);
+  
+  const grossPayChange = previousPeriodData.grossPay > 0 
+    ? ((totalGrossPay - previousPeriodData.grossPay) / previousPeriodData.grossPay * 100).toFixed(1)
+    : '0.0';
+  
+  const processedCount = displayedPayslips.filter(p => p.status === 'Processed').length;
+  const completionRate = displayedPayslips.length > 0 
+    ? ((processedCount / displayedPayslips.length) * 100).toFixed(0)
+    : '0';
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading payroll data...</div>;
@@ -203,7 +240,9 @@ export const PayrollProcessing: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">${totalGrossPay.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">+5% from last month</p>
+              <p className="text-xs text-muted-foreground">
+                {previousPeriodData.grossPay > 0 ? `${Number(grossPayChange) >= 0 ? '+' : ''}${grossPayChange}% from last period` : 'No previous period data'}
+              </p>
             </CardContent>
           </Card>
 
@@ -236,7 +275,7 @@ export const PayrollProcessing: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{employeesProcessed}</div>
-              <p className="text-xs text-muted-foreground">95% completion rate</p>
+              <p className="text-xs text-muted-foreground">{completionRate}% completion rate</p>
             </CardContent>
           </Card>
         </div>
@@ -275,11 +314,11 @@ export const PayrollProcessing: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleViewDetails(payroll)}>
                           View Details
                         </Button>
                         {payroll.status !== 'Processed' && (
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(payroll)}>
                             Edit
                           </Button>
                         )}
@@ -326,10 +365,26 @@ export const PayrollProcessing: React.FC = () => {
       <ProcessPayrollForm
         open={isProcessPayrollOpen}
         onOpenChange={setIsProcessPayrollOpen}
-        onSuccess={() => {
-          // Refresh payroll data after successful processing
-          globalThis.location.reload();
-        }}
+        onSuccess={refreshData}
+      />
+
+      <PayslipDetailsDialog
+        open={isDetailsOpen}
+        onOpenChange={setIsDetailsOpen}
+        payslip={selectedPayslip}
+      />
+
+      <ProcessPayrollForm
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        editMode={true}
+        payslipData={selectedPayslip ? {
+          id: selectedPayslip.id,
+          employee: selectedPayslip.employee,
+          grossPay: selectedPayslip.grossPay,
+          deductions: selectedPayslip.deductions
+        } : undefined}
+        onSuccess={refreshData}
       />
     </div>
   );

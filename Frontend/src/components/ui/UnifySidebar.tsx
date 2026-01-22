@@ -2,12 +2,29 @@ import React, { useState } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 import {
   Calculator, Users, Package, ShoppingCart, Shield, Scale,
-  Megaphone, Map, Receipt, Heart, Truck, BarChart3, ChevronLeft, Settings
+  Megaphone, Map, Receipt, Heart, Truck, BarChart3, ChevronLeft, Settings, Lock
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from '@/contexts/AuthContext'
 
 const modules = [
+  {
+    title: "Admin",
+    url: "/admin",
+    icon: Lock,
+    color: "from-red-500 to-red-600",
+    subItems: [
+      { title: "Dashboard", url: "/admin/dashboard" },
+      { title: "User Management", url: "/admin/users" },
+      { title: "Audit Logs", url: "/admin/audit-logs" },
+      { title: "Security", url: "/admin/security" },
+      { title: "System Settings", url: "/admin/settings" },
+      { title: "Database", url: "/admin/database" },
+      { title: "Monitoring", url: "/admin/monitoring" },
+      { title: "Notifications", url: "/admin/notifications" },
+      { title: "Support Tickets", url: "/admin/support" },
+    ]
+  },
   {
     title: "Finance",
     url: "/finance",
@@ -207,6 +224,7 @@ export function UnifySidebar() {
     if (!user) return []
 
     const departmentModuleMap: Record<string, string> = {
+      'ADMIN': 'Admin',
       'FINANCE': 'Finance',
       'HR': 'HR',
       'PROCUREMENT': 'Procurement',

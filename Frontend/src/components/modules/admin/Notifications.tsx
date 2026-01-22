@@ -42,9 +42,9 @@ export const Notifications: React.FC = () => {
   };
 
   const filteredNotifications = notifications.filter(notification =>
-    notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    notification.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    notification.type.toLowerCase().includes(searchTerm.toLowerCase())
+    notification.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    notification.message?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    notification.type?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusColor = (status: string) => {

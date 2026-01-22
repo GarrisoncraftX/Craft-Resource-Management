@@ -1,215 +1,207 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink} from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Users, Shield, Database, Activity, Bell, FileText, Home, Headphones } from 'lucide-react';
-import { SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
-import { SuperAdminDashboardSelector } from './SuperAdminDashboardSelector';
-import { useAuth } from '@/contexts/AuthContext';
+import { Users, Activity, Clock, HardDrive } from 'lucide-react';
 import { adminApiService } from '@/services/javabackendapi/adminApi';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { hrApiService } from '@/services/javabackendapi/hrApi';
+import { UnifySidebar } from '@/components/ui/UnifySidebar';
+import type { AuditLog } from '@/services/mockData/admin';
+import type { User } from '@/types/javabackendapi/hrTypes';
 
-const adminMenuItems = [
-  { title: "Overview", path: "/admin/dashboard", icon: Home },
-  { title: "User Management", path: "/admin/users", icon: Users },
-  { title: "System Settings", path: "/admin/settings", icon: Settings },
-  { title: "Security", path: "/admin/security", icon: Shield },
-  { title: "Database Management", path: "/admin/database", icon: Database },
-  { title: "System Monitoring", path: "/admin/monitoring", icon: Activity },
-  { title: "Support Tickets", path: "/admin/support", icon: Headphones },
-  { title: "Notifications", path: "/admin/notifications", icon: Bell },
-  { title: "Audit Logs", path: "/admin/logs", icon: FileText },
-];
+interface SystemStats {
+  activeSessions?: number;
+  uptime?: string;
+  storageUsed?: string;
+}
 
-const AdminSidebar = () => {
-  const { state } = useSidebar();
-
-  return (
-    <Sidebar collapsible="icon">
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>System Administration</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {adminMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.path}
-                      className={({ isActive }) =>
-                        isActive ? "bg-muted text-primary font-medium" : "hover:bg-muted/50"
-                      }
-                    >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {state === "expanded" && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
-  );
-};
+interface AuditStatistics {
+  totalLogs?: number;
+  todayLogs?: number;
+  weekLogs?: number;
+}
 
 export const AdminDashboard: React.FC = () => {
-  const { user } = useAuth();
-  const [stats, setStats] = useState<{
-    totalUsers: number;
-    activeSessions: number;
-    databaseSize: string;
-    systemUptime: string;
-  } | null>(null);
-  const [auditLogs, setAuditLogs] = useState<Array<{
-    id: number;
-    action: string;
-    resource: string;
-    user: string;
-    timestamp: string;
-    severity: string;
-  }>>([]);
+  const [stats, setStats] = useState<SystemStats | null>(null);
+  const [auditStats, setAuditStats] = useState<AuditStatistics | null>(null);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
-      const [statsData, logsData] = await Promise.all([
-        adminApiService.getSystemStats(),
-        adminApiService.getAuditLogs()
-      ]);
-      setStats(statsData);
-      setAuditLogs(logsData.slice(0, 4));
+      try {
+        const [statsData, auditStatsData, logsData, usersData] = await Promise.all([
+          adminApiService.getSystemStats(),
+          adminApiService.getAuditStatistics(),
+          adminApiService.getAuditLogs(5),
+          hrApiService.listEmployees()
+        ]);
+        setStats(statsData);
+        setAuditStats(auditStatsData);
+        setAuditLogs(logsData);
+        setUsers(usersData);
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+      }
     };
     fetchData();
   }, []);
 
-  if (user?.roleCode === 'SUPER_ADMIN') {
-    return <SuperAdminDashboardSelector />;
-  }
-
-  if (!stats) return null;
-
-  const systemStats = [
-    { metric: 'Total Users', value: stats.totalUsers, change: '+5', status: 'up' },
-    { metric: 'Active Sessions', value: stats.activeSessions, change: '+12', status: 'up' },
-    { metric: 'Database Size', value: stats.databaseSize, change: '+0.1GB', status: 'neutral' },
-    { metric: 'System Uptime', value: stats.systemUptime, change: '0%', status: 'neutral' },
-  ];
-
-  const usersByDepartment = [
-    { department: 'Finance', count: 45, active: 42 },
-    { department: 'HR', count: 38, active: 35 },
-    { department: 'IT', count: 28, active: 28 },
-    { department: 'Legal', count: 22, active: 20 },
-    { department: 'Planning', count: 31, active: 29 },
-  ];
-
-  const performanceData = [
-    { time: '00:00', users: 45, sessions: 12 },
-    { time: '04:00', users: 38, sessions: 8 },
-    { time: '08:00', users: 156, sessions: 89 },
-    { time: '12:00', users: 189, sessions: 102 },
-    { time: '16:00', users: 167, sessions: 95 },
-    { time: '20:00', users: 98, sessions: 45 }
-  ];
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AdminSidebar />
+    <div className="min-h-screen flex w-full bg-gray-50">
+      <UnifySidebar />
+      
+      <div className="flex-1 w-[70vw] overflow-auto">
+        <header className="bg-white shadow-sm border-b px-6 py-4">
+          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-gray-600">System overview and analytics</p>
+        </header>
 
-        <div className="flex-1 flex flex-col">
-          <header className="bg-white shadow-sm border-b h-12 flex items-center">
-            <SidebarTrigger className="ml-2" />
-            <div className="ml-4">
-              <h1 className="text-xl font-bold text-primary">System Administration</h1>
-            </div>
-          </header>
-
-          <main className="flex-1 p-6 bg-background">
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {systemStats.map((stat, index) => (
-                <Card key={index}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{stat.metric}</CardTitle>
-                    <Activity className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {stat.change} from last period
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>System Activity Trends</CardTitle>
-                  <CardDescription>User and session activity over 24 hours</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={performanceData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="time" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={2} name="Users" />
-                      <Line type="monotone" dataKey="sessions" stroke="#10b981" strokeWidth={2} name="Sessions" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Users by Department</CardTitle>
-                  <CardDescription>Active users across departments</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={usersByDepartment}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="department" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#3b82f6" name="Total" />
-                      <Bar dataKey="active" fill="#10b981" name="Active" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Audit Logs</CardTitle>
-                <CardDescription>Latest system events and user actions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {auditLogs.map((log) => (
-                    <div key={log.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{log.action} - {log.resource}</p>
-                        <p className="text-sm text-muted-foreground">User: {log.user}</p>
-                        <p className="text-xs text-muted-foreground">{log.timestamp}</p>
-                      </div>
-                      <Badge variant={log.severity === 'Warning' ? 'destructive' : 'secondary'}>
-                        {log.severity}
-                      </Badge>
-                    </div>
-                  ))}
+        <main className="p-6 space-y-6">
+          {/* Stats Overview - KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Users</p>
+                    <p className="text-2xl font-bold text-gray-900">{users.length}</p>
+                  </div>
+                  <Users className="h-8 w-8 text-blue-600" />
                 </div>
               </CardContent>
             </Card>
-          </main>
-        </div>
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Active Sessions</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats?.activeSessions || 0}</p>
+                  </div>
+                  <Activity className="h-8 w-8 text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">System Uptime</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats?.uptime || '99.9%'}</p>
+                  </div>
+                  <Clock className="h-8 w-8 text-purple-600" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Storage Used</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats?.storageUsed || '0%'}</p>
+                  </div>
+                  <HardDrive className="h-8 w-8 text-orange-600" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Database Analytics */}
+          {auditStats && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Audit Log Analytics</CardTitle>
+                <CardDescription>System activity and audit statistics</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <p className="text-2xl font-bold text-blue-600">{auditStats.totalLogs || 0}</p>
+                    <p className="text-sm text-gray-600">Total Logs</p>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <p className="text-2xl font-bold text-green-600">{auditStats.todayLogs || 0}</p>
+                    <p className="text-sm text-gray-600">Today's Logs</p>
+                  </div>
+                  <div className="text-center p-4 bg-orange-50 rounded-lg">
+                    <p className="text-2xl font-bold text-orange-600">{auditStats.weekLogs || 0}</p>
+                    <p className="text-sm text-gray-600">This Week</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Recent Activity */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent System Events</CardTitle>
+              <CardDescription>Latest audit logs and system activities</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {auditLogs.length === 0 ? (
+                  <p className="text-center text-gray-500 py-4">No recent system events</p>
+                ) : (
+                  auditLogs.map((log) => (
+                    <div key={log.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-gray-900">{log.action}</h4>
+                            <Badge variant={log.result === 'failure' ? 'destructive' : 'secondary'}>
+                              {log.result || 'success'}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                            <span className="font-medium">Performed by:</span>
+                            <span className="text-blue-600">{log.performedBy || log.user || 'System'}</span>
+                            <span className="text-gray-400">•</span>
+                            <span>{new Date(log.timestamp).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mt-3">
+                        {log.entityType && (
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Entity:</span>
+                            <span className="text-gray-900">{log.entityType}{log.entityId && ` #${log.entityId}`}</span>
+                          </div>
+                        )}
+                        {log.serviceName && (
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Service:</span>
+                            <span className="text-gray-900">{log.serviceName}</span>
+                          </div>
+                        )}
+                        {log.ipAddress && (
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">IP Address:</span>
+                            <span className="text-gray-900">{log.ipAddress}</span>
+                          </div>
+                        )}
+                        {log.sessionId && (
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Session:</span>
+                            <span className="text-gray-900 font-mono text-xs">{log.sessionId.substring(0, 12)}...</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {log.details && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <p className="text-sm text-gray-700">{log.details}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </main>
       </div>
-    </SidebarProvider>
+    </div>
   );
 };

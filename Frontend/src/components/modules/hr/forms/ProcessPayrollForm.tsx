@@ -13,12 +13,21 @@ interface ProcessPayrollFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  editMode?: boolean;
+  payslipData?: {
+    id: number;
+    employee: string;
+    grossPay: number;
+    deductions: number;
+  };
 }
 
 export const ProcessPayrollForm: React.FC<ProcessPayrollFormProps> = ({
   open,
   onOpenChange,
-  onSuccess
+  onSuccess,
+  editMode = false,
+  payslipData
 }) => {
   const [formData, setFormData] = useState({
     payPeriod: '',
@@ -28,7 +37,10 @@ export const ProcessPayrollForm: React.FC<ProcessPayrollFormProps> = ({
     department: 'all',
     includeOvertime: false,
     includeBonuses: false,
-    includeDeductions: true
+    includeDeductions: true,
+    grossPay: 0,
+    taxDeductions: 0,
+    otherDeductions: 0
   });
 
   const [loading, setLoading] = useState(false);
@@ -38,25 +50,34 @@ export const ProcessPayrollForm: React.FC<ProcessPayrollFormProps> = ({
     const loadDepartments = async () => {
       try {
         const data = await fetchDepartments();
-        setDepartments(data.filter(d => d.isActive));
+        setDepartments(data);
       } catch (error) {
         console.error('Failed to load departments:', error);
       }
     };
-    if (open) loadDepartments();
-  }, [open]);
+    if (open) {
+      loadDepartments();
+      if (editMode && payslipData) {
+        setFormData(prev => ({
+          ...prev,
+          grossPay: payslipData.grossPay,
+          taxDeductions: payslipData.deductions * 0.7,
+          otherDeductions: payslipData.deductions * 0.3
+        }));
+      }
+    }
+  }, [open, editMode, payslipData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Simulate payroll processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       toast({
         title: "Success",
-        description: "Payroll processed successfully for selected employees!"
+        description: editMode ? "Payslip updated successfully!" : "Payroll processed successfully for selected employees!"
       });
       
       onSuccess?.();
@@ -64,7 +85,8 @@ export const ProcessPayrollForm: React.FC<ProcessPayrollFormProps> = ({
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to process payroll"
+        description: editMode ? "Failed to update payslip" : "Failed to process payroll",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
@@ -77,14 +99,60 @@ export const ProcessPayrollForm: React.FC<ProcessPayrollFormProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
-            Process Payroll
+            {editMode ? `Edit Payslip - ${payslipData?.employee}` : 'Process Payroll'}
           </DialogTitle>
           <DialogDescription>
-            Configure and process payroll for the selected period
+            {editMode ? 'Update payroll information' : 'Configure and process payroll for the selected period'}
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
+          {editMode ? (
+            <>
+              <div>
+                <Label htmlFor="grossPay">Gross Pay</Label>
+                <Input
+                  id="grossPay"
+                  type="number"
+                  step="0.01"
+                  value={formData.grossPay}
+                  onChange={(e) => setFormData(prev => ({ ...prev, grossPay: Number.parseFloat(e.target.value) || 0 }))}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="taxDeductions">Tax Deductions</Label>
+                <Input
+                  id="taxDeductions"
+                  type="number"
+                  step="0.01"
+                  value={formData.taxDeductions}
+                  onChange={(e) => setFormData(prev => ({ ...prev, taxDeductions: Number.parseFloat(e.target.value) || 0 }))}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="otherDeductions">Other Deductions</Label>
+                <Input
+                  id="otherDeductions"
+                  type="number"
+                  step="0.01"
+                  value={formData.otherDeductions}
+                  onChange={(e) => setFormData(prev => ({ ...prev, otherDeductions: Number.parseFloat(e.target.value) || 0 }))}
+                  required
+                />
+              </div>
+              <div className="bg-muted p-4 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">Net Pay</span>
+                  <span className="text-xl font-bold text-green-600">
+                    ${(formData.grossPay - formData.taxDeductions - formData.otherDeductions).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="payPeriod">Pay Period</Label>
@@ -189,13 +257,15 @@ export const ProcessPayrollForm: React.FC<ProcessPayrollFormProps> = ({
               This will process payroll for approximately 156 employees in the selected department(s).
             </div>
           </div>
+            </>
+          )}
           
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Processing...' : 'Process Payroll'}
+              {loading ? (editMode ? 'Saving...' : 'Processing...') : (editMode ? 'Save Changes' : 'Process Payroll')}
             </Button>
           </div>
         </form>

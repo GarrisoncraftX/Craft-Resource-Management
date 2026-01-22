@@ -45,7 +45,7 @@ export const ViewEmployeeDialog: React.FC<ViewEmployeeDialogProps> = ({
           {/* Profile Section */}
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={`/avatars/${employee.employeeId}.jpg`} />
+              {employee.profilePictureUrl && <AvatarImage src={employee.profilePictureUrl} alt={`${employee.firstName} ${employee.lastName}`} />}
               <AvatarFallback className="text-xl">
                 {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
               </AvatarFallback>

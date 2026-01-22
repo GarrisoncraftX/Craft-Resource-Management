@@ -11,4 +11,5 @@ public interface EmployeeService {
     Optional<User> findByEmployeeId(String employeeId);
     Optional<User> findById(Long id);
     List<User> getProvisionedEmployees();
+    User toggleUserStatus(Long id);
 }

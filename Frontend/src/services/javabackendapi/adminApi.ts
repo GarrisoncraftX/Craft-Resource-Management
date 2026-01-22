@@ -1,7 +1,37 @@
 import { apiClient } from '@/utils/apiClient';
-import { mockUsers, mockAuditLogs, mockSecurityEvents, mockNotifications } from '@/services/mockData/admin';
-import type { User, AuditLog, SecurityEvent, Notification } from '@/services/mockData/admin';
-import type { SupportTicket } from '@/types/javabackendapi/adminTypes';
+import { mockUsers, mockAuditLogs, mockSecurityEvents, mockNotifications,mockSupportTickets,mockSystemStats,mockSystemSettings,mockDatabaseStats,mockAuditStatistics,mockTopActions,mockTopUsers } from '@/services/mockData/admin';
+import type { User, AuditLog, SecurityEvent, Notification, SupportTicket } from '@/services/mockData/admin';
+
+interface EmployeeResponse {
+  id: number;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  isActive?: number;
+  lastLogin?: string;
+  roleId?: number;
+  departmentId?: number;
+  profilePictureUrl?: string;
+}
+
+const ROLE_MAP: Record<number, string> = {
+  1: 'Admin',
+  2: 'Department Head',
+  5: 'Employee',
+  9: 'HR Manager',
+  10: 'Finance Manager',
+  11: 'IT Manager'
+};
+
+const DEPARTMENT_MAP: Record<number, string> = {
+  1: 'Human Resources',
+  2: 'Finance',
+  3: 'IT',
+  4: 'Operations',
+  5: 'Marketing',
+  6: 'Sales',
+  7: 'Legal'
+};
 
 class AdminApiService {
   private async handleApiCall<T>(apiCall: () => Promise<T>, fallback: T): Promise<T> {
@@ -14,110 +44,92 @@ class AdminApiService {
     }
   }
 
-  // User Management
+  // User Management - Using HR Employee endpoints
   async getUsers(): Promise<User[]> {
     return this.handleApiCall(
-      () => apiClient.get('/admin/users'),
+      async () => {
+        const employees = await apiClient.get('/hr/employees/list');
+        return employees.map((emp: EmployeeResponse) => ({
+          id: emp.id,
+          name: `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || 'N/A',
+          email: emp.email || '',
+          role: ROLE_MAP[emp.roleId || 5] || 'Employee',
+          status: emp.isActive === 1 ? 'Active' : 'Inactive',
+          lastLogin: emp.lastLogin ? new Date(emp.lastLogin).toLocaleString() : 'Never',
+          department: DEPARTMENT_MAP[emp.departmentId || 1] || 'N/A',
+          profilePictureUrl: emp.profilePictureUrl
+        }));
+      },
       mockUsers
     );
   }
 
   async createUser(user: Omit<User, 'id'>): Promise<User> {
     return this.handleApiCall(
-      () => apiClient.post('/admin/users', user),
+      () => apiClient.post('/hr/employees/register', user),
       { ...user, id: Date.now() }
     );
   }
 
   async updateUser(id: number, user: Partial<User>): Promise<User> {
     return this.handleApiCall(
-      () => apiClient.put(`/admin/users/${id}`, user),
+      () => apiClient.put(`/hr/employees/id/${id}`, user),
       { ...mockUsers[0], ...user, id }
     );
   }
 
   async deleteUser(id: number): Promise<void> {
     return this.handleApiCall(
-      () => apiClient.delete(`/admin/users/${id}`),
+      () => apiClient.delete(`/hr/employees/id/${id}`),
       undefined
     );
   }
 
   async toggleUserStatus(id: number): Promise<User> {
     return this.handleApiCall(
-      () => apiClient.patch(`/admin/users/${id}/toggle-status`),
+      () => apiClient.patch(`/hr/employees/id/${id}/toggle-status`),
       { ...mockUsers[0], id, status: mockUsers[0].status === 'Active' ? 'Locked' : 'Active' }
     );
   }
 
-  // Audit Logs
+  // Audit Logs - Using real Java backend endpoint
   async getAuditLogs(limit?: number): Promise<AuditLog[]> {
-    const query = limit ? `?limit=${limit}` : '';
+    const params = limit ? { page: 0, size: limit } : { page: 0, size: 20 };
     return this.handleApiCall(
-      () => apiClient.get(`/admin/audit-logs${query}`),
+      async () => {
+        const response = await apiClient.get('/system/audit-logs', { params });
+        return response.content || response;
+      },
       limit ? mockAuditLogs.slice(0, limit) : mockAuditLogs
     );
   }
 
-  // Security Events
+  // Security Events - Using system security incidents endpoint
   async getSecurityEvents(): Promise<SecurityEvent[]> {
     return this.handleApiCall(
-      () => apiClient.get('/admin/security/events'),
+      () => apiClient.get('/system/security/incidents'),
       mockSecurityEvents
     );
   }
 
-  // Notifications
+  // Notifications - Mock only (no backend endpoint yet)
   async getNotifications(): Promise<Notification[]> {
-    return this.handleApiCall(
-      () => apiClient.get('/admin/notifications'),
-      mockNotifications
-    );
+    return mockNotifications;
   }
 
   async sendNotification(notification: Omit<Notification, 'id' | 'timestamp' | 'status'>): Promise<Notification> {
-    return this.handleApiCall(
-      () => apiClient.post('/admin/notifications', notification),
-      { ...notification, id: Date.now(), timestamp: new Date().toISOString(), status: 'Sent' }
-    );
+    return { ...notification, id: Date.now(), timestamp: new Date().toISOString(), status: 'Sent' };
   }
 
   async deleteNotification(id: number): Promise<void> {
-    return this.handleApiCall(
-      () => apiClient.delete(`/admin/notifications/${id}`),
-      undefined
-    );
+    return undefined;
   }
 
-  // Support Tickets
+  // Support Tickets - Using real Java backend endpoint
   async getSupportTickets(): Promise<SupportTicket[]> {
-    const mockTickets: SupportTicket[] = [
-      {
-        id: 1,
-        title: 'Login Issues',
-        description: 'Users unable to login to the system',
-        priority: 'High',
-        status: 'Open',
-        assignedTo: 'IT Support',
-        createdBy: 'john.doe@company.com',
-        createdAt: '2024-01-15T10:30:00Z',
-        updatedAt: '2024-01-15T10:30:00Z'
-      },
-      {
-        id: 2,
-        title: 'Database Performance',
-        description: 'Slow query performance on reports',
-        priority: 'Medium',
-        status: 'In Progress',
-        assignedTo: 'Database Admin',
-        createdBy: 'jane.smith@company.com',
-        createdAt: '2024-01-14T14:20:00Z',
-        updatedAt: '2024-01-15T09:15:00Z'
-      }
-    ];
     return this.handleApiCall(
       () => apiClient.get('/admin/support-tickets'),
-      mockTickets
+      mockSupportTickets
     );
   }
 
@@ -133,93 +145,77 @@ class AdminApiService {
     );
   }
 
-  // System Stats
-  async getSystemStats() {
-    const mockStats = {
-      totalUsers: 247,
-      activeSessions: 89,
-      databaseSize: '2.4GB',
-      systemUptime: '99.9%',
-      cpuUsage: 42,
-      memoryUsage: 68,
-      diskUsage: 47,
-      activeUsers: 156,
-      systemHealth: 'Good',
-      lastBackup: '2024-01-15T02:00:00Z',
-      pendingUpdates: 3
-    };
+  // Analytics - Using real Java backend audit analytics endpoints
+  async getAuditStatistics() {
     return this.handleApiCall(
-      () => apiClient.get('/admin/stats'),
-      mockStats
+      () => apiClient.get('/system/audit-logs/analytics/statistics'),
+      mockAuditStatistics
     );
   }
 
-  // System Settings
-  async getSystemSettings() {
-    const mockSettings = {
-      organizationName: 'Craft Resource Management',
-      systemTimezone: 'UTC',
-      dateFormat: 'YYYY-MM-DD',
-      currency: 'USD',
-      language: 'English',
-      sessionTimeout: '30',
-      maxLoginAttempts: '3',
-      passwordExpiry: '90',
-      enableTwoFactor: true,
-      enableAuditLog: true,
-      maintenanceMode: false,
-      backupFrequency: 'daily',
-      emailNotifications: true,
-      smsNotifications: false,
-      autoBackup: true,
-      systemTheme: 'light'
-    };
+  async getTopActions(days: number = 7) {
     return this.handleApiCall(
-      () => apiClient.get('/admin/settings'),
-      mockSettings
+      () => apiClient.get('/system/audit-logs/analytics/top-actions', { params: { days } }),
+      mockTopActions
+    );
+  }
+
+  async getTopUsers(days: number = 7) {
+    return this.handleApiCall(
+      () => apiClient.get('/system/audit-logs/analytics/top-users', { params: { days } }),
+      mockTopUsers
+    );
+  }
+
+  // System Config - Using real Java backend endpoint
+  async getSystemConfigs() {
+    return this.handleApiCall(
+      () => apiClient.get('/system/configs'),
+      []
+    );
+  }
+
+  async updateSystemConfig(id: number, config: Record<string, unknown>) {
+    return this.handleApiCall(
+      () => apiClient.put(`/system/configs/${id}`, config),
+      config
+    );
+  }
+
+  // System Stats
+  async getSystemStats() {
+    return this.handleApiCall(
+      () => apiClient.get('/admin/stats'),
+      mockSystemStats
+    );
+  }
+
+  // System Settings - Using system configs endpoint
+  async getSystemSettings() {
+    return this.handleApiCall(
+      () => apiClient.get('/system/configs'),
+      mockSystemSettings
     );
   }
 
   async updateSystemSettings(settings: Record<string, unknown>) {
     return this.handleApiCall(
-      () => apiClient.put('/admin/settings', settings),
+      () => apiClient.put('/system/configs', settings),
       settings
     );
   }
 
-  // Database Management
+  // Database Management - Mock only (no backend endpoint yet)
   async getDatabaseStats() {
-    const mockDbStats = {
-      totalTables: 45,
-      totalRecords: 125000,
-      databaseSize: '2.4GB',
-      indexSize: '450MB',
-      lastOptimization: '2024-01-14T03:00:00Z',
-      connectionPool: { active: 12, idle: 8, max: 20 },
-      queryPerformance: {
-        avgResponseTime: 125,
-        slowQueries: 3,
-        totalQueries: 15420
-      }
-    };
-    return this.handleApiCall(
-      () => apiClient.get('/admin/database/stats'),
-      mockDbStats
-    );
+    return mockDatabaseStats;
   }
 
   async optimizeDatabase(): Promise<{ success: boolean; message: string }> {
-    return this.handleApiCall(
-      () => apiClient.post('/admin/database/optimize', {}),
-      { success: true, message: 'Database optimization completed successfully' }
-    );
+    return { success: true, message: 'Database optimization completed successfully' };
   }
 
   async backupDatabase(): Promise<{ success: boolean; message: string; backupId?: string }> {
-    return this.handleApiCall(
-      () => apiClient.post('/admin/database/backup', {}),
-      { success: true, message: 'Database backup initiated', backupId: `backup_${Date.now()}` }
-    );
+    return { success: true, message: 'Database backup initiated', backupId: `backup_${Date.now()}` };
   }
 }
 

@@ -141,4 +141,13 @@ public class EmployeeController {
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    @PutMapping("/id/{id}/toggle-status")
+    public ResponseEntity<User> toggleUserStatus(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(employeeService.toggleUserStatus(id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

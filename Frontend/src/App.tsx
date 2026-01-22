@@ -170,6 +170,7 @@ const AppRoutes = () => {
   const handleViewDashboard = () => {
     if (location.pathname === '/employee-dashboard') {
       const departmentRoutes: Record<string, string> = {
+        'ADMIN': '/admin/dashboard',
         'FINANCE': '/finance/dashboard',
         'HR': '/hr',
         'PROCUREMENT': '/procurement/dashboard',

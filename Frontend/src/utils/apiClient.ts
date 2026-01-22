@@ -77,8 +77,18 @@ export class ApiClient {
     return response.json();
   }
 
-  async get(endpoint: string, options?: { responseType?: 'json' | 'blob' }) {
-    const response = await this.fetchWithFallback(`${this.baseURL}${endpoint}`, {
+  async get(endpoint: string, options?: { responseType?: 'json' | 'blob'; params?: Record<string, any> }) {
+    let url = `${this.baseURL}${endpoint}`;
+    if (options?.params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(options.params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+      url += `?${searchParams.toString()}`;
+    }
+    const response = await this.fetchWithFallback(url, {
       method: 'GET',
       headers: this.getHeaders(),
     });

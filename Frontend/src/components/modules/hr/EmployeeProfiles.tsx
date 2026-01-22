@@ -224,7 +224,7 @@ export const EmployeeProfiles: React.FC = () => {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={`/avatars/${employee.employeeId}.jpg`} />
+                          {employee.profilePictureUrl && <AvatarImage src={employee.profilePictureUrl} alt={`${employee.firstName} ${employee.lastName}`} />}
                           <AvatarFallback>{`${employee.firstName.charAt(0)}${employee.lastName.charAt(0)}`.toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div>

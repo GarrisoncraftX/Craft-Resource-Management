@@ -177,6 +177,17 @@ export interface Invoice {
   expenseAccountCode?: string;
 }
 
+
+export interface PayrollDisplayData {
+  id: number;
+  employee: string;
+  period: string;
+  grossPay: number;
+  deductions: number;
+  netPay: number;
+  status: PayrollStatus;
+};
+
 export interface Payslip {
   id: number;
   user_id?: number;
@@ -191,6 +202,8 @@ export interface Payslip {
     runDate: string;
     status: 'COMPLETED' | 'PENDING' | 'DRAFT';
   };
+
+  
 
 
   user: {
@@ -218,7 +231,8 @@ export interface Payslip {
     passwordResetExpires?: string;
     createdAt: string;
     updatedAt: string;
-    dateOfJoining?: string;  };
+    dateOfJoining?: string; 
+   };
 }
 
 export interface PayrollRun {

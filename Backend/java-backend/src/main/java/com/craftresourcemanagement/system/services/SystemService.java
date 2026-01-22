@@ -52,4 +52,17 @@ public interface SystemService {
     // Support Tickets
     SupportTicket createSupportTicket(SupportTicket ticket);
     List<SupportTicket> getAllSupportTickets();
+
+    // Session Tracking
+    ActiveSession createOrUpdateSession(ActiveSession session);
+    void deleteSession(String sessionId);
+    long getActiveSessionCount();
+    void cleanupInactiveSessions(int timeoutMinutes);
+
+    // Notifications
+    Notification createNotification(Notification notification);
+    List<Notification> getNotificationsByUserId(Long userId);
+    Notification markAsRead(Long id);
+    void deleteNotification(Long id);
+    long getUnreadCount(Long userId);
 }

@@ -8,6 +8,7 @@ from datetime import datetime
 from src.middleware.auth import auth_required, get_current_user
 from src.middleware.error_handler import register_error_handlers
 from src.middleware.request_logger import setup_request_logging
+from src.middleware.session_tracker import session_tracker, start_cleanup_thread
 
 # Import controllers
 from src.biometric_module.controller import BiometricController
@@ -90,6 +91,8 @@ register_error_handlers(app)
 
 # Middleware
 setup_request_logging(app)
+app.before_request(session_tracker())
+start_cleanup_thread()
 
 # Health check endpoint
 @app.route('/health', methods=['GET'])

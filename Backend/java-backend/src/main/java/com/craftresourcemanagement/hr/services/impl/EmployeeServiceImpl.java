@@ -143,4 +143,15 @@ public class EmployeeServiceImpl implements EmployeeService {
     public List<User> getProvisionedEmployees() {
         return userRepository.findByAccountStatus("PROVISIONED");
     }
+
+    @Override
+    public User toggleUserStatus(Long id) {
+        return userRepository.findById(id).map(user -> {
+            user.setIsActive(user.getIsActive() == 1 ? 0 : 1);
+            User updated = userRepository.save(user);
+            auditClient.logAction(id, "USER_STATUS_TOGGLED", 
+                "User: " + user.getEmployeeId() + ", Status: " + (updated.getIsActive() == 1 ? "Active" : "Inactive"));
+            return updated;
+        }).orElseThrow(() -> new RuntimeException("User not found"));
+    }
 }
