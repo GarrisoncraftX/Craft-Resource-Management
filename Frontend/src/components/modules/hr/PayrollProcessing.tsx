@@ -120,6 +120,27 @@ export const PayrollProcessing: React.FC = () => {
     globalThis.location.reload();
   };
 
+  const handleDownloadReport = async () => {
+    if (!selectedPeriod || displayedPayslips.length === 0) return;
+    
+    try {
+      const payrollRunId = displayedPayslips[0]?.id;
+      if (!payrollRunId) return;
+      
+      const blob = await hrApiService.downloadPayrollReport(payrollRunId, 'csv');
+      const url = globalThis.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `payroll_report_${selectedPeriod.replace(/\s/g, '_')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      globalThis.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Failed to download report:', error);
+    }
+  };
+
   useEffect(() => {
     const filtered = selectedPeriod
       ? payslips.filter(p => `${p.payPeriodStart} - ${p.payPeriodEnd}` === selectedPeriod)
@@ -195,7 +216,7 @@ export const PayrollProcessing: React.FC = () => {
             <p className="text-muted-foreground">Manage employee payroll and compensation</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleDownloadReport}>
               <Download className="h-4 w-4 mr-2" />
               Export Report
             </Button>
@@ -340,7 +361,7 @@ export const PayrollProcessing: React.FC = () => {
               <CardDescription>Create and distribute employee payslips</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full">
+              <Button className="w-full" onClick={handleDownloadReport}>
                 <FileText className="h-4 w-4 mr-2" />
                 Generate Payslips
               </Button>
@@ -353,7 +374,24 @@ export const PayrollProcessing: React.FC = () => {
               <CardDescription>Process salary payments to employee accounts</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full">
+              <Button className="w-full" onClick={async () => {
+                if (!selectedPeriod || displayedPayslips.length === 0) return;
+                try {
+                  const payrollRunId = displayedPayslips[0]?.id;
+                  if (!payrollRunId) return;
+                  const blob = await hrApiService.downloadBankFile(payrollRunId);
+                  const url = globalThis.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `bank_transfer_${selectedPeriod.replace(/\s/g, '_')}.csv`;
+                  document.body.appendChild(a);
+                  a.click();
+                  globalThis.URL.revokeObjectURL(url);
+                  document.body.removeChild(a);
+                } catch (error) {
+                  console.error('Failed to download bank file:', error);
+                }
+              }}>
                 <DollarSign className="h-4 w-4 mr-2" />
                 Process Transfers
               </Button>

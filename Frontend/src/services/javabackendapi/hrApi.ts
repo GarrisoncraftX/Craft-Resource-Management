@@ -249,6 +249,27 @@ class HrApiService {
     return apiClient.get(`/hr/payroll/payslips/user/${userId}`);
   }
 
+  async processPayroll(request: {
+    startDate: string;
+    endDate: string;
+    payDate: string;
+    departmentId: number | null;
+    includeOvertime: boolean;
+    includeBonuses: boolean;
+    includeDeductions: boolean;
+    createdBy: number;
+  }): Promise<{ payrollRunId: number; employeesProcessed: number; status: string; message: string }> {
+    return apiClient.post('/hr/payroll/process', request);
+  }
+
+  async downloadPayrollReport(payrollRunId: number, format: string = 'csv'): Promise<Blob> {
+    return apiClient.get(`/hr/payroll/runs/${payrollRunId}/report?format=${format}`, { responseType: 'blob' });
+  }
+
+  async downloadBankFile(payrollRunId: number): Promise<Blob> {
+    return apiClient.get(`/hr/payroll/runs/${payrollRunId}/bank-file`, { responseType: 'blob' });
+  }
+
   async getProvisionedEmployees(): Promise<ProvisioningResponse[]> {
     const response = await apiClient.get('/hr/employees/provisioned');
     return response.employees || [];

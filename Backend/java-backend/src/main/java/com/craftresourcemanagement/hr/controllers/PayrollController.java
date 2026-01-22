@@ -289,4 +289,110 @@ public class PayrollController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    @PostMapping("/process")
+    public ResponseEntity<ProcessPayrollResponse> processPayroll(@RequestBody ProcessPayrollRequest request) {
+        try {
+            PayrollRun payrollRun = payrollService.processPayroll(
+                request.getStartDate(),
+                request.getEndDate(),
+                request.getPayDate(),
+                request.getDepartmentId(),
+                request.isIncludeOvertime(),
+                request.isIncludeBonuses(),
+                request.isIncludeDeductions(),
+                request.getCreatedBy()
+            );
+
+            List<Payslip> payslips = payrollService.getAllPayslips().stream()
+                .filter(p -> p.getPayrollRun() != null && p.getPayrollRun().getId().equals(payrollRun.getId()))
+                .toList();
+
+            ProcessPayrollResponse response = new ProcessPayrollResponse(
+                payrollRun.getId(),
+                payslips.size(),
+                "SUCCESS",
+                "Payroll processed successfully for " + payslips.size() + " employees"
+            );
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error processing payroll: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                .body(new ProcessPayrollResponse(null, 0, "ERROR", "Failed to process payroll: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/runs/{id}/report")
+    public ResponseEntity<String> generatePayrollReport(@PathVariable Long id, @RequestParam(defaultValue = "csv") String format) {
+        try {
+            PayrollRun run = payrollService.getPayrollRunById(id);
+            if (run == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            List<Payslip> payslips = payrollService.getAllPayslips().stream()
+                .filter(p -> p.getPayrollRun() != null && p.getPayrollRun().getId().equals(id))
+                .toList();
+
+            StringBuilder report = new StringBuilder();
+            report.append("Employee ID,Name,Gross Pay,Tax Deductions,Other Deductions,Net Pay\n");
+            
+            for (Payslip p : payslips) {
+                report.append(String.format("%s,%s %s,%.2f,%.2f,%.2f,%.2f\n",
+                    p.getUser().getEmployeeId(),
+                    p.getUser().getFirstName(),
+                    p.getUser().getLastName(),
+                    p.getGrossPay(),
+                    p.getTaxDeductions(),
+                    p.getOtherDeductions(),
+                    p.getNetPay()));
+            }
+
+            return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=payroll_report_" + id + ".csv")
+                .header("Content-Type", "text/csv")
+                .body(report.toString());
+        } catch (Exception e) {
+            logger.error("Error generating report: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/runs/{id}/bank-file")
+    public ResponseEntity<String> generateBankFile(@PathVariable Long id) {
+        try {
+            PayrollRun run = payrollService.getPayrollRunById(id);
+            if (run == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            List<Payslip> payslips = payrollService.getAllPayslips().stream()
+                .filter(p -> p.getPayrollRun() != null && p.getPayrollRun().getId().equals(id))
+                .toList();
+
+            StringBuilder bankFile = new StringBuilder();
+            bankFile.append("Account Number,Account Name,Bank Name,Amount,Reference\n");
+            
+            for (Payslip p : payslips) {
+                String accountNumber = p.getUser().getAccountNumber() != null ? p.getUser().getAccountNumber() : "N/A";
+                String bankName = p.getUser().getBankName() != null ? p.getUser().getBankName() : "N/A";
+                bankFile.append(String.format("%s,%s %s,%s,%.2f,PAYROLL_%s\n",
+                    accountNumber,
+                    p.getUser().getFirstName(),
+                    p.getUser().getLastName(),
+                    bankName,
+                    p.getNetPay(),
+                    run.getId()));
+            }
+
+            return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=bank_transfer_" + id + ".csv")
+                .header("Content-Type", "text/csv")
+                .body(bankFile.toString());
+        } catch (Exception e) {
+            logger.error("Error generating bank file: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

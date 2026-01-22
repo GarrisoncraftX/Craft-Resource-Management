@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import {  DollarSign, Users } from 'lucide-react';
 import { fetchDepartments, Department } from '@/services/api';
+import { hrApiService } from '@/services/javabackendapi/hrApi';
 
 interface ProcessPayrollFormProps {
   open: boolean;
@@ -73,12 +74,56 @@ export const ProcessPayrollForm: React.FC<ProcessPayrollFormProps> = ({
     setLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Success",
-        description: editMode ? "Payslip updated successfully!" : "Payroll processed successfully for selected employees!"
-      });
+      if (editMode) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        toast({
+          title: "Success",
+          description: "Payslip updated successfully!"
+        });
+      } else {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const result = await hrApiService.processPayroll({
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          payDate: formData.payDate,
+          departmentId: formData.department === 'all' ? null : parseInt(formData.department),
+          includeOvertime: formData.includeOvertime,
+          includeBonuses: formData.includeBonuses,
+          includeDeductions: formData.includeDeductions,
+          createdBy: user.id || 1
+        });
+        
+        toast({
+          title: "Success",
+          description: result.message || `Payroll processed successfully for ${result.employeesProcessed} employees!`,
+          action: result.payrollRunId ? (
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={async () => {
+                const blob = await hrApiService.downloadPayrollReport(result.payrollRunId, 'csv');
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `payroll_report_${result.payrollRunId}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+              }}>Download Report</Button>
+              <Button size="sm" onClick={async () => {
+                const blob = await hrApiService.downloadBankFile(result.payrollRunId);
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `bank_file_${result.payrollRunId}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+              }}>Download Bank File</Button>
+            </div>
+          ) : undefined
+        });
+      }
       
       onSuccess?.();
       onOpenChange(false);

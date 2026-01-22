@@ -57,4 +57,10 @@ public interface PayrollService {
 
     // Payslip by user
     List<Payslip> getPayslipsByUser(User user);
+
+    // Process payroll for employees
+    PayrollRun processPayroll(java.time.LocalDate startDate, java.time.LocalDate endDate, 
+                              java.time.LocalDate payDate, Integer departmentId, 
+                              boolean includeOvertime, boolean includeBonuses, 
+                              boolean includeDeductions, Long createdBy);
 }

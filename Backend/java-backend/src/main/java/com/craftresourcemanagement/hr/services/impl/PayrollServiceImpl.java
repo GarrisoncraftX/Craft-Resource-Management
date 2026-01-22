@@ -8,10 +8,14 @@ import com.craftresourcemanagement.utils.OpenAIClient;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,9 +31,11 @@ public class PayrollServiceImpl implements PayrollService {
     private final TrainingCourseRepository trainingCourseRepository;
     private final EmployeeTrainingRepository employeeTrainingRepository;
     private final PerformanceReviewRepository performanceReviewRepository;
+    private final UserRepository userRepository;
 
     private final OpenAIClient openAIClient;
     private final AuditClient auditClient;
+    private final com.craftresourcemanagement.hr.services.NotificationService notificationService;
 
     @Value("${openai.api.key}")
     private String openAIKey;
@@ -41,8 +47,10 @@ public class PayrollServiceImpl implements PayrollService {
             TrainingCourseRepository trainingCourseRepository,
             EmployeeTrainingRepository employeeTrainingRepository,
             PerformanceReviewRepository performanceReviewRepository,
+            UserRepository userRepository,
             OpenAIClient openAIClient,
-            AuditClient auditClient) {
+            AuditClient auditClient,
+            com.craftresourcemanagement.hr.services.NotificationService notificationService) {
         this.payrollRunRepository = payrollRunRepository;
         this.payslipRepository = payslipRepository;
         this.benefitPlanRepository = benefitPlanRepository;
@@ -50,8 +58,10 @@ public class PayrollServiceImpl implements PayrollService {
         this.trainingCourseRepository = trainingCourseRepository;
         this.employeeTrainingRepository = employeeTrainingRepository;
         this.performanceReviewRepository = performanceReviewRepository;
+        this.userRepository = userRepository;
         this.openAIClient = openAIClient;
         this.auditClient = auditClient;
+        this.notificationService = notificationService;
     }
 
     // PayrollRun
@@ -332,4 +342,66 @@ public class PayrollServiceImpl implements PayrollService {
         }
 
     }
-}
+
+    @Override
+    @Transactional
+    public PayrollRun processPayroll(LocalDate startDate, LocalDate endDate, LocalDate payDate,
+                                     Integer departmentId, boolean includeOvertime, 
+                                     boolean includeBonuses, boolean includeDeductions, Long createdBy) {
+        // Create payroll run
+        PayrollRun payrollRun = new PayrollRun();
+        payrollRun.setRunDate(payDate.atTime(23, 59, 59));
+        payrollRun.setStatus("COMPLETED");
+        PayrollRun savedRun = payrollRunRepository.save(payrollRun);
+
+        // Get active employees
+        List<User> employees;
+        if (departmentId != null && departmentId > 0) {
+            employees = userRepository.findAll().stream()
+                .filter(u -> u.getIsActive() == 1 && u.getDepartmentId().equals(departmentId))
+                .toList();
+        } else {
+            employees = userRepository.findByAccountStatus("ACTIVE");
+        }
+
+        List<Payslip> processedPayslips = new java.util.ArrayList<>();
+
+        // Process each employee
+        for (User employee : employees) {
+            if (employee.getSalary() == null || employee.getSalary() <= 0) {
+                continue;
+            }
+
+            BigDecimal grossPay = BigDecimal.valueOf(employee.getSalary());
+            BigDecimal taxDeduction = grossPay.multiply(BigDecimal.valueOf(0.065));
+            BigDecimal otherDeduction = BigDecimal.valueOf(350);
+            BigDecimal totalDeductions = includeDeductions ? taxDeduction.add(otherDeduction) : BigDecimal.ZERO;
+            BigDecimal netPay = grossPay.subtract(totalDeductions);
+
+            Payslip payslip = new Payslip();
+            payslip.setPayrollRun(savedRun);
+            payslip.setUser(employee);
+            payslip.setPayPeriodStart(startDate);
+            payslip.setPayPeriodEnd(endDate);
+            payslip.setGrossPay(grossPay);
+            payslip.setTaxDeductions(taxDeduction);
+            payslip.setOtherDeductions(otherDeduction);
+            payslip.setNetPay(netPay);
+
+            Payslip saved = payslipRepository.save(payslip);
+            processedPayslips.add(saved);
+        }
+
+        // Send notifications
+        try {
+            notificationService.sendBulkPayrollNotifications(processedPayslips);
+        } catch (Exception e) {
+            logger.error("Failed to send notifications: {}", e.getMessage());
+        }
+
+        auditClient.logAction(createdBy != null ? createdBy.toString() : "SYSTEM", 
+                             "PROCESS_PAYROLL", 
+                             "Processed payroll for " + employees.size() + " employees");
+
+        return savedRun;
+    }
