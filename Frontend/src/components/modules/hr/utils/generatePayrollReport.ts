@@ -1,0 +1,125 @@
+interface PayrollReportData {
+  employee: string;
+  grossPay: number;
+  deductions: number;
+  netPay: number;
+  status: string;
+}
+
+interface ReportParams {
+  payslips: PayrollReportData[];
+  period: string;
+  totalGrossPay: number;
+  totalDeductions: number;
+  totalNetPay: number;
+  employeesProcessed: number;
+  processedCount: number;
+}
+
+export const generatePayrollReport = async (params: ReportParams): Promise<void> => {
+  const { payslips, period, totalGrossPay, totalDeductions, totalNetPay, employeesProcessed, processedCount } = params;
+
+  // Convert logo to base64
+  const logoBase64 = await fetch('/logo.png')
+    .then(res => res.blob())
+    .then(blob => new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    }))
+    .catch(() => 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect fill="%232563eb" width="100" height="100"/%3E%3Ctext x="50" y="55" font-size="40" fill="white" text-anchor="middle" font-family="Arial" font-weight="bold"%3ECRM%3C/text%3E%3C/svg%3E');
+
+  const reportHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Payroll Report - ${period}</title>
+      <style>
+        @media print { body { margin: 0; } }
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .header { position: relative; margin-bottom: 30px; border-bottom: 2px solid #2563eb; padding-bottom: 20px; }
+        .header img { position: absolute; left: 0; top: 0; width: 80px; height: 80px; }
+        .header-text { text-align: center; }
+        .header h1 { margin: 5px 0; color: #1e293b; font-size: 24px; }
+        .header p { margin: 3px 0; color: #64748b; font-size: 14px; }
+        .info { margin: 20px 0; background: #f8fafc; padding: 15px; border-radius: 8px; }
+        .info p { margin: 5px 0; color: #334155; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background: #2563eb; color: white; padding: 12px; text-align: left; font-weight: 600; }
+        td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
+        tr:hover { background: #f8fafc; }
+        .status-processed { background: #22c55e; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .status-pending { background: #f59e0b; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .status-draft { background: #94a3b8; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .totals { margin-top: 20px; text-align: right; font-weight: bold; background: #f8fafc; padding: 15px; border-radius: 8px; }
+        .totals div { margin: 5px 0; color: #1e293b; }
+        .footer { margin-top: 40px; text-align: center; color: #64748b; font-size: 12px; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <img src="${logoBase64}" alt="Logo">
+        <div class="header-text">
+          <h1>CRAFT RESOURCE MANAGEMENT</h1>
+          <p>Payroll Report</p>
+          <p>Period: ${period}</p>
+        </div>
+      </div>
+      
+      <div class="info">
+        <p><strong>Report Generated:</strong> ${new Date().toLocaleString()}</p>
+        <p><strong>Total Employees:</strong> ${employeesProcessed}</p>
+        <p><strong>Status:</strong> ${processedCount} Processed, ${payslips.length - processedCount} Pending</p>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Employee Name</th>
+            <th>Gross Pay</th>
+            <th>Deductions</th>
+            <th>Net Pay</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${payslips.map(p => `
+            <tr>
+              <td>${p.employee}</td>
+              <td>$${p.grossPay.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              <td>$${p.deductions.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              <td>$${p.netPay.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              <td><span class="status-${p.status.toLowerCase()}">${p.status}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="totals">
+        <div>Total Gross Pay: $${totalGrossPay.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+        <div>Total Deductions: $${totalDeductions.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+        <div>Total Net Pay: $${totalNetPay.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+      </div>
+
+      <div class="footer">
+        <p>This is an official payroll report generated by Craft Resource Management System</p>
+        <p>© ${new Date().getFullYear()} Craft Resource Management. All rights reserved.</p>
+      </div>
+      <script>
+        window.onload = () => window.print();
+      </script>
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob([reportHTML], { type: 'text/html' });
+  const url = globalThis.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Payroll_Report_${period.replace(/\s/g, '_')}.html`;
+  document.body.appendChild(a);
+  a.click();
+  globalThis.URL.revokeObjectURL(url);
+  a.remove();
+};

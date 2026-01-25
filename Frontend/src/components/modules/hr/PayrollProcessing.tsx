@@ -13,6 +13,7 @@ import { Employee } from '@/types/hr';
 import { ProcessPayrollForm } from './forms/ProcessPayrollForm';
 import { PayslipDetailsDialog } from './forms/PayslipDetailsDialog';
 import { ProcessingDialog } from './forms/ProcessingDialog';
+import { generatePayrollReport } from './utils/generatePayrollReport';
 
 
 
@@ -118,57 +119,55 @@ export const PayrollProcessing: React.FC = () => {
     setIsEditOpen(true);
   };
 
-  const refreshData = () => {
-    globalThis.location.reload();
-  };
-
-  const handleDownloadReport = async () => {
-    if (!selectedPeriod || displayedPayslips.length === 0) return;
-    
+  const refreshData = async () => {
     try {
-      const payrollRunId = displayedPayslips[0]?.id;
-      if (!payrollRunId) return;
-      
-      const blob = await hrApiService.downloadPayrollReport(payrollRunId, 'csv');
-      const url = globalThis.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `payroll_report_${selectedPeriod.replace(/\s/g, '_')}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      globalThis.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error('Failed to download report:', error);
+      setLoading(true);
+      const payslipsData = await hrApiService.getAllPayslips();
+      const dataToUse = payslipsData.length > 0 ? payslipsData as unknown as ApiPayslip[] : mockPayslips;
+      setPayslips(dataToUse);
+
+      if (dataToUse.length > 0) {
+        const latestPeriod = dataToUse.reduce((latest, current) => {
+          const latestDate = new Date(latest.payPeriodEnd);
+          const currentDate = new Date(current.payPeriodEnd);
+          return currentDate > latestDate ? current : latest;
+        }, dataToUse[0]);
+        setSelectedPeriod(`${latestPeriod.payPeriodStart} - ${latestPeriod.payPeriodEnd}`);
+      }
+    } catch (err) {
+      console.error("Failed to refresh payroll data:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleProcessTransfers = async () => {
-    if (!selectedPeriod || displayedPayslips.length === 0) return;
-    
-    setIsProcessingTransfer(true);
+  const handleDownloadReport = async () => {
+    if (displayedPayslips.length === 0) {
+      alert('No payroll data to export');
+      return;
+    }
+
     try {
-      const payrollRunId = displayedPayslips[0]?.id;
-      if (!payrollRunId) return;
+      const storedRunId = sessionStorage.getItem('lastPayrollRunId');
+      const payrollRunId = storedRunId ? parseInt(storedRunId) : displayedPayslips[0]?.id;
       
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      if (!payrollRunId) {
+        alert('No payroll run available to download');
+        return;
+      }
       
-      const blob = await hrApiService.downloadBankFile(payrollRunId);
+      const blob = await hrApiService.downloadPayrollReport(payrollRunId, 'html');
       const url = globalThis.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `bank_transfer_${selectedPeriod.replace(/\s/g, '_')}.csv`;
+      a.download = `Payroll_Report_${selectedPeriod.replace(/\s/g, '_')}.html`;
       document.body.appendChild(a);
       a.click();
       globalThis.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      setIsProcessingTransfer(false);
-      alert(`Payment processed successfully! ${displayedPayslips.length} employees have been notified via email and SMS.`);
+      a.remove();
     } catch (error) {
-      console.error('Failed to process transfers:', error);
-      setIsProcessingTransfer(false);
-      alert('Failed to process transfers. Please try again.');
+      console.error('Failed to download report:', error);
+      alert('Failed to download report. Please try again.');
     }
   };
 
@@ -249,7 +248,7 @@ export const PayrollProcessing: React.FC = () => {
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleDownloadReport}>
               <Download className="h-4 w-4 mr-2" />
-              Export Report
+              Download Report
             </Button>
             <Button onClick={() => setIsProcessPayrollOpen(true)}>
               <Calculator className="h-4 w-4 mr-2" />
@@ -383,35 +382,7 @@ export const PayrollProcessing: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Generate Payslips</CardTitle>
-              <CardDescription>Create and distribute employee payslips</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full" onClick={handleDownloadReport}>
-                <FileText className="h-4 w-4 mr-2" />
-                Generate Payslips
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Bank Transfer</CardTitle>
-              <CardDescription>Process salary payments to employee accounts</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full" onClick={handleProcessTransfers}>
-                <DollarSign className="h-4 w-4 mr-2" />
-                Process Transfers
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
       </div>
 
       <ProcessPayrollForm

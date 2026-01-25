@@ -335,6 +335,14 @@ public class PayrollController {
                 .filter(p -> p.getPayrollRun() != null && p.getPayrollRun().getId().equals(id))
                 .toList();
 
+            if ("html".equalsIgnoreCase(format)) {
+                String htmlReport = generateHTMLReport(run, payslips);
+                return ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=crmspayroll.report_" + id + ".html")
+                    .header("Content-Type", "text/html")
+                    .body(htmlReport);
+            }
+
             StringBuilder report = new StringBuilder();
             report.append("Employee ID,Name,Gross Pay,Tax Deductions,Other Deductions,Net Pay\n");
             
@@ -357,6 +365,57 @@ public class PayrollController {
             logger.error("Error generating report: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    private String generateHTMLReport(PayrollRun run, List<Payslip> payslips) {
+        double totalGross = payslips.stream().mapToDouble(p -> p.getGrossPay().doubleValue()).sum();
+        double totalDeductions = payslips.stream().mapToDouble(p -> p.getTaxDeductions().add(p.getOtherDeductions()).doubleValue()).sum();
+        double totalNet = payslips.stream().mapToDouble(p -> p.getNetPay().doubleValue()).sum();
+        long processedCount = payslips.stream().filter(p -> "COMPLETED".equals(run.getStatus())).count();
+
+        String logoSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%232563eb' width='100' height='100'/%3E%3Ctext x='50' y='55' font-size='40' fill='white' text-anchor='middle' font-family='Arial' font-weight='bold'%3ECRM%3C/text%3E%3C/svg%3E";
+
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Payroll Report</title>");
+        html.append("<style>@media print{body{margin:0}}body{font-family:Arial,sans-serif;margin:40px}");
+        html.append(".header{position:relative;margin-bottom:30px;border-bottom:2px solid #2563eb;padding-bottom:20px}");
+        html.append(".header img{position:absolute;left:0;top:0;width:80px;height:80px}");
+        html.append(".header-text{text-align:center}.header h1{margin:5px 0;color:#1e293b;font-size:24px}");
+        html.append(".header p{margin:3px 0;color:#64748b;font-size:14px}");
+        html.append(".info{margin:20px 0;background:#f8fafc;padding:15px;border-radius:8px}.info p{margin:5px 0;color:#334155}");
+        html.append("table{width:100%;border-collapse:collapse;margin:20px 0}");
+        html.append("th{background:#2563eb;color:white;padding:12px;text-align:left;font-weight:600}");
+        html.append("td{padding:10px;border-bottom:1px solid #e2e8f0}tr:hover{background:#f8fafc}");
+        html.append(".status-processed{background:#22c55e;color:white;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600}");
+        html.append(".totals{margin-top:20px;text-align:right;font-weight:bold;background:#f8fafc;padding:15px;border-radius:8px}");
+        html.append(".totals div{margin:5px 0;color:#1e293b}");
+        html.append(".footer{margin-top:40px;text-align:center;color:#64748b;font-size:12px;border-top:1px solid #e2e8f0;padding-top:20px}");
+        html.append("</style></head><body>");
+        html.append("<div class='header'><img src='").append(logoSvg).append("' alt='Logo'>");
+        html.append("<div class='header-text'><h1>CRAFT RESOURCE MANAGEMENT</h1><p>Payroll Report</p>");
+        html.append("<p>Period: ").append(run.getStartDate()).append(" - ").append(run.getEndDate()).append("</p></div></div>");
+        html.append("<div class='info'><p><strong>Report Generated:</strong> ").append(java.time.LocalDateTime.now()).append("</p>");
+        html.append("<p><strong>Total Employees:</strong> ").append(payslips.size()).append("</p>");
+        html.append("<p><strong>Status:</strong> ").append(processedCount).append(" Processed, ").append(payslips.size() - processedCount).append(" Pending</p></div>");
+        html.append("<table><thead><tr><th>Employee Name</th><th>Gross Pay</th><th>Deductions</th><th>Net Pay</th><th>Status</th></tr></thead><tbody>");
+        
+        for (Payslip p : payslips) {
+            html.append("<tr><td>").append(p.getUser().getFirstName()).append(" ").append(p.getUser().getLastName()).append("</td>");
+            html.append("<td>$").append(String.format("%.2f", p.getGrossPay())).append("</td>");
+            html.append("<td>$").append(String.format("%.2f", p.getTaxDeductions().add(p.getOtherDeductions()))).append("</td>");
+            html.append("<td>$").append(String.format("%.2f", p.getNetPay())).append("</td>");
+            html.append("<td><span class='status-processed'>Processed</span></td></tr>");
+        }
+        
+        html.append("</tbody></table><div class='totals'>");
+        html.append("<div>Total Gross Pay: $").append(String.format("%.2f", totalGross)).append("</div>");
+        html.append("<div>Total Deductions: $").append(String.format("%.2f", totalDeductions)).append("</div>");
+        html.append("<div>Total Net Pay: $").append(String.format("%.2f", totalNet)).append("</div></div>");
+        html.append("<div class='footer'><p>This is an official payroll report generated by Craft Resource Management System</p>");
+        html.append("<p>&copy; ").append(java.time.Year.now().getValue()).append(" Craft Resource Management. All rights reserved.</p></div>");
+        html.append("<script>window.onload=()=>window.print();</script></body></html>");
+        
+        return html.toString();
     }
 
     @GetMapping("/runs/{id}/bank-file")

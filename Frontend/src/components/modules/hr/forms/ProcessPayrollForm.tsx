@@ -98,34 +98,13 @@ export const ProcessPayrollForm: React.FC<ProcessPayrollFormProps> = ({
         
         toast({
           title: "Success",
-          description: result.message || `Payroll processed successfully for ${result.employeesProcessed} employees!`,
-          action: result.payrollRunId ? (
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={async () => {
-                const blob = await hrApiService.downloadPayrollReport(result.payrollRunId, 'csv');
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `payroll_report_${result.payrollRunId}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-              }}>Download Report</Button>
-              <Button size="sm" onClick={async () => {
-                const blob = await hrApiService.downloadBankFile(result.payrollRunId);
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `bank_file_${result.payrollRunId}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-              }}>Download Bank File</Button>
-            </div>
-          ) : undefined
+          description: result.message || `Payroll processed successfully for ${result.employeesProcessed} employees!`
         });
+        
+        // Store payroll run ID for download buttons
+        if (result.payrollRunId) {
+          sessionStorage.setItem('lastPayrollRunId', result.payrollRunId.toString());
+        }
       }
       
       onSuccess?.();

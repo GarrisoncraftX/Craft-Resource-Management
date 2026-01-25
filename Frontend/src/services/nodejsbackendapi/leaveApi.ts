@@ -155,34 +155,20 @@ class LeaveApiService {
   }
 
   async approveLeaveRequest(id: string, approverId: number = 1): Promise<LeaveRequest> {
-    try {
-      const response = await apiClient.post(`/api/leave/requests/${id}/approve`, { userId: approverId });
-      if (response?.success) {
-        return response.data;
-      } else {
-        throw new Error(response?.message || 'Failed to approve leave request');
-      }
-    } catch (error) {
-      if (error?.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      }
-      throw error;
+    const response = await apiClient.post(`/api/leave/requests/${id}/approve`, { userId: approverId });
+    if (response?.success) {
+      return response.data;
+    } else {
+      throw new Error(response?.message || 'Failed to approve leave request');
     }
   }
 
   async rejectLeaveRequest(id: string, approverId: number = 1, reason?: string): Promise<LeaveRequest> {
-    try {
-      const response = await apiClient.post(`/api/leave/requests/${id}/reject`, { userId: approverId, reason });
-      if (response?.success) {
-        return response.data;
-      } else {
-        throw new Error(response?.message || 'Failed to reject leave request');
-      }
-    } catch (error) {
-      if (error?.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      }
-      throw error;
+    const response = await apiClient.post(`/api/leave/requests/${id}/reject`, { userId: approverId, reason });
+    if (response?.success) {
+      return response.data;
+    } else {
+      throw new Error(response?.message || 'Failed to reject leave request');
     }
   }
 

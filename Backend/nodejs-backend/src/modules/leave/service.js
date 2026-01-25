@@ -4,6 +4,7 @@ const { LeaveType, LeaveRequest, LeaveBalance, LeaveApproval } = require("./mode
 const cloudinaryService = require('../../utils/cloudinary')
 const auditService = require("../audit/service")
 const User = require("../auth/model")
+const { ValidationError, NotFoundError, ConflictError } = require("../../middleware/errorHandler")
 
 class LeaveService {
   async getLeaveTypes() {
@@ -44,7 +45,7 @@ class LeaveService {
   async getUserLeaveRequests(userId, filters = {}) {
     // Validate userId to prevent undefined parameter error
     if (!userId || userId === 'undefined') {
-      throw new Error("User ID is required and cannot be undefined")
+      throw new ValidationError("User ID is required and cannot be undefined")
     }
 
     const where = { userId }
@@ -212,10 +213,10 @@ class LeaveService {
     try {
       const leaveRequest = await LeaveRequest.findByPk(leaveRequestId, { transaction });
       if (!leaveRequest) {
-        throw new Error('Leave request not found');
+        throw new NotFoundError('Leave request not found');
       }
       if (leaveRequest.status !== 'pending') {
-        throw new Error('Leave request is not in pending status');
+        throw new ValidationError('Leave request is not in pending status');
       }
 
       // Check for overlapping approved leaves
@@ -233,7 +234,7 @@ class LeaveService {
       });
 
       if (overlappingLeave) {
-        throw new Error('User already has approved leave during this period');
+        throw new ConflictError('User already has approved leave during this period');
       }
 
       // Update leave request status
@@ -289,8 +290,8 @@ class LeaveService {
 
   async rejectLeaveRequest(leaveRequestId, approverId, reason) {
     const leaveRequest = await LeaveRequest.findByPk(leaveRequestId)
-    if (!leaveRequest) throw new Error("Leave request not found")
-    if (leaveRequest.status !== "pending") throw new Error("Only pending leave requests can be rejected")
+    if (!leaveRequest) throw new NotFoundError("Leave request not found")
+    if (leaveRequest.status !== "pending") throw new ValidationError("Only pending leave requests can be rejected")
 
     leaveRequest.status = "rejected"
     leaveRequest.reviewComments = reason

@@ -14,7 +14,6 @@ import java.util.List;
 @Repository
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     
-    // Find all ordered by timestamp descending (latest first)
     List<AuditLog> findAllByOrderByTimestampDesc();
     
     // Existing method

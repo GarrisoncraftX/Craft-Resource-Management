@@ -270,6 +270,10 @@ class HrApiService {
     return apiClient.get(`/hr/payroll/runs/${payrollRunId}/bank-file`, { responseType: 'blob' });
   }
 
+  async downloadPayslipPDF(payslipId: number): Promise<Blob> {
+    return apiClient.get(`/hr/payroll/payslips/${payslipId}/pdf`, { responseType: 'blob' });
+  }
+
   async getProvisionedEmployees(): Promise<ProvisioningResponse[]> {
     const response = await apiClient.get('/hr/employees/provisioned');
     return response.employees || [];

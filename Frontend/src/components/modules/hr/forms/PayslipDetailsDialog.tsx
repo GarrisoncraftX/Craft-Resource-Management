@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { FileText, Calendar, DollarSign, User } from 'lucide-react';
 import { PayrollStatus } from '@/types/api';
+import { hrApiService } from '@/services/javabackendapi/hrApi';
 
 interface PayslipDetailsDialogProps {
   open: boolean;
@@ -33,6 +34,23 @@ export const PayslipDetailsDialog: React.FC<PayslipDetailsDialogProps> = ({
       case 'Pending': return 'secondary';
       case 'Draft': return 'outline';
       default: return 'outline';
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      const blob = await hrApiService.downloadPayslipPDF(payslip.id);
+      const url = globalThis.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `payslip_${payslip.employee.replace(/\s/g, '_')}_${payslip.period.replace(/\s/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      globalThis.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (error) {
+      console.error('Failed to download payslip:', error);
+      alert('Failed to download payslip. Please try again.');
     }
   };
 
@@ -85,12 +103,8 @@ export const PayslipDetailsDialog: React.FC<PayslipDetailsDialogProps> = ({
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button onClick={() => onOpenChange(false)}>
               Close
-            </Button>
-            <Button>
-              <FileText className="h-4 w-4 mr-2" />
-              Download PDF
             </Button>
           </div>
         </div>

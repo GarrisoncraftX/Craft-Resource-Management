@@ -68,7 +68,7 @@ public class PayrollServiceImpl implements PayrollService {
     @Override
     public PayrollRun createPayrollRun(PayrollRun payrollRun) {
         PayrollRun saved = payrollRunRepository.save(payrollRun);
-        auditClient.logAction(null, "CREATE_PAYROLL_RUN", "Run Date: " + saved.getRunDate());
+        auditClient.logAction(null, "CREATE_PAYROLL_RUN", String.format("{\"runDate\": \"%s\"}", saved.getRunDate()));
         return saved;
     }
 
@@ -103,7 +103,9 @@ public class PayrollServiceImpl implements PayrollService {
     @Override
     public Payslip createPayslip(Payslip payslip) {
         Payslip saved = payslipRepository.save(payslip);
-        auditClient.logAction(payslip.getUser().getId(), "CREATE_PAYSLIP", "Period: " + saved.getPayPeriodStart() + " to " + saved.getPayPeriodEnd());
+        auditClient.logAction(payslip.getUser().getId(), "CREATE_PAYSLIP", 
+            String.format("{\"periodStart\": \"%s\", \"periodEnd\": \"%s\"}", 
+                saved.getPayPeriodStart(), saved.getPayPeriodEnd()));
         return saved;
     }
 
@@ -283,7 +285,8 @@ public class PayrollServiceImpl implements PayrollService {
     @Override
     public PerformanceReview createPerformanceReview(PerformanceReview performanceReview) {
         PerformanceReview saved = performanceReviewRepository.save(performanceReview);
-        auditClient.logAction(null, "CREATE_PERFORMANCE_REVIEW", "Employee ID: " + saved.getUser().getId());
+        auditClient.logAction(null, "CREATE_PERFORMANCE_REVIEW", 
+            String.format("{\"employeeId\": %d}", saved.getUser().getId()));
         analyzePerformanceReview(saved);
         return saved;
     }
@@ -419,7 +422,8 @@ public class PayrollServiceImpl implements PayrollService {
 
         auditClient.logAction(createdBy, 
                              "PROCESS_PAYROLL", 
-                             "Processed payroll for " + employees.size() + " employees");
+                             String.format("{\"employeeCount\": %d, \"startDate\": \"%s\", \"endDate\": \"%s\", \"totalGross\": %.2f, \"totalNet\": %.2f}", 
+                                 employees.size(), startDate, endDate, totalGross, totalNet));
 
         return savedRun;
     }

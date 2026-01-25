@@ -81,8 +81,8 @@ export const LeaveManagement: React.FC = () => {
     try {
       await leaveApiService.approveLeaveRequest(requestId);
       await loadData();
-    } catch (err) {
-      const errorMsg = err?.response?.data?.message || err?.message || 'Failed to approve leave request';
+    } catch (err: any) {
+      const errorMsg = err?.message || 'Failed to approve leave request';
       setError(errorMsg);
       console.error('Error approving leave request:', err);
     } finally {
@@ -101,8 +101,8 @@ export const LeaveManagement: React.FC = () => {
     try {
       await leaveApiService.rejectLeaveRequest(requestId, 1, 'Request rejected');
       await loadData();
-    } catch (err) {
-      const errorMsg = err?.response?.data?.message || err?.message || 'Failed to reject leave request';
+    } catch (err: any) {
+      const errorMsg = err?.message || 'Failed to reject leave request';
       setError(errorMsg);
       console.error('Error rejecting leave request:', err);
     } finally {
