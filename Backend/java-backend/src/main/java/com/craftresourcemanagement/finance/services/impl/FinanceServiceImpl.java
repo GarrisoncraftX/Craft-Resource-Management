@@ -25,7 +25,7 @@ import java.math.BigDecimal;
 public class FinanceServiceImpl implements FinanceService {
 
     private static final Logger logger = LoggerFactory.getLogger(FinanceServiceImpl.class);
-    private static final String SYSTEM_USER = "SYSTEM";
+    private static final Long SYSTEM_USER_ID = null;
 
     private final ChartOfAccountRepository chartOfAccountRepository;
     private final BudgetRepository budgetRepository;
@@ -142,7 +142,7 @@ public class FinanceServiceImpl implements FinanceService {
         }
         
         Budget saved = budgetRepository.save(budget);
-        auditClient.logAction(budget.getCreatedBy(), "CREATE_BUDGET", "Budget: " + saved.getBudgetName() + ", Amount: " + saved.getTotalAmount());
+        auditClient.logAction(SYSTEM_USER_ID, "CREATE_BUDGET", "Budget: " + saved.getBudgetName() + ", Amount: " + saved.getTotalAmount());
         return saved;
     }
 
@@ -243,7 +243,7 @@ public class FinanceServiceImpl implements FinanceService {
             }
             
             Budget updated = budgetRepository.save(toUpdate);
-            auditClient.logAction(SYSTEM_USER, "UPDATE_BUDGET", "Budget: " + updated.getBudgetName());
+            auditClient.logAction(SYSTEM_USER_ID, "UPDATE_BUDGET", "Budget: " + updated.getBudgetName());
             return updated;
         }
         return null;
@@ -268,7 +268,7 @@ public class FinanceServiceImpl implements FinanceService {
         }
         
         JournalEntry savedEntry = journalEntryRepository.save(journalEntry);
-        auditClient.logAction(SYSTEM_USER, "CREATE_JOURNAL_ENTRY", "Account: " + savedEntry.getAccountCode() + ", Amount: " + savedEntry.getAmount());
+        auditClient.logAction(SYSTEM_USER_ID, "CREATE_JOURNAL_ENTRY", "Account: " + savedEntry.getAccountCode() + ", Amount: " + savedEntry.getAmount());
         detectAnomaly(savedEntry);
         return savedEntry;
     }
@@ -299,7 +299,7 @@ public class FinanceServiceImpl implements FinanceService {
             toUpdate.setAmount(journalEntry.getAmount());
             toUpdate.setAccountCode(journalEntry.getAccountCode());
             JournalEntry updatedEntry = journalEntryRepository.save(toUpdate);
-            auditClient.logAction(SYSTEM_USER, "UPDATE_JOURNAL_ENTRY", "Account: " + updatedEntry.getAccountCode());
+            auditClient.logAction(SYSTEM_USER_ID, "UPDATE_JOURNAL_ENTRY", "Account: " + updatedEntry.getAccountCode());
             detectAnomaly(updatedEntry);
             return updatedEntry;
         }
@@ -328,7 +328,7 @@ public class FinanceServiceImpl implements FinanceService {
         }
         
         AccountPayable saved = accountPayableRepository.save(ap);
-        auditClient.logAction(SYSTEM_USER, "CREATE_ACCOUNT_PAYABLE", "Invoice: " + saved.getInvoiceNumber() + ", Vendor: " + saved.getVendorName() + ", Amount: " + saved.getAmount());
+        auditClient.logAction(SYSTEM_USER_ID, "CREATE_ACCOUNT_PAYABLE", "Invoice: " + saved.getInvoiceNumber() + ", Vendor: " + saved.getVendorName() + ", Amount: " + saved.getAmount());
         return saved;
     }
 
@@ -372,7 +372,7 @@ public class FinanceServiceImpl implements FinanceService {
             }
             
             AccountPayable updated = accountPayableRepository.save(toUpdate);
-            auditClient.logAction(SYSTEM_USER, "UPDATE_ACCOUNT_PAYABLE", "Invoice: " + updated.getInvoiceNumber());
+            auditClient.logAction(SYSTEM_USER_ID, "UPDATE_ACCOUNT_PAYABLE", "Invoice: " + updated.getInvoiceNumber());
             return updated;
         }
         return null;
@@ -403,7 +403,7 @@ public class FinanceServiceImpl implements FinanceService {
         }
         
         AccountReceivable saved = accountReceivableRepository.save(ar);
-        auditClient.logAction(SYSTEM_USER, "CREATE_ACCOUNT_RECEIVABLE", "Invoice: " + saved.getInvoiceNumber() + ", Customer: " + saved.getCustomerName() + ", Amount: " + saved.getAmount());
+        auditClient.logAction(SYSTEM_USER_ID, "CREATE_ACCOUNT_RECEIVABLE", "Invoice: " + saved.getInvoiceNumber() + ", Customer: " + saved.getCustomerName() + ", Amount: " + saved.getAmount());
         return saved;
     }
 
@@ -452,7 +452,7 @@ public class FinanceServiceImpl implements FinanceService {
             }
             
             AccountReceivable updated = accountReceivableRepository.save(toUpdate);
-            auditClient.logAction(SYSTEM_USER, "UPDATE_ACCOUNT_RECEIVABLE", "Invoice: " + updated.getInvoiceNumber());
+            auditClient.logAction(SYSTEM_USER_ID, "UPDATE_ACCOUNT_RECEIVABLE", "Invoice: " + updated.getInvoiceNumber());
             return updated;
         }
         return null;
@@ -473,7 +473,7 @@ public class FinanceServiceImpl implements FinanceService {
             budgetRequest.setStatus("Pending");
         }
         BudgetRequest saved = budgetRequestRepository.save(budgetRequest);
-        auditClient.logAction(SYSTEM_USER, "CREATE_BUDGET_REQUEST", "Department: " + saved.getDepartment() + ", Amount: " + saved.getRequestedAmount());
+        auditClient.logAction(SYSTEM_USER_ID, "CREATE_BUDGET_REQUEST", "Department: " + saved.getDepartment() + ", Amount: " + saved.getRequestedAmount());
         return saved;
     }
 

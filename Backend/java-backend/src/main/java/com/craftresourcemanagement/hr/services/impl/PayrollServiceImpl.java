@@ -68,7 +68,7 @@ public class PayrollServiceImpl implements PayrollService {
     @Override
     public PayrollRun createPayrollRun(PayrollRun payrollRun) {
         PayrollRun saved = payrollRunRepository.save(payrollRun);
-        auditClient.logAction("SYSTEM", "CREATE_PAYROLL_RUN", "Run Date: " + saved.getRunDate());
+        auditClient.logAction(null, "CREATE_PAYROLL_RUN", "Run Date: " + saved.getRunDate());
         return saved;
     }
 
@@ -283,7 +283,7 @@ public class PayrollServiceImpl implements PayrollService {
     @Override
     public PerformanceReview createPerformanceReview(PerformanceReview performanceReview) {
         PerformanceReview saved = performanceReviewRepository.save(performanceReview);
-        auditClient.logAction(performanceReview.getReviewer(), "CREATE_PERFORMANCE_REVIEW", "Employee ID: " + saved.getUser().getId());
+        auditClient.logAction(null, "CREATE_PERFORMANCE_REVIEW", "Employee ID: " + saved.getUser().getId());
         analyzePerformanceReview(saved);
         return saved;
     }
@@ -348,13 +348,15 @@ public class PayrollServiceImpl implements PayrollService {
     public PayrollRun processPayroll(LocalDate startDate, LocalDate endDate, LocalDate payDate,
                                      Integer departmentId, boolean includeOvertime, 
                                      boolean includeBonuses, boolean includeDeductions, Long createdBy) {
-        // Create payroll run
         PayrollRun payrollRun = new PayrollRun();
+        payrollRun.setRunMonth(endDate.getMonthValue());
+        payrollRun.setRunYear(endDate.getYear());
+        payrollRun.setStartDate(startDate);
+        payrollRun.setEndDate(endDate);
         payrollRun.setRunDate(payDate.atTime(23, 59, 59));
         payrollRun.setStatus("COMPLETED");
-        PayrollRun savedRun = payrollRunRepository.save(payrollRun);
+        payrollRun.setCreatedBy(createdBy);
 
-        // Get active employees
         List<User> employees;
         if (departmentId != null && departmentId > 0) {
             employees = userRepository.findAll().stream()
@@ -365,21 +367,30 @@ public class PayrollServiceImpl implements PayrollService {
         }
 
         List<Payslip> processedPayslips = new java.util.ArrayList<>();
+        BigDecimal totalGross = BigDecimal.ZERO;
+        BigDecimal totalDeductions = BigDecimal.ZERO;
+        BigDecimal totalNet = BigDecimal.ZERO;
 
-        // Process each employee
         for (User employee : employees) {
             if (employee.getSalary() == null || employee.getSalary() <= 0) {
                 continue;
             }
 
-            BigDecimal grossPay = BigDecimal.valueOf(employee.getSalary());
+            BigDecimal baseSalary = BigDecimal.valueOf(employee.getSalary());
+            BigDecimal overtimePay = includeOvertime ? baseSalary.multiply(BigDecimal.valueOf(0.15)) : BigDecimal.ZERO;
+            BigDecimal bonusPay = includeBonuses ? baseSalary.multiply(BigDecimal.valueOf(0.10)) : BigDecimal.ZERO;
+            BigDecimal grossPay = baseSalary.add(overtimePay).add(bonusPay);
+            
             BigDecimal taxDeduction = grossPay.multiply(BigDecimal.valueOf(0.065));
             BigDecimal otherDeduction = BigDecimal.valueOf(350);
-            BigDecimal totalDeductions = includeDeductions ? taxDeduction.add(otherDeduction) : BigDecimal.ZERO;
-            BigDecimal netPay = grossPay.subtract(totalDeductions);
+            BigDecimal deductions = includeDeductions ? taxDeduction.add(otherDeduction) : BigDecimal.ZERO;
+            BigDecimal netPay = grossPay.subtract(deductions);
+
+            totalGross = totalGross.add(grossPay);
+            totalDeductions = totalDeductions.add(deductions);
+            totalNet = totalNet.add(netPay);
 
             Payslip payslip = new Payslip();
-            payslip.setPayrollRun(savedRun);
             payslip.setUser(employee);
             payslip.setPayPeriodStart(startDate);
             payslip.setPayPeriodEnd(endDate);
@@ -387,21 +398,29 @@ public class PayrollServiceImpl implements PayrollService {
             payslip.setTaxDeductions(taxDeduction);
             payslip.setOtherDeductions(otherDeduction);
             payslip.setNetPay(netPay);
-
-            Payslip saved = payslipRepository.save(payslip);
-            processedPayslips.add(saved);
+            processedPayslips.add(payslip);
         }
 
-        // Send notifications
+        payrollRun.setTotalGross(totalGross);
+        payrollRun.setTotalDeductions(totalDeductions);
+        payrollRun.setTotalNet(totalNet);
+        PayrollRun savedRun = payrollRunRepository.save(payrollRun);
+
+        for (Payslip payslip : processedPayslips) {
+            payslip.setPayrollRun(savedRun);
+            payslipRepository.save(payslip);
+        }
+
         try {
             notificationService.sendBulkPayrollNotifications(processedPayslips);
         } catch (Exception e) {
             logger.error("Failed to send notifications: {}", e.getMessage());
         }
 
-        auditClient.logAction(createdBy != null ? createdBy.toString() : "SYSTEM", 
+        auditClient.logAction(createdBy, 
                              "PROCESS_PAYROLL", 
                              "Processed payroll for " + employees.size() + " employees");
 
         return savedRun;
     }
+}

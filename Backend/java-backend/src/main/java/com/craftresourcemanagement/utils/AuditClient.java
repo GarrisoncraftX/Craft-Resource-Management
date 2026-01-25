@@ -60,18 +60,17 @@ public class AuditClient {
      * Async audit logging with queueing
      */
     @Async
-    public CompletableFuture<Void> logActionAsync(String userId, String action, String details) {
+    public CompletableFuture<Void> logActionAsync(Long userId, String action, String details) {
         return logActionAsync(userId, action, details, null, null, null);
     }
 
     @Async
-    public CompletableFuture<Void> logActionAsync(String userId, String action, String details, 
+    public CompletableFuture<Void> logActionAsync(Long userId, String action, String details, 
                                                     String serviceName, String entityType, String entityId) {
         try {
             AuditLog log = createAuditLog(userId, action, details, serviceName, entityType, entityId);
             auditQueue.offer(log);
             
-            // Flush immediately if queue is full
             if (auditQueue.size() >= batchSize) {
                 flushQueue();
             }
@@ -83,9 +82,6 @@ public class AuditClient {
         }
     }
 
-    /**
-     * Synchronous audit logging with retry
-     */
     @Retryable(
         maxAttemptsExpression = "${audit.retry.max-attempts:3}",
         backoff = @Backoff(
@@ -94,7 +90,7 @@ public class AuditClient {
             maxDelayExpression = "${audit.retry.backoff.max-delay:5000}"
         )
     )
-    public void logAction(String userId, String action, String details) {
+    public void logAction(Long userId, String action, String details) {
         logAction(userId, action, details, null, null, null);
     }
 
@@ -106,7 +102,7 @@ public class AuditClient {
             maxDelayExpression = "${audit.retry.backoff.max-delay:5000}"
         )
     )
-    public void logAction(String userId, String action, String details, 
+    public void logAction(Long userId, String action, String details, 
                          String serviceName, String entityType, String entityId) {
         try {
             AuditLog log = createAuditLog(userId, action, details, serviceName, entityType, entityId);
@@ -114,7 +110,6 @@ public class AuditClient {
             logger.debug("Audit log saved: action={}, user={}", action, userId);
         } catch (Exception e) {
             logger.error("Failed to save audit log after retries: {}", e.getMessage(), e);
-            // Fallback: add to queue for later processing
             try {
                 AuditLog log = createAuditLog(userId, action, details, serviceName, entityType, entityId);
                 auditQueue.offer(log);
@@ -123,16 +118,6 @@ public class AuditClient {
                 logger.error("Failed to queue audit log: {}", queueError.getMessage());
             }
         }
-    }
-
-    public void logAction(Long userId, String action, String details) {
-        logAction(userId != null ? userId.toString() : null, action, details);
-    }
-
-    public void logAction(Long userId, String action, String details, 
-                         String serviceName, String entityType, String entityId) {
-        logAction(userId != null ? userId.toString() : null, action, details, 
-                 serviceName, entityType, entityId);
     }
 
     /**
@@ -160,13 +145,10 @@ public class AuditClient {
         }
     }
 
-    /**
-     * Create audit log entity
-     */
-    private AuditLog createAuditLog(String userId, String action, String details,
+    private AuditLog createAuditLog(Long userId, String action, String details,
                                     String serviceName, String entityType, String entityId) {
         AuditLog log = new AuditLog();
-        log.setPerformedBy(userId != null ? userId : "SYSTEM");
+        log.setUserId(userId);
         log.setAction(action);
         log.setTimestamp(LocalDateTime.now());
         log.setDetails(maskSensitiveData(details));

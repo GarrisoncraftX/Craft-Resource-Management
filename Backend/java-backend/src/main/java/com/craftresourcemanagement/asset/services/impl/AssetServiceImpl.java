@@ -35,7 +35,7 @@ public class AssetServiceImpl implements AssetService {
     @Override
     public Asset createAsset(Asset asset) {
         Asset saved = assetRepository.save(asset);
-        auditClient.logAction("SYSTEM", "CREATE_ASSET", "Asset: " + saved.getAssetTag());
+        auditClient.logAction(null, "CREATE_ASSET", "Asset: " + saved.getAssetTag());
         return saved;
     }
 
@@ -63,7 +63,7 @@ public class AssetServiceImpl implements AssetService {
             toUpdate.setLocation(asset.getLocation());
             toUpdate.setStatus(asset.getStatus());
             Asset updated = assetRepository.save(toUpdate);
-            auditClient.logAction("SYSTEM", "UPDATE_ASSET", "Asset: " + updated.getAssetTag());
+            auditClient.logAction(null, "UPDATE_ASSET", "Asset: " + updated.getAssetTag());
             return updated;
         }
         return null;
@@ -72,7 +72,7 @@ public class AssetServiceImpl implements AssetService {
     @Override
     public void deleteAsset(Long id) {
         assetRepository.findById(id).ifPresent(asset -> 
-            auditClient.logAction("SYSTEM", "DELETE_ASSET", "Asset: " + asset.getAssetTag())
+            auditClient.logAction(null, "DELETE_ASSET", "Asset: " + asset.getAssetTag())
         );
         assetRepository.deleteById(id);
     }
@@ -81,7 +81,7 @@ public class AssetServiceImpl implements AssetService {
     @Override
     public MaintenanceRecord createMaintenanceRecord(MaintenanceRecord record) {
         MaintenanceRecord saved = maintenanceRecordRepository.save(record);
-        auditClient.logAction(record.getPerformedBy(), "CREATE_MAINTENANCE_RECORD", "Asset ID: " + saved.getAsset().getId());
+        auditClient.logAction(null, "CREATE_MAINTENANCE_RECORD", "Asset ID: " + saved.getAsset().getId() + ", Performed by: " + saved.getPerformedBy());
         return saved;
     }
 
@@ -118,7 +118,7 @@ public class AssetServiceImpl implements AssetService {
     @Override
     public DisposalRecord createDisposalRecord(DisposalRecord record) {
         DisposalRecord saved = disposalRecordRepository.save(record);
-        auditClient.logAction(record.getDisposedBy(), "CREATE_DISPOSAL_RECORD", "Asset ID: " + saved.getAsset().getId() + ", Reason: " + saved.getReason());
+        auditClient.logAction(null, "CREATE_DISPOSAL_RECORD", "Asset ID: " + saved.getAsset().getId() + ", Reason: " + saved.getReason() + ", Disposed by: " + saved.getDisposedBy());
         return saved;
     }
 

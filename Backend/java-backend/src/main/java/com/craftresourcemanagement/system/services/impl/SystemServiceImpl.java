@@ -95,8 +95,28 @@ public class SystemServiceImpl implements SystemService {
     }
 
     @Override
+    public AuditLog createAuditLogWithDescriptiveAction(AuditLog auditLog) {
+        if (auditLog.getTimestamp() == null) {
+            auditLog.setTimestamp(LocalDateTime.now());
+        }
+        
+        if (auditLog.getUserId() != null) {
+            userRepository.findById(auditLog.getUserId()).ifPresent(user -> {
+                String userName = user.getFirstName() + " " + user.getLastName();
+                String action = auditLog.getAction();
+                
+                if (!action.toLowerCase().contains("user") && !action.toLowerCase().contains(userName.toLowerCase())) {
+                    auditLog.setAction("User " + userName + " " + action);
+                }
+            });
+        }
+        
+        return auditLogRepository.save(auditLog);
+    }
+
+    @Override
     public List<AuditLog> getAllAuditLogs() {
-        return auditLogRepository.findAll();
+        return auditLogRepository.findAllByOrderByTimestampDesc();
     }
 
     @Override
@@ -110,18 +130,18 @@ public class SystemServiceImpl implements SystemService {
     }
 
     @Override
-    public List<AuditLog> getRecentAuditLogsForUser(String performedBy) {
-        return auditLogRepository.findTop5ByPerformedByOrderByTimestampDesc(performedBy);
+    public List<AuditLog> getRecentAuditLogsForUser(Long userId) {
+        return auditLogRepository.findTop5ByUserIdOrderByTimestampDesc(userId);
     }
 
     @Override
-    public Page<AuditLog> getAuditLogsForUser(String performedBy, LocalDateTime startDate, 
+    public Page<AuditLog> getAuditLogsForUser(Long userId, LocalDateTime startDate, 
                                               LocalDateTime endDate, Pageable pageable) {
         if (startDate != null && endDate != null) {
-            return auditLogRepository.findByPerformedByAndTimestampBetweenOrderByTimestampDesc(
-                performedBy, startDate, endDate, pageable);
+            return auditLogRepository.findByUserIdAndTimestampBetweenOrderByTimestampDesc(
+                userId, startDate, endDate, pageable);
         }
-        return auditLogRepository.findByPerformedByOrderByTimestampDesc(performedBy, pageable);
+        return auditLogRepository.findByUserIdOrderByTimestampDesc(userId, pageable);
     }
 
     @Override
@@ -131,11 +151,11 @@ public class SystemServiceImpl implements SystemService {
     }
 
     @Override
-    public Page<AuditLog> searchAuditLogs(String performedBy, String action, String serviceName,
+    public Page<AuditLog> searchAuditLogs(Long userId, String action, String serviceName,
                                           String entityType, LocalDateTime startDate, 
                                           LocalDateTime endDate, Pageable pageable) {
         return auditLogRepository.searchAuditLogs(
-            performedBy, action, serviceName, entityType, startDate, endDate, pageable);
+            userId, action, serviceName, entityType, startDate, endDate, pageable);
     }
 
     @Override
@@ -162,7 +182,16 @@ public class SystemServiceImpl implements SystemService {
         
         for (Object[] result : results) {
             Map<String, Object> map = new HashMap<>();
-            map.put("user", result[0]);
+            Object userIdObj = result[0];
+            Long userId;
+            if (userIdObj instanceof Integer) {
+                userId = ((Integer) userIdObj).longValue();
+            } else if (userIdObj instanceof Long) {
+                userId = (Long) userIdObj;
+            } else {
+                userId = null;
+            }
+            map.put("user", userId);
             map.put("count", result[1]);
             topUsers.add(map);
         }
@@ -171,7 +200,7 @@ public class SystemServiceImpl implements SystemService {
     }
 
     @Override
-    public Map<String, Object> getAuditStatistics(String performedBy, String action,
+    public Map<String, Object> getAuditStatistics(Long userId, String action,
                                                    LocalDateTime startDate, LocalDateTime endDate) {
         Map<String, Object> stats = new HashMap<>();
         
@@ -202,7 +231,7 @@ public class SystemServiceImpl implements SystemService {
         if (existing.isPresent()) {
             AuditLog toUpdate = existing.get();
             toUpdate.setAction(auditLog.getAction());
-            toUpdate.setPerformedBy(auditLog.getPerformedBy());
+            toUpdate.setUserId(auditLog.getUserId());
             toUpdate.setTimestamp(auditLog.getTimestamp());
             toUpdate.setDetails(auditLog.getDetails());
             return auditLogRepository.save(toUpdate);
@@ -275,10 +304,13 @@ public class SystemServiceImpl implements SystemService {
     public ActiveSession createOrUpdateSession(ActiveSession session) {
         session.setLastActivity(LocalDateTime.now());
         ActiveSession saved = activeSessionRepository.save(session);
-        userRepository.findById(saved.getUserId()).ifPresent(user -> {
-            saved.setFirstName(user.getFirstName());
-            saved.setLastName(user.getLastName());
-        });
+        Long userId = saved.getUserId() != null ? Long.valueOf(saved.getUserId()) : null;
+        if (userId != null) {
+            userRepository.findById(userId).ifPresent(user -> {
+                saved.setFirstName(user.getFirstName());
+                saved.setLastName(user.getLastName());
+            });
+        }
         return saved;
     }
 

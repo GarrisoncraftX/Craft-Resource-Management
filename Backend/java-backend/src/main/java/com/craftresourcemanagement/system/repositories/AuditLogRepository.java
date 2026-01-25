@@ -14,14 +14,17 @@ import java.util.List;
 @Repository
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     
+    // Find all ordered by timestamp descending (latest first)
+    List<AuditLog> findAllByOrderByTimestampDesc();
+    
     // Existing method
-    List<AuditLog> findTop5ByPerformedByOrderByTimestampDesc(String performedBy);
+    List<AuditLog> findTop5ByUserIdOrderByTimestampDesc(Long userId);
     
     // Enhanced query methods with pagination
-    Page<AuditLog> findByPerformedByOrderByTimestampDesc(String performedBy, Pageable pageable);
+    Page<AuditLog> findByUserIdOrderByTimestampDesc(Long userId, Pageable pageable);
     
-    Page<AuditLog> findByPerformedByAndTimestampBetweenOrderByTimestampDesc(
-        String performedBy, 
+    Page<AuditLog> findByUserIdAndTimestampBetweenOrderByTimestampDesc(
+        Long userId, 
         LocalDateTime startDate, 
         LocalDateTime endDate, 
         Pageable pageable
@@ -45,7 +48,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     
     // Advanced search
     @Query("SELECT a FROM AuditLog a WHERE " +
-           "(:performedBy IS NULL OR a.performedBy = :performedBy) AND " +
+           "(:userId IS NULL OR a.userId = :userId) AND " +
            "(:action IS NULL OR a.action = :action) AND " +
            "(:serviceName IS NULL OR a.serviceName = :serviceName) AND " +
            "(:entityType IS NULL OR a.entityType = :entityType) AND " +
@@ -53,7 +56,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
            "(:endDate IS NULL OR a.timestamp <= :endDate) " +
            "ORDER BY a.timestamp DESC")
     Page<AuditLog> searchAuditLogs(
-        @Param("performedBy") String performedBy,
+        @Param("userId") Long userId,
         @Param("action") String action,
         @Param("serviceName") String serviceName,
         @Param("entityType") String entityType,
@@ -66,11 +69,11 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     @Query("SELECT a.action, COUNT(a) FROM AuditLog a WHERE a.timestamp >= :since GROUP BY a.action ORDER BY COUNT(a) DESC")
     List<Object[]> getTopActionsSince(@Param("since") LocalDateTime since);
     
-    @Query("SELECT a.performedBy, COUNT(a) FROM AuditLog a WHERE a.timestamp >= :since GROUP BY a.performedBy ORDER BY COUNT(a) DESC")
+    @Query("SELECT a.userId, COUNT(a) FROM AuditLog a WHERE a.timestamp >= :since GROUP BY a.userId ORDER BY COUNT(a) DESC")
     List<Object[]> getTopUsersSince(@Param("since") LocalDateTime since);
     
     // Count methods for statistics
-    long countByPerformedByAndTimestampBetween(String performedBy, LocalDateTime startDate, LocalDateTime endDate);
+    long countByUserIdAndTimestampBetween(Long userId, LocalDateTime startDate, LocalDateTime endDate);
     
     long countByActionAndTimestampBetween(String action, LocalDateTime startDate, LocalDateTime endDate);
 }

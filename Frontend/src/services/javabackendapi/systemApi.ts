@@ -10,12 +10,17 @@ export interface SystemConfig {
 
 export interface AuditLog {
   id?: number;
+  userId?: number;
   action: string;
-  entity: string;
-  entityId: number;
-  performedBy: string;
   timestamp: string;
   details?: string;
+  serviceName?: string;
+  ipAddress?: string;
+  requestId?: string;
+  sessionId?: string;
+  entityType?: string;
+  entityId?: string;
+  result?: string;
 }
 
 class SystemApiService {
@@ -61,8 +66,8 @@ class SystemApiService {
     return apiClient.delete(`/system/audit-logs/${id}`);
   }
 
-  async getRecentAuditLogsForUser(performedBy: string): Promise<AuditLog[]> {
-    return apiClient.get(`/system/audit-logs/user/${performedBy}/recent`);
+  async getRecentAuditLogsForUser(userId: string | number): Promise<AuditLog[]> {
+    return apiClient.get(`/system/audit-logs/user/${userId}/recent`);
   }
 }
 

@@ -5,10 +5,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "audit_logs", indexes = {
-    @Index(name = "idx_performed_by", columnList = "performedBy"),
+    @Index(name = "idx_user_id", columnList = "user_id"),
     @Index(name = "idx_timestamp", columnList = "timestamp"),
     @Index(name = "idx_action", columnList = "action"),
-    @Index(name = "idx_service_name", columnList = "serviceName")
+    @Index(name = "idx_service_name", columnList = "service_name")
 })
 public class AuditLog {
 
@@ -16,11 +16,11 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String action;
+    @Column(name = "user_id")
+    private Long userId;
 
     @Column(nullable = false)
-    private String performedBy;
+    private String action;
 
     @Column(nullable = false)
     private LocalDateTime timestamp;
@@ -29,12 +29,24 @@ public class AuditLog {
     private String details;
 
     // Enhanced metadata fields
+    @Column(name = "service_name")
     private String serviceName; // python-backend, nodejs-backend, java-backend
+    
+    @Column(name = "ip_address")
     private String ipAddress;
+    
+    @Column(name = "request_id")
     private String requestId; // For distributed tracing
+    
+    @Column(name = "session_id")
     private String sessionId;
+    
+    @Column(name = "entity_type")
     private String entityType; // visitor, employee, asset, etc.
+    
+    @Column(name = "entity_id")
     private String entityId;
+    
     private String result; // success, failure
 
     // Getters and Setters
@@ -43,20 +55,20 @@ public class AuditLog {
         return id;
     }
 
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
     public String getAction() {
         return action;
     }
 
     public void setAction(String action) {
         this.action = action;
-    }
-
-    public String getPerformedBy() {
-        return performedBy;
-    }
-
-    public void setPerformedBy(String performedBy) {
-        this.performedBy = performedBy;
     }
 
     public LocalDateTime getTimestamp() {

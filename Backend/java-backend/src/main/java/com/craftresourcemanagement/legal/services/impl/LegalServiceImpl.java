@@ -30,7 +30,7 @@ public class LegalServiceImpl implements LegalService {
     @Override
     public LegalCase createLegalCase(LegalCase legalCase) {
         LegalCase saved = legalCaseRepository.save(legalCase);
-        auditClient.logAction(legalCase.getAssignedTo(), "CREATE_LEGAL_CASE", "Case: " + saved.getCaseNumber());
+        auditClient.logAction(null, "CREATE_LEGAL_CASE", "Case: " + saved.getCaseNumber());
         return saved;
     }
 
@@ -57,7 +57,7 @@ public class LegalServiceImpl implements LegalService {
             toUpdate.setStatus(legalCase.getStatus());
             toUpdate.setAssignedTo(legalCase.getAssignedTo());
             LegalCase updated = legalCaseRepository.save(toUpdate);
-            auditClient.logAction(legalCase.getAssignedTo(), "UPDATE_LEGAL_CASE", "Case: " + updated.getCaseNumber() + ", Status: " + updated.getStatus());
+            auditClient.logAction(null, "UPDATE_LEGAL_CASE", "Case: " + updated.getCaseNumber() + ", Status: " + updated.getStatus());
             return updated;
         }
         return null;
@@ -66,7 +66,7 @@ public class LegalServiceImpl implements LegalService {
     @Override
     public void deleteLegalCase(Long id) {
         legalCaseRepository.findById(id).ifPresent(legalCase -> 
-            auditClient.logAction(legalCase.getAssignedTo(), "DELETE_LEGAL_CASE", "Case: " + legalCase.getCaseNumber())
+            auditClient.logAction(null, "DELETE_LEGAL_CASE", "Case: " + legalCase.getCaseNumber())
         );
         legalCaseRepository.deleteById(id);
     }
@@ -75,7 +75,7 @@ public class LegalServiceImpl implements LegalService {
     @Override
     public ComplianceRecord createComplianceRecord(ComplianceRecord complianceRecord) {
         ComplianceRecord saved = complianceRecordRepository.save(complianceRecord);
-        auditClient.logAction(complianceRecord.getResponsiblePerson(), "CREATE_COMPLIANCE_RECORD", "Type: " + saved.getComplianceType());
+        auditClient.logAction(null, "CREATE_COMPLIANCE_RECORD", "Type: " + saved.getComplianceType() + ", Responsible: " + saved.getResponsiblePerson());
         return saved;
     }
 
@@ -99,7 +99,7 @@ public class LegalServiceImpl implements LegalService {
             toUpdate.setDescription(complianceRecord.getDescription());
             toUpdate.setResponsiblePerson(complianceRecord.getResponsiblePerson());
             ComplianceRecord updated = complianceRecordRepository.save(toUpdate);
-            auditClient.logAction(complianceRecord.getResponsiblePerson(), "UPDATE_COMPLIANCE_RECORD", "Type: " + updated.getComplianceType());
+            auditClient.logAction(null, "UPDATE_COMPLIANCE_RECORD", "Type: " + updated.getComplianceType() + ", Responsible: " + updated.getResponsiblePerson());
             return updated;
         }
         return null;

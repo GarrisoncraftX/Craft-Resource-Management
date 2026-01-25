@@ -35,7 +35,7 @@ public class RevenueServiceImpl implements RevenueService {
     @Override
     public TaxAssessment createTaxAssessment(TaxAssessment taxAssessment) {
         TaxAssessment saved = taxAssessmentRepository.save(taxAssessment);
-        auditClient.logAction("SYSTEM", "CREATE_TAX_ASSESSMENT", "Taxpayer: " + saved.getTaxpayerId() + ", Amount: " + saved.getAssessedAmount());
+        auditClient.logAction(null, "CREATE_TAX_ASSESSMENT", "Taxpayer: " + saved.getTaxpayerId() + ", Amount: " + saved.getAssessedAmount());
         return saved;
     }
 
@@ -59,7 +59,7 @@ public class RevenueServiceImpl implements RevenueService {
             toUpdate.setAssessedAmount(taxAssessment.getAssessedAmount());
             toUpdate.setStatus(taxAssessment.getStatus());
             TaxAssessment updated = taxAssessmentRepository.save(toUpdate);
-            auditClient.logAction("SYSTEM", "UPDATE_TAX_ASSESSMENT", "Taxpayer: " + updated.getTaxpayerId() + ", Status: " + updated.getStatus());
+            auditClient.logAction(null, "UPDATE_TAX_ASSESSMENT", "Taxpayer: " + updated.getTaxpayerId() + ", Status: " + updated.getStatus());
             return updated;
         }
         return null;
@@ -74,7 +74,7 @@ public class RevenueServiceImpl implements RevenueService {
     @Override
     public RevenueCollection createRevenueCollection(RevenueCollection revenueCollection) {
         RevenueCollection saved = revenueCollectionRepository.save(revenueCollection);
-        auditClient.logAction("SYSTEM", "CREATE_REVENUE_COLLECTION", "Payer: " + saved.getPayerId() + ", Amount: " + saved.getAmountCollected());
+        auditClient.logAction(null, "CREATE_REVENUE_COLLECTION", "Payer: " + saved.getPayerId() + ", Amount: " + saved.getAmountCollected());
         return saved;
     }
 
@@ -111,7 +111,7 @@ public class RevenueServiceImpl implements RevenueService {
     @Override
     public BusinessPermit createBusinessPermit(BusinessPermit businessPermit) {
         BusinessPermit saved = businessPermitRepository.save(businessPermit);
-        auditClient.logAction("SYSTEM", "CREATE_BUSINESS_PERMIT", "Permit: " + saved.getPermitNumber() + ", Business: " + saved.getBusinessName());
+        auditClient.logAction(null, "CREATE_BUSINESS_PERMIT", "Permit: " + saved.getPermitNumber() + ", Business: " + saved.getBusinessName());
         return saved;
     }
 
@@ -141,7 +141,7 @@ public class RevenueServiceImpl implements RevenueService {
             toUpdate.setFee(businessPermit.getFee());
             toUpdate.setStatus(businessPermit.getStatus());
             BusinessPermit updated = businessPermitRepository.save(toUpdate);
-            auditClient.logAction("SYSTEM", "UPDATE_BUSINESS_PERMIT", "Permit: " + updated.getPermitNumber() + ", Status: " + updated.getStatus());
+            auditClient.logAction(null, "UPDATE_BUSINESS_PERMIT", "Permit: " + updated.getPermitNumber() + ", Status: " + updated.getStatus());
             return updated;
         }
         return null;

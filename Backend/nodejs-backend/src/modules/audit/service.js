@@ -13,27 +13,25 @@ class AuditService {
         this.auditQueue = [];
         this.isProcessing = false;
         
-        // Start periodic flush
         this.flushTimer = setInterval(() => this.flushQueue(), this.flushInterval);
     }
 
-    async logAction(userId, action, details = {}, entityType = null, entityId = null) {
+    async logAction(userId, action, details = {}, entityType = null, entityId = null, ipAddress = null) {
         try {
             const auditLog = {
-                action: action,
-                performedBy: userId ? userId.toString() : 'SYSTEM',
+                userId: userId || null,
+                action: this.buildDescriptiveAction(action, details),
                 timestamp: new Date().toISOString(),
                 details: this.maskSensitiveData(JSON.stringify(details)),
                 serviceName: 'nodejs-backend',
+                ipAddress: ipAddress,
                 entityType: entityType,
                 entityId: entityId,
                 result: 'success'
             };
 
-            // Add to queue for batching
             this.auditQueue.push(auditLog);
             
-            // Flush immediately if queue is full
             if (this.auditQueue.length >= this.batchSize) {
                 await this.flushQueue();
             }
@@ -42,13 +40,66 @@ class AuditService {
         }
     }
 
-    async logActionSync(userId, action, details = {}, entityType = null, entityId = null) {
+    buildDescriptiveAction(action, details) {
+        const { module, operation, recordDate, leaveType, startDate, endDate, recordId } = details;
+        
+        if (module === 'attendance' && operation === 'UPDATE') {
+            return `has updated the Attendance record for ${recordDate}`;
+        }
+        if (module === 'leave_management' && operation === 'CREATE') {
+            return `has created a new Leave Request for ${startDate} to ${endDate}`;
+        }
+        if (module === 'leave_management' && operation === 'UPDATE') {
+            return `has updated Leave Request ${recordId}`;
+        }
+        if (module === 'leave_management' && operation === 'DELETE') {
+            return `has deleted Leave Request ${recordId}`;
+        }
+        if (module === 'leave_management' && operation === 'APPROVE') {
+            return `has approved Leave Request ${recordId}`;
+        }
+        if (module === 'leave_management' && operation === 'REJECT') {
+            return `has rejected Leave Request ${recordId}`;
+        }
+        if (module === 'procurement' && operation === 'CREATE') {
+            return `has created a new Procurement Request ${recordId}`;
+        }
+        if (module === 'procurement' && operation === 'UPDATE') {
+            return `has updated Procurement Request ${recordId}`;
+        }
+        if (module === 'procurement' && operation === 'DELETE') {
+            return `has deleted Procurement Request ${recordId}`;
+        }
+        if (module === 'transportation' && operation === 'CREATE') {
+            return `has created a new Transportation Request ${recordId}`;
+        }
+        if (module === 'transportation' && operation === 'UPDATE') {
+            return `has updated Transportation Request ${recordId}`;
+        }
+        if (module === 'planning' && operation === 'CREATE') {
+            return `has created a new Planning Item ${recordId}`;
+        }
+        if (module === 'planning' && operation === 'UPDATE') {
+            return `has updated Planning Item ${recordId}`;
+        }
+        if (module === 'communication' && operation === 'CREATE') {
+            return `has created a new Communication ${details.communicationType || 'item'}`;
+        }
+        if (module === 'public_relations' && operation === 'CREATE') {
+            return `has created a new Public Relations ${details.prType || 'item'}`;
+        }
+        
+        return action;
+    }
+
+    async logActionSync(userId, action, details = {}, entityType = null, entityId = null, ipAddress = null) {
         const auditLog = {
-            action: action,
-            performedBy: userId ? userId.toString() : 'SYSTEM',
+            userId: userId || null,
+            action: this.buildDescriptiveAction(action, details),
             timestamp: new Date().toISOString(),
             details: this.maskSensitiveData(JSON.stringify(details)),
             serviceName: 'nodejs-backend',
+            ipAddress: ipAddress,
             entityType: entityType,
             entityId: entityId,
             result: 'success'
@@ -85,7 +136,7 @@ class AuditService {
             );
             return true;
         } catch (error) {
-            console.error('Failed to send audit log after retries, re-queuing:', error.message);
+            console.error('Failed to send audit log after retries:', error.message);
             this.auditQueue.push(auditLog);
             return false;
         }
@@ -127,8 +178,8 @@ class AuditService {
         return masked;
     }
 
-    async logEntityAction(entityType, entityId, action, userId, details = {}) {
-        await this.logAction(userId, action, details, entityType, entityId);
+    async logEntityAction(entityType, entityId, action, userId, details = {}, ipAddress = null) {
+        await this.logAction(userId, action, details, entityType, entityId, ipAddress);
     }
 
     async getUserAuditLogs(userId, limit = 10, page = 0) {

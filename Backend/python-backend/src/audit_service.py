@@ -23,17 +23,18 @@ class AuditService:
         self.flush_thread = threading.Thread(target=self._flush_worker, daemon=True)
         self.flush_thread.start()
 
-    def log_action(self, user_id: Optional[str], action: str, details: Optional[Any] = None,
-                   entity_type: Optional[str] = None, entity_id: Optional[str] = None) -> None:
+    def log_action(self, user_id: Optional[int], action: str, details: Optional[Any] = None,
+                   entity_type: Optional[str] = None, entity_id: Optional[str] = None, ip_address: Optional[str] = None) -> None:
         """
         Non-blocking audit logging with queueing
         """
         audit_log = {
-            'action': action,
-            'performedBy': str(user_id) if user_id else 'SYSTEM',
+            'userId': user_id,
+            'action': self._build_descriptive_action(action, details if isinstance(details, dict) else {}),
             'timestamp': datetime.now(timezone.utc).isoformat(),
             'details': self._mask_sensitive_data(str(details) if details else '{}'),
             'serviceName': 'python-backend',
+            'ipAddress': ip_address,
             'entityType': entity_type,
             'entityId': entity_id,
             'result': 'success'
@@ -44,6 +45,33 @@ class AuditService:
             
         if len(self.audit_queue) >= self.batch_size:
             self._flush_queue()
+
+    def _build_descriptive_action(self, action: str, details: Dict[str, Any]) -> str:
+        """Build human-readable action statements"""
+        module = details.get('module', '')
+        operation = details.get('operation', '')
+        
+        if module == 'biometric' and operation == 'ENROLL':
+            employee_id = details.get('employeeId', 'unknown')
+            return f"has enrolled biometric data for employee {employee_id}"
+        
+        if module == 'dashboard' and operation == 'VIEW':
+            widget_name = details.get('widgetName', 'unknown widget')
+            return f"viewed the Employee Dashboard - {widget_name}"
+        
+        if module == 'visitor' and operation == 'CHECK_IN':
+            visitor_name = details.get('visitorName', 'unknown visitor')
+            return f"has checked in visitor {visitor_name}"
+        
+        if module == 'health_safety' and operation == 'CREATE':
+            incident_type = details.get('incidentType', 'incident')
+            return f"has reported a new {incident_type}"
+        
+        if module == 'reports' and operation == 'GENERATE':
+            report_type = details.get('reportType', 'report')
+            return f"has generated a {report_type}"
+        
+        return action
 
     def _send_with_retry(self, audit_log: Dict[str, Any], max_retries: int = 3) -> bool:
         headers = {
@@ -68,7 +96,7 @@ class AuditService:
                 if attempt < max_retries - 1:
                     time.sleep(wait_time)
                 else:
-                    logger.error(f"Failed after {max_retries} attempts, re-queuing")
+                    logger.error(f"Failed after {max_retries} attempts")
                     with self.lock:
                         self.audit_queue.append(audit_log)
                     return False

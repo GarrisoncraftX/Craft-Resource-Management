@@ -35,46 +35,51 @@ export const AuditLogs: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSeverity, setSelectedSeverity] = useState('all');
   const [dateRange, setDateRange] = useState('7days');
+  const [entityTypes, setEntityTypes] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchLogs = async () => {
       const data = await adminApiService.getAuditLogs();
       setAuditLogs(data);
+      
+      // Extract unique entity types from logs
+      const uniqueTypes = Array.from(new Set(data.map(log => log.entityType).filter(Boolean))) as string[];
+      setEntityTypes(uniqueTypes.sort());
     };
     fetchLogs();
   }, []);
 
   const filteredLogs = auditLogs.filter(log => {
-    const matchesSearch = log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = searchTerm === '' || 
                          log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.resource.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.details.toLowerCase().includes(searchTerm.toLowerCase());
+                         (log.details && log.details.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (log.serviceName && log.serviceName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (log.entityType && log.entityType.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    const matchesCategory = selectedCategory === 'all' || log.category === selectedCategory;
-    const matchesSeverity = selectedSeverity === 'all' || log.severity === selectedSeverity;
+    const matchesCategory = selectedCategory === 'all' || 
+                           (log.entityType && log.entityType.toLowerCase() === selectedCategory.toLowerCase());
+    const matchesSeverity = selectedSeverity === 'all' || 
+                           (log.result && log.result.toLowerCase() === selectedSeverity.toLowerCase());
     
     return matchesSearch && matchesCategory && matchesSeverity;
   });
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'Critical': return 'bg-red-500';
-      case 'Warning': return 'bg-yellow-500';
-      case 'Info': return 'bg-blue-500';
+  const getSeverityColor = (result: string) => {
+    switch (result) {
+      case 'failure': return 'bg-red-500';
+      case 'error': return 'bg-yellow-500';
+      case 'success': return 'bg-green-500';
       default: return 'bg-gray-500';
     }
   };
 
   const getActionColor = (action: string) => {
-    switch (action) {
-      case 'Login': return 'bg-green-500';
-      case 'Failed Login': return 'bg-red-500';
-      case 'Create': return 'bg-blue-500';
-      case 'Update': return 'bg-orange-500';
-      case 'Delete': return 'bg-red-500';
-      case 'View': return 'bg-gray-500';
-      default: return 'bg-gray-500';
-    }
+    if (action.includes('signed in')) return 'bg-green-500';
+    if (action.includes('failed') || action.includes('deleted')) return 'bg-red-500';
+    if (action.includes('created')) return 'bg-blue-500';
+    if (action.includes('updated')) return 'bg-orange-500';
+    if (action.includes('viewed')) return 'bg-gray-500';
+    return 'bg-gray-500';
   };
 
   return (
@@ -171,26 +176,25 @@ export const AuditLogs: React.FC = () => {
                   
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Category" />
+                      <SelectValue placeholder="Entity Type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="Authentication">Authentication</SelectItem>
-                      <SelectItem value="User Management">User Management</SelectItem>
-                      <SelectItem value="Data Management">Data Management</SelectItem>
-                      <SelectItem value="System">System</SelectItem>
+                      <SelectItem value="all">All Types</SelectItem>
+                      {entityTypes.map(type => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
 
                   <Select value={selectedSeverity} onValueChange={setSelectedSeverity}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Severity" />
+                      <SelectValue placeholder="Result" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Severities</SelectItem>
-                      <SelectItem value="Critical">Critical</SelectItem>
-                      <SelectItem value="Warning">Warning</SelectItem>
-                      <SelectItem value="Info">Info</SelectItem>
+                      <SelectItem value="all">All Results</SelectItem>
+                      <SelectItem value="success">Success</SelectItem>
+                      <SelectItem value="failure">Failure</SelectItem>
+                      <SelectItem value="error">Error</SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -219,34 +223,36 @@ export const AuditLogs: React.FC = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Timestamp</TableHead>
-                      <TableHead>User</TableHead>
                       <TableHead>Action</TableHead>
-                      <TableHead>Resource</TableHead>
+                      <TableHead>Service</TableHead>
+                      <TableHead>Entity Type</TableHead>
                       <TableHead>Details</TableHead>
-                      <TableHead>Severity</TableHead>
+                      <TableHead>Result</TableHead>
                       <TableHead>IP Address</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredLogs.map((log) => (
                       <TableRow key={log.id}>
-                        <TableCell className="font-mono text-sm">{log.timestamp}</TableCell>
-                        <TableCell>{log.user}</TableCell>
-                        <TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {new Date(log.timestamp).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="max-w-md">
                           <Badge className={getActionColor(log.action)}>
                             {log.action}
                           </Badge>
                         </TableCell>
-                        <TableCell>{log.resource}</TableCell>
+                        <TableCell>{log.serviceName || 'N/A'}</TableCell>
+                        <TableCell>{log.entityType || 'N/A'}</TableCell>
                         <TableCell className="max-w-xs truncate" title={log.details}>
-                          {log.details}
+                          {log.details || 'N/A'}
                         </TableCell>
                         <TableCell>
-                          <Badge className={getSeverityColor(log.severity)}>
-                            {log.severity}
+                          <Badge className={getSeverityColor(log.result || 'success')}>
+                            {log.result || 'success'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="font-mono text-sm">{log.ip}</TableCell>
+                        <TableCell className="font-mono text-sm">{log.ipAddress || 'N/A'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

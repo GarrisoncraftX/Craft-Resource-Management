@@ -13,9 +13,9 @@ export interface User {
 
 export interface AuditLog {
   id: number;
-  timestamp: string;
+  userId?: number;
   action: string;
-  performedBy?: string;
+  timestamp: string;
   details?: string;
   serviceName?: string;
   ipAddress?: string;
@@ -24,11 +24,6 @@ export interface AuditLog {
   entityType?: string;
   entityId?: string;
   result?: string;
-  user?: string;
-  resource?: string;
-  severity?: string;
-  category?: string;
-  ip?: string;
 }
 
 export interface SecurityEvent {
@@ -71,9 +66,9 @@ export const mockUsers: User[] = [
 ];
 
 export const mockAuditLogs: AuditLog[] = [
-  { id: 1, timestamp: '2024-01-15 14:30:22', user: 'john.doe@company.com', action: 'Login', resource: 'System', details: 'Successful login from IP 192.168.1.45', severity: 'Info', category: 'Authentication', ip: '192.168.1.45' },
-  { id: 2, timestamp: '2024-01-15 13:45:15', user: 'jane.smith@company.com', action: 'Update', resource: 'User Profile', details: 'Updated user profile information', severity: 'Info', category: 'User Management', ip: '192.168.1.78' },
-  { id: 3, timestamp: '2024-01-15 12:20:08', user: 'admin@company.com', action: 'Delete', resource: 'Database Record', details: 'Deleted user record ID: 12345', severity: 'Warning', category: 'Data Management', ip: '192.168.1.10' }
+  { id: 1, userId: 1, action: 'User John Doe has signed in successfully', timestamp: '2024-01-15T14:30:22Z', details: '{"module":"authentication","operation":"SIGN_IN"}', serviceName: 'java-backend', ipAddress: '192.168.1.45', entityType: 'USER', entityId: '1', result: 'success' },
+  { id: 2, userId: 2, action: 'User Jane Smith has updated their profile information', timestamp: '2024-01-15T13:45:15Z', details: '{"module":"user_management","operation":"UPDATE"}', serviceName: 'java-backend', ipAddress: '192.168.1.78', entityType: 'USER', entityId: '2', result: 'success' },
+  { id: 3, userId: 1, action: 'User Admin has deleted user record ID: 12345', timestamp: '2024-01-15T12:20:08Z', details: '{"module":"user_management","operation":"DELETE","recordId":"12345"}', serviceName: 'java-backend', ipAddress: '192.168.1.10', entityType: 'USER', entityId: '12345', result: 'success' }
 ];
 
 export const mockSecurityEvents: SecurityEvent[] = [
@@ -163,20 +158,18 @@ export const mockDatabaseStats = {
 export const mockAuditStatistics = {
   totalLogs: 15420,
   todayLogs: 342,
-  weekLogs: 2156,
-  topActions: ['LOGIN', 'UPDATE', 'CREATE'],
-  topUsers: ['admin', 'john.doe', 'jane.smith']
+  weekLogs: 2156
 };
 
 export const mockTopActions = [
-  { action: 'LOGIN', count: 450 },
-  { action: 'UPDATE', count: 320 },
-  { action: 'CREATE', count: 180 },
-  { action: 'DELETE', count: 45 }
+  { action: 'has signed in successfully', count: 450 },
+  { action: 'has updated', count: 320 },
+  { action: 'has created', count: 180 },
+  { action: 'has deleted', count: 45 }
 ];
 
 export const mockTopUsers = [
-  { user: 'admin', count: 523 },
-  { user: 'john.doe', count: 342 },
-  { user: 'jane.smith', count: 289 }
+  { user: '1', count: 523 },
+  { user: '2', count: 342 },
+  { user: '3', count: 289 }
 ];

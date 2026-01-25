@@ -46,12 +46,15 @@ export const ProcessPayrollForm: React.FC<ProcessPayrollFormProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [employeeCount, setEmployeeCount] = useState(0);
 
   useEffect(() => {
     const loadDepartments = async () => {
       try {
         const data = await fetchDepartments();
         setDepartments(data);
+        const employees = await hrApiService.listEmployees();
+        setEmployeeCount(employees.filter(e => e.accountStatus === 'ACTIVE').length);
       } catch (error) {
         console.error('Failed to load departments:', error);
       }
@@ -299,7 +302,7 @@ export const ProcessPayrollForm: React.FC<ProcessPayrollFormProps> = ({
               <span className="font-medium">Estimated Impact</span>
             </div>
             <div className="text-sm text-muted-foreground">
-              This will process payroll for approximately 156 employees in the selected department(s).
+              This will process payroll for approximately {employeeCount} employees in the selected department(s).
             </div>
           </div>
             </>

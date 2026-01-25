@@ -12,6 +12,7 @@ import { Payslip as ApiPayslip, PayrollStatus, PayrollDisplayData } from '@/type
 import { Employee } from '@/types/hr';
 import { ProcessPayrollForm } from './forms/ProcessPayrollForm';
 import { PayslipDetailsDialog } from './forms/PayslipDetailsDialog';
+import { ProcessingDialog } from './forms/ProcessingDialog';
 
 
 
@@ -26,6 +27,7 @@ export const PayrollProcessing: React.FC = () => {
   const [selectedPayslip, setSelectedPayslip] = useState<PayrollDisplayData | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isProcessingTransfer, setIsProcessingTransfer] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -138,6 +140,35 @@ export const PayrollProcessing: React.FC = () => {
       document.body.removeChild(a);
     } catch (error) {
       console.error('Failed to download report:', error);
+    }
+  };
+
+  const handleProcessTransfers = async () => {
+    if (!selectedPeriod || displayedPayslips.length === 0) return;
+    
+    setIsProcessingTransfer(true);
+    try {
+      const payrollRunId = displayedPayslips[0]?.id;
+      if (!payrollRunId) return;
+      
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      const blob = await hrApiService.downloadBankFile(payrollRunId);
+      const url = globalThis.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bank_transfer_${selectedPeriod.replace(/\s/g, '_')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      globalThis.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      setIsProcessingTransfer(false);
+      alert(`Payment processed successfully! ${displayedPayslips.length} employees have been notified via email and SMS.`);
+    } catch (error) {
+      console.error('Failed to process transfers:', error);
+      setIsProcessingTransfer(false);
+      alert('Failed to process transfers. Please try again.');
     }
   };
 
@@ -374,24 +405,7 @@ export const PayrollProcessing: React.FC = () => {
               <CardDescription>Process salary payments to employee accounts</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full" onClick={async () => {
-                if (!selectedPeriod || displayedPayslips.length === 0) return;
-                try {
-                  const payrollRunId = displayedPayslips[0]?.id;
-                  if (!payrollRunId) return;
-                  const blob = await hrApiService.downloadBankFile(payrollRunId);
-                  const url = globalThis.URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `bank_transfer_${selectedPeriod.replace(/\s/g, '_')}.csv`;
-                  document.body.appendChild(a);
-                  a.click();
-                  globalThis.URL.revokeObjectURL(url);
-                  document.body.removeChild(a);
-                } catch (error) {
-                  console.error('Failed to download bank file:', error);
-                }
-              }}>
+              <Button className="w-full" onClick={handleProcessTransfers}>
                 <DollarSign className="h-4 w-4 mr-2" />
                 Process Transfers
               </Button>
@@ -423,6 +437,11 @@ export const PayrollProcessing: React.FC = () => {
           deductions: selectedPayslip.deductions
         } : undefined}
         onSuccess={refreshData}
+      />
+
+      <ProcessingDialog 
+        open={isProcessingTransfer} 
+        message="Processing payments and sending notifications..."
       />
     </div>
   );

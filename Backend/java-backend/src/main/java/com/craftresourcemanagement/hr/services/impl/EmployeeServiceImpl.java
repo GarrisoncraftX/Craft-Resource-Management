@@ -32,8 +32,15 @@ public class EmployeeServiceImpl implements EmployeeService {
     public User registerEmployee(User user) {
         if (user.getId() == null) {
             User newUser = provisionNewEmployee(user);
-            auditClient.logAction(newUser.getId(), "EMPLOYEE_PROVISIONED", 
-                "Employee: " + newUser.getEmployeeId() + ", Email: " + newUser.getEmail());
+            auditClient.logActionAsync(
+                newUser.getId(),
+                "has been provisioned as a new employee",
+                String.format("{\"module\":\"user_management\",\"operation\":\"CREATE\",\"employeeId\":\"%s\",\"email\":\"%s\"}",
+                    newUser.getEmployeeId(), newUser.getEmail()),
+                "java-backend",
+                "EMPLOYEE",
+                newUser.getId().toString()
+            );
             return newUser;
         } else {
             // Validate role_id exists before updating
@@ -68,8 +75,15 @@ public class EmployeeServiceImpl implements EmployeeService {
             }
 
             User updatedUser = userRepository.save(user);
-            auditClient.logAction(updatedUser.getId(), "Employee Updated Their Profile Info", 
-                "Employee: " + updatedUser.getEmployeeId());
+            auditClient.logActionAsync(
+                updatedUser.getId(),
+                "has updated their profile information",
+                String.format("{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"%s\",\"email\":\"%s\"}",
+                    updatedUser.getEmployeeId(), updatedUser.getEmail()),
+                "java-backend",
+                "USER",
+                updatedUser.getId().toString()
+            );
             return updatedUser;
         }
     }
@@ -149,8 +163,16 @@ public class EmployeeServiceImpl implements EmployeeService {
         return userRepository.findById(id).map(user -> {
             user.setIsActive(user.getIsActive() == 1 ? 0 : 1);
             User updated = userRepository.save(user);
-            auditClient.logAction(id, "USER_STATUS_TOGGLED", 
-                "User: " + user.getEmployeeId() + ", Status: " + (updated.getIsActive() == 1 ? "Active" : "Inactive"));
+            String statusAction = updated.getIsActive() == 1 ? "activated" : "deactivated";
+            auditClient.logActionAsync(
+                id,
+                String.format("has %s user account", statusAction),
+                String.format("{\"module\":\"user_management\",\"operation\":\"STATUS_TOGGLE\",\"employeeId\":\"%s\",\"newStatus\":\"%s\"}",
+                    user.getEmployeeId(), statusAction),
+                "java-backend",
+                "USER",
+                id.toString()
+            );
             return updated;
         }).orElseThrow(() -> new RuntimeException("User not found"));
     }
