@@ -17,9 +17,14 @@ class LeaveService {
   async createLeaveType(data) {
     const leaveType = await LeaveType.create({
       name: data.name,
-     daysAllowed: data.daysAllowed,
+      daysAllowed: data.daysAllowed,
       description: data.description,
-      isActive: true,
+      maxDaysPerYear: data.maxDaysPerYear ?? data.daysAllowed ?? 0,
+      carryForwardAllowed: data.carryForwardAllowed ?? false,
+      maxCarryForwardDays: data.maxCarryForwardDays ?? 0,
+      requiresApproval: data.requiresApproval ?? true,
+      isPaid: data.isPaid ?? true,
+      isActive: data.isActive ?? true,
       createdAt: new Date(),
     })
 
@@ -30,6 +35,44 @@ class LeaveService {
     })
 
     return leaveType
+  }
+
+  async updateLeaveType(id, data) {
+    const leaveType = await LeaveType.findByPk(id);
+    if (!leaveType) return null;
+
+    await leaveType.update({
+      name: data.name ?? leaveType.name,
+      daysAllowed: data.daysAllowed ?? leaveType.daysAllowed,
+      description: data.description ?? leaveType.description,
+      maxDaysPerYear: data.maxDaysPerYear ?? leaveType.maxDaysPerYear,
+      carryForwardAllowed: data.carryForwardAllowed ?? leaveType.carryForwardAllowed,
+      maxCarryForwardDays: data.maxCarryForwardDays ?? leaveType.maxCarryForwardDays,
+      requiresApproval: data.requiresApproval ?? leaveType.requiresApproval,
+      isPaid: data.isPaid ?? leaveType.isPaid,
+      isActive: data.isActive ?? leaveType.isActive,
+      updatedAt: new Date(),
+    });
+
+    // Audit Log
+    if (data.actorId) {
+      auditService.logAction(data.actorId, "UPDATE_LEAVE_TYPE", {
+        leaveTypeId: id,
+        changes: data,
+      });
+    }
+
+    return leaveType;
+  }
+
+  async deleteLeaveType(id) {
+    const leaveType = await LeaveType.findByPk(id);
+    if (!leaveType) throw new NotFoundError("Leave type not found");
+
+    // Soft delete by setting isActive to false
+    await leaveType.update({ isActive: false, updatedAt: new Date() });
+
+    return true;
   }
 
   async getLeaveTypeById(id) {
@@ -375,6 +418,7 @@ async getLeaveStatistics() {
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
     const startOfYear = new Date(today.getFullYear(), 0, 1);
     const endOfYear = new Date(today.getFullYear() + 1, 0, 1);
 
@@ -383,7 +427,8 @@ async getLeaveStatistics() {
       pendingRequests,
       approvedTodayCount,
       approvedRequestsForYear,
-      totalApprovedLeavesCount
+      totalApprovedLeavesCount,
+      employeesOnLeaveThisMonth
     ] = await Promise.all([
       // Count all pending requests
       LeaveRequest.count({
@@ -410,12 +455,39 @@ async getLeaveStatistics() {
             [Op.lt]: endOfYear
           }
         },
-        attributes: ['totalDays', 'startDate']
+        attributes: ['totalDays', 'startDate', 'endDate', 'userId']
       }),
 
       // Count total unique users with approved leaves (all time)
       LeaveRequest.count({
         where: { status: "approved" },
+        distinct: true,
+        col: 'userId'
+      }),
+
+      // Count employees on leave this month
+      LeaveRequest.count({
+        where: {
+          status: "approved",
+          [Op.or]: [
+            {
+              startDate: {
+                [Op.between]: [startOfMonth, endOfMonth]
+              }
+            },
+            {
+              endDate: {
+                [Op.between]: [startOfMonth, endOfMonth]
+              }
+            },
+            {
+              [Op.and]: [
+                { startDate: { [Op.lte]: startOfMonth } },
+                { endDate: { [Op.gte]: endOfMonth } }
+              ]
+            }
+          ]
+        },
         distinct: true,
         col: 'userId'
       })
@@ -425,25 +497,21 @@ async getLeaveStatistics() {
     let totalDaysThisMonth = 0;
     let approvedRequestsThisMonthCount = 0;
     let totalDaysThisYear = 0;
-    const employeesOnLeaveSet = new Set();
-    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
 
     approvedRequestsForYear.forEach(request => {
       const requestStartDate = new Date(request.startDate);
+      const requestEndDate = new Date(request.endDate);
 
       // Check if the leave falls within the current month
-      if (requestStartDate >= startOfMonth && requestStartDate <= endOfMonth) {
+      if ((requestStartDate >= startOfMonth && requestStartDate <= endOfMonth) ||
+          (requestEndDate >= startOfMonth && requestEndDate <= endOfMonth) ||
+          (requestStartDate <= startOfMonth && requestEndDate >= endOfMonth)) {
         totalDaysThisMonth += request.totalDays;
         approvedRequestsThisMonthCount++;
       }
 
       // Add to total days for the year
       totalDaysThisYear += request.totalDays;
-      
-      // Check if the leave is currently active today (this is a separate calculation from approvedTodayCount)
-      if (request.startDate <= today && request.endDate >= today) {
-        employeesOnLeaveSet.add(request.userId);
-      }
     });
 
     const averageLeaveDaysThisMonth = approvedRequestsThisMonthCount > 0
@@ -457,7 +525,7 @@ async getLeaveStatistics() {
     return {
       pendingRequests,
       approvedToday: approvedTodayCount,
-      employeesOnLeave: employeesOnLeaveSet.size,
+      employeesOnLeave: employeesOnLeaveThisMonth,
       averageLeaveDaysThisMonth: Math.round(averageLeaveDaysThisMonth * 10) / 10,
       averageLeaveDaysThisYear: Math.round(averageLeaveDaysThisYear * 10) / 10,
       totalApprovedLeaves: totalApprovedLeavesCount

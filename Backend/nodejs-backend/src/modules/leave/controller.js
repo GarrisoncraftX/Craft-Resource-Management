@@ -21,6 +21,29 @@ class LeaveController {
     }
   }
 
+  async updateLeaveType(req, res, next) {
+    try {
+      const id = req.params.id;
+      const leaveType = await this.leaveService.updateLeaveType(id, req.body);
+      if (!leaveType) {
+        return res.status(404).json({ success: false, message: "Leave type not found" });
+      }
+      res.json({ success: true, data: leaveType });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteLeaveType(req, res, next) {
+    try {
+      const id = req.params.id;
+      await this.leaveService.deleteLeaveType(id);
+      res.json({ success: true, message: "Leave type deleted successfully" });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async createLeaveRequest(req, res, next) {
     try {
       const data = { ...req.body };
@@ -121,6 +144,16 @@ class LeaveController {
     try {
       const balances = await this.leaveService.getAllLeaveBalances();
       res.json({ success: true, data: balances });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async initializeLeaveBalances(req, res, next) {
+    try {
+      const userId = req.params.userId;
+      const balances = await this.leaveService.initializeLeaveBalancesForUser(userId);
+      res.json({ success: true, data: balances, message: 'Leave balances initialized successfully' });
     } catch (error) {
       next(error);
     }

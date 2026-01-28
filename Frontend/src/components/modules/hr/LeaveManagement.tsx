@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarDays, Clock, CheckCircle, XCircle, Calendar as CalendarIcon, Filter, Eye } from 'lucide-react';
+import { Clock, CheckCircle, Filter, Users } from 'lucide-react';
 import { leaveApiService } from '@/services/nodejsbackendapi/leaveApi';
 import type { LeaveRequest, LeaveBalance, LeaveStatistics, LeaveType } from '@/types/nodejsbackendapi/leaveTypes';
+import { LeaveRequests } from './LeaveRequests';
+import { LeaveBalances } from './LeaveBalances';
+import { LeaveCalendar } from './LeaveCalendar';
+import { LeavePolicies } from './LeavePolicies';
+import { LeaveRequestModal } from './LeaveRequestModal';
+import { useToast } from '@/hooks/use-toast';
 
 export const LeaveManagement: React.FC = () => {
+  const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [activeTab, setActiveTab] = useState('requests');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -20,6 +24,8 @@ export const LeaveManagement: React.FC = () => {
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [processingRequests, setProcessingRequests] = useState<Set<string>>(new Set());
+  const [viewingRequest, setViewingRequest] = useState<LeaveRequest | null>(null);
 
   // Filter leave requests based on status
   const filteredLeaveRequests = (leaveRequests || []).filter(request => {
@@ -71,8 +77,50 @@ export const LeaveManagement: React.FC = () => {
   };
 
 
-  const [processingRequests, setProcessingRequests] = useState<Set<string>>(new Set());
-  const [viewingRequest, setViewingRequest] = useState<LeaveRequest | null>(null);
+  const handleInitializeBalances = async (userId: number) => {
+    try {
+      await leaveApiService.initializeLeaveBalances(userId);
+      toast({ title: 'Success', description: 'Leave balances initialized successfully', variant: 'default' });
+      await loadData();
+    } catch (err) {
+      const error = err as Error;
+      const errorMsg = error?.message || 'Failed to initialize leave balances';
+      toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
+      console.error('Error initializing leave balances:', err);
+    }
+  };
+
+  const handleSavePolicy = async (policy: Partial<LeaveType>, isNew: boolean, id?: number) => {
+    try {
+      if (isNew) {
+        await leaveApiService.createLeaveType(policy);
+        toast({ title: 'Success', description: 'Leave policy created successfully', variant: 'default' });
+      } else if (id) {
+        await leaveApiService.updateLeaveType(id, policy);
+        toast({ title: 'Success', description: 'Leave policy updated successfully', variant: 'default' });
+      }
+      await loadData();
+    } catch (err) {
+      const error = err as Error;
+      const errorMsg = error?.message || 'Failed to save policy';
+      toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
+      console.error('Error saving policy:', err);
+    }
+  };
+
+  const handleDeletePolicy = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this leave policy?')) return;
+    try {
+      await leaveApiService.deleteLeaveType(id);
+      toast({ title: 'Success', description: 'Leave policy deleted successfully', variant: 'default' });
+      await loadData();
+    } catch (err) {
+      const error = err as Error;
+      const errorMsg = error?.message || 'Failed to delete policy';
+      toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
+      console.error('Error deleting policy:', err);
+    }
+  };
 
   const handleApproveRequest = async (requestId: string) => {
     if (processingRequests.has(requestId)) return;
@@ -80,10 +128,12 @@ export const LeaveManagement: React.FC = () => {
     setProcessingRequests(prev => new Set(prev).add(requestId));
     try {
       await leaveApiService.approveLeaveRequest(requestId);
+      toast({ title: 'Success', description: 'Leave request approved successfully', variant: 'default' });
       await loadData();
-    } catch (err: any) {
-      const errorMsg = err?.message || 'Failed to approve leave request';
-      setError(errorMsg);
+    } catch (err) {
+      const error = err as Error;
+      const errorMsg = error?.message || 'Failed to approve leave request';
+      toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
       console.error('Error approving leave request:', err);
     } finally {
       setProcessingRequests(prev => {
@@ -100,10 +150,12 @@ export const LeaveManagement: React.FC = () => {
     setProcessingRequests(prev => new Set(prev).add(requestId));
     try {
       await leaveApiService.rejectLeaveRequest(requestId, 1, 'Request rejected');
+      toast({ title: 'Success', description: 'Leave request rejected successfully', variant: 'default' });
       await loadData();
-    } catch (err: any) {
-      const errorMsg = err?.message || 'Failed to reject leave request';
-      setError(errorMsg);
+    } catch (err) {
+      const error = err as Error;
+      const errorMsg = error?.message || 'Failed to reject leave request';
+      toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
       console.error('Error rejecting leave request:', err);
     } finally {
       setProcessingRequests(prev => {
@@ -206,12 +258,12 @@ export const LeaveManagement: React.FC = () => {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg Leave (This Month)</CardTitle>
-                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">On Leave This Month</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{statistics.averageLeaveDaysThisMonth}</div>
-                <p className="text-xs text-muted-foreground">Days per employee</p>
+                <div className="text-2xl font-bold">{statistics.employeesOnLeave}</div>
+                <p className="text-xs text-muted-foreground">Employees currently on leave</p>
               </CardContent>
             </Card>
           </div>
@@ -226,300 +278,34 @@ export const LeaveManagement: React.FC = () => {
           </TabsList>
 
           <TabsContent value="requests" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Leave Requests</CardTitle>
-                <CardDescription>Manage and approve employee leave requests</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Days</TableHead>
-                      <TableHead>Reason</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLeaveRequests.map((request) => (
-                      <TableRow key={request.id}>
-                        <TableCell className="font-medium">
-                          {request.User ? `${request.User.firstName} ${request.User.lastName}` : `Employee ${request.userId}`}
-                        </TableCell>
-                        <TableCell>{request.leaveType?.name || `Leave Type ${request.leaveTypeId}`}</TableCell>
-                        <TableCell>{request.startDate} to {request.endDate}</TableCell>
-                        <TableCell>{request.totalDays}</TableCell>
-                        <TableCell>{request.reason || 'No reason provided'}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              request.status === 'approved' ? 'default' :
-                                request.status === 'pending' ? 'secondary' : 'destructive'
-                            }
-                          >
-                            {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setViewingRequest(request)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {request.status === 'pending' && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleApproveRequest(request.id)}
-                                  disabled={processingRequests.has(request.id)}
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleRejectRequest(request.id)}
-                                  disabled={processingRequests.has(request.id)}
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            <LeaveRequests
+              requests={filteredLeaveRequests}
+              onApprove={handleApproveRequest}
+              onReject={handleRejectRequest}
+              onView={setViewingRequest}
+              processingRequests={processingRequests}
+            />
           </TabsContent>
 
           <TabsContent value="balances" className="space-y-6">
-            {leaveBalances && leaveBalances.length > 0 ? (
-              Object.entries(
-                leaveBalances.reduce((acc, balance) => {
-                  const employeeId = balance.userId || 'unknown';
-                  if (!acc[employeeId]) {
-                    acc[employeeId] = {
-                      firstName: balance.firstName,
-                      middleName: balance.middleName,
-                      lastName: balance.lastName,
-                      employeeName: balance.employeeName,
-                      balances: []
-                    };
-                  }
-                  acc[employeeId].balances.push(balance);
-                  return acc;
-                }, {} as Record<string, { firstName?: string; middleName?: string; lastName?: string; employeeName?: string; balances: LeaveBalance[] }>
-              )
-              ).map(([employeeId, employeeData]) => {
-                const displayName = employeeData.employeeName ||
-                  `${employeeData.firstName || ''} ${employeeData.middleName ? employeeData.middleName + ' ' : ''}${employeeData.lastName || ''}`.trim() ||
-                  `Employee ${employeeId}`;
-
-                return (
-                  <Card key={employeeId}>
-                    <CardHeader>
-                      <CardTitle>
-                        <h3 className="text-xl font-semibold">
-                          {displayName}
-                        </h3>
-                      </CardTitle>
-                      <CardDescription>Leave balances for {employeeData.firstName || displayName}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {employeeData.balances.map((balance) => (
-                          <div key={balance.leaveTypeId} className="border rounded-lg p-4">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-muted-foreground">{balance.leaveTypeName}</span>
-                              <span className="text-lg font-bold">{balance.remainingDaysFormatted}</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                              <div
-                                className="bg-blue-500 h-2 rounded-full"
-                                style={{
-                                  width: `${balance.allocatedDays > 0 ? (balance.remainingDays / balance.allocatedDays) * 100 : 0}%`
-                                }}
-                              />
-                            </div>
-                            <div className="mt-2 text-xs text-muted-foreground">
-                              Used: {balance.usedDays} days
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })
-            ) : (
-              <p>No leave balances found.</p>
-            )}
+            <LeaveBalances balances={leaveBalances} onInitialize={handleInitializeBalances} />
           </TabsContent>
 
           <TabsContent value="calendar" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Leave Calendar</CardTitle>
-                  <CardDescription>View leave schedules and availability</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    className="rounded-md border"
-                  />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Today's Leave Schedule</CardTitle>
-                  <CardDescription>Employees currently on leave</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {leaveRequests
-                      .filter(request => request.status === 'approved')
-                      .map((request) => (
-                        <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div>
-                            <p className="font-medium">
-                              {request.User ? `${request.User.firstName} ${request.User.lastName}` : `Employee ${request.userId}`}
-                            </p>
-                            <p className="text-sm text-muted-foreground">{request.leaveType?.name} - {request.totalDays} days</p>
-                          </div>
-                          <Badge variant="default">Approved</Badge>
-                        </div>
-                      ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <LeaveCalendar requests={leaveRequests} />
           </TabsContent>
 
           <TabsContent value="policies" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Annual Leave Policy</CardTitle>
-                  <CardDescription>Configure annual leave entitlements</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <p className="text-sm">Entitlement: 25 days per year</p>
-                    <p className="text-sm">Carryover: 5 days maximum</p>
-                    <p className="text-sm">Advance: 5 days allowed</p>
-                  </div>
-                  <Button className="w-full mt-4" variant="outline">Edit Policy</Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sick Leave Policy</CardTitle>
-                  <CardDescription>Configure sick leave provisions</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <p className="text-sm">Entitlement: 12 days per year</p>
-                    <p className="text-sm">Medical certificate: After 3 days</p>
-                    <p className="text-sm">Carryover: Not allowed</p>
-                  </div>
-                  <Button className="w-full mt-4" variant="outline">Edit Policy</Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Personal Leave Policy</CardTitle>
-                  <CardDescription>Configure personal leave provisions</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <p className="text-sm">Entitlement: 5 days per year</p>
-                    <p className="text-sm">Notice required: 2 weeks</p>
-                    <p className="text-sm">Carryover: Not allowed</p>
-                  </div>
-                  <Button className="w-full mt-4" variant="outline">Edit Policy</Button>
-                </CardContent>
-              </Card>
-            </div>
+            <LeavePolicies
+              policies={leaveTypes}
+              onSave={handleSavePolicy}
+              onDelete={handleDeletePolicy}
+            />
           </TabsContent>
         </Tabs>
       </div>
 
-      {viewingRequest && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setViewingRequest(null)}>
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-bold">Leave Request Details</h2>
-              <Button variant="ghost" size="sm" onClick={() => setViewingRequest(null)}>✕</Button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Employee</p>
-                <p className="font-medium">{viewingRequest.User ? `${viewingRequest.User.firstName} ${viewingRequest.User.lastName}` : `Employee ${viewingRequest.userId}`}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Leave Type</p>
-                <p className="font-medium">{viewingRequest.leaveType?.name || `Leave Type ${viewingRequest.leaveTypeId}`}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Start Date</p>
-                  <p className="font-medium">{viewingRequest.startDate}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">End Date</p>
-                  <p className="font-medium">{viewingRequest.endDate}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Days</p>
-                <p className="font-medium">{viewingRequest.totalDays}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Reason</p>
-                <p className="font-medium">{viewingRequest.reason || 'No reason provided'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Supporting Documents</p>
-                {viewingRequest.supportingDocuments && viewingRequest.supportingDocuments.length > 0 ? (
-                  <div className="space-y-2">
-                    {viewingRequest.supportingDocuments.map((doc, idx) => (
-                      <a
-                        key={idx}
-                        href={doc}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-2 border rounded hover:bg-gray-50"
-                      >
-                        <Eye className="h-4 w-4" />
-                        <span>Document {idx + 1}</span>
-                      </a>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">No documents uploaded</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {viewingRequest && <LeaveRequestModal request={viewingRequest} onClose={() => setViewingRequest(null)} />}
     </div>
   );
 };

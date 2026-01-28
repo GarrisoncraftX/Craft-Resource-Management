@@ -11,17 +11,23 @@ public class PerformanceReview {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "employee_id", nullable = false)
+    private Long employeeId;
 
-    @Column(nullable = false)
+    @Column(name = "reviewer_id", nullable = false)
+    private Long reviewerId;
+
+    @Column(name = "review_date", nullable = false)
     private LocalDate reviewDate;
 
-    @Column(nullable = false, length = 2000)
-    private String reviewText;
+    @Column(nullable = false)
+    private Double rating;
 
-    private String reviewer;
+    @Column(length = 2000)
+    private String comments;
+
+    @Column(length = 2000)
+    private String goals;
 
     // Getters and Setters
 
@@ -29,12 +35,24 @@ public class PerformanceReview {
         return id;
     }
 
-    public User getUser() {
-        return user;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    public void setUser(User user) {
-        this.user = user;
+    public Long getEmployeeId() {
+        return employeeId;
+    }
+
+    public void setEmployeeId(Long employeeId) {
+        this.employeeId = employeeId;
+    }
+
+    public Long getReviewerId() {
+        return reviewerId;
+    }
+
+    public void setReviewerId(Long reviewerId) {
+        this.reviewerId = reviewerId;
     }
 
     public LocalDate getReviewDate() {
@@ -45,19 +63,27 @@ public class PerformanceReview {
         this.reviewDate = reviewDate;
     }
 
-    public String getReviewText() {
-        return reviewText;
+    public Double getRating() {
+        return rating;
     }
 
-    public void setReviewText(String reviewText) {
-        this.reviewText = reviewText;
+    public void setRating(Double rating) {
+        this.rating = rating;
     }
 
-    public String getReviewer() {
-        return reviewer;
+    public String getComments() {
+        return comments;
     }
 
-    public void setReviewer(String reviewer) {
-        this.reviewer = reviewer;
+    public void setComments(String comments) {
+        this.comments = comments;
+    }
+
+    public String getGoals() {
+        return goals;
+    }
+
+    public void setGoals(String goals) {
+        this.goals = goals;
     }
 }

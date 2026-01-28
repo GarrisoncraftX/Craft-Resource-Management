@@ -60,6 +60,32 @@ class LeaveApiService {
     );
   }
 
+  async updateLeaveType(id: number, leaveType: Partial<LeaveType>): Promise<LeaveType> {
+    return this.handleApiError(
+      async () => {
+        const response = await apiClient.put(`/api/leave/types/${id}`, leaveType);
+        if (response?.success) {
+          return response.data;
+        } else {
+          throw new Error('Failed to update leave type');
+        }
+      },
+      { ...mockLeaveTypes[0], ...leaveType, id }
+    );
+  }
+
+  async deleteLeaveType(id: number): Promise<void> {
+    return this.handleApiError(
+      async () => {
+        const response = await apiClient.delete(`/api/leave/types/${id}`);
+        if (!response?.success) {
+          throw new Error('Failed to delete leave type');
+        }
+      },
+      undefined
+    );
+  }
+
   // Leave Requests
   async getLeaveRequests(userId?: number): Promise<LeaveRequest[]> {
     return this.handleApiError(
@@ -200,6 +226,20 @@ class LeaveApiService {
           return response.data;
         } else {
           return mockLeaveBalances;
+        }
+      },
+      mockLeaveBalances
+    );
+  }
+
+  async initializeLeaveBalances(userId: number): Promise<LeaveBalance[]> {
+    return this.handleApiError(
+      async () => {
+        const response = await apiClient.post(`/api/leave/balances/initialize/${userId}`);
+        if (response?.success) {
+          return response.data;
+        } else {
+          throw new Error('Failed to initialize leave balances');
         }
       },
       mockLeaveBalances
