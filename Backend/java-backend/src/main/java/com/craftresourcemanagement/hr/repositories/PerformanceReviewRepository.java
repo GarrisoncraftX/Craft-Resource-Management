@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PerformanceReviewRepository extends JpaRepository<PerformanceReview, Long> {
+    long countByStatus(String status);
 }

@@ -1,28 +1,39 @@
-# Maven target directory
-target/
+# Environment Variables
+.env
+.env.*
+!.env.example
+application-*.properties
+!application.properties
 
-# Compiled class files
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+
+# Java
 *.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
 
 # Logs
+logs/
 *.log
 
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE files
-.vscode/
+# IDE
 .idea/
-
-# Eclipse files
-.project
+*.iml
+*.iws
+.vscode/
 .classpath
+.project
 .settings/
 
-# IntelliJ files
-*.iml
-out/
-
-# Application properties
-src/main/resources/application.properties
+# OS
+.DS_Store

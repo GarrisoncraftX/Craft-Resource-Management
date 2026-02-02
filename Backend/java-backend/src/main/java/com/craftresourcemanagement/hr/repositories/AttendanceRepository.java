@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +15,12 @@ import java.util.Optional;
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     Optional<Attendance> findTopByUserAndClockOutTimeIsNullOrderByClockInTimeDesc(User user);
     List<Attendance> findByUserOrderByClockInTimeDesc(User user);
+    
+    @Query("SELECT COUNT(a) FROM Attendance a WHERE DATE(a.clockInTime) = ?1")
+    long countByDate(LocalDate date);
+    
+    @Query("SELECT COUNT(a) FROM Attendance a WHERE DATE(a.clockInTime) BETWEEN ?1 AND ?2")
+    long countByDateBetween(LocalDate startDate, LocalDate endDate);
 
     // Pillar 2: Fail-Safe Attendance Governance queries
     @Query("SELECT a FROM Attendance a WHERE a.manualFallbackFlag = true ORDER BY a.clockInTime DESC")

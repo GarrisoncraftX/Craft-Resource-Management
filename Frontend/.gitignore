@@ -1,41 +1,36 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Environment Variables
+.env
+.env.*
+!.env.example
 
-# Dependency directories
+# Dependencies
 node_modules/
 
-# Build output
+# Build Output
 dist/
-dist-ssr/
+build/
+.next/
+out/
 
-# Vite cache
-node_modules/.vite/
+# Cache
+.vite/
+.cache/
+.parcel-cache/
+.eslintcache
 
-# Local environment files
-*.local
-.env
-.env.local
-.env.development.local
+# Logs
+*.log
+npm-debug.log*
 
-# Editor directories and files
-.vscode/
-!.vscode/extensions.json
-.idea/
+# OS
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
 
-# OS generated files
-Thumbs.db
-ehthumbs.db
+# IDE
+.vscode/
+.idea/
 
-# TypeScript build info
+# Test
+coverage/
+
+# Misc
 *.tsbuildinfo

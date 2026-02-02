@@ -85,6 +85,10 @@ public class SystemServiceImpl implements SystemService {
         systemConfigRepository.deleteById(id);
     }
 
+    public Optional<SystemConfig> getSystemConfig(String configKey) {
+        return systemConfigRepository.findByConfigKey(configKey);
+    }
+
     // AuditLog - Enhanced Implementation
     @Override
     public AuditLog createAuditLog(AuditLog auditLog) {
@@ -129,6 +133,14 @@ public class SystemServiceImpl implements SystemService {
     @Override
     public AuditLog getAuditLogById(Long id) {
         return auditLogRepository.findById(id).orElse(null);
+    }
+
+    public Page<AuditLog> getAuditLogsByUserId(Long userId, Pageable pageable) {
+        return auditLogRepository.findByUserId(userId, pageable);
+    }
+
+    public List<AuditLog> getAuditLogsByServiceName(String serviceName) {
+        return auditLogRepository.findByServiceName(serviceName);
     }
 
     @Override
@@ -279,6 +291,10 @@ public class SystemServiceImpl implements SystemService {
         return sopRepository.findAll();
     }
 
+    public List<SOP> getSOPsByCategory(String category) {
+        return sopRepository.findByCategory(category);
+    }
+
     // Security - Incidents
     @Override
     public SecurityIncident createSecurityIncident(SecurityIncident incident) {
@@ -299,6 +315,21 @@ public class SystemServiceImpl implements SystemService {
     @Override
     public List<SupportTicket> getAllSupportTickets() {
         return supportTicketRepository.findAll();
+    }
+
+    public Optional<SupportTicket> getSupportTicketById(Long id) {
+        return supportTicketRepository.findById(id);
+    }
+
+    public List<SupportTicket> getSupportTicketsByUserId(Long userId) {
+        return supportTicketRepository.findByUserId(userId);
+    }
+
+    public SupportTicket updateTicketStatus(Long id, String status) {
+        return supportTicketRepository.findById(id).map(ticket -> {
+            ticket.setStatus(status);
+            return supportTicketRepository.save(ticket);
+        }).orElse(null);
     }
 
     // Session Tracking
@@ -358,6 +389,17 @@ public class SystemServiceImpl implements SystemService {
 
     @Override
     public long getUnreadCount(Long userId) {
+        return notificationRepository.countByUserIdAndIsRead(userId, false);
+    }
+
+    public Notification markNotificationAsRead(Long id) {
+        return notificationRepository.findById(id).map(notification -> {
+            notification.setRead(true);
+            return notificationRepository.save(notification);
+        }).orElse(null);
+    }
+
+    public long getUnreadNotificationCount(Long userId) {
         return notificationRepository.countByUserIdAndIsRead(userId, false);
     }
 }

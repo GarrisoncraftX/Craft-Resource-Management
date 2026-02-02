@@ -1,76 +1,184 @@
-# Node modules
-/node_modules/
+# ===================================
+# Craft Resource Management System
+# Root .gitignore
+# ===================================
 
-# Java build output
-/target/
+# Environment Variables - CRITICAL
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+*.env
+**/.env
+**/.env.*
 
-# Java application properties
-/src/main/resources/application.properties
+# Secrets and Keys
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+secrets/
+credentials/
+*.secret
+.secrets
+jwt-secret.txt
 
-# Python bytecode and virtual environments
-/pycache/
-/*.py[cod]
-/venv/
-/ENV/
-/.env
+# Database
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+*.mdb
+*.accdb
+fulldatabase.sql
+backup*.sql
+dump*.sql
 
-# Log files
-*.log
+# Logs
 logs/
-/logs/
-
-# OS files
-.DS_Store
-Thumbs.db
-ehthumbs.db
-
-# IDE/editor folders
-.vscode/
-.idea/
-*.iml
-.project
-.classpath
-.settings/
-
-# npm debug logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
 pnpm-debug.log*
+combined.log
+error.log
+access.log
+*.log.*
 
-# Coverage reports
+# Operating System
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+.history/
+.vs/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.pnpm-store/
+.npm/
+.yarn/
+.pnp.*
+
+# Java
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Frontend Build
+Frontend/dist/
+Frontend/build/
+Frontend/.next/
+Frontend/out/
+Frontend/.cache/
+Frontend/.parcel-cache/
+Frontend/.vite/
+
+# Uploads and User Content
+uploads/
+temp/
+tmp/
+*.tmp
+user-uploads/
+attachments/
+documents/
+
+# Backup Files
+*.bak
+*.backup
+*.old
+*~
+*.orig
+
+# Compiled Files
+*.com
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Test Coverage
 coverage/
+.nyc_output/
+*.lcov
 
-# Build output
-/dist/
-/dist-ssr/
-/node_modules/.vite/
+# Documentation Build
+docs/_build/
+site/
 
-# TypeScript build info
-*.tsbuildinfo
+# Cache
+.cache/
+*.cache
+.eslintcache
+.stylelintcache
 
-# Dockerfiles in backend folders containing secrets
-Backend/nodejs-backend/Dockerfile
-Backend/python-backend/Dockerfile
-Backend/java-backend/Dockerfile
-Backend/api-gateway/Dockerfile
+# PM2
+.pm2/
+pm2.log
 
-
-# Environment files
-*.local
-.env
-.env.local
-.env.development.local
-
-# Miscellaneous
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints
-
-# Kubernetes secrets
-k8s/secrets.yaml
+# Misc
+.amazonq/
+.qodo/
+*.swp
+*.swo
+.tmp/

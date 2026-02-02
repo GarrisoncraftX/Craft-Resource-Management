@@ -1,99 +1,207 @@
-# Craft Resource Management
+# Craft Resource Management System
 
-## Overview
-This repository contains the full stack application for Craft Resource Management, including backend services and frontend application.
+A comprehensive enterprise resource management system built with a microservices architecture, featuring HR management, finance, asset tracking, biometric authentication, visitor management, and more.
 
-## Backend
-The backend consists of multiple services implemented in different technologies to provide a modular and scalable architecture:
+## System Architecture
 
-- **API Gateway**: Node.js service acting as the gateway for routing and aggregating requests.
-- **Java Backend**: Java-based service built with Maven, providing core business logic and APIs.
-- **Node.js Backend**: Node.js service with RESTful APIs and business logic.
-- **Python Backend**: Python Flask service providing biometric, reporting, health & safety, visitor management, and dashboard functionalities.
+This system follows a microservices architecture with three specialized backend services and a unified frontend:
 
-Each backend service has its own setup instructions and dependencies. Please refer to the respective README files in each service directory for detailed information.
+- **API Gateway** - Central routing and authentication layer
+- **Java Backend** - HR, Finance, Assets, Legal, Revenue, and System Administration
+- **Node.js Backend** - Authentication, Leave Management, Procurement, Planning, Transportation, and Communication
+- **Python Backend** - Biometric Authentication, Visitor Management, Health & Safety, Reports & Analytics, and Dashboard
+- **React Frontend** - Modern web interface built with React 18, TypeScript, and Tailwind CSS
 
-## Frontend
-The frontend application is built using React 18 with TypeScript, Vite as the build tool, and Tailwind CSS for styling. It leverages Radix UI components for accessible UI primitives and React Query for data fetching and state management.
+## Technology Stack
 
-### Technologies Used
-- React 18
-- TypeScript
-- Vite
-- Tailwind CSS (with typography and animation plugins)
-- Radix UI components
-- React Router DOM for routing
-- React Hook Form for form handling
-- Zod for schema validation
-- ESLint for linting
+### Backend Services
+- **Java**: Spring Boot 3.0, Spring Data JPA, Spring Security, MySQL
+- **Node.js**: Express.js, Sequelize ORM, JWT, MySQL
+- **Python**: Flask, SQLAlchemy, Flask-JWT-Extended, MySQL
+- **API Gateway**: Express.js, JWT validation, request routing
 
-### Prerequisites
-- Node.js (version 16 or higher recommended)
-- npm or yarn
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for build tooling
+- **Tailwind CSS** for styling
+- **Radix UI** for accessible components
+- **React Query** for data fetching
+- **React Router** for navigation
 
-### Installation
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   ```
-2. Navigate to the frontend directory:
-   ```bash
-   cd Frontend
-   ```
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
-   or
-   ```bash
-   yarn install
-   ```
+### Database
+- **MySQL** - Shared database across all services
 
-### Available Scripts
-- `npm run dev` - Starts the development server.
-- `npm run build` - Builds the app for production.
-- `npm run build:dev` - Builds the app for development mode.
-- `npm run preview` - Previews the production build locally.
-- `npm run lint` - Runs ESLint to analyze the code.
+## Project Structure
 
-## Common Scripts
-The `Backend/scripts` directory contains SQL scripts for database schema, seed data, user creation, and documentation for access control and backup/recovery.
+```
+CraftResourceManagement/
+├── Backend/
+│   ├── api-gateway/          # Central API gateway and routing
+│   ├── java-backend/         # Spring Boot service
+│   ├── nodejs-backend/       # Express.js service
+│   ├── python-backend/       # Flask service
+│   └── scripts/              # Database scripts
+└── Frontend/                 # React TypeScript application
+```
 
-## Docker
-Each backend service and the API gateway have their own Dockerfiles and `.dockerignore` files for containerization. The root `.dockerignore` and `.gitignore` files help manage ignored files across the entire project.
+## Prerequisites
 
-### Docker Compose
-The root `docker-compose.yml` file orchestrates all backend services and the frontend:
+- **Node.js** 16+ (for API Gateway, Node.js backend, and Frontend)
+- **Java JDK** 17+ (for Java backend)
+- **Python** 3.9+ (for Python backend)
+- **MySQL** 8.0+
+- **Maven** 3.6+ (for Java backend)
+- **npm** or **yarn** (for Node.js projects)
 
-1. Copy `.env.example` to `.env` and fill in your environment variables
-2. Run `docker-compose up --build` to start all services
-3. Access the frontend at `http://localhost`
-4. Backend services will be available at their respective ports:
-   - API Gateway: `http://localhost:5003`
-   - Java Backend: `http://localhost:5002`
-   - Node.js Backend: `http://localhost:5001`
-   - Python Backend: `http://localhost:5000`
+## Quick Start
 
-## Kubernetes
-The `k8s/` directory contains Kubernetes manifests for deploying the application to a Kubernetes cluster:
+### 1. Database Setup
+```bash
+# Create database and run migrations
+mysql -u root -p < Backend/scripts/fulldatabase.sql
+```
 
-- `deployments.yaml`: Deployments for all services
-- `services.yaml`: Services for internal communication
-- `ingress.yaml`: Ingress for external access
-- `secrets.yaml`: Secrets and ConfigMaps for environment variables
+### 2. Configure Environment Variables
+Each backend service requires a `.env` file. Use the `.env.example` files as templates:
+- `Backend/api-gateway/.env`
+- `Backend/java-backend/.env` (or application.properties)
+- `Backend/nodejs-backend/.env`
+- `Backend/python-backend/.env`
+- `Frontend/.env`
 
-### Kubernetes Deployment
-1. Apply the secrets and configmaps: `kubectl apply -f k8s/secrets.yaml`
-2. Deploy the services: `kubectl apply -f k8s/services.yaml`
-3. Deploy the applications: `kubectl apply -f k8s/deployments.yaml`
-4. Apply the ingress: `kubectl apply -f k8s/ingress.yaml`
-5. Access the application at `http://craft-resource-management.local` (add to /etc/hosts if needed)
+### 3. Start Backend Services
+
+**API Gateway** (Port 5003):
+```bash
+cd Backend/api-gateway
+npm install
+npm start
+```
+
+**Java Backend** (Port 5002):
+```bash
+cd Backend/java-backend
+mvn clean install
+mvn spring-boot:run
+```
+
+**Node.js Backend** (Port 5001):
+```bash
+cd Backend/nodejs-backend
+npm install
+npm start
+```
+
+**Python Backend** (Port 5000):
+```bash
+cd Backend/python-backend
+pip install -r requirements.txt
+python app.py
+```
+
+### 4. Start Frontend (Port 5173)
+```bash
+cd Frontend
+npm install
+npm run dev
+```
+
+## Service Responsibilities
+
+### API Gateway (Port 5003)
+- JWT token validation
+- Request routing to appropriate backend services
+- CORS handling
+- User context injection
+
+### Java Backend (Port 5002)
+- **HR Module**: Employee management, payroll, attendance, benefits, training, performance reviews
+- **Finance Module**: Accounting, budgets, accounts payable/receivable, journal entries
+- **Asset Module**: Asset tracking, maintenance records, disposal management
+- **Legal Module**: Legal cases, compliance records
+- **Revenue Module**: Tax assessments, business permits, revenue collection
+- **System Module**: Audit logs, notifications, security incidents, support tickets, SOPs
+
+### Node.js Backend (Port 5001)
+- **Authentication**: User registration, login, password reset, email verification
+- **Leave Management**: Leave requests, approvals, balances
+- **Procurement**: Purchase requests, vendor management, purchase orders
+- **Public Relations**: Press releases, media contacts, events
+- **Planning**: Projects, milestones, resource allocation
+- **Transportation**: Vehicle management, trip scheduling, maintenance
+- **Communication**: Internal messaging and announcements
+
+### Python Backend (Port 5000)
+- **Biometric Module**: Facial recognition, fingerprint enrollment, identification
+- **Visitor Management**: Check-in/out, token generation, entry passes
+- **Health & Safety**: Incident reporting, safety inspections, training records
+- **Reports & Analytics**: Data analysis, custom reports, KPI tracking
+- **Dashboard**: Real-time metrics and visualizations
+
+## API Documentation
+
+All API requests should be routed through the API Gateway at `http://localhost:5003`.
+
+### Authentication
+Most endpoints require JWT authentication. Include the token in the Authorization header:
+```
+Authorization: Bearer <your-jwt-token>
+```
+
+### Public Routes
+- `POST /api/auth/login`
+- `POST /api/auth/register`
+- `POST /api/auth/request-password-reset`
+- `POST /api/biometric/enroll`
+- `POST /api/visitors/generate-token`
+
+## Development
+
+### Running in Development Mode
+Each service has a development mode with hot-reloading:
+- API Gateway: `npm run dev`
+- Java Backend: Uses Spring DevTools
+- Node.js Backend: `npm run dev`
+- Python Backend: Set `FLASK_ENV=development`
+- Frontend: `npm run dev`
+
+### Testing
+- **Node.js Backend**: `npm test`
+- **Java Backend**: `mvn test`
+- **Python Backend**: `pytest`
+- **Frontend**: `npm run lint`
+
+## Deployment
+
+### Building for Production
+
+**Frontend**:
+```bash
+cd Frontend
+npm run build
+```
+
+**Java Backend**:
+```bash
+cd Backend/java-backend
+mvn clean package
+```
+
+**Node.js Services**: Use PM2 or similar process manager
+**Python Backend**: Use Gunicorn or uWSGI
 
 ## Contributing
-Contributions are welcome! Please fork the repository and create a pull request with your changes. Make sure to run linting and tests before submitting.
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
-This project is licensed under the MIT License. See the LICENSE file for details.
 
-## Contact
-For questions or support, contact the development team.
+This project is licensed under the MIT License.
+
+## Support
+
+For issues and questions, please open an issue in the repository or contact the development team.

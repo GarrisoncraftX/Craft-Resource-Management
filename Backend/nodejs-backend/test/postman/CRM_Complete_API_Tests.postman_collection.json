@@ -1,0 +1,761 @@
+{
+  "info": {
+    "name": "Craft Resource Management - Complete API Tests",
+    "description": "Comprehensive manual API testing collection for all CRM backend services",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "variable": [
+    {
+      "key": "apiGatewayUrl",
+      "value": "http://localhost:5003/api",
+      "type": "string"
+    },
+    {
+      "key": "javaBackendUrl",
+      "value": "http://localhost:5002",
+      "type": "string"
+    },
+    {
+      "key": "nodejsBackendUrl",
+      "value": "http://localhost:5001",
+      "type": "string"
+    },
+    {
+      "key": "pythonBackendUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "leaveRequestId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "procurementRequestId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Node.js Backend - Authentication",
+      "item": [
+        {
+          "name": "Register New User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has user id', () => {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.collectionVariables.set('userId', jsonData.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"TEST{{$randomInt}}\",\n  \"email\": \"test{{$randomInt}}@example.com\",\n  \"password\": \"password123\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\",\n  \"dateOfBirth\": \"1990-01-01\",\n  \"departmentId\": 1,\n  \"roleId\": 5\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/auth/register"}
+          }
+        },
+        {
+          "name": "Sign In",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has token', () => {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('token');",
+                  "    pm.collectionVariables.set('authToken', jsonData.token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"ADMIN001\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/auth/signin"}
+          }
+        },
+        {
+          "name": "Get Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Profile has required fields', () => {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('employeeId');",
+                  "    pm.expect(jsonData).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/auth/profile"}
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\"\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/auth/change-password"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Node.js Backend - Leave Management",
+      "item": [
+        {
+          "name": "Get Leave Types",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/leave/types"}
+          }
+        },
+        {
+          "name": "Create Leave Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+                  "const jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('leaveRequestId', jsonData.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"leaveTypeId\": 1,\n  \"startDate\": \"2024-06-01\",\n  \"endDate\": \"2024-06-05\",\n  \"reason\": \"Family vacation\"\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/leave/request"}
+          }
+        },
+        {
+          "name": "Get Leave Balance",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/leave/balance"}
+          }
+        },
+        {
+          "name": "Approve Leave Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewComments\": \"Approved\"\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/leave/request/{{leaveRequestId}}/approve"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Node.js Backend - Procurement",
+      "item": [
+        {
+          "name": "Create Procurement Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+                  "const jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('procurementRequestId', jsonData.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemName\": \"Office Supplies\",\n  \"quantity\": 50,\n  \"estimatedCost\": 500.00,\n  \"justification\": \"Monthly supplies\",\n  \"urgency\": \"medium\"\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/procurement/request"}
+          }
+        },
+        {
+          "name": "Get Procurement Requests",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/procurement/requests"}
+          }
+        },
+        {
+          "name": "Approve Procurement Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comments\": \"Approved for purchase\"\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/procurement/request/{{procurementRequestId}}/approve"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Node.js Backend - Transportation",
+      "item": [
+        {
+          "name": "Create Transportation Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleType\": \"sedan\",\n  \"destination\": \"City Hall\",\n  \"purpose\": \"Official meeting\",\n  \"requestedDate\": \"2024-06-15\",\n  \"requestedTime\": \"09:00\",\n  \"passengers\": 3\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/transportation/request"}
+          }
+        },
+        {
+          "name": "Get Transportation Requests",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/transportation/requests"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Node.js Backend - Planning",
+      "item": [
+        {
+          "name": "Create Planning Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Q2 Budget Review\",\n  \"description\": \"Quarterly budget review meeting\",\n  \"startDate\": \"2024-06-20\",\n  \"endDate\": \"2024-06-20\",\n  \"priority\": \"high\",\n  \"category\": \"finance\"\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/planning/item"}
+          }
+        },
+        {
+          "name": "Get Planning Items",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/planning/items"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Node.js Backend - Communication",
+      "item": [
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientId\": 2,\n  \"subject\": \"Test Message\",\n  \"content\": \"This is a test message\",\n  \"priority\": \"normal\"\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/communication/message"}
+          }
+        },
+        {
+          "name": "Get Messages",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/communication/messages"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Node.js Backend - Lookup",
+      "item": [
+        {
+          "name": "Get Departments",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/lookup/departments"}
+          }
+        },
+        {
+          "name": "Get Roles",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/lookup/roles"}
+          }
+        },
+        {
+          "name": "Get Permissions",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/lookup/permissions"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Java Backend - HR Management",
+      "item": [
+        {
+          "name": "Get All Employees",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/hr/employees"}
+          }
+        },
+        {
+          "name": "Get Employee by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/hr/employees/{{userId}}"}
+          }
+        },
+        {
+          "name": "Update Employee",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+1234567890\",\n  \"address\": \"123 Main St\"\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/hr/employees/{{userId}}"}
+          }
+        },
+        {
+          "name": "Process Payroll",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"month\": 6,\n  \"year\": 2024\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/hr/payroll/process"}
+          }
+        },
+        {
+          "name": "Get Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/hr/dashboard/summary"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Java Backend - Finance",
+      "item": [
+        {
+          "name": "Get Budgets",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/finance/budgets"}
+          }
+        },
+        {
+          "name": "Create Budget",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"departmentId\": 1,\n  \"fiscalYear\": 2024,\n  \"allocatedAmount\": 100000.00,\n  \"category\": \"Operations\"\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/finance/budgets"}
+          }
+        },
+        {
+          "name": "Create Account Payable",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorName\": \"ABC Supplies\",\n  \"amount\": 5000.00,\n  \"dueDate\": \"2024-07-01\",\n  \"description\": \"Office supplies invoice\",\n  \"category\": \"Supplies\"\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/finance/account-payables"}
+          }
+        },
+        {
+          "name": "Get Journal Entries",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/finance/journal-entries"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Java Backend - Asset Management",
+      "item": [
+        {
+          "name": "Get All Assets",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/assets"}
+          }
+        },
+        {
+          "name": "Create Asset",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetName\": \"Laptop Dell XPS\",\n  \"assetTag\": \"ASSET-{{$randomInt}}\",\n  \"category\": \"IT Equipment\",\n  \"purchaseDate\": \"2024-01-15\",\n  \"purchaseCost\": 1500.00,\n  \"status\": \"active\"\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/assets"}
+          }
+        },
+        {
+          "name": "Create Maintenance Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetId\": 1,\n  \"maintenanceType\": \"Repair\",\n  \"description\": \"Screen replacement\",\n  \"cost\": 200.00,\n  \"performedBy\": \"IT Department\"\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/assets/maintenance"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Python Backend - Biometric",
+      "item": [
+        {
+          "name": "Clock In",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"EMP001\",\n  \"biometricData\": \"fingerprint_hash_here\",\n  \"location\": \"Main Office\"\n}"
+            },
+            "url": {"raw": "{{pythonBackendUrl}}/biometric/clock-in"}
+          }
+        },
+        {
+          "name": "Clock Out",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"EMP001\",\n  \"biometricData\": \"fingerprint_hash_here\"\n}"
+            },
+            "url": {"raw": "{{pythonBackendUrl}}/biometric/clock-out"}
+          }
+        },
+        {
+          "name": "Get Attendance Records",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{pythonBackendUrl}}/biometric/attendance?employeeId=EMP001"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Python Backend - Visitor Management",
+      "item": [
+        {
+          "name": "Check In Visitor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitorName\": \"John Doe\",\n  \"purpose\": \"Business Meeting\",\n  \"hostEmployeeId\": \"EMP001\",\n  \"idType\": \"Driver License\",\n  \"idNumber\": \"DL123456\"\n}"
+            },
+            "url": {"raw": "{{pythonBackendUrl}}/visitor/check-in"}
+          }
+        },
+        {
+          "name": "Check Out Visitor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"visitorId\": 1\n}"
+            },
+            "url": {"raw": "{{pythonBackendUrl}}/visitor/check-out"}
+          }
+        },
+        {
+          "name": "Get Active Visitors",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{pythonBackendUrl}}/visitor/active"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Python Backend - Health & Safety",
+      "item": [
+        {
+          "name": "Report Incident",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"incidentType\": \"Accident\",\n  \"severity\": \"medium\",\n  \"description\": \"Slip and fall in hallway\",\n  \"location\": \"Building A, Floor 2\",\n  \"reportedBy\": \"EMP001\"\n}"
+            },
+            "url": {"raw": "{{pythonBackendUrl}}/health-safety/incident"}
+          }
+        },
+        {
+          "name": "Get Incidents",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{pythonBackendUrl}}/health-safety/incidents"}
+          }
+        },
+        {
+          "name": "Create Safety Inspection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inspectionType\": \"Fire Safety\",\n  \"location\": \"Building A\",\n  \"inspectorId\": \"EMP001\",\n  \"findings\": \"All fire extinguishers checked and functional\",\n  \"status\": \"passed\"\n}"
+            },
+            "url": {"raw": "{{pythonBackendUrl}}/health-safety/inspection"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Python Backend - Reports & Analytics",
+      "item": [
+        {
+          "name": "Get Attendance Report",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{pythonBackendUrl}}/reports/attendance?startDate=2024-01-01&endDate=2024-01-31"}
+          }
+        },
+        {
+          "name": "Get Department Analytics",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{pythonBackendUrl}}/reports/department-analytics"}
+          }
+        },
+        {
+          "name": "Generate Custom Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reportType\": \"attendance\",\n  \"startDate\": \"2024-01-01\",\n  \"endDate\": \"2024-01-31\",\n  \"departmentId\": 1,\n  \"format\": \"pdf\"\n}"
+            },
+            "url": {"raw": "{{pythonBackendUrl}}/reports/generate"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Java Backend - System & Admin",
+      "item": [
+        {
+          "name": "Get Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/system/audit-logs?page=0&size=20"}
+          }
+        },
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/system/notifications"}
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/system/notifications/1/read"}
+          }
+        },
+        {
+          "name": "Create Support Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{authToken}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"System Issue\",\n  \"description\": \"Unable to access payroll module\",\n  \"priority\": \"high\",\n  \"category\": \"technical\"\n}"
+            },
+            "url": {"raw": "{{apiGatewayUrl}}/system/support-tickets"}
+          }
+        },
+        {
+          "name": "Get System Config",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{authToken}}"}],
+            "url": {"raw": "{{apiGatewayUrl}}/system/config"}
+          }
+        }
+      ]
+    }
+  ]
+}

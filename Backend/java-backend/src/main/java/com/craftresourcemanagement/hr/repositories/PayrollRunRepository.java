@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PayrollRunRepository extends JpaRepository<PayrollRun, Long> {
+    long countByStatus(String status);
 }

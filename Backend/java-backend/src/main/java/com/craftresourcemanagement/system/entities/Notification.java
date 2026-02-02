@@ -82,6 +82,14 @@ public class Notification {
         this.isRead = isRead;
     }
 
+    public boolean isRead() {
+        return isRead != null ? isRead : false;
+    }
+
+    public void setRead(boolean read) {
+        this.isRead = read;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
