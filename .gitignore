@@ -97,6 +97,11 @@ target/
 *.ear
 *.nar
 hs_err_pid*
+
+# Application Properties
+application.properties
+application-*.properties
+!application.properties.example
 replay_pid*
 
 # Python

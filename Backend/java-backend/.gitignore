@@ -2,8 +2,11 @@
 .env
 .env.*
 !.env.example
+
+# Application Properties with Secrets
+application.properties
 application-*.properties
-!application.properties
+!application.properties.example
 
 # Maven
 target/
