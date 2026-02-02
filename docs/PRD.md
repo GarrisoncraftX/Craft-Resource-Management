@@ -953,7 +953,7 @@ The system encompasses:
 ### Appendix C: Change Log
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | Jan 2025 | Dev Team | Initial PRD |
+| 1.0 | Jan 2025 | Garrison Sayor | Initial PRD |
 
 ---
 
