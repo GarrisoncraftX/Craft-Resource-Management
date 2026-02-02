@@ -286,7 +286,7 @@ public class PayrollServiceImpl implements PayrollService {
     public PerformanceReview createPerformanceReview(PerformanceReview performanceReview) {
         PerformanceReview saved = performanceReviewRepository.save(performanceReview);
         auditClient.logAction(null, "CREATE_PERFORMANCE_REVIEW", 
-            String.format("{\"employeeId\": %d}", saved.getUser().getId()));
+            String.format("{\"employeeId\": %d}", saved.getEmployeeId()));
         analyzePerformanceReview(saved);
         return saved;
     }
@@ -306,10 +306,12 @@ public class PayrollServiceImpl implements PayrollService {
         Optional<PerformanceReview> existing = performanceReviewRepository.findById(id);
         if (existing.isPresent()) {
             PerformanceReview toUpdate = existing.get();
-            toUpdate.setUser(performanceReview.getUser());
+            toUpdate.setEmployeeId(performanceReview.getEmployeeId());
             toUpdate.setReviewDate(performanceReview.getReviewDate());
-            toUpdate.setReviewText(performanceReview.getReviewText());
-            toUpdate.setReviewer(performanceReview.getReviewer());
+            toUpdate.setComments(performanceReview.getComments());
+            toUpdate.setReviewerId(performanceReview.getReviewerId());
+            toUpdate.setRating(performanceReview.getRating());
+            toUpdate.setGoals(performanceReview.getGoals());
             return performanceReviewRepository.save(toUpdate);
         }
         return null;
@@ -326,12 +328,12 @@ public class PayrollServiceImpl implements PayrollService {
     }
 
     private void analyzePerformanceReview(PerformanceReview review) {
-        if (review == null || review.getReviewText() == null || review.getReviewText().isEmpty()) {
+        if (review == null || review.getComments() == null || review.getComments().isEmpty()) {
             return;
         }
         // Prepare prompt for NLP analysis
         String prompt = "Analyze the provided performance review text. Determine the overall sentiment (e.g., 'Positive', 'Neutral', 'Needs Improvement'), identify recurring themes, and pinpoint specific strengths and areas for development. Provide a concise summary of the analysis. If actionable insights or areas for growth are identified, present them in a supportive and constructive manner. Prioritize clarity, conciseness, and a humane tone in your response: "
-                + review.getReviewText();
+                + review.getComments();
         try {
             String response = openAIClient.callOpenAIAPI(openAIKey, prompt);
             logger.info("NLP analysis result: {}", response);
