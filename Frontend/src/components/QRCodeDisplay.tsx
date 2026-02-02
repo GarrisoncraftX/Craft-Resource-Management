@@ -7,14 +7,15 @@ import { visitorApiService } from '@/services/pythonbackendapi/visitorApi';
 import { useToast } from '@/hooks/use-toast';
 import QRCode from 'qrcode';
 import { attendanceApiService } from '@/services/pythonbackendapi/attendanceApi';
+import type { QRCodeDisplayProps } from '@/types/componentProps';
 
-interface QRCodeDisplayProps {
+interface ExtendedQRCodeDisplayProps extends QRCodeDisplayProps {
   type?: 'attendance' | 'visitor';
   refreshInterval?: number;
   onScanFailure?: () => void;
 }
 
-export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
+export const QRCodeDisplay: React.FC<ExtendedQRCodeDisplayProps> = ({
   type = 'attendance',
   refreshInterval = 3600000,
   onScanFailure,

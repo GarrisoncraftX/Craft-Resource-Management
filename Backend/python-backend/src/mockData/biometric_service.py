@@ -6,31 +6,26 @@ import hashlib
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 
-# Mock biometric templates (using realistic user IDs)
+# Mock card templates (using realistic user IDs)
 mock_biometric_templates = {
     "1": {  # System Administrator
-        "face": {
-            "template_data": base64.b64encode(b"mock_face_template_admin").decode('utf-8'),
-            "template_hash": hashlib.sha256(b"mock_face_template_admin").hexdigest(),
-            "created_at": "2024-01-15T10:00:00Z"
-        },
-        "fingerprint": {
-            "template_data": base64.b64encode(b"mock_fingerprint_template_admin").decode('utf-8'),
-            "template_hash": hashlib.sha256(b"mock_fingerprint_template_admin").hexdigest(),
+        "card": {
+            "template_data": base64.b64encode(b"mock_card_template_admin").decode('utf-8'),
+            "template_hash": hashlib.sha256(b"mock_card_template_admin").hexdigest(),
             "created_at": "2024-01-15T10:00:00Z"
         }
     },
     "2": {  # HR Head
-        "face": {
-            "template_data": base64.b64encode(b"mock_face_template_hr").decode('utf-8'),
-            "template_hash": hashlib.sha256(b"mock_face_template_hr").hexdigest(),
+        "card": {
+            "template_data": base64.b64encode(b"mock_card_template_hr").decode('utf-8'),
+            "template_hash": hashlib.sha256(b"mock_card_template_hr").hexdigest(),
             "created_at": "2024-01-16T14:30:00Z"
         }
     },
     "3": {  # Finance Head
-        "fingerprint": {
-            "template_data": base64.b64encode(b"mock_fingerprint_template_finance").decode('utf-8'),
-            "template_hash": hashlib.sha256(b"mock_fingerprint_template_finance").hexdigest(),
+        "card": {
+            "template_data": base64.b64encode(b"mock_card_template_finance").decode('utf-8'),
+            "template_hash": hashlib.sha256(b"mock_card_template_finance").hexdigest(),
             "created_at": "2024-01-17T09:15:00Z"
         }
     }
@@ -71,7 +66,7 @@ mock_id_cards = {
 mock_access_logs = []
 
 def enroll_biometric_mock(user_id: str, visitor_id: Optional[str], biometric_type: str, raw_data: str) -> Dict[str, Any]:
-    """Mock biometric enrollment"""
+    """Mock biometric enrollment (card only)"""
     template_data = base64.b64encode(f"mock_{biometric_type}_template_{user_id or visitor_id}".encode()).decode('utf-8')
     template_hash = hashlib.sha256(f"mock_{biometric_type}_template_{user_id or visitor_id}".encode()).hexdigest()
     
@@ -92,12 +87,12 @@ def enroll_biometric_mock(user_id: str, visitor_id: Optional[str], biometric_typ
     }
 
 def verify_biometric_mock(user_id: str, biometric_type: str, raw_data: str) -> Dict[str, Any]:
-    """Mock biometric verification (1:1)"""
+    """Mock biometric verification (1:1) - card only"""
     if user_id not in mock_biometric_templates:
         return {
             "is_match": False,
             "similarity_score": 0.0,
-            "message": "No biometric template found for user"
+            "message": "No card template found for user"
         }
     
     if biometric_type not in mock_biometric_templates[user_id]:
@@ -107,13 +102,12 @@ def verify_biometric_mock(user_id: str, biometric_type: str, raw_data: str) -> D
             "message": f"No {biometric_type} template found for user"
         }
     
-    # Mock verification logic - in real implementation, this would compare actual biometric data
-    # For demo purposes, we'll simulate a successful match
+    # Mock verification logic
     live_template = base64.b64encode(f"mock_{biometric_type}_template_{user_id}".encode()).decode('utf-8')
     stored_template = mock_biometric_templates[user_id][biometric_type]["template_data"]
     
     is_match = live_template == stored_template
-    similarity_score = 1.0 if is_match else 0.3  # Mock similarity score
+    similarity_score = 1.0 if is_match else 0.0
     
     return {
         "is_match": is_match,
@@ -122,19 +116,16 @@ def verify_biometric_mock(user_id: str, biometric_type: str, raw_data: str) -> D
     }
 
 def identify_biometric_mock(biometric_type: str, raw_data: str) -> Optional[Dict[str, Any]]:
-    """Mock biometric identification (1:N)"""
-    # Mock identification logic
-    # For demo purposes, we'll simulate finding a match for the first user
+    """Mock biometric identification (1:N) - card only"""
     for user_id, templates in mock_biometric_templates.items():
         if biometric_type in templates:
-            # Simulate successful identification
             if user_id in mock_users:
                 return {
                     "user_id": user_id,
                     "first_name": mock_users[user_id]["first_name"],
                     "last_name": mock_users[user_id]["last_name"],
                     "employee_id": mock_users[user_id]["employee_id"],
-                    "similarity_score": 0.95
+                    "similarity_score": 1.0
                 }
     
     return None
@@ -161,15 +152,12 @@ def get_biometric_statistics_mock() -> Dict[str, Any]:
     """Mock biometric statistics"""
     total_enrollments = sum(len(templates) for templates in mock_biometric_templates.values())
     unique_users = len(mock_biometric_templates)
-    face_enrollments = sum(1 for templates in mock_biometric_templates.values() if "face" in templates)
-    fingerprint_enrollments = sum(1 for templates in mock_biometric_templates.values() if "fingerprint" in templates)
+    card_enrollments = sum(1 for templates in mock_biometric_templates.values() if "card" in templates)
     
     return {
         "total_enrollments": total_enrollments,
         "unique_users": unique_users,
-        "face_enrollments": face_enrollments,
-        "fingerprint_enrollments": fingerprint_enrollments,
-        "card_enrollments": len(mock_id_cards),
+        "card_enrollments": card_enrollments,
         "recent_access_attempts": len(mock_access_logs),
         "generated_at": datetime.now().isoformat()
     }

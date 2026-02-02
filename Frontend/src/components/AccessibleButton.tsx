@@ -1,16 +1,16 @@
 
 import React from 'react';
-import { Button, ButtonProps } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import type { AccessibleButtonProps } from '@/types/componentProps';
 
-interface AccessibleButtonProps extends ButtonProps {
-  ariaLabel?: string;
+interface ExtendedAccessibleButtonProps extends AccessibleButtonProps {
   ariaDescribedBy?: string;
   loading?: boolean;
   loadingText?: string;
 }
 
-export const AccessibleButton: React.FC<AccessibleButtonProps> = ({
+export const AccessibleButton: React.FC<ExtendedAccessibleButtonProps> = ({
   children,
   ariaLabel,
   ariaDescribedBy,

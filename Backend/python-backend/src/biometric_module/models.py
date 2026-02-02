@@ -237,8 +237,7 @@ class BiometricModel:
                 SELECT
                     COUNT(*) as total_enrollments,
                     COUNT(DISTINCT user_id) as unique_users,
-                    COUNT(CASE WHEN biometric_type = 'face' THEN 1 END) as face_enrollments,
-                    COUNT(CASE WHEN biometric_type = 'card' THEN 1 END) as card_enrollments
+                    COUNT(CASE WHEN biometric_type IN ('card', 'idcard') THEN 1 END) as card_enrollments
                 FROM biometric_templates
                 WHERE user_id IS NOT NULL
             """
@@ -264,7 +263,6 @@ class BiometricModel:
             return {
                 'total_enrollments': 0,
                 'unique_users': 0,
-                'face_enrollments': 0,
                 'card_enrollments': 0,
                 'generated_at': datetime.now().isoformat()
             }

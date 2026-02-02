@@ -119,3 +119,15 @@ export interface PerformanceReview {
   comments: string;
   goals?: string;
 }
+
+export interface ProvisionedEmployee {
+  id: number;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  accountStatus: string;
+  provisionedDate: string;
+  profileCompleted: boolean;
+  defaultPasswordChanged: boolean;
+}

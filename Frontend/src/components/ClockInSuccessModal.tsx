@@ -4,10 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CheckCircle, Clock, MapPin, User } from 'lucide-react';
+import type { ClockInSuccessModalProps } from '@/types/componentProps';
 
-interface ClockInSuccessModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface ExtendedClockInSuccessModalProps extends ClockInSuccessModalProps {
   employeeData: {
     employeeId: string;
     firstName: string;
@@ -17,11 +16,10 @@ interface ClockInSuccessModalProps {
     role: string;
     profilePictureUrl?: string;
   };
-  clockInTime: string;
   clockInMethod: string;
 }
 
-export const ClockInSuccessModal: React.FC<ClockInSuccessModalProps> = ({
+export const ClockInSuccessModal: React.FC<ExtendedClockInSuccessModalProps> = ({
   isOpen,
   onClose,
   employeeData,

@@ -7,14 +7,10 @@ import { Calendar, Clock, Heart, MessageCircle, Share, Plus, BarChart3 } from 'l
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
 import { mockSocialMediaPosts } from '@/services/mockData/pr';
 import { SocialMediaPostFormDialog } from './SocialMediaPostFormDialog';
+import type { SocialPost } from '@/types/moduleComponentProps';
 
-interface SocialPost {
-  id: string | number;
-  platform: string;
-  content: string;
-  scheduledDate: string;
+interface ExtendedSocialPost extends SocialPost {
   scheduledTime: string;
-  status: 'scheduled' | 'published' | 'draft';
   engagement: { likes: number; comments: number; shares: number };
 }
 

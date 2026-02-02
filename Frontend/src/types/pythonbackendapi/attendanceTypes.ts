@@ -35,13 +35,13 @@ export interface AttendanceSearchParams {
 
 export interface AttendanceClockInPayload {
   user_id: string;
-  method: 'qr' | 'manual' | 'biometric';
+  method: 'qr' | 'manual' | 'card';
   location?: string;
 }
 
 export interface AttendanceClockOutPayload {
   user_id: string;
-  method: 'qr' | 'manual' | 'biometric';
+  method: 'qr' | 'manual' | 'card';
 }
 
 export interface QRToken {
@@ -63,10 +63,18 @@ export interface BuddyPunchReport {
   reportGeneratedAt: string;
 }
 
+export interface BuddyPunchReportItem {
+  id: number;
+  employee_id: string;
+  first_name: string;
+  last_name: string;
+  risk_count: number;
+}
+
 export interface AttendanceMethodStats {
   qrCount: number;
   manualCount: number;
-  biometricCount: number;
+  cardCount: number;
   totalAttendances: number;
   manualPercentage: number;
 }
@@ -74,6 +82,8 @@ export interface AttendanceMethodStats {
 export interface ManualFallbackAttendance extends AttendanceRecord {
   manual_fallback_flag: true;
   audit_notes?: string;
+  reviewed_at?: string;
+  reviewed_by?: number;
 }
 
 export interface AttendanceByMethod {

@@ -3,23 +3,20 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import type { AccessibleFormFieldProps } from '@/types/componentProps';
 
-interface AccessibleFormFieldProps {
+interface ExtendedAccessibleFormFieldProps extends AccessibleFormFieldProps {
   id: string;
-  label: string;
-  type?: string;
   placeholder?: string;
   value: string;
   onChange: (value: string) => void;
-  error?: string;
-  required?: boolean;
   disabled?: boolean;
   className?: string;
   autoComplete?: string;
   'aria-describedby'?: string;
 }
 
-export const AccessibleFormField: React.FC<AccessibleFormFieldProps> = ({
+export const AccessibleFormField: React.FC<ExtendedAccessibleFormFieldProps> = ({
   id,
   label,
   type = 'text',

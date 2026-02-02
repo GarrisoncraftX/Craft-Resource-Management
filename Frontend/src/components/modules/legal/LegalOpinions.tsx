@@ -4,15 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, FileText } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-interface LegalOpinion {
-  id: string;
-  subject: string;
-  author: string;
-  date: string;
-  category: string;
-  status: string;
-}
+import type { LegalOpinion } from '@/types/javabackendapi/legalTypes';
 
 export const LegalOpinions: React.FC = () => {
   const [opinions] = useState<LegalOpinion[]>([

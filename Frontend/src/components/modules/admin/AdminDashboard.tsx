@@ -7,18 +7,7 @@ import { hrApiService } from '@/services/javabackendapi/hrApi';
 import { UnifySidebar } from '@/components/ui/UnifySidebar';
 import type { AuditLog } from '@/services/mockData/admin';
 import type { User } from '@/types/javabackendapi/hrTypes';
-
-interface SystemStats {
-  activeSessions?: number;
-  uptime?: string;
-  storageUsed?: string;
-}
-
-interface AuditStatistics {
-  totalLogs?: number;
-  todayLogs?: number;
-  weekLogs?: number;
-}
+import type { SystemStats, AuditStatistics } from '@/types/javabackendapi/adminTypes';
 
 export const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<SystemStats | null>(null);

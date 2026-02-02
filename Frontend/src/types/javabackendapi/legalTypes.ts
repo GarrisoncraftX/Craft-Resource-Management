@@ -17,3 +17,26 @@ export interface ComplianceRecord {
   status: string;
   notes?: string;
 }
+
+export interface LegalOpinion {
+  id: string;
+  subject: string;
+  author: string;
+  date: string;
+  category: string;
+  status: string;
+}
+
+export interface ComplianceFormProps {
+  isOpen: boolean;
+  onClose: () => void;
+  record?: ComplianceRecord;
+  onSubmit: (data: Partial<ComplianceRecord>) => void;
+}
+
+export interface LegalCaseFormProps {
+  isOpen: boolean;
+  onClose: () => void;
+  legalCase?: LegalCase;
+  onSubmit: (data: Partial<LegalCase>) => void;
+}

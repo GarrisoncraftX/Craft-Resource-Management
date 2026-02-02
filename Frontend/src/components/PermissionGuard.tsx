@@ -1,16 +1,15 @@
 
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import type { PermissionGuardProps } from '@/types/componentProps';
 
-interface PermissionGuardProps {
-  children: React.ReactNode;
+interface ExtendedPermissionGuardProps extends PermissionGuardProps {
   requiredPermissions?: string[];
   requiredRole?: string;
   requiredDepartment?: string;
-  fallback?: React.ReactNode;
 }
 
-export const PermissionGuard: React.FC<PermissionGuardProps> = ({
+export const PermissionGuard: React.FC<ExtendedPermissionGuardProps> = ({
   children,
   requiredPermissions = [],
   requiredRole,

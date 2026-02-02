@@ -18,49 +18,20 @@ import {
   flagBuddyPunchRisk,
   reviewAttendance
 } from '@/services/api';
-
-interface ProvisionedEmployee {
-  id: number;
-  employeeId: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  accountStatus: string;
-  provisionedDate: string;
-  profileCompleted: boolean;
-  defaultPasswordChanged: boolean;
-}
-
-interface ManualAttendance {
-  id: number;
-  user: { employee_id: string; first_name: string; last_name: string };
-  clock_in_time: string;
-  clock_out_time?: string;
-  audit_notes?: string;
-  flagged_for_review: boolean;
-  reviewed_at?: string;
-  reviewed_by?: number;
-}
-
-interface MethodStats {
-  qrCount: number;
-  manualCount: number;
-  biometricCount: number;
-  totalAttendances: number;
-  manualPercentage: number;
-}
+import type { ManualFallbackAttendance, AttendanceMethodStats } from '@/types/pythonbackendapi/attendanceTypes';
+import type { ProvisionedEmployee } from '@/types/javabackendapi/hrTypes';
 
 export const HRDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('provisioning');
   const [provisionedEmployees, setProvisionedEmployees] = useState<ProvisionedEmployee[]>([]);
-  const [manualAttendances, setManualAttendances] = useState<ManualAttendance[]>([]);
-  const [methodStats, setMethodStats] = useState<MethodStats | null>(null);
+  const [manualAttendances, setManualAttendances] = useState<ManualFallbackAttendance[]>([]);
+  const [methodStats, setMethodStats] = useState<AttendanceMethodStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [flaggingId, setFlaggingId] = useState<number | null>(null);
-  const [reviewingId, setReviewingId] = useState<number | null>(null);
+  const [flaggingId, setFlaggingId] = useState<string | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadHRData();
@@ -90,10 +61,10 @@ export const HRDashboard: React.FC = () => {
     navigate(`/hr/employee/${id}`);
   };
 
-  const handleFlagBuddyPunch = async (attendanceId: number) => {
+  const handleFlagBuddyPunch = async (attendanceId: string) => {
     try {
       setFlaggingId(attendanceId);
-      await flagBuddyPunchRisk(attendanceId, 'Flagged for buddy punch review by HR');
+      await flagBuddyPunchRisk(Number(attendanceId), 'Flagged for buddy punch review by HR');
       await loadHRData();
       toast.success('Attendance flagged for review');
     } catch (err) {
@@ -105,10 +76,10 @@ export const HRDashboard: React.FC = () => {
     }
   };
 
-  const handleReviewAttendance = async (attendanceId: number) => {
+  const handleReviewAttendance = async (attendanceId: string) => {
     try {
       setReviewingId(attendanceId);
-      await reviewAttendance(attendanceId, Number(user?.userId) || 0, 'Reviewed by HR - No issues found');
+      await reviewAttendance(Number(attendanceId), Number(user?.userId) || 0, 'Reviewed by HR - No issues found');
       await loadHRData();
       toast.success('Attendance reviewed successfully');
     } catch (err) {
@@ -336,8 +307,8 @@ export const HRDashboard: React.FC = () => {
                         <div className="text-xs text-red-500">{(methodStats.manualPercentage || 0).toFixed(1)}%</div>
                       </div>
                       <div className="bg-green-50 p-4 rounded-lg">
-                        <div className="text-sm text-gray-600">Biometric</div>
-                        <div className="text-2xl font-bold text-green-600">{methodStats.biometricCount}</div>
+                        <div className="text-sm text-gray-600">Card</div>
+                        <div className="text-2xl font-bold text-green-600">{methodStats.cardCount}</div>
                       </div>
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <div className="text-sm text-gray-600">Total</div>
@@ -383,9 +354,9 @@ export const HRDashboard: React.FC = () => {
                             <tr key={attendance.id} className="border-b hover:bg-gray-50">
                               <td className="px-4 py-2">
                                 <div className="font-medium">
-                                  {attendance.user ? `${attendance.user.first_name} ${attendance.user.last_name}` : 'Unknown User'}
+                                  {attendance.employee_name || 'Unknown User'}
                                 </div>
-                                <div className="text-xs text-gray-500">{attendance.user ? attendance.user.employee_id : 'N/A'}</div>
+                                <div className="text-xs text-gray-500">{attendance.employee_id || 'N/A'}</div>
                               </td>
                               <td className="px-4 py-2">
                                 <div className="flex items-center gap-1">

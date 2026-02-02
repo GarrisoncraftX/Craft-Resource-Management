@@ -9,42 +9,21 @@ import {
   getAttendanceMethodStatistics,
   flagBuddyPunchRisk,
 } from '@/services/api';
+import type { ManualFallbackAttendance, AttendanceMethodStats, BuddyPunchReportItem } from '@/types/pythonbackendapi/attendanceTypes';
 
-interface ManualAttendance {
-  id: number | string;
-  user_id?: string;
-  employee_id?: string;
+interface ManualAttendance extends ManualFallbackAttendance {
+  user?: { employee_id: string; first_name: string; last_name: string };
   first_name?: string;
   last_name?: string;
-  user?: { employee_id: string; first_name: string; last_name: string };
-  clock_in_time: string;
-  clock_out_time?: string;
-  audit_notes?: string;
-}
-
-interface MethodStats {
-  qrCount: number;
-  manualCount: number;
-  biometricCount: number;
-  totalAttendances: number;
-  manualPercentage: number;
-}
-
-interface BuddyPunchReport {
-  id: number;
-  employee_id: string;
-  first_name: string;
-  last_name: string;
-  risk_count: number;
 }
 
 export function AttendanceMonitoring() {
   const [manualAttendances, setManualAttendances] = useState<ManualAttendance[]>([]);
-  const [methodStats, setMethodStats] = useState<MethodStats | null>(null);
-  const [buddyPunchReport, setBuddyPunchReport] = useState<BuddyPunchReport[]>([]);
+  const [methodStats, setMethodStats] = useState<AttendanceMethodStats | null>(null);
+  const [buddyPunchReport, setBuddyPunchReport] = useState<BuddyPunchReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [flaggingId, setFlaggingId] = useState<number | null>(null);
+  const [flaggingId, setFlaggingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadAttendanceData();
@@ -70,10 +49,10 @@ export function AttendanceMonitoring() {
     }
   };
 
-  const handleFlagBuddyPunch = async (attendanceId: number) => {
+  const handleFlagBuddyPunch = async (attendanceId: string) => {
     try {
       setFlaggingId(attendanceId);
-      await flagBuddyPunchRisk(attendanceId, 'Flagged for buddy punch review');
+      await flagBuddyPunchRisk(Number(attendanceId), 'Flagged for buddy punch review');
       await loadAttendanceData();
     } catch (err) {
       setError('Failed to flag attendance');
@@ -114,8 +93,8 @@ export function AttendanceMonitoring() {
                 <div className="text-xs text-red-500">{methodStats.manualPercentage.toFixed(1)}%</div>
               </div>
               <div className="bg-green-50 p-4 rounded-lg">
-                <div className="text-sm text-gray-600">Biometric</div>
-                <div className="text-2xl font-bold text-green-600">{methodStats.biometricCount}</div>
+                <div className="text-sm text-gray-600">Card</div>
+                <div className="text-2xl font-bold text-green-600">{methodStats.cardCount}</div>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="text-sm text-gray-600">Total</div>
@@ -179,7 +158,7 @@ export function AttendanceMonitoring() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleFlagBuddyPunch(typeof attendance.id === 'number' ? attendance.id : Number.parseInt(String(attendance.id)))}
+                          onClick={() => handleFlagBuddyPunch(attendance.id)}
                           disabled={flaggingId === attendance.id}
                           className="text-red-600 hover:text-red-700"
                         >
