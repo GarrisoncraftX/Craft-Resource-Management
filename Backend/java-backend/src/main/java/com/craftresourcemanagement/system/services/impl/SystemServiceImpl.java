@@ -103,6 +103,7 @@ public class SystemServiceImpl implements SystemService {
         if (auditLog.getUserId() != null) {
             userRepository.findById(auditLog.getUserId()).ifPresent(user -> {
                 String userName = user.getFirstName() + " " + user.getLastName();
+                auditLog.setUserName(userName);
                 String action = auditLog.getAction();
                 
                 if (!action.toLowerCase().contains("user") && !action.toLowerCase().contains(userName.toLowerCase())) {
@@ -121,7 +122,8 @@ public class SystemServiceImpl implements SystemService {
 
     @Override
     public Page<AuditLog> getAllAuditLogsPaginated(Pageable pageable) {
-        return auditLogRepository.findAll(pageable);
+        return auditLogRepository.findByTimestampBetweenOrderByTimestampDesc(
+            LocalDateTime.of(2000, 1, 1, 0, 0), LocalDateTime.now().plusDays(1), pageable);
     }
 
     @Override

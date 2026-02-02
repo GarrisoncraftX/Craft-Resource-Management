@@ -144,7 +144,7 @@ export const AdminDashboard: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                             <span className="font-medium">Performed by:</span>
-                            <span className="text-blue-600">{log.userId ? `User #${log.userId}` : 'System'}</span>
+                            <span className="text-blue-600">{log.userName || (log.userId ? `User #${log.userId}` : 'System')}</span>
                             <span className="text-gray-400">•</span>
                             <span>{new Date(log.timestamp).toLocaleString()}</span>
                           </div>
