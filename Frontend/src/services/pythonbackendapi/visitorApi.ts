@@ -91,6 +91,21 @@ class VisitorApiService {
     const response = await apiClient.post('/api/visitors/entry-pass', { visitor_id: visitorId });
     return response.entry_pass;
   }
+
+  // Approve visitor
+  async approveVisitor(visitorId: string): Promise<{ message: string }> {
+    return apiClient.post('/api/visitors/approve', { visitor_id: visitorId });
+  }
+
+  // Reject visitor
+  async rejectVisitor(visitorId: string, reason?: string): Promise<{ message: string }> {
+    return apiClient.post('/api/visitors/reject', { visitor_id: visitorId, reason });
+  }
+
+  // Check visitor status
+  async checkVisitorStatus(visitorId: string): Promise<any> {
+    return apiClient.get(`/api/visitors/status?visitor_id=${visitorId}`);
+  }
 }
 
 export const visitorApiService = new VisitorApiService();

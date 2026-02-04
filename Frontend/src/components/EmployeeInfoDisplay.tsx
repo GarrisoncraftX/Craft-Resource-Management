@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useNavigate } from 'react-router-dom';
 import { Employee, fetchEmployeeById } from '@/services/api'; 
 import { useAuth } from '@/contexts/AuthContext';
-import Navbar from '@/components/ui/Navbar';
+import ModuleLayout from '@/components/ui/ModuleLayout';
 import { Briefcase, Mail, MapPin, Shield, DollarSign, FileText, User } from 'lucide-react'; 
 
 // --- Helper Component ---
@@ -97,15 +97,13 @@ const EmployeeInfoDisplay: React.FC = () => {
 
     // --- Main Component Render ---
     return (
-        <div className="min-h-screen bg-gray-50">
-            <Navbar
-                title="Employee Profile"
-                onViewDashboard={handleViewDashboard}
-                onLogout={handleLogout}
-                toggleSidebar={() => {}}
-                isEmployeeDashboard={true}
-            />
-            <div className="max-w-7xl mx-auto pt-24 px-4 sm:px-6 lg:px-8">
+        <ModuleLayout
+            onViewDashboard={handleViewDashboard}
+            onLogout={handleLogout}
+            isEmployeeDashboard={false}
+            showSidebar={false}
+        >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 
                 {/* 1. Profile Header Card (Styled) */}
                 <Card className="shadow-xl mb-8 border-t-4 border-blue-600 rounded-lg overflow-hidden">
@@ -269,7 +267,7 @@ const EmployeeInfoDisplay: React.FC = () => {
                 </Tabs>
 
             </div>
-        </div>
+        </ModuleLayout>
     );
 };
 

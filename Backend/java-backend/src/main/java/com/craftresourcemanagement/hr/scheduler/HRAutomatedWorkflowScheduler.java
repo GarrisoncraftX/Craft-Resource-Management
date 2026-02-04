@@ -21,7 +21,7 @@ public class HRAutomatedWorkflowScheduler {
         this.notificationService = notificationService;
     }
 
-    @Scheduled(cron = "0 0 9 * * *") // Daily at 9 AM
+    @Scheduled(cron = "0 0 10 * * *") // Daily at 10 AM
     public void sendBirthdayAndAnniversaryNotifications() {
         log.info("Running birthday/anniversary notifications job");
         

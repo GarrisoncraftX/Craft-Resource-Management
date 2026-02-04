@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Camera, Save } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import Navbar from '@/components/ui/Navbar';
+import ModuleLayout from '@/components/ui/ModuleLayout';
 import { useNavigate } from 'react-router-dom';
 import { fetchEmployeeById, updateEmployeeById, uploadProfilePicture } from '@/services/api';
 import { LogoSpinner } from '@/components/ui/LogoSpinner';
@@ -236,7 +236,7 @@ export const EmployeeAccount: React.FC = () => {
       setProfileImage(updatedEmployee.profilePictureUrl || '');
       toast.success('Profile picture updated successfully');
       event.target.value = '';
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to upload profile picture:', error);
       const errorMessage = error?.message || 'Failed to upload profile picture';
       toast.error(errorMessage);
@@ -247,21 +247,16 @@ export const EmployeeAccount: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar 
-        title="Employee Account" 
-        onViewDashboard={handleViewDashboard}
-        onLogout={handleLogout}
-        toggleSidebar={() => {}}
-        isEmployeeDashboard={true}
-      />
-      
+    <ModuleLayout
+      onViewDashboard={handleViewDashboard}
+      onLogout={handleLogout}
+      isEmployeeDashboard={false}
+      showSidebar={false}
+    >
       {initialLoading ? (
-        <div className="pt-20 px-6 pb-6">
-          <LogoSpinner size="lg" className="min-h-[60vh]" />
-        </div>
+        <LogoSpinner size="lg" className="min-h-[60vh]" />
       ) : (
-      <div className="pt-20 px-6 pb-6">
+      <div className="px-6 pb-6">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Profile Picture Section */}
           <Card>
@@ -471,6 +466,6 @@ export const EmployeeAccount: React.FC = () => {
         </div>
       </div>
       )}
-    </div>
+    </ModuleLayout>
   );
 };

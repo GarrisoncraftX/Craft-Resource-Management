@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './button';
-import { Eye, Home, LogOut, Bell, Clock, User } from 'lucide-react';
+import { Eye, Home, LogOut, Bell, Clock, User, CheckCircle, XCircle } from 'lucide-react';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -11,11 +11,18 @@ import {
 import { useNavigate} from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { visitorApiService } from '@/services/pythonbackendapi/visitorApi';
+import { toast } from 'sonner';
 import bgImage from '@/assets/bgimage.jpg';
 import logo from '@/assets/logo.png';
 import { UnifySidebar } from './UnifySidebar';
 import { fetchEmployeeById } from '@/services/api';
 import type { Employee } from '@/services/api';
+import { fetchNotificationsByUserId, markNotificationAsRead, getUnreadNotificationCount, Notification } from '@/services/javabackendapi/systemApi';
 
 interface ModuleLayoutProps {
   title?: string;
@@ -38,6 +45,10 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
   const { user } = useAuth();
   const [currentTime, setCurrentTime] = React.useState(new Date());
   const [employeeData, setEmployeeData] = React.useState<Employee | null>(null);
+  const [notifications, setNotifications] = React.useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = React.useState(0);
+  const [isNotificationOpen, setIsNotificationOpen] = React.useState(false);
+  const [approvalDialog, setApprovalDialog] = React.useState<{ open: boolean; visitorId: string; visitorName: string } | null>(null);
 
   // Update time every second
   React.useEffect(() => {
@@ -53,6 +64,80 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
         .catch(error => console.error('Failed to load employee data:', error));
     }
   }, [user?.userId]);
+
+  // Load notifications
+  React.useEffect(() => {
+    if (user?.userId) {
+      loadNotifications();
+      const interval = setInterval(loadNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user?.userId]);
+
+  const loadNotifications = async () => {
+    if (!user?.userId) return;
+    try {
+      const [notifs, count] = await Promise.all([
+        fetchNotificationsByUserId(user.userId),
+        getUnreadNotificationCount(user.userId)
+      ]);
+      setNotifications(notifs || []);
+      setUnreadCount(count || 0);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+      setNotifications([]);
+      setUnreadCount(0);
+    }
+  };
+
+  const handleNotificationClick = async (notification: Notification) => {
+    if (!notification.isRead && notification.id) {
+      try {
+        await markNotificationAsRead(notification.id);
+        await loadNotifications();
+      } catch (error) {
+        console.error('Failed to mark notification as read:', error);
+      }
+    }
+    
+    // Check if it's a visitor approval notification
+    if (notification.title === 'Visitor Approval Required' && notification.message) {
+      const visitorIdMatch = notification.message.match(/Visitor ID: (\S+)/);
+      const visitorNameMatch = notification.message.match(/^(.+?) is waiting/);
+      if (visitorIdMatch && visitorNameMatch) {
+        setApprovalDialog({
+          open: true,
+          visitorId: visitorIdMatch[1],
+          visitorName: visitorNameMatch[1]
+        });
+        setIsNotificationOpen(false);
+      }
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!approvalDialog) return;
+    try {
+      await visitorApiService.approveVisitor(approvalDialog.visitorId);
+      toast.success(`Visitor ${approvalDialog.visitorName} approved`);
+      setApprovalDialog(null);
+      await loadNotifications();
+    } catch (error) {
+      toast.error('Failed to approve visitor');
+    }
+  };
+
+  const handleReject = async () => {
+    if (!approvalDialog) return;
+    try {
+      await visitorApiService.rejectVisitor(approvalDialog.visitorId, 'Host declined the visit');
+      toast.success(`Visitor ${approvalDialog.visitorName} rejected`);
+      setApprovalDialog(null);
+      await loadNotifications();
+    } catch (error) {
+      toast.error('Failed to reject visitor');
+    }
+  };
 
   const handleBackToAdmin = () => {
     navigate('/admin/dashboard');
@@ -118,10 +203,45 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
 
             {/* Action Icons */}
             <div className="flex items-center">
-              <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-accent h-8 w-8 sm:h-10 sm:w-10">
-                <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-destructive rounded-full ring-1 sm:ring-2 ring-card" />
-              </Button>
+              <DropdownMenu open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-accent h-8 w-8 sm:h-10 sm:w-10">
+                    <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                    {unreadCount > 0 && (
+                      <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white text-xs">
+                        {unreadCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80">
+                  <div className="p-2 font-semibold border-b">Notifications</div>
+                  <ScrollArea className="h-96">
+                    {notifications.length === 0 ? (
+                      <div className="p-4 text-center text-sm text-gray-500">No notifications</div>
+                    ) : (
+                      notifications.map((notif, index) => (
+                        <React.Fragment key={notif.id}>
+                          <DropdownMenuItem
+                            className={`flex flex-col items-start p-3 cursor-pointer ${!notif.isRead ? 'bg-blue-50' : ''}`}
+                            onClick={() => handleNotificationClick(notif)}
+                          >
+                            <div className="flex justify-between w-full">
+                              <span className="font-medium text-sm">{notif.title}</span>
+                              {!notif.isRead && <Badge className="bg-blue-500 h-2 w-2 p-0 rounded-full" />}
+                            </div>
+                            <span className="text-xs text-gray-600 mt-1">{notif.message}</span>
+                            <span className="text-xs text-gray-400 mt-1">
+                              {notif.createdAt ? new Date(notif.createdAt).toLocaleString() : ''}
+                            </span>
+                          </DropdownMenuItem>
+                          {index < notifications.length - 1 && <Separator />}
+                        </React.Fragment>
+                      ))
+                    )}
+                  </ScrollArea>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {/* Desktop Navigation */}
@@ -240,6 +360,33 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
           {children}
         </div>
       </main>
+
+      {/* Visitor Approval Dialog */}
+      {approvalDialog && (
+        <Dialog open={approvalDialog.open} onOpenChange={(open) => !open && setApprovalDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Visitor Approval Request</DialogTitle>
+              <DialogDescription>
+                {approvalDialog.visitorName} is waiting for your approval.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-gray-600">Visitor ID: {approvalDialog.visitorId}</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleReject}>
+                <XCircle className="h-4 w-4 mr-2" />
+                Reject
+              </Button>
+              <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700">
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Approve
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

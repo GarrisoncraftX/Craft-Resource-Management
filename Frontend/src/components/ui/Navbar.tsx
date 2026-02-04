@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Eye, LogOut, Menu, User, Bell } from 'lucide-react';
+import { Eye, LogOut, Menu, User, Bell, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { fetchNotificationsByUserId, markNotificationAsRead, getUnreadNotificationCount, Notification } from '@/services/javabackendapi/systemApi';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { visitorApiService } from '@/services/pythonbackendapi/visitorApi';
+import { toast } from 'sonner';
 
 interface NavbarProps {
   title: string;
@@ -23,6 +26,7 @@ const Navbar: React.FC<NavbarProps> = ({ title, onViewDashboard, onLogout, toggl
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [approvalDialog, setApprovalDialog] = useState<{ open: boolean; visitorId: string; visitorName: string } | null>(null);
 
   useEffect(() => {
     if (user?.userId) {
@@ -56,6 +60,43 @@ const Navbar: React.FC<NavbarProps> = ({ title, onViewDashboard, onLogout, toggl
       } catch (error) {
         console.error('Failed to mark notification as read:', error);
       }
+    }
+    
+    // Check if it's a visitor approval notification
+    if (notification.title === 'Visitor Approval Required' && notification.message) {
+      const visitorIdMatch = notification.message.match(/Visitor ID: (\S+)/);
+      const visitorNameMatch = notification.message.match(/^(.+?) is waiting/);
+      if (visitorIdMatch && visitorNameMatch) {
+        setApprovalDialog({
+          open: true,
+          visitorId: visitorIdMatch[1],
+          visitorName: visitorNameMatch[1]
+        });
+      }
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!approvalDialog) return;
+    try {
+      await visitorApiService.approveVisitor(approvalDialog.visitorId);
+      toast.success(`Visitor ${approvalDialog.visitorName} approved`);
+      setApprovalDialog(null);
+      await loadNotifications();
+    } catch (error) {
+      toast.error('Failed to approve visitor');
+    }
+  };
+
+  const handleReject = async () => {
+    if (!approvalDialog) return;
+    try {
+      await visitorApiService.rejectVisitor(approvalDialog.visitorId, 'Host declined the visit');
+      toast.success(`Visitor ${approvalDialog.visitorName} rejected`);
+      setApprovalDialog(null);
+      await loadNotifications();
+    } catch (error) {
+      toast.error('Failed to reject visitor');
     }
   };
 
@@ -180,6 +221,33 @@ const Navbar: React.FC<NavbarProps> = ({ title, onViewDashboard, onLogout, toggl
           </div>
         </div>
       </div>
+
+      {/* Visitor Approval Dialog */}
+      {approvalDialog && (
+        <Dialog open={approvalDialog.open} onOpenChange={(open) => !open && setApprovalDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Visitor Approval Request</DialogTitle>
+              <DialogDescription>
+                {approvalDialog.visitorName} is waiting for your approval.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-gray-600">Visitor ID: {approvalDialog.visitorId}</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleReject}>
+                <XCircle className="h-4 w-4 mr-2" />
+                Reject
+              </Button>
+              <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700">
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Approve
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </header>
   );
 };

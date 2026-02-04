@@ -12,6 +12,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,9 +22,14 @@ public class NotificationService {
     
     private static final Logger logger = LoggerFactory.getLogger(NotificationService.class);
     private final RestTemplate restTemplate = new RestTemplate();
+    private final HRNotificationService hrNotificationService;
     
     @Value("${nodejs.service.url}")
     private String nodejsBackendUrl;
+
+    public NotificationService(HRNotificationService hrNotificationService) {
+        this.hrNotificationService = hrNotificationService;
+    }
 
     public void sendPayslipEmail(Payslip payslip) {
         try {
@@ -79,25 +86,65 @@ public class NotificationService {
     // Automated workflow notification methods
     public void sendBirthdayGreeting(User employee) {
         logger.info("BIRTHDAY: Sending greeting to {} ({})", employee.getEmail(), employee.getFirstName());
+        hrNotificationService.sendNotification(
+            employee.getId(),
+            "🎉 Happy Birthday!",
+            String.format("Happy Birthday %s! Wishing you a wonderful day filled with joy and happiness. The entire team wishes you all the best!", employee.getFirstName()),
+            "INFO"
+        );
     }
     
     public void sendAnniversaryGreeting(User employee) {
         logger.info("ANNIVERSARY: Sending greeting to {} ({})", employee.getEmail(), employee.getFirstName());
+        if (employee.getHireDate() != null) {
+            int years = Period.between(employee.getHireDate(), LocalDate.now()).getYears();
+            hrNotificationService.sendNotification(
+                employee.getId(),
+                "🎊 Work Anniversary!",
+                String.format("Congratulations %s on completing %d year%s with us! Thank you for your dedication and hard work.", 
+                    employee.getFirstName(), years, years > 1 ? "s" : ""),
+                "SUCCESS"
+            );
+        }
     }
     
     public void sendProbationEndAlert(User employee) {
         logger.info("PROBATION ALERT: Notifying HR about {} - probation ending soon", employee.getEmployeeId());
+        hrNotificationService.sendNotification(
+            employee.getId(),
+            "Probation Period Ending Soon",
+            String.format("Your probation period will end in 2 weeks. Please ensure all required tasks are completed."),
+            "WARNING"
+        );
     }
     
     public void sendContractRenewalReminder(User employee) {
         logger.info("CONTRACT RENEWAL: Alerting HR about {} - contract expiring soon", employee.getEmployeeId());
+        hrNotificationService.sendNotification(
+            employee.getId(),
+            "Contract Renewal Reminder",
+            "Your employment contract will expire in 1 month. Please contact HR for renewal procedures.",
+            "WARNING"
+        );
     }
     
     public void sendTrainingDueReminder(EmployeeTraining training) {
         logger.info("TRAINING REMINDER: Notifying {} about upcoming training", training.getUser().getEmail());
+        hrNotificationService.sendNotification(
+            training.getUser().getId(),
+            "Training Reminder",
+            String.format("Reminder: Your training is due in 3 days. Please ensure you complete it on time."),
+            "INFO"
+        );
     }
     
     public void sendLeaveBalanceAlert(User employee) {
         logger.info("LEAVE BALANCE: Alerting {} about low leave balance", employee.getEmail());
+        hrNotificationService.sendNotification(
+            employee.getId(),
+            "Low Leave Balance",
+            "Your leave balance is running low. Please plan your leaves accordingly.",
+            "INFO"
+        );
     }
 }

@@ -3,12 +3,15 @@ package com.craftresourcemanagement.hr.controllers;
 import com.craftresourcemanagement.hr.entities.User;
 import com.craftresourcemanagement.hr.services.EmployeeService;
 import com.craftresourcemanagement.hr.services.CloudinaryService;
+import com.craftresourcemanagement.hr.services.NotificationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/hr/employees")
@@ -16,10 +19,12 @@ public class EmployeeController {
 
     private final EmployeeService employeeService;
     private final CloudinaryService cloudinaryService;
+    private final NotificationService notificationService;
 
-    public EmployeeController(EmployeeService employeeService, CloudinaryService cloudinaryService) {
+    public EmployeeController(EmployeeService employeeService, CloudinaryService cloudinaryService, NotificationService notificationService) {
         this.employeeService = employeeService;
         this.cloudinaryService = cloudinaryService;
+        this.notificationService = notificationService;
     }
 
     @PostMapping("/register")
@@ -161,6 +166,28 @@ public class EmployeeController {
             return ResponseEntity.ok(employeeService.toggleUserStatus(id));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/test-birthday-notifications")
+    public ResponseEntity<?> testBirthdayNotifications() {
+        try {
+            List<User> birthdayEmployees = employeeService.getEmployeesWithBirthdayToday();
+            List<User> anniversaryEmployees = employeeService.getEmployeesWithAnniversaryToday();
+            
+            birthdayEmployees.forEach(notificationService::sendBirthdayGreeting);
+            anniversaryEmployees.forEach(notificationService::sendAnniversaryGreeting);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("birthdayCount", birthdayEmployees.size());
+            response.put("anniversaryCount", anniversaryEmployees.size());
+            response.put("birthdayEmployees", birthdayEmployees.stream().map(u -> u.getFirstName() + " " + u.getLastName()).toList());
+            response.put("anniversaryEmployees", anniversaryEmployees.stream().map(u -> u.getFirstName() + " " + u.getLastName()).toList());
+            response.put("message", "Notifications sent successfully");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
     }
 }
