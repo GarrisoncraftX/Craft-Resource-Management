@@ -13,6 +13,7 @@ export interface User {
   managerId?: number;
   salary?: number;
   accountNumber?: string;
+  bankName?: string;
   momoNumber?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
@@ -35,6 +36,7 @@ export interface UpdateEmployeeRequest {
   managerId?: number;
   salary?: number;
   accountNumber?: string;
+  bankName?: string;
   momoNumber?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;

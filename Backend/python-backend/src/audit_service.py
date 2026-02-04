@@ -2,7 +2,8 @@ import requests
 import os
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime
+import pytz
 from typing import Optional, Dict, Any
 from collections import deque
 import threading
@@ -28,10 +29,14 @@ class AuditService:
         """
         Non-blocking audit logging with queueing
         """
+        # Use Rwanda timezone and format as ISO with 'T'
+        rwanda_tz = pytz.timezone('Africa/Kigali')
+        timestamp = datetime.now(rwanda_tz).strftime('%Y-%m-%dT%H:%M:%S')
+        
         audit_log = {
             'userId': user_id,
             'action': self._build_descriptive_action(action, details if isinstance(details, dict) else {}),
-            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'timestamp': timestamp,
             'details': self._mask_sensitive_data(str(details) if details else '{}'),
             'serviceName': 'python-backend',
             'ipAddress': ip_address,

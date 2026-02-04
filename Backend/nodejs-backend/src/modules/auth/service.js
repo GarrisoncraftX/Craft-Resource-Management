@@ -410,12 +410,14 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
 
   // Log audit activity for signin
   try {
-    await auditService.logAction(user.id, 'has signin', {
+    console.log('[AUDIT DEBUG] Attempting to log signin for user:', user.id, 'employeeId:', user.employeeId);
+    await auditService.logAction(user.id, 'SIGNIN', {
       employeeId: user.employeeId,
       method: biometric_type ? 'biometric' : 'password'
     });
+    console.log('[AUDIT DEBUG] Signin audit log queued successfully');
   } catch (auditError) {
-    console.error('Audit logging failed for signin:', auditError.message);
+    console.error('[AUDIT DEBUG] Audit logging failed for signin:', auditError.message);
   }
 
   const permissions = await getUserPermissions(user.roleId);

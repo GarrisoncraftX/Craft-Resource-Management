@@ -15,6 +15,7 @@ public class UpdateEmployeeRequest {
     private Double salary;
     private String accountNumber;
     private String momoNumber;
+    private String bankName;
     private String emergencyContactName;
     private String emergencyContactPhone;
     private String email;
@@ -120,6 +121,14 @@ public class UpdateEmployeeRequest {
 
     public void setMomoNumber(String momoNumber) {
         this.momoNumber = momoNumber;
+    }
+
+    public String getBankName() {
+        return bankName;
+    }
+
+    public void setBankName(String bankName) {
+        this.bankName = bankName;
     }
 
     public String getEmergencyContactName() {

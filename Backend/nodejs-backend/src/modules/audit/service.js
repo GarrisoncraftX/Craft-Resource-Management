@@ -18,10 +18,17 @@ class AuditService {
 
     async logAction(userId, action, details = {}, entityType = null, entityId = null, ipAddress = null) {
         try {
+            console.log('[AUDIT SERVICE] logAction called:', { userId, action, details });
+            
+            // Convert to Rwanda timezone and format as ISO with 'T'
+            const now = new Date();
+            const rwandaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Kigali' }));
+            const timestamp = rwandaTime.toISOString().slice(0, 19); // Format: 2026-02-04T02:55:05
+            
             const auditLog = {
                 userId: userId || null,
                 action: this.buildDescriptiveAction(action, details),
-                timestamp: new Date().toISOString(),
+                timestamp: timestamp,
                 details: this.maskSensitiveData(JSON.stringify(details)),
                 serviceName: 'nodejs-backend',
                 ipAddress: ipAddress,
@@ -30,13 +37,16 @@ class AuditService {
                 result: 'success'
             };
 
+            console.log('[AUDIT SERVICE] Audit log created:', auditLog);
             this.auditQueue.push(auditLog);
+            console.log('[AUDIT SERVICE] Queue length:', this.auditQueue.length);
             
             if (this.auditQueue.length >= this.batchSize) {
+                console.log('[AUDIT SERVICE] Batch size reached, flushing queue');
                 await this.flushQueue();
             }
         } catch (error) {
-            console.error('Failed to queue audit log:', error.message);
+            console.error('[AUDIT SERVICE] Failed to queue audit log:', error.message);
         }
     }
 
@@ -122,10 +132,15 @@ class AuditService {
     }
 
     async logActionSync(userId, action, details = {}, entityType = null, entityId = null, ipAddress = null) {
+        // Convert to Rwanda timezone and format as ISO with 'T'
+        const now = new Date();
+        const rwandaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Kigali' }));
+        const timestamp = rwandaTime.toISOString().slice(0, 19); // Format: 2026-02-04T02:55:05
+        
         const auditLog = {
             userId: userId || null,
             action: this.buildDescriptiveAction(action, details),
-            timestamp: new Date().toISOString(),
+            timestamp: timestamp,
             details: this.maskSensitiveData(JSON.stringify(details)),
             serviceName: 'nodejs-backend',
             ipAddress: ipAddress,
@@ -143,6 +158,9 @@ class AuditService {
             'X-Service-Auth-Token': this.serviceAuthToken
         };
 
+        console.log('[AUDIT SERVICE] Sending audit log to:', `${this.javaBackendUrl}/system/audit-logs`);
+        console.log('[AUDIT SERVICE] Audit log data:', auditLog);
+
         try {
             await pRetry(
                 async () => {
@@ -151,6 +169,7 @@ class AuditService {
                         auditLog,
                         { headers, timeout: 5000 }
                     );
+                    console.log('[AUDIT SERVICE] Audit log sent successfully:', response.status);
                     return response.data;
                 },
                 {
@@ -159,13 +178,17 @@ class AuditService {
                     minTimeout: this.retryMinTimeout,
                     maxTimeout: this.retryMaxTimeout,
                     onFailedAttempt: error => {
-                        console.warn(`Audit send attempt ${error.attemptNumber} failed: ${error.message}`);
+                        console.warn(`[AUDIT SERVICE] Audit send attempt ${error.attemptNumber} failed: ${error.message}`);
                     }
                 }
             );
             return true;
         } catch (error) {
-            console.error('Failed to send audit log after retries:', error.message);
+            console.error('[AUDIT SERVICE] Failed to send audit log after retries:', error.message);
+            if (error.response) {
+                console.error('[AUDIT SERVICE] Response status:', error.response.status);
+                console.error('[AUDIT SERVICE] Response data:', error.response.data);
+            }
             this.auditQueue.push(auditLog);
             return false;
         }
@@ -176,15 +199,16 @@ class AuditService {
             return;
         }
 
+        console.log('[AUDIT SERVICE] Flushing queue with', this.auditQueue.length, 'logs');
         this.isProcessing = true;
         const batch = this.auditQueue.splice(0, this.batchSize);
 
         try {
             const promises = batch.map(log => this.sendWithRetry(log));
             await Promise.allSettled(promises);
-            console.debug(`Flushed ${batch.length} audit logs`);
+            console.log(`[AUDIT SERVICE] Flushed ${batch.length} audit logs successfully`);
         } catch (error) {
-            console.error('Error flushing audit queue:', error.message);
+            console.error('[AUDIT SERVICE] Error flushing audit queue:', error.message);
         } finally {
             this.isProcessing = false;
         }

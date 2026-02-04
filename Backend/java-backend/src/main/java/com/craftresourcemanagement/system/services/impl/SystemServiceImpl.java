@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -100,8 +101,10 @@ public class SystemServiceImpl implements SystemService {
 
     @Override
     public AuditLog createAuditLogWithDescriptiveAction(AuditLog auditLog) {
+        // Don't override timestamp if it's already set (from Node.js/Python backends)
+        // Only set it if null (from Java backend)
         if (auditLog.getTimestamp() == null) {
-            auditLog.setTimestamp(LocalDateTime.now());
+            auditLog.setTimestamp(LocalDateTime.now(ZoneId.of("Africa/Kigali")));
         }
         
         if (auditLog.getUserId() != null) {

@@ -22,6 +22,8 @@ export interface User {
   permissions: string[];
   firstName: string;
   lastName: string;
+  bankName: string;
+  bankAccountNumber?: string;
   email: string;
   department: string;
   role: string;

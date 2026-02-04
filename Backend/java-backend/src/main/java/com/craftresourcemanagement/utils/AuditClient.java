@@ -12,6 +12,7 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
@@ -153,7 +154,7 @@ public class AuditClient {
                                     String serviceName, String entityType, String entityId) {
         AuditLog log = new AuditLog();
         log.setUserId(userId);
-        log.setTimestamp(LocalDateTime.now());
+        log.setTimestamp(LocalDateTime.now(ZoneId.of("Africa/Kigali")));
         log.setDetails(maskSensitiveData(details));
         log.setServiceName(serviceName != null ? serviceName : "java-backend");
         log.setEntityType(entityType);

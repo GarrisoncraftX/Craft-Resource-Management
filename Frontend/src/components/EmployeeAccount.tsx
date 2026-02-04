@@ -58,7 +58,7 @@ export const EmployeeAccount: React.FC = () => {
           });
           setBankingInfo({
             accountNumber: employee.accountNumber || '',
-            bankName: '',
+            bankName: employee.bankName || '',
             momoNumber: employee.momoNumber || '',
             momoProvider: '',
           });
@@ -82,7 +82,7 @@ export const EmployeeAccount: React.FC = () => {
     }
     setLoading(true);
     try {
-      const updateRequest = {
+      const updateRequest: Record<string, string | boolean | undefined> = {
         firstName: personalInfo.firstName,
         lastName: personalInfo.lastName,
         middleName: personalInfo.middleName,
@@ -92,13 +92,16 @@ export const EmployeeAccount: React.FC = () => {
         dateOfBirth: personalInfo.dateOfBirth,
         emergencyContactName: personalInfo.emergencyContactName,
         emergencyContactPhone: personalInfo.emergencyContactPhone,
-        accountNumber: bankingInfo.accountNumber,
-        momoNumber: bankingInfo.momoNumber,
-        password: personalInfo.password || undefined,
-        confirmPassword: personalInfo.confirmPassword || undefined,
         profileCompleted: true,
-        defaultPasswordChanged: personalInfo.password ? true : undefined,
       };
+      
+      // Only include password if it's actually provided
+      if (personalInfo.password && personalInfo.password.trim() !== '') {
+        updateRequest.password = personalInfo.password;
+        updateRequest.confirmPassword = personalInfo.confirmPassword;
+        updateRequest.defaultPasswordChanged = true;
+      }
+      
       await updateEmployeeById(user.userId, updateRequest);
       toast.success('Personal information updated successfully');
       
@@ -123,6 +126,7 @@ export const EmployeeAccount: React.FC = () => {
     try {
       const updateRequest = {
         accountNumber: bankingInfo.accountNumber,
+        bankName: bankingInfo.bankName,
         momoNumber: bankingInfo.momoNumber,
       };
       await updateEmployeeById(user.userId, updateRequest);

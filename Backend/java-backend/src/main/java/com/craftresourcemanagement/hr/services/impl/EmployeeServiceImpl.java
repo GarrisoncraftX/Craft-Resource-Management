@@ -83,13 +83,31 @@ public class EmployeeServiceImpl implements EmployeeService {
                 }
             }
             
-            if (user.getPassword() != null && !user.getPassword().trim().isEmpty()) {
-                user.setPassword(passwordEncoder.encode(user.getPassword()));
-                user.setDefaultPasswordChanged(true);
-            } else {
-                Optional<User> existing = userRepository.findById(user.getId());
-                if (existing.isPresent()) {
-                    user.setPassword(existing.get().getPassword());
+            // Preserve existing password if not updating
+            Optional<User> existing = userRepository.findById(user.getId());
+            if (existing.isPresent()) {
+                String currentPasswordHash = existing.get().getPassword();
+                log.info("[PASSWORD DEBUG] Current password hash in DB: {}", currentPasswordHash);
+                log.info("[PASSWORD DEBUG] Incoming password field: {}", user.getPassword());
+                
+                // Only hash and update password if it's provided and not empty
+                if (user.getPassword() != null && !user.getPassword().trim().isEmpty()) {
+                    // Check if password is already hashed (bcrypt starts with $2a$ or $2b$)
+                    if (user.getPassword().startsWith("$2a$") || user.getPassword().startsWith("$2b$")) {
+                        log.info("[PASSWORD DEBUG] Password is already hashed, preserving it");
+                        user.setPassword(currentPasswordHash);
+                    } else {
+                        log.info("[PASSWORD DEBUG] Hashing new password");
+                        user.setPassword(passwordEncoder.encode(user.getPassword()));
+                        user.setDefaultPasswordChanged(true);
+                    }
+                } else {
+                    log.info("[PASSWORD DEBUG] No password provided, preserving existing hash");
+                    user.setPassword(currentPasswordHash);
+                    // Preserve defaultPasswordChanged status if not explicitly set
+                    if (user.getDefaultPasswordChanged() == null) {
+                        user.setDefaultPasswordChanged(existing.get().getDefaultPasswordChanged());
+                    }
                 }
             }
 

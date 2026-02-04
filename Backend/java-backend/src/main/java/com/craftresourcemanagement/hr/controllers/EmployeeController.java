@@ -74,8 +74,14 @@ public class EmployeeController {
 
     @PutMapping("/id/{id}")
     public ResponseEntity<User> updateEmployee(@PathVariable Long id, @RequestBody UpdateEmployeeRequest request) {
-        if (request.getPassword() != null && !request.getPassword().trim().isEmpty() && !request.getPassword().equals(request.getConfirmPassword())) {
-            return ResponseEntity.badRequest().build();
+        // Only validate password if it's actually being changed (not empty and not already hashed)
+        if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+            // Check if password is already hashed (bcrypt starts with $2a$ or $2b$)
+            if (!request.getPassword().startsWith("$2a$") && !request.getPassword().startsWith("$2b$")) {
+                if (!request.getPassword().equals(request.getConfirmPassword())) {
+                    return ResponseEntity.badRequest().build();
+                }
+            }
         }
         return employeeService.findById(id)
                 .map(existingUser -> {
@@ -91,12 +97,17 @@ public class EmployeeController {
                     if (request.getSalary() != null) existingUser.setSalary(request.getSalary());
                     if (request.getAccountNumber() != null) existingUser.setAccountNumber(request.getAccountNumber());
                     if (request.getMomoNumber() != null) existingUser.setMomoNumber(request.getMomoNumber());
+                    if (request.getBankName() != null) existingUser.setBankName(request.getBankName());
                     if (request.getEmergencyContactName() != null) existingUser.setEmergencyContactName(request.getEmergencyContactName());
                     if (request.getEmergencyContactPhone() != null) existingUser.setEmergencyContactPhone(request.getEmergencyContactPhone());
                     if (request.getEmail() != null) existingUser.setEmail(request.getEmail());
                     if (request.getEmployeeId() != null) existingUser.setEmployeeId(request.getEmployeeId());
+                    // Only set password if it's provided, not empty, and not already hashed
                     if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
-                        existingUser.setPassword(request.getPassword());
+                        if (!request.getPassword().startsWith("$2a$") && !request.getPassword().startsWith("$2b$")) {
+                            existingUser.setPassword(request.getPassword());
+                        }
+                        // If password is already hashed, don't set it (preserve existing)
                     }
                     if (request.getProfileCompleted() != null) existingUser.setProfileCompleted(request.getProfileCompleted());
                     if (request.getDefaultPasswordChanged() != null) existingUser.setDefaultPasswordChanged(request.getDefaultPasswordChanged());
