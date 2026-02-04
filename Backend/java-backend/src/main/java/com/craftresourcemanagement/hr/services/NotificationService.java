@@ -1,6 +1,8 @@
 package com.craftresourcemanagement.hr.services;
 
+import com.craftresourcemanagement.hr.entities.EmployeeTraining;
 import com.craftresourcemanagement.hr.entities.Payslip;
+import com.craftresourcemanagement.hr.entities.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -72,5 +74,30 @@ public class NotificationService {
         }
         
         logger.info("Completed sending notifications for {} payslips", payslips.size());
+    }
+    
+    // Automated workflow notification methods
+    public void sendBirthdayGreeting(User employee) {
+        logger.info("BIRTHDAY: Sending greeting to {} ({})", employee.getEmail(), employee.getFirstName());
+    }
+    
+    public void sendAnniversaryGreeting(User employee) {
+        logger.info("ANNIVERSARY: Sending greeting to {} ({})", employee.getEmail(), employee.getFirstName());
+    }
+    
+    public void sendProbationEndAlert(User employee) {
+        logger.info("PROBATION ALERT: Notifying HR about {} - probation ending soon", employee.getEmployeeId());
+    }
+    
+    public void sendContractRenewalReminder(User employee) {
+        logger.info("CONTRACT RENEWAL: Alerting HR about {} - contract expiring soon", employee.getEmployeeId());
+    }
+    
+    public void sendTrainingDueReminder(EmployeeTraining training) {
+        logger.info("TRAINING REMINDER: Notifying {} about upcoming training", training.getUser().getEmail());
+    }
+    
+    public void sendLeaveBalanceAlert(User employee) {
+        logger.info("LEAVE BALANCE: Alerting {} about low leave balance", employee.getEmail());
     }
 }

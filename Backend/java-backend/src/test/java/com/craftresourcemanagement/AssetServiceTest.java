@@ -3,6 +3,7 @@ package com.craftresourcemanagement;
 import com.craftresourcemanagement.asset.entities.Asset;
 import com.craftresourcemanagement.asset.repositories.AssetRepository;
 import com.craftresourcemanagement.asset.services.impl.AssetServiceImpl;
+import com.craftresourcemanagement.utils.AuditClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +25,9 @@ class AssetServiceTest {
 
     @Mock
     private AssetRepository assetRepository;
+
+    @Mock
+    private AuditClient auditClient;
 
     @InjectMocks
     private AssetServiceImpl assetService;
@@ -84,11 +88,11 @@ class AssetServiceTest {
     @Test
     void testDeleteAsset_Success() {
         when(assetRepository.findById(1L)).thenReturn(Optional.of(testAsset));
-        doNothing().when(assetRepository).delete(any(Asset.class));
+        doNothing().when(assetRepository).deleteById(1L);
 
         assetService.deleteAsset(1L);
 
-        verify(assetRepository, times(1)).delete(any(Asset.class));
+        verify(assetRepository, times(1)).deleteById(1L);
     }
 
 

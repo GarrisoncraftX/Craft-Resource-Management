@@ -135,7 +135,7 @@ const AuthForm: React.FC = () => {
         
         if (needsPasswordChange || needsProfileCompletion) {
           setSuccess('Please complete your profile setup.');
-          setTimeout(() => navigate('/employee/account'), 1000);
+          setTimeout(() => navigate('/employee/profile'), 1000);
         } else {
           setSuccess('Successfully signed in!');
           setTimeout(() => navigate('/employee-dashboard'), 1000);

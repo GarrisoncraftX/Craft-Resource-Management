@@ -6,8 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BookOpen, Users, Calendar, Award, Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
-import { hrApiService, TrainingCourse, EmployeeTraining, User } from '@/services/javabackendapi/hrApi';
+import { hrApiService } from '@/services/javabackendapi/hrApi';
+import type { User } from '@/services/javabackendapi/hrApi';
 import { AddTrainingForm } from './forms/AddTrainingForm';
 import { EnrollEmployeeTrainingForm } from './forms/EnrollEmployeeTrainingForm';
 import { AddCertificationForm } from './forms/AddCertificationForm';
@@ -17,8 +19,20 @@ import { mockMonthlyTraining } from '@/services/mockData/hr';
 export const TrainingDevelopment: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('programs');
-  const [trainingCourses, setTrainingCourses] = useState<TrainingCourse[]>([]);
-  const [employeeTrainings, setEmployeeTrainings] = useState<EmployeeTraining[]>([]);
+  const [trainingCourses, setTrainingCourses] = useState<Array<{
+    id?: number;
+    name: string;
+    duration: number;
+    cost: number;
+  }>>([]);
+  const [employeeTrainings, setEmployeeTrainings] = useState<Array<{
+    id?: number;
+    employeeId: number;
+    trainingCourseId: number;
+    status: string;
+    startDate: string;
+    endDate: string;
+  }>>([]);
   const [employees, setEmployees] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -209,8 +223,26 @@ export const TrainingDevelopment: React.FC = () => {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
-                                <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4" /></Button>
+                                <TooltipProvider delayDuration={200}>
+                                  <UITooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Edit Program</p>
+                                    </TooltipContent>
+                                  </UITooltip>
+                                </TooltipProvider>
+                                <TooltipProvider delayDuration={200}>
+                                  <UITooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4" /></Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Delete Program</p>
+                                    </TooltipContent>
+                                  </UITooltip>
+                                </TooltipProvider>
                               </div>
                             </TableCell>
                           </TableRow>

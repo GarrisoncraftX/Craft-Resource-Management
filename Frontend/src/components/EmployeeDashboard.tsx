@@ -4,11 +4,10 @@ import ModuleLayout from './ui/ModuleLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
-import { Clock, Users, FileText, Settings, Plus, Calendar, DollarSign, HelpCircle, Loader2, LogOut} from 'lucide-react';
+import { Clock, Users, Settings, Plus, Calendar, DollarSign, HelpCircle, Loader2, LogOut} from 'lucide-react';
 import { leaveApiService } from '@/services/nodejsbackendapi/leaveApi';
 import { LeaveBalance, LeaveRequest } from '@/types/nodejsbackendapi/leaveTypes';
 import { mockAttendanceHistory, mockDashboardKPIs, mockPayrollHistory } from '@/services/mockData/hr';
@@ -21,6 +20,8 @@ import { AttendanceRecord } from '@/types/pythonbackendapi/attendanceTypes';
 import { Payslip as JavaPayslip, User } from '@/types/javabackendapi/hrTypes';
 import { AuditLog as JavaAuditLog } from '@/services/javabackendapi/systemApi';
 import { formatAttendanceMethod } from '@/utils/attendanceUtils';
+import { DataTableDialog } from './ui/DataTableDialog';
+import { Separator } from '@/components/ui/separator';
 
 
 
@@ -64,19 +65,21 @@ const processLeaveBalances = (data: LeaveBalance[]): { totalLeaveBalance: number
 const EmployeeDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('attendance');
   const [dashboardKPIs, setDashboardKPIs] = useState<DashboardKPIs | null>(null);
   const [formattedLeaveBalance, setFormattedLeaveBalance] = useState<string>('');
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [isLeaveRequestFormOpen, setIsLeaveRequestFormOpen] = useState(false);
   const [isITSupportFormOpen, setIsITSupportFormOpen] = useState(false);
-  const [employeeData] = useState<User | null>(null);
+  const [employeeData, setEmployeeData] = useState<User | null>(null);
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [payrollData, setPayrollData] = useState<JavaPayslip[]>([]);
   const [recentActivities, setRecentActivities] = useState<{ id: string; message: string; timestamp: string; color: string }[]>([]);
   const [isCheckingOut, setIsCheckingOut] = useState<string | null>(null);
   const [attendanceError, setAttendanceError] = useState(false);
   const [payrollError, setPayrollError] = useState(false);
+  const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
+  const [isPayrollDialogOpen, setIsPayrollDialogOpen] = useState(false);
 
 
 
@@ -195,6 +198,10 @@ const EmployeeDashboard: React.FC = () => {
       }
 
       try {
+        const { fetchEmployeeById } = await import('@/services/api');
+        const employee = await fetchEmployeeById(user.userId);
+        setEmployeeData(employee);
+
         const leaveBalanceResponse = await leaveApiService.getLeaveBalances(Number(user.userId));
         console.log('Fetched leave balance data:', leaveBalanceResponse);
         const leaveBalanceData = leaveBalanceResponse;
@@ -210,12 +217,10 @@ const EmployeeDashboard: React.FC = () => {
         }));
         setFormattedLeaveBalance(formattedBalance);
 
-        // Fetch leave requests
         const leaveRequestsResponse = await leaveApiService.getLeaveRequests(Number(user.userId));
         console.log("Fetch leave requests: ", leaveRequestsResponse)
         setLeaveRequests(leaveRequestsResponse);
 
-        // Fetch attendance data
         try {
           const attendanceResponse = await fetchAttendance(user.userId) as AttendanceRecord[];
           console.log("Attendace records", attendanceResponse)
@@ -226,7 +231,6 @@ const EmployeeDashboard: React.FC = () => {
           setAttendanceError(true);
         }
 
-        // Fetch payroll data
         try {
           const payrollResponse = await fetchPayslips(user.userId);
           console.log("Payroll response", payrollResponse)
@@ -237,7 +241,6 @@ const EmployeeDashboard: React.FC = () => {
           setPayrollError(true);
         }
 
-        // Fetch recent activities from audit logs
         const auditLogsResponse = await fetchRecentActivities(user.userId);
         console.log("Audit logs response", auditLogsResponse);
         const activities = auditLogsResponse.map((log: JavaAuditLog) => ({
@@ -265,12 +268,6 @@ const EmployeeDashboard: React.FC = () => {
     fetchDashboardData();
   }, [user]);
 
-  useEffect(() => {
-    if (activeTab === 'attendance') {
-      refreshAttendance();
-    }
-  }, [activeTab, refreshAttendance]);
-
   if (!user || !dashboardKPIs) return null;
 
 
@@ -281,395 +278,342 @@ const EmployeeDashboard: React.FC = () => {
       isEmployeeDashboard={true}
       showSidebar={false}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-4xl font-bold text-white mb-2">Employee Portal</h1>
-          <p className="text-white">Welcome back, {user.firstName} {user.lastName}</p>
-        </div>
-
-        <Card className="mb-6 bg-gradient-to-r from-blue-600 to-blue-700">
-          <CardHeader className="text-white">
-            <CardTitle className="flex items-center text-white">
-              <Users className="h-5 w-5 mr-2" />
-             <span className="text-yellow-400 mr-2">{user.firstName} {user.lastName} </span> Profile
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-white flex items-center gap-6">
-            <Avatar className="h-20 w-20 ring-4 ring-yellow-400/50 hover:ring-yellow-400 transition-all cursor-pointer">
-              {employeeData?.profilePictureUrl ? (
-                <AvatarImage src={employeeData.profilePictureUrl} alt={`${user.firstName} ${user.lastName}`} />
-              ) : (
-                <AvatarFallback className="text-4xl font-extrabold bg-yellow-400 text-white">
-                  {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
-                </AvatarFallback>
-              )}
-            </Avatar>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 flex-1">
-              <div>
-                <p className="text-blue-100 text-sm">Employee ID</p>
-                <p className="font-semibold text-sm sm:text-base">{user.employeeId}</p>
-              </div>
-              <div>
-                <p className="text-blue-100 text-sm">Department</p>
-                <p className="font-semibold text-sm sm:text-base">{user.department}</p>
-              </div>
-              <div>
-                <p className="text-blue-100 text-sm">Position</p>
-                <p className="font-semibold text-sm sm:text-base">{user.role}</p>
-              </div>
-              <div>
-                <p className="text-blue-100 text-sm">Email</p>
-                <p className="font-semibold text-sm sm:text-base break-all">{user.email}</p>
-              </div>
-              <div>
-                <p className="text-blue-100 text-sm">Hire Date</p>
-                <p className="font-semibold text-sm sm:text-base">
-                  {user.hiredDate ? new Date(user.hiredDate).toLocaleDateString() : 'N/A'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
+      <Card className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Card className="flex flex-col lg:flex-row justify-between p-2 items-center bg-blue-500">
+          <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-2 text-white text-center lg:text-left">Welcome back, {user.firstName} {user.lastName}</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-2 text-white text-center lg:text-right">Employee Portal</h1>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-green-500 text-white">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-green-100 flex items-center">
-                <Calendar className="h-4 w-4 mr-2" />
-                This Month Attendance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold mb-2">95%</div>
-              <div className="w-full bg-green-600 rounded-full h-2">
-                <div className="bg-white h-2 rounded-full" style={{ width: '95%' }}></div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-blue-500 text-white">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-100 flex items-center">
-                <Clock className="h-4 w-4 mr-2" />
-                Leave Balance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{formattedLeaveBalance}</div>
-              <p className="text-blue-100 text-sm">Total leave remaining</p>
-            </CardContent>
-          </Card>
+        {/* Main Layout: 30% Left, 70% Right */}
+        <div className="flex flex-col lg:flex-row gap-6 mt-6">
+          {/* Left Section - 30% */}
+          <div className="lg:w-[30%] space-y-6">
+            {/* User Info Card */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex flex-col items-center">
+                  <Avatar className="h-24 w-24 ring-4 ring-blue-400/50">
+                    {employeeData?.profilePictureUrl ? (
+                      <AvatarImage src={employeeData.profilePictureUrl} alt={`${user.firstName} ${user.lastName}`} />
+                    ) : (
+                      <AvatarFallback className="text-3xl font-bold bg-blue-500 text-white">
+                        {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div className="mt-4 text-center w-full">
+                    <p className="text-sm text-gray-500">Employee ID</p>
+                    <p className="font-semibold">{user.employeeId}</p>
+                    <p className="font-bold text-lg mt-2">{user.firstName} {user.lastName}</p>
+                    <p className="text-sm text-gray-600">{user.email}</p>
+                  </div>
+                  
+                  <Separator className="my-4" />
+                  
+                  <div className="w-full space-y-3">
+                    <div>
+                      <p className="text-sm text-gray-500">Department</p>
+                      <p className="font-semibold">{user.department}</p>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div>
+                      <p className="text-sm text-gray-500">Position</p>
+                      <p className="font-semibold">{user.role}</p>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm text-gray-500">Hire Date</p>
+                      <p className="font-semibold">
+                        {user.hiredDate ? new Date(user.hiredDate).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-purple-500 text-white">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-purple-100 flex items-center">
-                <Clock className="h-4 w-4 mr-2" />
-                Overtime This Month
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">12.5h</div>
-              <p className="text-purple-100 text-sm">Extra hours worked</p>
-            </CardContent>
-          </Card>
+            {/* Management Buttons */}
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    className="w-full justify-start bg-amber-500 hover:bg-amber-600 text-white" 
+                    onClick={() => setIsAttendanceDialogOpen(true)}
+                  >
+                    <Clock className="h-4 w-4 mr-2" />
+                    Attendance
+                  </Button>
+                  <Button 
+                    className="w-full justify-start bg-amber-500 hover:bg-amber-600 text-white" 
+                    onClick={() => setIsLeaveDialogOpen(true)}
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Leave
+                  </Button>
+                </div>
+                <div className="flex justify-center">
+                  <Button 
+                    className="w-full justify-center bg-green-600 hover:bg-green-700 text-white" 
+                    onClick={() => setIsPayrollDialogOpen(true)}
+                  >
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Payroll
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-          <Card className="bg-orange-500 text-white">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-orange-100 flex items-center">
-                <DollarSign className="h-4 w-4 mr-2" />
-                Last Pay
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">$5,722.92</div>
-              <p className="text-orange-100 text-sm">Net salary received</p>
-            </CardContent>
-          </Card>
-        </div>
+          {/* Right Section - 70% */}
+          <div className="lg:w-[70%] space-y-6">
+            {/* Quick Actions */}
+            <Card>
+              <CardContent>
+                <div className="flex justify-left mb-3">
+                  <span className="text-xs font-semibold bg-blue-500 text-white px-3 py-1 rounded">Quick Actions</span>
+                </div>
+                <div className="space-y-2">
+                  <Button className="w-full justify-center bg-green-600 hover:bg-green-700 text-white" onClick={() => navigate('/employee/info')}>
+                    <Users className="h-4 w-4 mr-2" />
+                    Update Your Profile
+                  </Button>
+                  <Separator />
+                  <Button className="w-full justify-center bg-amber-500 hover:bg-amber-600 text-white" onClick={() => setIsITSupportFormOpen(true)}>
+                    <HelpCircle className="h-4 w-4 mr-2" />
+                    Contact IT Support 
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="flex w-full overflow-x-auto justify-between border-b p-0 h-auto rounded-none">
-            <TabsTrigger value="attendance" className="whitespace-nowrap px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 font-semibold transition-colors">
-              <Clock className="h-4 w-4 mr-2" />
-              Attendance
-            </TabsTrigger>
-            <TabsTrigger value="leave" className="whitespace-nowrap px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-green-600 font-semibold transition-colors">
-              <Calendar className="h-4 w-4 mr-2" />
-              Leave Management
-            </TabsTrigger>
-            <TabsTrigger value="payroll" className="whitespace-nowrap px-4 py-2 border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-purple-600 font-semibold transition-colors">
-              <DollarSign className="h-4 w-4 mr-2" />
-              Payroll
-            </TabsTrigger>
-          </TabsList>
+            {/* Submit Leave */}
+            <Card>
+              <CardContent>
+                <div className="flex justify-left space-x-4 items-center">
+                  <span className="text-xs font-semibold bg-blue-500 text-white px-3 py-1 rounded">Submit Leave</span>
+                    <Plus className="h-10 w-10 bg-amber-500 rounded-50" onClick={() => setIsLeaveRequestFormOpen(true)}/>
+                </div>
+              </CardContent>
+            </Card>
 
-          <TabsContent value="attendance">
-              <div>
-                <Card className="bg-blue-600 text-white mb-4">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between text-white">
-                      <Clock className="h-5 w-5 mr-2" />                      
-                      My Attendance History
-                      <Button onClick={refreshAttendance} variant="secondary" size="sm">
-                        Refresh
-                      </Button>
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
-                <Card>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Check In</TableHead>
-                          <TableHead>Check Out</TableHead>
-                          <TableHead>Total Hours</TableHead>
-                          <TableHead>Method</TableHead>
-                          <TableHead>Status</TableHead>
-                          {(attendanceError ? mapAttendanceToUI(mockAttendanceHistory as unknown as AttendanceRecord[]) : mapAttendanceToUI(attendanceData)).some(record => record.checkIn !== '-' && record.checkOut === '-') && (
-                            <TableHead>Actions</TableHead>
-                          )}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>{(attendanceError ? mapAttendanceToUI(mockAttendanceHistory as unknown as AttendanceRecord[]) : mapAttendanceToUI(attendanceData)).map((record, index) => (
-                        <TableRow key={`${record.date}-${index}`}>
-                          <TableCell>{record.date}</TableCell>
-                          <TableCell>{(record.checkIn)}</TableCell>
-                          <TableCell>{record.checkOut === '-' ? '-' : record.checkOut}</TableCell>
-                          <TableCell>{record.totalHours}</TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div>In: {formatAttendanceMethod(record.checkIn === '-' ? 'N/A' : record.clock_in_method || 'N/A')}</div>
-                              <div>Out: {formatAttendanceMethod(record.checkOut === '-' ? 'N/A' : record.clock_out_method || 'N/A')}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={record.status === 'Present' ? 'default' : 'secondary'}>
-                              {record.status}
-                            </Badge>
-                          </TableCell>
-                          {(attendanceError ? mapAttendanceToUI(mockAttendanceHistory as unknown as AttendanceRecord[]) : mapAttendanceToUI(attendanceData)).some(r => r.checkIn !== '-' && r.checkOut === '-') && (
-                            <TableCell>
-                              {record.checkIn !== '-' && record.checkOut === '-' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleCheckOut(record.date)}
-                                disabled={isCheckingOut === record.date}
-                              >
-                                {isCheckingOut === record.date ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                    Checking Out...
-                                  </>
-                                ) : (
-                                  <>
-                                    <LogOut className="mr-2 h-3 w-3" />
-                                    Check Out
-                                  </>
-                                )}
-                              </Button>
-                              )}
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      ))}</TableBody>
-                    </Table>
-                    <div className="flex justify-between items-center p-4 border-t">
-                      <span className="text-sm text-gray-600">Page 1 of 1</span>
-                      <div className="space-x-2">
-                        <Button variant="outline" size="sm" disabled>Previous</Button>
-                        <Button variant="outline" size="sm" disabled>Next</Button>
+            {/* KPI Cards - 2 per row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              <Card className="bg-blue-500 text-white">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-blue-100 flex items-center">
+                    <Clock className="h-4 w-4 mr-2" />
+                    Leave Balance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{formattedLeaveBalance}</div>
+                  <p className="text-blue-100 text-sm">Total leave remaining</p>
+                </CardContent>
+              </Card>
+
+      
+
+              <Card className="bg-amber-500 text-white">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-orange-100 flex items-center">
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Last Pay
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">
+                    {payrollData.length > 0 ? payrollData[0].netPay : (payrollError && mockPayrollHistory.length > 0 ? mockPayrollHistory[0].netPay : 'N/A')}
+                  </div>
+                  <p className="text-orange-100 text-sm">Net salary received</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recent Activities */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between text-green-600">
+                  <div className="flex items-center">
+                    <Clock className="h-5 w-5 mr-2" />
+                    Recent Activities
+                  </div>
+                  <Button onClick={refreshRecentActivities} variant="ghost" size="sm">
+                    Refresh
+                  </Button>
+                </CardTitle>
+                <CardDescription>
+                  Your latest system activities
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentActivities.length > 0 ? recentActivities.map((activity) => (
+                    <div key={activity.id} className="flex items-start space-x-3">
+                      <div className={`w-2 h-2 ${activity.color} rounded-full mt-2`}></div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{activity.message}</p>
+                        <p className="text-xs text-muted-foreground">{new Date(activity.timestamp).toLocaleString()}</p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
-          </TabsContent>
-
-          <TabsContent value="leave">
-            <Card className="bg-green-600 text-white mb-4">
-              <CardHeader>
-                <CardTitle className="flex items-center text-white">
-                  <Calendar className="h-5 w-5 mr-2" />
-                  My Leave Applications
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-          <CardContent className="p-0">
-            <div className="flex justify-end p-4">
-              <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsLeaveRequestFormOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Apply for Leave
-              </Button>
-            </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Leave Type</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      <TableHead>End Date</TableHead>
-                      <TableHead>Days Requested</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Response</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>{leaveRequests.map((leave) => (
-                    <TableRow key={leave.id}>
-                      <TableCell>{leave.leaveType?.name || 'N/A'}</TableCell>
-                      <TableCell>{leave.startDate}</TableCell>
-                      <TableCell>{leave.endDate}</TableCell>
-                      <TableCell>{leave.totalDays} days</TableCell>
-                      <TableCell>
-                        <Badge variant="default" className="bg-gray-800">
-                          {leave.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{leave.reviewComments || '-'}</TableCell>
-                    </TableRow>
-                  ))}</TableBody>
-                </Table>
-                <div className="flex justify-between items-center p-4 border-t">
-                  <span className="text-sm text-gray-600">Page 1 of 1</span>
-                  <div className="space-x-2">
-                    <Button variant="outline" size="sm" disabled>Previous</Button>
-                    <Button variant="outline" size="sm" disabled>Next</Button>
-                  </div>
+                  )) : (
+                    <p className="text-sm text-muted-foreground">No recent activities</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="payroll">
-            <Card className="bg-purple-600 text-white mb-4">
-              <CardHeader>
-                <CardTitle className="flex items-center text-white">
-                  <DollarSign className="h-5 w-5 mr-2" />
-                  My Payroll History
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Period</TableHead>
-                      <TableHead>Basic Salary</TableHead>
-                      <TableHead>Allowances</TableHead>
-                      <TableHead>Overtime</TableHead>
-                      <TableHead>Deductions</TableHead>
-                      <TableHead>Net Pay</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>{(payrollError ? mockPayrollHistory : mapPayrollToUI(payrollData as JavaPayslip[])).map((payroll, index) => (
-                    <TableRow key={payroll.period || index}>
-                      <TableCell>{payroll.period}</TableCell>
-                      <TableCell>{payroll.basicSalary}</TableCell>
-                      <TableCell>{payroll.allowances}</TableCell>
-                      <TableCell>{payroll.overtime}</TableCell>
-                      <TableCell>{payroll.deductions}</TableCell>
-                      <TableCell>{payroll.netPay}</TableCell>
-                      <TableCell>
-                        <Badge variant="default" className="bg-gray-800">
-                          {payroll.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}</TableBody>
-                </Table>
-                <div className="flex justify-between items-center p-4 border-t">
-                  <span className="text-sm text-gray-600">Page 1 of 1</span>
-                  <div className="space-x-2">
-                    <Button variant="outline" size="sm" disabled>Previous</Button>
-                    <Button variant="outline" size="sm" disabled>Next</Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-blue-600">
-                <Settings className="h-5 w-5 mr-2" />
-                Quick Actions
-              </CardTitle>
-              <CardDescription>
-                Frequently used employee services
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <Button variant="outline" className="justify-start h-auto p-4" onClick={() => setIsLeaveRequestFormOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  <div className="text-left">
-                    <div className="font-medium">Submit Leave</div>
-                    <div className="text-xs text-muted-foreground">Request time off</div>
-                  </div>
-                </Button>
-                <Button variant="outline" className="justify-start h-auto p-4" onClick={() => setActiveTab('payroll')}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  <div className="text-left">
-                    <div className="font-medium">View Payslips</div>
-                    <div className="text-xs text-muted-foreground">Download payslips</div>
-                  </div>
-                </Button>
-                <Button variant="outline" className="justify-start h-auto p-4" onClick={() => navigate('/profile')}>
-                  <Users className="h-4 w-4 mr-2" />
-                  <div className="text-left">
-                    <div className="font-medium">Update Profile</div>
-                    <div className="text-xs text-muted-foreground">Edit personal info</div>
-                  </div>
-                </Button>
-                <Button variant="outline" className="justify-start h-auto p-4" onClick={() => setIsITSupportFormOpen(true)}>
-                  <HelpCircle className="h-4 w-4 mr-2" />
-                  <div className="text-left">
-                    <div className="font-medium">IT Support</div>
-                    <div className="text-xs text-muted-foreground">Request assistance</div>
-                  </div>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between text-green-600">
-                <div className="flex items-center">
-                  <Clock className="h-5 w-5 mr-2" />
-                  Recent Activities
-                </div>
-                <Button onClick={refreshRecentActivities} variant="ghost" size="sm">
-                  Refresh
-                </Button>
-              </CardTitle>
-              <CardDescription>
-                Your latest system activities
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivities.length > 0 ? recentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3">
-                    <div className={`w-2 h-2 ${activity.color} rounded-full mt-2`}></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{activity.message}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(activity.timestamp).toLocaleString()}</p>
-                    </div>
-                  </div>
-                )) : (
-                  <p className="text-sm text-muted-foreground">No recent activities</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          </div>
         </div>
-      </div>
+
+        {/* Dialogs for Tables */}
+        <DataTableDialog
+          isOpen={isAttendanceDialogOpen}
+          onClose={() => setIsAttendanceDialogOpen(false)}
+          title="My Attendance History"
+        >
+          <div className="flex justify-end mb-4">
+            <Button onClick={refreshAttendance} variant="secondary" size="sm">
+              Refresh
+            </Button>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Check In</TableHead>
+                <TableHead>Check Out</TableHead>
+                <TableHead>Total Hours</TableHead>
+                <TableHead>Method</TableHead>
+                <TableHead>Status</TableHead>
+                {(attendanceError ? mapAttendanceToUI(mockAttendanceHistory as unknown as AttendanceRecord[]) : mapAttendanceToUI(attendanceData)).some(record => record.checkIn !== '-' && record.checkOut === '-') && (
+                  <TableHead>Actions</TableHead>
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody>{(attendanceError ? mapAttendanceToUI(mockAttendanceHistory as unknown as AttendanceRecord[]) : mapAttendanceToUI(attendanceData)).map((record, index) => (
+              <TableRow key={`${record.date}-${index}`}>
+                <TableCell>{record.date}</TableCell>
+                <TableCell>{(record.checkIn)}</TableCell>
+                <TableCell>{record.checkOut === '-' ? '-' : record.checkOut}</TableCell>
+                <TableCell>{record.totalHours}</TableCell>
+                <TableCell>
+                  <div className="space-y-1">
+                    <div>In: {formatAttendanceMethod(record.checkIn === '-' ? 'N/A' : record.clock_in_method || 'N/A')}</div>
+                    <div>Out: {formatAttendanceMethod(record.checkOut === '-' ? 'N/A' : record.clock_out_method || 'N/A')}</div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={record.status === 'Present' ? 'default' : 'secondary'}>
+                    {record.status}
+                  </Badge>
+                </TableCell>
+                {(attendanceError ? mapAttendanceToUI(mockAttendanceHistory as unknown as AttendanceRecord[]) : mapAttendanceToUI(attendanceData)).some(r => r.checkIn !== '-' && r.checkOut === '-') && (
+                  <TableCell>
+                    {record.checkIn !== '-' && record.checkOut === '-' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCheckOut(record.date)}
+                      disabled={isCheckingOut === record.date}
+                    >
+                      {isCheckingOut === record.date ? (
+                        <>
+                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                          Checking Out...
+                        </>
+                      ) : (
+                        <>
+                          <LogOut className="mr-2 h-3 w-3" />
+                          Check Out
+                        </>
+                      )}
+                    </Button>
+                    )}
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}</TableBody>
+          </Table>
+        </DataTableDialog>
+
+        <DataTableDialog
+          isOpen={isLeaveDialogOpen}
+          onClose={() => setIsLeaveDialogOpen(false)}
+          title="My Leave Applications"
+        >
+          <div className="flex justify-end mb-4">
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsLeaveRequestFormOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Apply for Leave
+            </Button>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Leave Type</TableHead>
+                <TableHead>Start Date</TableHead>
+                <TableHead>End Date</TableHead>
+                <TableHead>Days Requested</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Response</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>{leaveRequests.map((leave) => (
+              <TableRow key={leave.id}>
+                <TableCell>{leave.leaveType?.name || 'N/A'}</TableCell>
+                <TableCell>{leave.startDate}</TableCell>
+                <TableCell>{leave.endDate}</TableCell>
+                <TableCell>{leave.totalDays} days</TableCell>
+                <TableCell>
+                  <Badge variant="default" className="bg-gray-800">
+                    {leave.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>{leave.reviewComments || '-'}</TableCell>
+              </TableRow>
+            ))}</TableBody>
+          </Table>
+        </DataTableDialog>
+
+        <DataTableDialog
+          isOpen={isPayrollDialogOpen}
+          onClose={() => setIsPayrollDialogOpen(false)}
+          title="My Payroll History"
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Period</TableHead>
+                <TableHead>Basic Salary</TableHead>
+                <TableHead>Allowances</TableHead>
+                <TableHead>Overtime</TableHead>
+                <TableHead>Deductions</TableHead>
+                <TableHead>Net Pay</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>{(payrollError ? mockPayrollHistory : mapPayrollToUI(payrollData as JavaPayslip[])).map((payroll, index) => (
+              <TableRow key={payroll.period || index}>
+                <TableCell>{payroll.period}</TableCell>
+                <TableCell>{payroll.basicSalary}</TableCell>
+                <TableCell>{payroll.allowances}</TableCell>
+                <TableCell>{payroll.overtime}</TableCell>
+                <TableCell>{payroll.deductions}</TableCell>
+                <TableCell>{payroll.netPay}</TableCell>
+                <TableCell>
+                  <Badge variant="default" className="bg-gray-800">
+                    {payroll.status}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}</TableBody>
+          </Table>
+        </DataTableDialog>
+      </Card>
       <LeaveRequestForm
         userId={Number(user.userId)}
         isOpen={isLeaveRequestFormOpen}

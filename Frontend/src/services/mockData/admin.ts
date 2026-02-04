@@ -67,9 +67,9 @@ export const mockUsers: User[] = [
 ];
 
 export const mockAuditLogs: AuditLog[] = [
-  { id: 1, userId: 1, action: 'User John Doe has signed in successfully', timestamp: '2024-01-15T14:30:22Z', details: '{"module":"authentication","operation":"SIGN_IN"}', serviceName: 'java-backend', ipAddress: '192.168.1.45', entityType: 'USER', entityId: '1', result: 'success' },
-  { id: 2, userId: 2, action: 'User Jane Smith has updated their profile information', timestamp: '2024-01-15T13:45:15Z', details: '{"module":"user_management","operation":"UPDATE"}', serviceName: 'java-backend', ipAddress: '192.168.1.78', entityType: 'USER', entityId: '2', result: 'success' },
-  { id: 3, userId: 1, action: 'User Admin has deleted user record ID: 12345', timestamp: '2024-01-15T12:20:08Z', details: '{"module":"user_management","operation":"DELETE","recordId":"12345"}', serviceName: 'java-backend', ipAddress: '192.168.1.10', entityType: 'USER', entityId: '12345', result: 'success' }
+  { id: 1, userId: 1, action: 'John Doe has signed in successfully', timestamp: '2024-01-15T14:30:22Z', details: '{"module":"authentication","operation":"SIGN_IN"}', serviceName: 'java-backend', ipAddress: '192.168.1.45', entityType: 'USER', entityId: '1', result: 'success' },
+  { id: 2, userId: 2, action: 'Jane Smith has updated their profile information', timestamp: '2024-01-15T13:45:15Z', details: '{"module":"user_management","operation":"UPDATE"}', serviceName: 'java-backend', ipAddress: '192.168.1.78', entityType: 'USER', entityId: '2', result: 'success' },
+  { id: 3, userId: 1, action: 'Admin has deleted user record ID: 12345', timestamp: '2024-01-15T12:20:08Z', details: '{"module":"user_management","operation":"DELETE","recordId":"12345"}', serviceName: 'java-backend', ipAddress: '192.168.1.10', entityType: 'USER', entityId: '12345', result: 'success' }
 ];
 
 export const mockSecurityEvents: SecurityEvent[] = [

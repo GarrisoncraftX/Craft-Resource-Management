@@ -1,5 +1,23 @@
 import { apiClient } from '@/utils/apiClient';
 import type { LegalCase, ComplianceRecord } from '@/types/javabackendapi/legalTypes';
+import type { LegalCase as UILegalCase } from '@/services/mockData/legal';
+
+function mapLegalCaseToUI(c: LegalCase): UILegalCase {
+  return {
+    id: String(c.id ?? c.caseNumber ?? `CASE-${Math.random().toString(36).slice(2, 8)}`),
+    caseNumber: String(c.caseNumber ?? ''),
+    title: String(c.title ?? 'Untitled Case'),
+    description: String(c.description ?? ''),
+    status: String(c.status ?? 'Pending'),
+    priority: String(c.priority ?? 'Medium'),
+    assignedLawyer: String(c.assignedLawyer ?? ''),
+    filingDate: String(c.filingDate ?? ''),
+    resolutionDate: c.resolutionDate ? String(c.resolutionDate) : undefined,
+    stage: String(c.stage ?? c.status ?? 'Unknown'),
+    counsel: String(c.counsel ?? ''),
+    nextDate: String(c.nextDate ?? ''),
+  };
+}
 
 class LegalApiService {
   // LegalCase endpoints
@@ -55,7 +73,8 @@ export async function createLegalCaseRecord(record: LegalCase) {
 }
 
 export async function fetchLegalCases() {
-  return legalApiService.getAllLegalCases();
+  const cases = await legalApiService.getAllLegalCases();
+  return cases.map(mapLegalCaseToUI);
 }
 
 export async function updateLegalCaseRecord(id: number | string, record: LegalCase) {

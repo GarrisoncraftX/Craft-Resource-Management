@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { apiClient } from '@/utils/apiClient';
 import { AccountForm } from './AccountForm';
@@ -278,17 +279,35 @@ export const ChartOfAccounts: React.FC = () => {
                   <TableCell>
                     <div className="flex gap-2">
                       <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
-                        <Button variant="outline" size="sm" onClick={() => {
-                          setEditingAccount(account);
-                          setIsAddingAccount(true);
-                        }}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="sm" onClick={() => {
+                                setEditingAccount(account);
+                                setIsAddingAccount(true);
+                              }}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Edit Account</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </PermissionGuard>
                       <PermissionGuard requiredPermissions={['finance.manage_accounts']}>
-                        <Button variant="outline" size="sm" className="text-destructive" onClick={() => handleDeleteAccount(account.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="sm" className="text-destructive" onClick={() => handleDeleteAccount(account.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Delete Account</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </PermissionGuard>
                     </div>
                   </TableCell>

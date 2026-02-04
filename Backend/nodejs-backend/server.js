@@ -4,6 +4,7 @@ const dotenv  = require("dotenv")
 const multer = require("multer")
 const { errorHandler } = require("./src/middleware/errorHandler")
 const { sessionTracker } = require("./src/middleware/sessionTracker")
+const { scheduleLeaveCompletion } = require("./src/jobs/leaveScheduler")
 
 // Import route modules
 const leaveRoutes = require("./src/modules/leave/routes")
@@ -57,6 +58,7 @@ app.use(errorHandler)
 app.listen(PORT, () => {
   console.log(`🚀 Node.js Backend Service running on port ${PORT}`)
   console.log(`📋 Available modules: Leave Management, Procurement, Public Relations, Planning & Development, Transportation`)
+  scheduleLeaveCompletion()
 })
 
 module.exports = app

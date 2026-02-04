@@ -29,6 +29,9 @@ public class PerformanceReview {
     @Column(length = 2000)
     private String goals;
 
+    @Column(length = 50)
+    private String status;
+
     // Getters and Setters
 
     public Long getId() {
@@ -85,5 +88,13 @@ public class PerformanceReview {
 
     public void setGoals(String goals) {
         this.goals = goals;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

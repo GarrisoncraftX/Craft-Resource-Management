@@ -123,6 +123,12 @@ public class User {
     @Column(name = "bank_name")
     private String bankName;
 
+    @Column(name = "probation_end_date")
+    private LocalDate probationEndDate;
+
+    @Column(name = "contract_end_date")
+    private LocalDate contractEndDate;
+
     // Getters and Setters
 
     public Long getId() {
@@ -429,6 +435,22 @@ public class User {
 
     public void setBankName(String bankName) {
         this.bankName = bankName;
+    }
+
+    public LocalDate getProbationEndDate() {
+        return probationEndDate;
+    }
+
+    public void setProbationEndDate(LocalDate probationEndDate) {
+        this.probationEndDate = probationEndDate;
+    }
+
+    public LocalDate getContractEndDate() {
+        return contractEndDate;
+    }
+
+    public void setContractEndDate(LocalDate contractEndDate) {
+        this.contractEndDate = contractEndDate;
     }
 
 

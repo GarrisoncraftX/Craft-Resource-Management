@@ -140,7 +140,7 @@ class SystemServiceTest {
     @Test
     void testGetNotificationsByUserId() {
         List<Notification> notifications = Arrays.asList(testNotification);
-        when(notificationRepository.findByUserId(100L)).thenReturn(notifications);
+        when(notificationRepository.findByUserIdOrderByCreatedAtDesc(100L)).thenReturn(notifications);
 
         List<Notification> result = systemService.getNotificationsByUserId(100L);
 

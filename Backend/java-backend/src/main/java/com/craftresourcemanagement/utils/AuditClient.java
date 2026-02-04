@@ -2,6 +2,7 @@ package com.craftresourcemanagement.utils;
 
 import com.craftresourcemanagement.system.entities.AuditLog;
 import com.craftresourcemanagement.system.repositories.AuditLogRepository;
+import com.craftresourcemanagement.hr.repositories.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +23,7 @@ public class AuditClient {
 
     private static final Logger logger = LoggerFactory.getLogger(AuditClient.class);
     private final AuditLogRepository auditLogRepository;
+    private final UserRepository userRepository;
     private final ConcurrentLinkedQueue<AuditLog> auditQueue;
     private final ScheduledExecutorService scheduler;
     
@@ -44,8 +46,10 @@ public class AuditClient {
     private long maxBackoffDelay;
 
     public AuditClient(AuditLogRepository auditLogRepository,
+                      UserRepository userRepository,
                       @Value("${audit.flush.interval.seconds:5}") int flushIntervalSeconds) {
         this.auditLogRepository = auditLogRepository;
+        this.userRepository = userRepository;
         this.auditQueue = new ConcurrentLinkedQueue<>();
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
         
@@ -149,13 +153,25 @@ public class AuditClient {
                                     String serviceName, String entityType, String entityId) {
         AuditLog log = new AuditLog();
         log.setUserId(userId);
-        log.setAction(action);
         log.setTimestamp(LocalDateTime.now());
         log.setDetails(maskSensitiveData(details));
         log.setServiceName(serviceName != null ? serviceName : "java-backend");
         log.setEntityType(entityType);
         log.setEntityId(entityId);
         log.setResult("success");
+        
+        if (userId != null) {
+            userRepository.findById(userId).ifPresent(user -> {
+                String userName = user.getFirstName() + " " + user.getLastName();
+                log.setUserName(userName);
+                log.setAction(userName + " " + action);
+            });
+        }
+        
+        if (log.getAction() == null) {
+            log.setAction(action);
+        }
+        
         return log;
     }
 

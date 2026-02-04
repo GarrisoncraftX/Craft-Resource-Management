@@ -51,10 +51,16 @@ export class ApiClient {
       try {
         const errorData = await response.json();
         console.log('Error response data:', errorData);
-        errorMessage = errorData.message || errorData.error || errorMessage;
+        // Try multiple fields to extract the error message
+        errorMessage = errorData.message || errorData.error || errorData.detail || errorMessage;
       } catch (parseError) {
         console.error('Failed to parse error response:', parseError);
-        errorMessage = response.statusText || errorMessage;
+        // For 401 errors, provide a more user-friendly message
+        if (response.status === 401) {
+          errorMessage = 'Invalid credentials. Please check your employee ID and password.';
+        } else {
+          errorMessage = response.statusText || errorMessage;
+        }
       }
       
       if (response.status === 401 && !globalThis.location.pathname.includes('/signin')) {

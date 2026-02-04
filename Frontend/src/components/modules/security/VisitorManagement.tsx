@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, UserCheck, LogOut, Search, RefreshCw, QrCode } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { visitorApiService } from '@/services/pythonbackendapi/visitorApi';
-import type { Visitor } from '@/types/visitor';
+import type { Visitor } from '@/types/pythonbackendapi/visitorTypes';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
@@ -28,7 +29,7 @@ export const VisitorManagement: React.FC = () => {
     loadVisitors();
   }, []);
 
-  const loadVisitors = async () => {
+  const loadVisitors = React.useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await visitorApiService.getAllVisitors();
@@ -42,7 +43,7 @@ export const VisitorManagement: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   const handleSearch = async () => {
     try {
@@ -149,9 +150,18 @@ export const VisitorManagement: React.FC = () => {
                 <Search className="mr-2 h-4 w-4" />
                 Search
               </Button>
-              <Button onClick={loadVisitors} variant="outline">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={loadVisitors} variant="outline">
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Refresh List</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </CardContent>
@@ -242,24 +252,33 @@ export const VisitorManagement: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         {visitor.status === 'Checked In' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCheckOut(visitor.visitor_id!)}
-                            disabled={isCheckingOut === visitor.visitor_id}
-                          >
-                            {isCheckingOut === visitor.visitor_id ? (
-                              <>
-                                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                Checking Out...
-                              </>
-                            ) : (
-                              <>
-                                <LogOut className="mr-2 h-3 w-3" />
-                                Check Out
-                              </>
-                            )}
-                          </Button>
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleCheckOut(visitor.visitor_id!)}
+                                  disabled={isCheckingOut === visitor.visitor_id}
+                                >
+                                  {isCheckingOut === visitor.visitor_id ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                      Checking Out...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <LogOut className="mr-2 h-3 w-3" />
+                                      Check Out
+                                    </>
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Check Out Visitor</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
                       </TableCell>
                     </TableRow>

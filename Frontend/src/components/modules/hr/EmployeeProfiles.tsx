@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, Edit, Eye, UserPlus } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { fetchEmployees } from '@/services/api';
 import { lookupApiService } from '@/services/nodejsbackendapi/lookupApi';
 import type { User } from '@/types/javabackendapi/hrTypes';
@@ -252,22 +253,40 @@ export const EmployeeProfiles: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button 
-                          className='hover:bg-blue-300 hover:text-white' 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleViewEmployee(employee)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          className='hover:bg-purple-300 hover:text-white' 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleEditEmployee(employee)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                className='hover:bg-blue-300 hover:text-white' 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleViewEmployee(employee)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>View Details</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                className='hover:bg-purple-300 hover:text-white' 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleEditEmployee(employee)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Edit Employee</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <AdminResetPasswordDialog
                           userId={employee.employeeId}
                           userName={`${employee.firstName} ${employee.lastName}`}

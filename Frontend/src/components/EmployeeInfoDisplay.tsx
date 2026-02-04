@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-// Ensure these components are available in your project setup
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; 
 import { Button } from '@/components/ui/button'; 
 import { Label } from '@/components/ui/label'; 
@@ -82,7 +81,7 @@ const EmployeeInfoDisplay: React.FC = () => {
     }
 
     // --- Handlers (kept as is) ---
-    const handleEditClick = () => { navigate('/employee/account'); };
+    const handleEditClick = () => { navigate('/employee/profile'); };
     const handleViewDashboard = () => { navigate('/employee-dashboard'); };
     const handleLogout = () => { logout(); navigate('/signin'); };
     const formatDate = (dateString: string | undefined) => {

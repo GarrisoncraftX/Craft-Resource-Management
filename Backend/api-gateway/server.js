@@ -134,17 +134,26 @@ const proxyRequest = async (req, res, targetUrl) => {
   }
 
   // For other requests, use axios
-  const axiosConfig = {
-    url: url.toString(),
-    method: req.method,
-    headers,
-    data: req.body,
-    responseType: "stream",
-  };
+  try {
+    const axiosConfig = {
+      url: url.toString(),
+      method: req.method,
+      headers,
+      data: req.body,
+      responseType: "stream",
+      validateStatus: () => true, 
+    };
 
-  const response = await axios(axiosConfig);
-  res.status(response.status);
-  response.data.pipe(res);
+    const response = await axios(axiosConfig);
+    res.status(response.status);
+    response.data.pipe(res);
+  } catch (error) {
+    console.error('Proxy request error:', error.message);
+    res.status(500).json({ 
+      error: 'Gateway error',
+      message: 'Failed to connect to backend service'
+    });
+  }
 };
 
 // Define routing based on path prefixes

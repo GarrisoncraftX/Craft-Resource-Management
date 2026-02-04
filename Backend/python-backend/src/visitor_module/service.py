@@ -7,6 +7,7 @@ from src.utils.logger import logger
 from src.config.app import config as app_config_dict
 from src.communication_service import communication_service
 from src.audit_service import audit_service
+from src.utils.notification_helper import notification_helper
 import os
 
 class VisitorService:
@@ -131,10 +132,10 @@ class VisitorService:
             visitor_params = (visitor_id, first_name, last_name, company, email, phone, purpose_of_visit, visiting_employee_id)
             self.db.execute_query(visitor_query, visitor_params, fetch=False)
 
-            # Insert check-in record
+            # Insert check-in record with pending_approval status
             checkin_query = """
                 INSERT INTO visitor_checkins (visitor_id, check_in_time, check_in_method, purpose, host_employee_id, status, created_at, updated_at)
-                VALUES (%s, NOW(), %s, %s, %s, 'checked_in', NOW(), NOW())
+                VALUES (%s, NOW(), %s, %s, %s, 'pending_approval', NOW(), NOW())
             """
             checkin_method = 'qr' if qr_token else 'manual'
             checkin_params = (visitor_id, checkin_method, purpose_of_visit, visiting_employee_id)
@@ -148,17 +149,139 @@ class VisitorService:
             # Send notification to host employee
             self._send_host_notification(visitor_id, visitor_data)
 
+            # Send system notification to host employee for approval
+            notification_helper.notify_visitor_approval_request(
+                visiting_employee_id,
+                f"{first_name} {last_name}",
+                purpose_of_visit,
+                visitor_id
+            )
+
             # Send notification to visitor if email provided
             if email:
                 self._send_visitor_notification(visitor_id, visitor_data)
 
             if user_id:
                 audit_service.log_action(user_id, 'CHECK_IN_VISITOR', {'entity': 'visitor', 'id': visitor_id, 'data': visitor_data})
-            logger.info(f"Visitor {first_name} {last_name} checked in successfully with ID {visitor_id}")
+            logger.info(f"Visitor {first_name} {last_name} checked in successfully with ID {visitor_id}, awaiting host approval")
             return True, visitor_id
         except Exception as e:
             logger.error(f"Error checking in visitor: {e}")
             return False, str(e)
+
+    def approve_visitor(self, visitor_id, host_user_id):
+        """Approve visitor and generate entry pass"""
+        try:
+            # Update status to approved
+            query = """
+                UPDATE visitor_checkins
+                SET status = 'approved', updated_at = NOW()
+                WHERE visitor_id = %s AND host_employee_id = %s AND status = 'pending_approval'
+            """
+            affected = self.db.execute_query(query, (visitor_id, host_user_id), fetch=False)
+            
+            if affected == 0:
+                return False, "Visitor not found or already processed"
+            
+            # Get visitor details for notification
+            visitor_query = "SELECT first_name, last_name, email FROM visitors WHERE visitor_id = %s"
+            visitor_result = self.db.execute_query(visitor_query, (visitor_id,))
+            
+            if visitor_result:
+                visitor = visitor_result[0]
+                visitor_name = f"{visitor['first_name']} {visitor['last_name']}"
+                
+                # Send approval notification to visitor
+                if visitor['email']:
+                    communication_service.send_email(
+                        visitor['email'],
+                        'Visitor Access Approved',
+                        f"Dear {visitor_name},\n\nYour visit has been approved. Your digital entry pass is now available.\n\nPlease access your entry pass at the check-in page on your phone and show it at security checkpoints.\n\nBest regards,\nVisitor Management System"
+                    )
+            
+            audit_service.log_action(host_user_id, 'APPROVE_VISITOR', {'visitor_id': visitor_id})
+            logger.info(f"Visitor {visitor_id} approved by host {host_user_id}")
+            return True, None
+        except Exception as e:
+            logger.error(f"Error approving visitor: {e}")
+            return False, str(e)
+
+    def reject_visitor(self, visitor_id, host_user_id, reason=None):
+        """Reject visitor"""
+        try:
+            # Update status to rejected
+            query = """
+                UPDATE visitor_checkins
+                SET status = 'rejected', updated_at = NOW()
+                WHERE visitor_id = %s AND host_employee_id = %s AND status = 'pending_approval'
+            """
+            affected = self.db.execute_query(query, (visitor_id, host_user_id), fetch=False)
+            
+            if affected == 0:
+                return False, "Visitor not found or already processed"
+            
+            # Get visitor details for notification
+            visitor_query = "SELECT first_name, last_name, email FROM visitors WHERE visitor_id = %s"
+            visitor_result = self.db.execute_query(visitor_query, (visitor_id,))
+            
+            if visitor_result:
+                visitor = visitor_result[0]
+                visitor_name = f"{visitor['first_name']} {visitor['last_name']}"
+                
+                # Send rejection notification to visitor
+                if visitor['email']:
+                    communication_service.send_email(
+                        visitor['email'],
+                        '❌ Visitor Access Denied',
+                        f"Dear {visitor_name},\n\nWe regret to inform you that your visit request has been DECLINED.\n\n{('Reason: ' + reason) if reason else 'Your host is currently unavailable.'}\n\nPlease contact your host directly for more information or to reschedule.\n\nVisitor ID: {visitor_id}\n\nBest regards,\nVisitor Management System"
+                    )
+                
+                # Send SMS if phone available
+                visitor_phone_query = "SELECT phone FROM visitors WHERE visitor_id = %s"
+                phone_result = self.db.execute_query(visitor_phone_query, (visitor_id,))
+                if phone_result and phone_result[0]['phone']:
+                    communication_service.send_sms(
+                        phone_result[0]['phone'],
+                        f"Visit Declined: Your visit request has been declined. {('Reason: ' + reason) if reason else ''} Please contact your host."
+                    )
+            
+            audit_service.log_action(host_user_id, 'REJECT_VISITOR', {'visitor_id': visitor_id, 'reason': reason})
+            logger.info(f"Visitor {visitor_id} rejected by host {host_user_id}")
+            return True, None
+        except Exception as e:
+            logger.error(f"Error rejecting visitor: {e}")
+            return False, str(e)
+
+    def check_visitor_status(self, visitor_id):
+        """Check visitor approval status"""
+        try:
+            query = """
+                SELECT vc.status, v.first_name, v.last_name, v.purpose_of_visit,
+                       u.first_name as host_first_name, u.last_name as host_last_name,
+                       vc.check_in_time
+                FROM visitor_checkins vc
+                JOIN visitors v ON vc.visitor_id = v.visitor_id
+                LEFT JOIN users u ON vc.host_employee_id = u.id
+                WHERE vc.visitor_id = %s
+                ORDER BY vc.check_in_time DESC LIMIT 1
+            """
+            result = self.db.execute_query(query, (visitor_id,))
+            
+            if not result:
+                return None
+            
+            data = result[0]
+            return {
+                'visitor_id': visitor_id,
+                'status': data['status'],
+                'visitor_name': f"{data['first_name']} {data['last_name']}",
+                'host_name': f"{data['host_first_name']} {data['host_last_name']}" if data['host_first_name'] else None,
+                'purpose': data['purpose_of_visit'],
+                'check_in_time': data['check_in_time'].isoformat() if data['check_in_time'] else None
+            }
+        except Exception as e:
+            logger.error(f"Error checking visitor status: {e}")
+            return None
 
     def _send_host_notification(self, visitor_id, visitor_data):
         """Send notification to the host employee about visitor arrival"""
@@ -252,7 +375,7 @@ class VisitorService:
                 FROM visitors v
                 LEFT JOIN visitor_checkins vc ON v.visitor_id = vc.visitor_id
                 LEFT JOIN users u ON v.employee_to_visit = u.id
-                WHERE v.visitor_id = %s AND vc.status = 'checked_in'
+                WHERE v.visitor_id = %s AND vc.status = 'approved'
                 ORDER BY vc.check_in_time DESC LIMIT 1
             """
             visitor_result = self.db.execute_query(visitor_query, (visitor_id,))

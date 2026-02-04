@@ -114,3 +114,53 @@ class VisitorController:
         except Exception as e:
             logger.error(f"Error generating entry pass: {e}")
             return {'success': False, 'message': 'Error generating entry pass'}, 500
+
+    def approve_visitor(self):
+        try:
+            data = request.get_json()
+            visitor_id = data.get('visitor_id')
+            if not visitor_id:
+                return {'success': False, 'message': 'visitor_id is required'}, 400
+            
+            user_id = getattr(request, 'user_id', None)
+            success, message = self.service.approve_visitor(visitor_id, user_id)
+            if success:
+                return {'success': True, 'message': 'Visitor approved'}, 200
+            else:
+                return {'success': False, 'message': message}, 400
+        except Exception as e:
+            logger.error(f"Error approving visitor: {e}")
+            return {'success': False, 'message': 'Error approving visitor'}, 500
+
+    def reject_visitor(self):
+        try:
+            data = request.get_json()
+            visitor_id = data.get('visitor_id')
+            reason = data.get('reason')
+            if not visitor_id:
+                return {'success': False, 'message': 'visitor_id is required'}, 400
+            
+            user_id = getattr(request, 'user_id', None)
+            success, message = self.service.reject_visitor(visitor_id, user_id, reason)
+            if success:
+                return {'success': True, 'message': 'Visitor rejected'}, 200
+            else:
+                return {'success': False, 'message': message}, 400
+        except Exception as e:
+            logger.error(f"Error rejecting visitor: {e}")
+            return {'success': False, 'message': 'Error rejecting visitor'}, 500
+
+    def check_visitor_status(self):
+        try:
+            visitor_id = request.args.get('visitor_id')
+            if not visitor_id:
+                return {'success': False, 'message': 'visitor_id is required'}, 400
+            
+            status_data = self.service.check_visitor_status(visitor_id)
+            if status_data:
+                return {'success': True, 'data': status_data}, 200
+            else:
+                return {'success': False, 'message': 'Visitor not found'}, 404
+        except Exception as e:
+            logger.error(f"Error checking visitor status: {e}")
+            return {'success': False, 'message': 'Error checking status'}, 500

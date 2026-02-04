@@ -110,7 +110,9 @@ public class SystemServiceImpl implements SystemService {
                 auditLog.setUserName(userName);
                 String action = auditLog.getAction();
                 
-                if (!action.toLowerCase().contains("user") && !action.toLowerCase().contains(userName.toLowerCase())) {
+                if (action.startsWith("has ")) {
+                    auditLog.setAction(userName + " " + action);
+                } else if (!action.toLowerCase().contains("user") && !action.toLowerCase().contains(userName.toLowerCase())) {
                     auditLog.setAction("User " + userName + " " + action);
                 }
             });

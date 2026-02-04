@@ -5,6 +5,7 @@ import com.craftresourcemanagement.legal.entities.ComplianceRecord;
 import com.craftresourcemanagement.legal.repositories.LegalCaseRepository;
 import com.craftresourcemanagement.legal.repositories.ComplianceRecordRepository;
 import com.craftresourcemanagement.legal.services.impl.LegalServiceImpl;
+import com.craftresourcemanagement.utils.AuditClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +27,9 @@ class LegalServiceTest {
 
     @Mock
     private ComplianceRecordRepository complianceRecordRepository;
+
+    @Mock
+    private AuditClient auditClient;
 
     @InjectMocks
     private LegalServiceImpl legalService;

@@ -102,6 +102,7 @@ class FinanceServiceTest {
     @Test
     void testCreateBudget_Success() {
         // Arrange
+        testBudget.setCreatedBy(1L);
         when(budgetRepository.save(any(Budget.class))).thenReturn(testBudget);
 
         // Act
@@ -117,9 +118,11 @@ class FinanceServiceTest {
     void testUpdateBudget_Success() {
         // Arrange
         Budget updatedBudget = new Budget();
-        updatedBudget.setAllocatedAmount(new BigDecimal("120000.00"));
+        updatedBudget.setTotalAmount(new BigDecimal("120000.00"));
 
         when(budgetRepository.findById(1L)).thenReturn(Optional.of(testBudget));
+        
+        testBudget.setTotalAmount(new BigDecimal("120000.00"));
         when(budgetRepository.save(any(Budget.class))).thenReturn(testBudget);
 
         // Act

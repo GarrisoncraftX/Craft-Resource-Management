@@ -232,7 +232,7 @@ const AppRoutes = () => {
 
       {/* Employee Routes */}
       <Route path="/employee-dashboard" element={<ProtectedRoute><SuspenseWrapper><EmployeeDashboard /></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/employee/account" element={<ProtectedRoute><SuspenseWrapper><EmployeeAccount /></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/employee/profile" element={<ProtectedRoute><SuspenseWrapper><EmployeeAccount /></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/employee/info" element={<ProtectedRoute><SuspenseWrapper><EmployeeInfoDisplay /></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/kiosk-interface" element={<ProtectedRoute><SuspenseWrapper><AttendanceKiosk /></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/reception-desk" element={<ProtectedRoute><SuspenseWrapper><AttendanceKiosk /></SuspenseWrapper></ProtectedRoute>} />

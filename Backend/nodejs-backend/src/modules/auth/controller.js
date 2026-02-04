@@ -21,7 +21,11 @@ const signin = async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Signin error:', error);
-    res.status(401).json({ message: error.message, error: error.message });
+    res.status(401).json({ 
+      success: false,
+      message: error.message || 'Invalid employee ID or password',
+      error: error.message || 'Invalid employee ID or password'
+    });
   }
 };
 

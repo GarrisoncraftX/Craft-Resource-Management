@@ -1,4 +1,5 @@
 from src.utils.logger import logger
+from src.utils.notification_helper import notification_helper
 import os
 
 class HealthSafetyService:
@@ -53,6 +54,15 @@ class HealthSafetyService:
             )
             self.db.execute_query(query, params, fetch=False)
             audit_service.log_action(user_id, 'CREATE_INCIDENT', {'entity': 'incident', 'data': incident_data})
+            
+            # Send notification to reporter
+            if user_id:
+                notification_helper.notify_incident_reported(
+                    user_id,
+                    incident_data.get('severity', 'Unknown'),
+                    incident_data.get('description', '')
+                )
+            
             return True
         except Exception as e:
             logger.error(f"Error adding incident to DB: {e}")

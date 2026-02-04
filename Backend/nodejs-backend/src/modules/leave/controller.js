@@ -190,6 +190,35 @@ class LeaveController {
       next(error);
     }
   }
+
+  async processExpiredLeaves(req, res, next) {
+    try {
+      const count = await this.leaveService.processExpiredLeaves();
+      res.json({ success: true, message: `${count} leave(s) marked as completed` });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async completeLeaveRequest(req, res, next) {
+    try {
+      const id = req.params.id;
+      const actorId = req.body.actorId || req.userContext?.userId;
+      const result = await this.leaveService.completeLeaveRequest(id, actorId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getEmployeesOnLeave(req, res, next) {
+    try {
+      const employees = await this.leaveService.getEmployeesOnLeave();
+      res.json({ success: true, data: employees });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = LeaveController

@@ -1,31 +1,55 @@
 package com.craftresourcemanagement.hr.services.impl;
 
+import com.craftresourcemanagement.hr.entities.EmployeeTraining;
+import com.craftresourcemanagement.hr.entities.PerformanceReview;
 import com.craftresourcemanagement.hr.entities.User;
+import com.craftresourcemanagement.hr.repositories.EmployeeTrainingRepository;
+import com.craftresourcemanagement.hr.repositories.PerformanceReviewRepository;
 import com.craftresourcemanagement.hr.repositories.UserRepository;
 import com.craftresourcemanagement.hr.services.EmployeeService;
 import com.craftresourcemanagement.utils.AuditClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.StoredProcedureQuery;
+import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class EmployeeServiceImpl implements EmployeeService {
 
+    private static final Logger log = LoggerFactory.getLogger(EmployeeServiceImpl.class);
+    private static final String SERVICE_NAME = "java-backend";
+    
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final EntityManager entityManager;
     private final AuditClient auditClient;
+    private final EmployeeTrainingRepository trainingRepository;
+    private final PerformanceReviewRepository performanceReviewRepository;
+    private final RestTemplate restTemplate;
+    
+    @Value("${nodejs.service.url:http://localhost:5001}")
+    private String nodejsServiceUrl;
 
-    public EmployeeServiceImpl(UserRepository userRepository, EntityManager entityManager, AuditClient auditClient) {
+    public EmployeeServiceImpl(UserRepository userRepository, EntityManager entityManager, AuditClient auditClient,
+                               EmployeeTrainingRepository trainingRepository, PerformanceReviewRepository performanceReviewRepository) {
         this.userRepository = userRepository;
         this.entityManager = entityManager;
         this.auditClient = auditClient;
+        this.trainingRepository = trainingRepository;
+        this.performanceReviewRepository = performanceReviewRepository;
         this.passwordEncoder = new BCryptPasswordEncoder();
+        this.restTemplate = new RestTemplate();
     }
 
     @Override
@@ -37,7 +61,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 "has been provisioned as a new employee",
                 String.format("{\"module\":\"user_management\",\"operation\":\"CREATE\",\"employeeId\":\"%s\",\"email\":\"%s\"}",
                     newUser.getEmployeeId(), newUser.getEmail()),
-                "java-backend",
+                SERVICE_NAME,
                 "EMPLOYEE",
                 newUser.getId().toString()
             );
@@ -59,7 +83,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 }
             }
             
-            if (user.getPassword() != null && !user.getPassword().isEmpty()) {
+            if (user.getPassword() != null && !user.getPassword().trim().isEmpty()) {
                 user.setPassword(passwordEncoder.encode(user.getPassword()));
                 user.setDefaultPasswordChanged(true);
             } else {
@@ -80,7 +104,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 "has updated their profile information",
                 String.format("{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"%s\",\"email\":\"%s\"}",
                     updatedUser.getEmployeeId(), updatedUser.getEmail()),
-                "java-backend",
+                SERVICE_NAME,
                 "USER",
                 updatedUser.getId().toString()
             );
@@ -169,11 +193,76 @@ public class EmployeeServiceImpl implements EmployeeService {
                 String.format("has %s user account", statusAction),
                 String.format("{\"module\":\"user_management\",\"operation\":\"STATUS_TOGGLE\",\"employeeId\":\"%s\",\"newStatus\":\"%s\"}",
                     user.getEmployeeId(), statusAction),
-                "java-backend",
+                SERVICE_NAME,
                 "USER",
                 id.toString()
             );
             return updated;
         }).orElseThrow(() -> new RuntimeException("User not found"));
+    }
+    
+    @Override
+    public List<User> getEmployeesWithBirthdayToday() {
+        return userRepository.findByBirthdayToday(LocalDate.now());
+    }
+    
+    @Override
+    public List<User> getEmployeesWithAnniversaryToday() {
+        return userRepository.findByAnniversaryToday(LocalDate.now());
+    }
+    
+    @Override
+    public List<User> getEmployeesWithProbationEndingOn(LocalDate date) {
+        return userRepository.findByProbationEndDate(date);
+    }
+    
+    @Override
+    public List<User> getEmployeesWithContractExpiringOn(LocalDate date) {
+        return userRepository.findByContractEndDate(date);
+    }
+    
+    @Override
+    public List<EmployeeTraining> getTrainingsEndingOn(LocalDate date) {
+        return trainingRepository.findIncompleteTrainingsEndingOn(date);
+    }
+    
+    @Override
+    public List<User> getEmployeesWithLowLeaveBalance(int threshold) {
+        try {
+            String url = nodejsServiceUrl + "/api/leave/low-balance?threshold=" + threshold;
+            ResponseEntity<Long[]> response = restTemplate.getForEntity(url, Long[].class);
+            if (response.getBody() != null) {
+                return userRepository.findAllById(List.of(response.getBody()));
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch low leave balance employees: {}", e.getMessage());
+        }
+        return Collections.emptyList();
+    }
+    
+    @Override
+    public void autoSchedulePerformanceReviews() {
+        LocalDate today = LocalDate.now();
+        List<User> employees = userRepository.findAll();
+        
+        for (User emp : employees) {
+            if (emp.getHireDate() != null) {
+                LocalDate nextReview = emp.getHireDate().plusYears(1);
+                while (nextReview.isBefore(today)) {
+                    nextReview = nextReview.plusYears(1);
+                }
+                
+                if (nextReview.getMonth() == today.getMonth() && nextReview.getYear() == today.getYear()) {
+                    PerformanceReview review = new PerformanceReview();
+                    review.setEmployeeId(emp.getId());
+                    review.setReviewDate(nextReview);
+                    review.setStatus("SCHEDULED");
+                    review.setReviewerId(1L);
+                    review.setRating(0.0);
+                    performanceReviewRepository.save(review);
+                    log.info("Scheduled performance review for employee {} on {}", emp.getEmployeeId(), nextReview);
+                }
+            }
+        }
     }
 }

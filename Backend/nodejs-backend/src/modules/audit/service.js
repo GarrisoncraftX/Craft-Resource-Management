@@ -41,7 +41,36 @@ class AuditService {
     }
 
     buildDescriptiveAction(action, details) {
-        const { module, operation, recordDate, leaveType, startDate, endDate, recordId } = details;
+        const { module, operation, recordDate, startDate, endDate, recordId, method } = details;
+        
+        // Authentication actions
+        if (action === 'SIGNIN') {
+            return `has signed in using ${method || 'password'} authentication`;
+        }
+        if (action === 'REGISTER') {
+            return 'has registered a new account';
+        }
+        if (action === 'CHANGE_PASSWORD') {
+            return 'has changed their password';
+        }
+        if (action === 'PASSWORD_RESET') {
+            return 'has reset their password';
+        }
+        if (action === 'EMAIL_VERIFIED') {
+            return 'has verified their email address';
+        }
+        if (action === 'UPDATE_PROFILE') {
+            return 'has updated their profile';
+        }
+        if (action === 'REVOKE_SESSION') {
+            return 'has revoked a session';
+        }
+        if (action === 'REVOKE_ALL_SESSIONS') {
+            return 'has revoked all sessions';
+        }
+        if (action === 'ADMIN_PASSWORD_RESET') {
+            return `has reset password for user ${details.targetEmployeeId || details.targetUserId}`;
+        }
         
         if (module === 'attendance' && operation === 'UPDATE') {
             return `has updated the Attendance record for ${recordDate}`;

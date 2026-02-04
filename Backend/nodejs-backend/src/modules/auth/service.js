@@ -398,7 +398,6 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
       throw new Error('Invalid employee ID or password');
     }
 
-    // Reset failed login attempts on successful login
     user.failedLoginAttempts = 0;
     user.accountLockedUntil = null;
 
@@ -411,13 +410,12 @@ const signin = async (employeeId, password, biometric_type, raw_data) => {
 
   // Log audit activity for signin
   try {
-    await auditService.logAction(user.id, 'SIGNIN', {
+    await auditService.logAction(user.id, 'has signin', {
       employeeId: user.employeeId,
       method: biometric_type ? 'biometric' : 'password'
     });
   } catch (auditError) {
     console.error('Audit logging failed for signin:', auditError.message);
-    // Don't throw here to avoid blocking signin
   }
 
   const permissions = await getUserPermissions(user.roleId);

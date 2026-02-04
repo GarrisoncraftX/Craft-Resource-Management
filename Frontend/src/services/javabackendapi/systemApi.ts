@@ -99,3 +99,35 @@ export async function deleteSystem(id: number | string) {
 export async function fetchRecentActivities(userId: string | number): Promise<AuditLog[]> {
   return systemApiService.getRecentAuditLogsForUser(String(userId));
 }
+
+// Notification functions
+export async function createNotification(notification: Notification) {
+  return apiClient.post('/system/notifications', notification);
+}
+
+export async function fetchNotificationsByUserId(userId: number | string): Promise<Notification[]> {
+  return apiClient.get(`/system/notifications/user/${userId}`);
+}
+
+export async function markNotificationAsRead(id: number | string): Promise<Notification> {
+  return apiClient.put(`/system/notifications/${id}/read`, {});
+}
+
+export async function deleteNotification(id: number | string): Promise<void> {
+  return apiClient.delete(`/system/notifications/${id}`);
+}
+
+export async function getUnreadNotificationCount(userId: number | string): Promise<number> {
+  const response = await apiClient.get<{ count: number }>(`/system/notifications/user/${userId}/unread-count`);
+  return response.count;
+}
+
+export interface Notification {
+  id?: number;
+  userId: number;
+  title: string;
+  message: string;
+  type: string;
+  isRead?: boolean;
+  createdAt?: string;
+}

@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { fetchLegalCases, createLegalCase, updateLegalCase, deleteLegalCase } from '@/services/api';
 import { mockLegalCases } from '@/services/mockData/legal';
 import type { LegalCase } from '@/services/mockData/legal';
@@ -12,7 +13,6 @@ import { toast } from 'sonner';
 
 export const LegalCases: React.FC = () => {
 	const [cases, setCases] = useState<LegalCase[]>(mockLegalCases);
-	const [loading, setLoading] = useState<boolean>(true);
 	const [error, setError] = useState<string | null>(null);
 	const [formOpen, setFormOpen] = useState(false);
 	const [editingCase, setEditingCase] = useState<LegalCase | undefined>();
@@ -22,39 +22,25 @@ export const LegalCases: React.FC = () => {
 	}, []);
 
 	const loadCases = async () => {
-		setLoading(true);
 		setError(null);
 		try {
 			const resp = await fetchLegalCases();
 			if (Array.isArray(resp) && resp.length > 0) {
-				const mapped = resp.map((c: any) => ({
-					id: c.id ?? c.caseNumber ?? `CASE-${Math.random().toString(36).slice(2, 8)}`,
-					caseNumber: c.caseNumber ?? '',
-					title: c.title ?? c.caseTitle ?? c.subject ?? c.summary ?? 'Untitled Case',
-					description: c.description ?? '',
-					status: c.status ?? 'Pending',
-					priority: c.priority ?? 'Medium',
-					assignedLawyer: c.assignedLawyer ?? c.assignedCounsel ?? '',
-					filingDate: c.filingDate ?? '',
-					resolutionDate: c.resolutionDate,
-					stage: c.stage ?? c.caseStage ?? c.status ?? 'Unknown',
-					counsel: c.counsel ?? c.assignedCounsel ?? c.lawFirm ?? '',
-					nextDate: c.nextDate ?? c.nextHearingDate ?? c.next ?? '',
-				}));
-				setCases(mapped);
+				setCases(resp);
 			} else {
 				setCases(mockLegalCases);
 			}
-		} catch (err: any) {
-			console.warn('LegalCases: failed to fetch legal cases — using fallback data.', err?.message ?? err);
-			setError(err?.message ?? 'Failed to fetch legal cases');
+		} catch (err: unknown) {
+			const errorMessage = err instanceof Error ? err.message : 'Failed to fetch legal cases';
+			console.warn('LegalCases: failed to fetch legal cases — using fallback data.', errorMessage);
+			setError(errorMessage);
 			setCases(mockLegalCases);
 		} finally {
-			setLoading(false);
+			// Cases loaded
 		}
 	};
 
-	const handleCreate = async (data: Partial<LegalCase>) => {
+	const handleCreate = async (data: Omit<LegalCase, 'id'>) => {
 		try {
 			await createLegalCase(data);
 			toast.success('Legal case created successfully');
@@ -65,7 +51,7 @@ export const LegalCases: React.FC = () => {
 		}
 	};
 
-	const handleUpdate = async (data: Partial<LegalCase>) => {
+	const handleUpdate = async (data: Omit<LegalCase, 'id'>) => {
 		if (!editingCase?.id) return;
 		try {
 			await updateLegalCase(editingCase.id, data);
@@ -88,6 +74,18 @@ export const LegalCases: React.FC = () => {
 			toast.error('Failed to delete legal case');
 			console.error(error);
 		}
+	};
+
+	const getPriorityVariant = (priority: string) => {
+		if (priority === 'High' || priority === 'Critical') return 'destructive';
+		if (priority === 'Medium') return 'default';
+		return 'secondary';
+	};
+
+	const getStatusVariant = (status: string) => {
+		if (status === 'Active') return 'default';
+		if (status === 'Completed') return 'secondary';
+		return 'outline';
 	};
 
 	return (
@@ -127,12 +125,12 @@ export const LegalCases: React.FC = () => {
 									<TableCell>{c.title}</TableCell>
 									<TableCell>{c.stage}</TableCell>
 									<TableCell>
-										<Badge variant={c.priority === 'High' || c.priority === 'Critical' ? 'destructive' : c.priority === 'Medium' ? 'default' : 'secondary'}>
+										<Badge variant={getPriorityVariant(c.priority)}>
 											{c.priority}
 										</Badge>
 									</TableCell>
 									<TableCell>
-										<Badge variant={c.status === 'Active' ? 'default' : c.status === 'Completed' ? 'secondary' : 'outline'}>
+										<Badge variant={getStatusVariant(c.status)}>
 											{c.status}
 										</Badge>
 									</TableCell>
@@ -140,12 +138,30 @@ export const LegalCases: React.FC = () => {
 									<TableCell>{c.nextDate ? new Date(c.nextDate).toLocaleDateString() : '—'}</TableCell>
 									<TableCell>
 										<div className="flex gap-2">
-											<Button size="sm" variant="outline" onClick={() => { setEditingCase(c); setFormOpen(true); }}>
-												<Edit className="h-3 w-3" />
-											</Button>
-											<Button size="sm" variant="destructive" onClick={() => handleDelete(c.id)}>
-												<Trash2 className="h-3 w-3" />
-											</Button>
+											<TooltipProvider delayDuration={200}>
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<Button size="sm" variant="outline" onClick={() => { setEditingCase(c); setFormOpen(true); }}>
+															<Edit className="h-3 w-3" />
+														</Button>
+													</TooltipTrigger>
+													<TooltipContent>
+														<p>Edit Case</p>
+													</TooltipContent>
+												</Tooltip>
+											</TooltipProvider>
+											<TooltipProvider delayDuration={200}>
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<Button size="sm" variant="destructive" onClick={() => handleDelete(c.id)}>
+															<Trash2 className="h-3 w-3" />
+														</Button>
+													</TooltipTrigger>
+													<TooltipContent>
+														<p>Delete Case</p>
+													</TooltipContent>
+												</Tooltip>
+											</TooltipProvider>
 										</div>
 									</TableCell>
 								</TableRow>

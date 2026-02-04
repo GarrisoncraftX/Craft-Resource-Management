@@ -10,8 +10,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -117,13 +115,13 @@ class DashboardServiceTest {
 
     @Test
     void testGetUpcomingTrainingsCount() {
-        LocalDateTime now = LocalDateTime.now();
-        when(employeeTrainingRepository.countByStartDateAfter(any(LocalDateTime.class))).thenReturn(8L);
+        LocalDate now = LocalDate.now();
+        when(employeeTrainingRepository.countByEnrollmentDateAfter(any(LocalDate.class))).thenReturn(8L);
 
         long count = dashboardService.getUpcomingTrainingsCount();
 
         assertEquals(8L, count);
-        verify(employeeTrainingRepository, times(1)).countByStartDateAfter(any(LocalDateTime.class));
+        verify(employeeTrainingRepository, times(1)).countByEnrollmentDateAfter(any(LocalDate.class));
     }
 
     @Test
@@ -133,7 +131,7 @@ class DashboardServiceTest {
         when(attendanceRepository.countByDate(any(LocalDate.class))).thenReturn(130L);
         when(payrollRunRepository.countByStatus("pending")).thenReturn(3L);
         when(performanceReviewRepository.countByStatus("pending")).thenReturn(10L);
-        when(employeeTrainingRepository.countByStartDateAfter(any(LocalDateTime.class))).thenReturn(5L);
+        when(employeeTrainingRepository.countByEnrollmentDateAfter(any(LocalDate.class))).thenReturn(5L);
 
         Map<String, Object> summary = dashboardService.getDashboardSummary();
 
@@ -161,16 +159,8 @@ class DashboardServiceTest {
 
     @Test
     void testGetDepartmentEmployeeCount() {
-        Map<String, Long> mockCounts = new HashMap<>();
-        mockCounts.put("IT", 50L);
-        mockCounts.put("HR", 30L);
-        mockCounts.put("Finance", 25L);
-
-        when(userRepository.countByDepartmentId(1L)).thenReturn(50L);
-        when(userRepository.countByDepartmentId(2L)).thenReturn(30L);
-        when(userRepository.countByDepartmentId(3L)).thenReturn(25L);
-
         // Test individual department counts
+        when(userRepository.countByDepartmentId(1L)).thenReturn(50L);
         long itCount = userRepository.countByDepartmentId(1L);
         assertEquals(50L, itCount);
     }

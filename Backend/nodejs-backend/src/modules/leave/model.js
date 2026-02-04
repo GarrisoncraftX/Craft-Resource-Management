@@ -102,7 +102,7 @@ const LeaveRequest = sequelize.define("LeaveRequest", {
     allowNull: true,
   },
   status: {
-    type: DataTypes.ENUM("pending", "approved", "rejected", "cancelled"),
+    type: DataTypes.ENUM("pending", "approved", "rejected", "cancelled", "completed"),
     allowNull: false,
     defaultValue: "pending",
   },

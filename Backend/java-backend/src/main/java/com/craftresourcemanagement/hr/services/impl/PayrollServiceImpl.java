@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,6 +35,7 @@ public class PayrollServiceImpl implements PayrollService {
     private final OpenAIClient openAIClient;
     private final AuditClient auditClient;
     private final com.craftresourcemanagement.hr.services.NotificationService notificationService;
+    private final com.craftresourcemanagement.hr.services.HRNotificationService hrNotificationService;
 
     @Value("${openai.api.key}")
     private String openAIKey;
@@ -50,7 +50,8 @@ public class PayrollServiceImpl implements PayrollService {
             UserRepository userRepository,
             OpenAIClient openAIClient,
             AuditClient auditClient,
-            com.craftresourcemanagement.hr.services.NotificationService notificationService) {
+            com.craftresourcemanagement.hr.services.NotificationService notificationService,
+            com.craftresourcemanagement.hr.services.HRNotificationService hrNotificationService) {
         this.payrollRunRepository = payrollRunRepository;
         this.payslipRepository = payslipRepository;
         this.benefitPlanRepository = benefitPlanRepository;
@@ -62,6 +63,7 @@ public class PayrollServiceImpl implements PayrollService {
         this.openAIClient = openAIClient;
         this.auditClient = auditClient;
         this.notificationService = notificationService;
+        this.hrNotificationService = hrNotificationService;
     }
 
     // PayrollRun
@@ -413,7 +415,21 @@ public class PayrollServiceImpl implements PayrollService {
 
         for (Payslip payslip : processedPayslips) {
             payslip.setPayrollRun(savedRun);
-            payslipRepository.save(payslip);
+            Payslip savedPayslip = payslipRepository.save(payslip);
+            
+            // Send notification to employee
+            try {
+                hrNotificationService.notifyPayrollProcessed(
+                    savedPayslip.getUser().getId(),
+                    savedPayslip.getUser().getFirstName() + " " + savedPayslip.getUser().getLastName(),
+                    savedPayslip.getNetPay().doubleValue(),
+                    savedPayslip.getPayPeriodStart().toString(),
+                    savedPayslip.getPayPeriodEnd().toString()
+                );
+            } catch (Exception e) {
+                logger.error("Failed to send notification to employee {}: {}", 
+                    savedPayslip.getUser().getId(), e.getMessage());
+            }
         }
 
         try {

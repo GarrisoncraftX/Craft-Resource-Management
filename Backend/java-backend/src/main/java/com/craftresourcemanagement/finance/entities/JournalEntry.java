@@ -2,7 +2,6 @@ package com.craftresourcemanagement.finance.entities;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "journal_entries")

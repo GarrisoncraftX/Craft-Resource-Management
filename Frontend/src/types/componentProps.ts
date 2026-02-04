@@ -42,8 +42,14 @@ export interface ManualEntryModalProps {
 
 export interface PermissionGuardProps {
   children: React.ReactNode;
-  requiredPermission: string;
+  requiredPermission?: string;
+  requiredPermissions?: string[];
   fallback?: React.ReactNode;
+}
+
+export interface ExtendedPermissionGuardProps extends PermissionGuardProps {
+  requiredPermission: string;
+  requiredPermissions: string[];
 }
 
 export interface QRCodeDisplayProps {

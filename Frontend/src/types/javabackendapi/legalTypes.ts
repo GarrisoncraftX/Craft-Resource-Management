@@ -4,9 +4,13 @@ export interface LegalCase {
   title: string;
   description: string;
   status: string;
+  priority: string;
   assignedLawyer: string;
   filingDate: string;
   resolutionDate?: string;
+  stage: string;
+  counsel: string;
+  nextDate?: string;
 }
 
 export interface ComplianceRecord {

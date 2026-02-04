@@ -3,6 +3,7 @@ const { sequelize } = require("../../config/sequelize")
 const { LeaveType, LeaveRequest, LeaveBalance, LeaveApproval } = require("./model")
 const cloudinaryService = require('../../utils/cloudinary')
 const auditService = require("../audit/service")
+const notificationHelper = require('../../utils/notificationHelper')
 const User = require("../auth/model")
 const { ValidationError, NotFoundError, ConflictError } = require("../../middleware/errorHandler")
 
@@ -324,6 +325,17 @@ class LeaveService {
         approvedBy: approverId
       });
 
+      // Send notification to employee
+      const leaveType = await LeaveType.findByPk(leaveRequest.leaveTypeId);
+      if (leaveType) {
+        await notificationHelper.notifyLeaveRequestApproved(
+          leaveRequest.userId,
+          leaveType.name,
+          leaveRequest.startDate,
+          leaveRequest.endDate
+        );
+      }
+
       return leaveRequest;
     } catch (error) {
       await transaction.rollback();
@@ -369,6 +381,18 @@ class LeaveService {
       reason
     });
 
+    // Send notification to employee
+    const leaveType = await LeaveType.findByPk(leaveRequest.leaveTypeId);
+    if (leaveType) {
+      await notificationHelper.notifyLeaveRequestRejected(
+        leaveRequest.userId,
+        leaveType.name,
+        leaveRequest.startDate,
+        leaveRequest.endDate,
+        reason
+      );
+    }
+
     return leaveRequest
   }
 
@@ -407,6 +431,17 @@ class LeaveService {
       leaveRequestId: leaveRequest.id,
       status: "pending",
     })
+
+    // Send notification to employee
+    const leaveType = await LeaveType.findByPk(data.leaveTypeId);
+    if (leaveType) {
+      await notificationHelper.notifyLeaveRequestCreated(
+        data.userId,
+        leaveType.name,
+        data.startDate,
+        data.endDate
+      );
+    }
 
     return leaveRequest
   }
@@ -593,6 +628,79 @@ async getLeaveStatistics() {
         });
       }
     }
+  }
+
+  // Process expired leaves and mark as completed
+  async processExpiredLeaves() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const expiredLeaves = await LeaveRequest.findAll({
+      where: {
+        status: 'approved',
+        endDate: { [Op.lt]: today }
+      },
+      include: [{ model: LeaveType }, { model: User, attributes: ['firstName', 'lastName', 'email'] }]
+    });
+
+    for (const leave of expiredLeaves) {
+      leave.status = 'completed';
+      leave.updatedAt = new Date();
+      await leave.save();
+
+      auditService.logAction(leave.userId, "LEAVE_COMPLETED", {
+        leaveRequestId: leave.id,
+        endDate: leave.endDate
+      });
+
+      if (leave.LeaveType) {
+        await notificationHelper.notifyLeaveCompleted(
+          leave.userId,
+          leave.LeaveType.name,
+          leave.startDate,
+          leave.endDate
+        );
+      }
+    }
+
+    return expiredLeaves.length;
+  }
+
+  // Mark leave as completed manually
+  async completeLeaveRequest(leaveRequestId, actorId) {
+    const leaveRequest = await LeaveRequest.findByPk(leaveRequestId);
+    if (!leaveRequest) throw new NotFoundError("Leave request not found");
+    if (leaveRequest.status !== "approved") throw new ValidationError("Only approved leaves can be completed");
+
+    leaveRequest.status = "completed";
+    leaveRequest.updatedAt = new Date();
+    await leaveRequest.save();
+
+    auditService.logAction(actorId, "COMPLETE_LEAVE_REQUEST", {
+      leaveRequestId,
+      userId: leaveRequest.userId
+    });
+
+    return leaveRequest;
+  }
+
+  // Get employees currently on leave
+  async getEmployeesOnLeave() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return await LeaveRequest.findAll({
+      where: {
+        status: 'approved',
+        startDate: { [Op.lte]: today },
+        endDate: { [Op.gte]: today }
+      },
+      include: [
+        { model: LeaveType },
+        { model: User, attributes: ['id', 'firstName', 'lastName', 'employeeId', 'email'] }
+      ],
+      order: [["endDate", "ASC"]]
+    });
   }
 
   // Update leave entitlement on milestone

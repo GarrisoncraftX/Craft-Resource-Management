@@ -5,6 +5,11 @@ import com.craftresourcemanagement.hr.entities.Payslip;
 import com.craftresourcemanagement.hr.entities.User;
 import com.craftresourcemanagement.hr.repositories.PayrollRunRepository;
 import com.craftresourcemanagement.hr.repositories.PayslipRepository;
+import com.craftresourcemanagement.hr.repositories.BenefitPlanRepository;
+import com.craftresourcemanagement.hr.repositories.EmployeeBenefitRepository;
+import com.craftresourcemanagement.hr.repositories.TrainingCourseRepository;
+import com.craftresourcemanagement.hr.repositories.EmployeeTrainingRepository;
+import com.craftresourcemanagement.hr.repositories.PerformanceReviewRepository;
 import com.craftresourcemanagement.hr.repositories.UserRepository;
 import com.craftresourcemanagement.hr.services.impl.PayrollServiceImpl;
 import com.craftresourcemanagement.utils.OpenAIClient;
@@ -34,6 +39,21 @@ class PayrollServiceTest {
     private PayslipRepository payslipRepository;
 
     @Mock
+    private BenefitPlanRepository benefitPlanRepository;
+
+    @Mock
+    private EmployeeBenefitRepository employeeBenefitRepository;
+
+    @Mock
+    private TrainingCourseRepository trainingCourseRepository;
+
+    @Mock
+    private EmployeeTrainingRepository employeeTrainingRepository;
+
+    @Mock
+    private PerformanceReviewRepository performanceReviewRepository;
+
+    @Mock
     private UserRepository userRepository;
 
     @Mock
@@ -41,6 +61,12 @@ class PayrollServiceTest {
 
     @Mock
     private AuditClient auditClient;
+
+    @Mock
+    private com.craftresourcemanagement.hr.services.NotificationService notificationService;
+
+    @Mock
+    private com.craftresourcemanagement.hr.services.HRNotificationService hrNotificationService;
 
     @InjectMocks
     private PayrollServiceImpl payrollService;
@@ -50,9 +76,6 @@ class PayrollServiceTest {
 
     @BeforeEach
     void setUp() {
-        payrollService = new PayrollServiceImpl(payrollRunRepository, payslipRepository, 
-            null, null, null, null, null, userRepository, openAIClient, auditClient, null);
-        
         testPayrollRun = new PayrollRun();
         testPayrollRun.setRunMonth(6);
         testPayrollRun.setRunYear(2024);

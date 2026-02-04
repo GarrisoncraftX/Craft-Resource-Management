@@ -76,3 +76,22 @@ def get_current_visitors_legacy():
 def get_visitor_logs_legacy():
     response, status_code = visitor_controller.get_visitor_logs()
     return jsonify(response), status_code
+
+# Visitor approval endpoints
+@visitor_bp.route('/visitors/approve', methods=['POST'])
+@require_auth
+def approve_visitor():
+    response, status_code = visitor_controller.approve_visitor()
+    return jsonify(response), status_code
+
+@visitor_bp.route('/visitors/reject', methods=['POST'])
+@require_auth
+def reject_visitor():
+    response, status_code = visitor_controller.reject_visitor()
+    return jsonify(response), status_code
+
+# Visitor status check endpoint (public for visitors to check their status)
+@visitor_bp.route('/visitors/status', methods=['GET'])
+def check_visitor_status():
+    response, status_code = visitor_controller.check_visitor_status()
+    return jsonify(response), status_code

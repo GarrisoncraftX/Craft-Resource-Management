@@ -14,6 +14,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import bgImage from '@/assets/bgimage.jpg';
 import logo from '@/assets/logo.png';
 import { UnifySidebar } from './UnifySidebar';
+import { fetchEmployeeById } from '@/services/api';
+import type { Employee } from '@/services/api';
 
 interface ModuleLayoutProps {
   title?: string;
@@ -35,12 +37,22 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
   const navigate = useNavigate();
   const { user } = useAuth();
   const [currentTime, setCurrentTime] = React.useState(new Date());
+  const [employeeData, setEmployeeData] = React.useState<Employee | null>(null);
 
   // Update time every second
   React.useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Fetch employee data for profile picture
+  React.useEffect(() => {
+    if (user?.userId) {
+      fetchEmployeeById(user.userId)
+        .then(setEmployeeData)
+        .catch(error => console.error('Failed to load employee data:', error));
+    }
+  }, [user?.userId]);
 
   const handleBackToAdmin = () => {
     navigate('/admin/dashboard');
@@ -154,10 +166,13 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 gap-3 pl-2 pr-4 rounded-full hover:bg-accent">
                   <Avatar className="h-8 w-8 ring-2 ring-primary/20">
-                    <AvatarImage src="/placeholder-avatar.jpg" alt="User" />
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-sm font-medium">
-                      {userInitials}
-                    </AvatarFallback>
+                    {employeeData?.profilePictureUrl ? (
+                      <AvatarImage src={employeeData.profilePictureUrl} alt={`${user?.firstName} ${user?.lastName}`} />
+                    ) : (
+                      <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-sm font-medium">
+                        {userInitials}
+                      </AvatarFallback>
+                    )}
                   </Avatar>
                   <div className="hidden sm:flex flex-col items-start">
                     <span className="text-sm font-medium text-foreground">

@@ -74,7 +74,7 @@ public class EmployeeController {
 
     @PutMapping("/id/{id}")
     public ResponseEntity<User> updateEmployee(@PathVariable Long id, @RequestBody UpdateEmployeeRequest request) {
-        if (request.getPassword() != null && !request.getPassword().equals(request.getConfirmPassword())) {
+        if (request.getPassword() != null && !request.getPassword().trim().isEmpty() && !request.getPassword().equals(request.getConfirmPassword())) {
             return ResponseEntity.badRequest().build();
         }
         return employeeService.findById(id)
@@ -95,7 +95,7 @@ public class EmployeeController {
                     if (request.getEmergencyContactPhone() != null) existingUser.setEmergencyContactPhone(request.getEmergencyContactPhone());
                     if (request.getEmail() != null) existingUser.setEmail(request.getEmail());
                     if (request.getEmployeeId() != null) existingUser.setEmployeeId(request.getEmployeeId());
-                    if (request.getPassword() != null) {
+                    if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
                         existingUser.setPassword(request.getPassword());
                     }
                     if (request.getProfileCompleted() != null) existingUser.setProfileCompleted(request.getProfileCompleted());

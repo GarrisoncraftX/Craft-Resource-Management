@@ -5,6 +5,7 @@ import com.craftresourcemanagement.revenue.entities.TaxAssessment;
 import com.craftresourcemanagement.revenue.repositories.RevenueCollectionRepository;
 import com.craftresourcemanagement.revenue.repositories.TaxAssessmentRepository;
 import com.craftresourcemanagement.revenue.services.impl.RevenueServiceImpl;
+import com.craftresourcemanagement.utils.AuditClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +27,9 @@ class RevenueServiceTest {
 
     @Mock
     private TaxAssessmentRepository taxAssessmentRepository;
+
+    @Mock
+    private AuditClient auditClient;
 
     @InjectMocks
     private RevenueServiceImpl revenueService;

@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -87,7 +86,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     public long getUpcomingTrainingsCount() {
-        return employeeTrainingRepository.countByStartDateAfter(LocalDateTime.now());
+        return employeeTrainingRepository.countByEnrollmentDateAfter(LocalDate.now());
     }
 
     public Map<String, Object> getDashboardSummary() {

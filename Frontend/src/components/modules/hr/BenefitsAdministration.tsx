@@ -4,14 +4,25 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
+
 import { Heart, Shield, Car, Plane, Plus, Settings } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { hrApiService } from '@/services/javabackendapi/hrApi';
 
 export const BenefitsAdministration: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [benefitPlans, setBenefitPlans] = useState<any[]>([]);
-  const [employeeBenefits, setEmployeeBenefits] = useState<any[]>([]);
+  const [benefitPlans, setBenefitPlans] = useState<Array<{
+    id?: number;
+    name: string;
+    type: string;
+    description: string;
+    premium: number;
+  }>>([]);
+  const [employeeBenefits, setEmployeeBenefits] = useState<Array<{
+    id?: number;
+    employeeId: number;
+    status: string;
+  }>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -160,8 +171,26 @@ export const BenefitsAdministration: React.FC = () => {
                         <TableCell>-</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm">Edit</Button>
-                            <Button variant="ghost" size="sm">View</Button>
+                            <TooltipProvider delayDuration={200}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm">Edit</Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Edit Plan</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider delayDuration={200}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm">View</Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>View Details</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -202,7 +231,16 @@ export const BenefitsAdministration: React.FC = () => {
                         </TableCell>
                         <TableCell className="font-medium">-</TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm">Manage</Button>
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="sm">Manage</Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Manage Benefits</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </TableCell>
                       </TableRow>
                     ))}

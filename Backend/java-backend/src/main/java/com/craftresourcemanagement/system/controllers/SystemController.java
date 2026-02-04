@@ -201,4 +201,31 @@ public class SystemController {
     public ResponseEntity<List<SecurityIncident>> getAllSecurityIncidents() {
         return ResponseEntity.ok(systemService.getAllSecurityIncidents());
     }
+
+    // Notifications
+    @PostMapping("/notifications")
+    public ResponseEntity<Notification> createNotification(@RequestBody Notification notification) {
+        return ResponseEntity.ok(systemService.createNotification(notification));
+    }
+
+    @GetMapping("/notifications/user/{userId}")
+    public ResponseEntity<List<Notification>> getNotificationsByUserId(@PathVariable Long userId) {
+        return ResponseEntity.ok(systemService.getNotificationsByUserId(userId));
+    }
+
+    @PutMapping("/notifications/{id}/read")
+    public ResponseEntity<Notification> markNotificationAsRead(@PathVariable Long id) {
+        return ResponseEntity.ok(systemService.markAsRead(id));
+    }
+
+    @DeleteMapping("/notifications/{id}")
+    public ResponseEntity<Void> deleteNotification(@PathVariable Long id) {
+        systemService.deleteNotification(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/notifications/user/{userId}/unread-count")
+    public ResponseEntity<Map<String, Long>> getUnreadCount(@PathVariable Long userId) {
+        return ResponseEntity.ok(Map.of("count", systemService.getUnreadCount(userId)));
+    }
 }

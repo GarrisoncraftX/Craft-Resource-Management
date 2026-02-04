@@ -6,7 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Truck, Plus, Search, Fuel, Settings } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { Tooltip as ChartTooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import { transportationApiService } from '@/services/nodejsbackendapi/transportationApi';
 import { VehicleFormDialog } from './VehicleFormDialog';
@@ -85,7 +87,7 @@ export const FleetManagement: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
-                <Tooltip />
+                <ChartTooltip />
                 <Bar dataKey="active" stackId="a" fill="#10b981" name="Active" />
                 <Bar dataKey="maintenance" stackId="a" fill="#f59e0b" name="Maintenance" />
                 <Bar dataKey="available" stackId="a" fill="#3b82f6" name="Available" />
@@ -131,7 +133,7 @@ export const FleetManagement: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
-                <Tooltip formatter={(value) => [`$${value}`, 'Cost']} />
+                <ChartTooltip formatter={(value) => [`$${value}`, 'Cost']} />
                 <Line type="monotone" dataKey="cost" stroke="#ef4444" strokeWidth={3} />
               </LineChart>
             </ResponsiveContainer>
@@ -206,9 +208,18 @@ export const FleetManagement: React.FC = () => {
                   </TableCell>
                   <TableCell>{vehicle.department}</TableCell>
                   <TableCell>
-                    <Button variant="outline" size="sm" onClick={() => { setSelectedVehicle(vehicle); setDialogOpen(true); }}>
-                      <Settings className="h-4 w-4" />
-                    </Button>
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="sm" onClick={() => { setSelectedVehicle(vehicle); setDialogOpen(true); }}>
+                            <Settings className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Manage Vehicle</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                 </TableRow>
               ))}
