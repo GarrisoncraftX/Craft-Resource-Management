@@ -206,6 +206,7 @@ export function UnifySidebar() {
   const [hoveredModule, setHoveredModule] = useState<string | null>(null)
   const [manuallyOpenedModule, setManuallyOpenedModule] = useState<string | null>(null)
   const [preventHover, setPreventHover] = useState(false)
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const location = useLocation()
   const { user } = useAuth()
 
@@ -262,11 +263,33 @@ export function UnifySidebar() {
   const hoveredOrManualIndex = filteredModules.findIndex(m => m.title === hoveredModule || m.title === manuallyOpenedModule)
 
   return (
-    <div 
-      className="fixed left-0 top-16 h-[calc(100vh-4rem)] z-40 flex"
-      onMouseLeave={() => setHoveredModule(null)}
-    >
-      {/* Icon Strip - Always visible */}
+    <>
+      {/* Mobile Toggle Button - Only visible when sidebar is closed on mobile */}
+      {!isMobileSidebarOpen && (
+        <button
+          onClick={() => setIsMobileSidebarOpen(true)}
+          className="sm:hidden fixed left-2 top-1/2 -translate-y-1/2 z-50 w-12 h-12 rounded-xl bg-blue-100 border border-border shadow-lg flex items-center justify-center text-muted-foreground"
+        >
+          <ChevronLeft className="w-5 h-5 rotate-180" />
+        </button>
+      )}
+
+      {/* Mobile Overlay */}
+      {isMobileSidebarOpen && (
+        <div
+          className="sm:hidden fixed inset-0 bg-black/50 z-30 top-14"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
+
+      <div 
+        className={cn(
+          "fixed left-0 top-14 sm:top-16 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] z-40 flex transition-transform duration-300",
+          !isMobileSidebarOpen && "-translate-x-full sm:translate-x-0"
+        )}
+        onMouseLeave={() => setHoveredModule(null)}
+      >
+      {/* Icon Strip */}
       <div className="w-16 bg-card border-r border-border flex flex-col items-center py-4 gap-1 relative overflow-y-auto">
         {filteredModules.map((module) => {
           const isActive = activeModule?.title === module.title
@@ -305,19 +328,37 @@ export function UnifySidebar() {
           )
         })}
 
-        {/* Collapse Button */}
+        {/* Collapse Button - Center of sidebar */}
         <button
           onClick={() => {
-            if (hoveredModule || manuallyOpenedModule) {
-              setHoveredModule(null)
-              setManuallyOpenedModule(null)
-            } else if (activeModule) {
-              setManuallyOpenedModule(activeModule.title)
+            if (window.innerWidth < 640) {
+              // Mobile: First click shows icons, second click shows flyout, third click closes all
+              if (!isMobileSidebarOpen) {
+                setIsMobileSidebarOpen(true)
+              } else if (!hoveredModule && !manuallyOpenedModule && activeModule) {
+                setManuallyOpenedModule(activeModule.title)
+              } else {
+                setHoveredModule(null)
+                setManuallyOpenedModule(null)
+                setIsMobileSidebarOpen(false)
+              }
+            } else {
+              // Desktop: Toggle flyout panel
+              if (hoveredModule || manuallyOpenedModule) {
+                setHoveredModule(null)
+                setManuallyOpenedModule(null)
+              } else if (activeModule) {
+                setManuallyOpenedModule(activeModule.title)
+              }
             }
           }}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-xl flex flex-col items-center justify-center transition-all duration-300 ease-out text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className={cn(
+            "w-5 h-5 transition-transform",
+            (hoveredModule || manuallyOpenedModule) && "rotate-0",
+            !(hoveredModule || manuallyOpenedModule) && "rotate-180"
+          )} />
         </button>
       </div>
 
@@ -348,6 +389,10 @@ export function UnifySidebar() {
                   onClick={() => {
                     setHoveredModule(null)
                     setManuallyOpenedModule(null)
+                    // Close mobile sidebar on small screens
+                    if (window.innerWidth < 640) {
+                      setIsMobileSidebarOpen(false)
+                    }
                   }}
                   className="w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
                 >
@@ -367,6 +412,7 @@ export function UnifySidebar() {
                       onClick={() => {
                         setHoveredModule(null)
                         setManuallyOpenedModule(null)
+                        setIsMobileSidebarOpen(false)
                       }}
                       className={cn(
                         "flex items-center px-3 py-2.5 rounded-lg text-sm transition-all duration-200 mb-1",
@@ -384,6 +430,7 @@ export function UnifySidebar() {
           )}
         </div>
     </div>
+    </>
   )
 }
 

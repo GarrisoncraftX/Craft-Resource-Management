@@ -22,6 +22,7 @@ import { AuditLog as JavaAuditLog } from '@/services/javabackendapi/systemApi';
 import { formatAttendanceMethod } from '@/utils/attendanceUtils';
 import { DataTableDialog } from './ui/DataTableDialog';
 import { Separator } from '@/components/ui/separator';
+import { LogoSpinner } from '@/components/ui/LogoSpinner';
 
 
 
@@ -80,6 +81,7 @@ const EmployeeDashboard: React.FC = () => {
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   const [isPayrollDialogOpen, setIsPayrollDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
 
 
@@ -186,6 +188,7 @@ const EmployeeDashboard: React.FC = () => {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      setIsLoading(true);
       if (!user?.userId) {
         console.error('User or User ID is undefined, skipping API call.');
         setDashboardKPIs({
@@ -194,6 +197,7 @@ const EmployeeDashboard: React.FC = () => {
           pendingTasks: mockDashboardKPIs.pendingTasks || 0
         });
         setFormattedLeaveBalance(calculateFormattedLeaveBalance(mockDashboardKPIs.leaveBalance));
+        setIsLoading(false);
         return;
       }
 
@@ -261,6 +265,8 @@ const EmployeeDashboard: React.FC = () => {
         setFormattedLeaveBalance(calculateFormattedLeaveBalance(mockDashboardKPIs.leaveBalance));
         setLeaveRequests([]);
         setRecentActivities([]);
+      } finally {
+        setIsLoading(false);
       }
 
     };
@@ -268,7 +274,9 @@ const EmployeeDashboard: React.FC = () => {
     fetchDashboardData();
   }, [user]);
 
-  if (!user || !dashboardKPIs) return null;
+  if (!user || !dashboardKPIs) return <LogoSpinner size="lg" className="min-h-screen" />;
+
+  if (isLoading) return <LogoSpinner size="lg" className="min-h-screen" />;
 
 
   return (
@@ -377,7 +385,7 @@ const EmployeeDashboard: React.FC = () => {
                   <span className="text-xs font-semibold bg-blue-500 text-white px-3 py-1 rounded">Quick Actions</span>
                 </div>
                 <div className="space-y-2">
-                  <Button className="w-full justify-center bg-green-600 hover:bg-green-700 text-white" onClick={() => navigate('/employee/info')}>
+                  <Button className="w-full justify-center bg-green-600 hover:bg-green-700 text-white" onClick={() => navigate('/employee/profile')}>
                     <Users className="h-4 w-4 mr-2" />
                     Update Your Profile
                   </Button>

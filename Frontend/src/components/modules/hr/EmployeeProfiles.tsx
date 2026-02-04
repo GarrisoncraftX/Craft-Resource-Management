@@ -122,18 +122,18 @@ export const EmployeeProfiles: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex-1 flex flex-col p-6 bg-background">
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+    <div className="min-h-screen flex-1 flex flex-col p-2 sm:p-4 md:p-6 bg-background">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Employee Profiles</h1>
-            <p className="text-muted-foreground">Manage employee information and profiles</p>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Employee Profiles</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Manage employee information and profiles</p>
           </div>
           <Button 
-            className="flex items-center gap-2 bg-green-500"
+            className="flex items-center gap-2 bg-green-500 text-xs sm:text-sm w-full sm:w-auto"
             onClick={() => setShowAddForm(true)}
           >
-            <UserPlus className="h-4 w-4 font-bold" />
+            <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 font-bold" />
             Add Employee
           </Button>
         </div>
@@ -158,7 +158,7 @@ export const EmployeeProfiles: React.FC = () => {
         </Card>
 
         {/* Employee Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           <Card className='bg-blue-500 text-white'>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
@@ -199,11 +199,12 @@ export const EmployeeProfiles: React.FC = () => {
         {/* Employee List */}
         <Card>
           <CardHeader>
-            <CardTitle>Employee Directory</CardTitle>
-            <CardDescription>Complete list of all employees</CardDescription>
+            <CardTitle className="text-base sm:text-lg md:text-xl">Employee Directory</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Complete list of all employees</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
+            <div className="overflow-x-auto -mx-2 sm:mx-0">
+              <Table className="min-w-[640px]">
               <TableHeader className='bg-blue-300 text-black font-bold'>
                 <TableRow >
                   <TableHead>Employee</TableHead>
@@ -297,6 +298,7 @@ export const EmployeeProfiles: React.FC = () => {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
       </div>

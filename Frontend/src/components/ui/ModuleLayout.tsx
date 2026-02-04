@@ -86,55 +86,55 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
       <div className="fixed inset-0 backdrop-blur-md bg-background/10 z-0" />
       
       {/* Fixed Navbar */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-card/95 backdrop-blur-sm border-b border-border z-50 shadow-sm">
-        <div className="h-full px-4 flex items-center justify-between">
+      <header className="fixed top-0 left-0 right-0 h-14 sm:h-16 bg-card/95 backdrop-blur-sm border-b border-border z-50 shadow-sm">
+        <div className="h-full px-2 sm:px-4 flex items-center justify-between gap-1 sm:gap-2">
           {/* Left Section - Logo & Title */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 sm:gap-4 min-w-0 flex-shrink">
             {/* Logo */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 sm:gap-3 min-w-0">
               <img 
                 src={logo} 
                 alt="CRMS Logo" 
-                className="h-10 w-10 object-contain rounded-full"
+                className="h-8 w-8 sm:h-10 sm:w-10 object-contain rounded-full flex-shrink-0"
               />
-              <div className="hidden sm:block">
-                <h1 className="text-lg font-bold text-foreground leading-tight">
+              <div className="hidden md:block">
+                <h1 className="text-sm lg:text-lg font-bold text-foreground leading-tight">
                   Craft Resource Management System
                 </h1>
               </div>
-              <div className="sm:hidden">
-                <h1 className="text-lg font-bold text-foreground">CRMS</h1>
+              <div className="md:hidden">
+                <h1 className="text-sm sm:text-base font-bold text-foreground">CRMS</h1>
               </div>
             </div>
           </div>
 
           {/* Right Section - Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             {/* Live Clock */}
-            <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full text-white shadow-md">
-              <Clock className="w-4 h-4" />
-              <span className="font-mono text-sm font-medium">{formatTime(currentTime)}</span>
+            <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full text-white shadow-md">
+              <Clock className="w-3 h-3" />
+              <span className="font-mono text-xs font-medium">{formatTime(currentTime)}</span>
             </div>
 
             {/* Action Icons */}
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-accent">
-                <Bell className="h-5 w-5 text-muted-foreground" />
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-destructive rounded-full ring-2 ring-card" />
+            <div className="flex items-center">
+              <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-accent h-8 w-8 sm:h-10 sm:w-10">
+                <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-destructive rounded-full ring-1 sm:ring-2 ring-card" />
               </Button>
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-1">
               {user?.roleCode === 'SUPER_ADMIN' && title !== 'Admin Dashboard' && !isEmployeeDashboard && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleBackToAdmin}
-                  className="text-muted-foreground hover:text-foreground rounded-full"
+                  className="text-muted-foreground hover:text-foreground rounded-full text-xs px-2"
                 >
-                  <Home className="h-4 w-4 mr-2" />
-                  Admin
+                  <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="hidden xl:inline">Admin</span>
                 </Button>
               )}
 
@@ -142,10 +142,10 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={onViewDashboard}
-                className="text-muted-foreground hover:text-foreground rounded-full"
+                className="text-muted-foreground hover:text-foreground rounded-full text-xs px-2"
               >
-                <Eye className="h-4 w-4 mr-2" />
-                {isEmployeeDashboard ? 'View Dashboard' : 'Employee Portal'}
+                <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                <span className="hidden xl:inline">{isEmployeeDashboard ? 'View Dashboard' : 'Employee Portal'}</span>
               </Button>
 
               {isEmployeeDashboard && (
@@ -153,10 +153,10 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => navigate('/employee/info')}
-                  className="text-muted-foreground hover:text-foreground rounded-full"
+                  className="text-muted-foreground hover:text-foreground rounded-full text-xs px-2"
                 >
-                  <User className="h-4 w-4 mr-2" />
-                  Account
+                  <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="hidden xl:inline">Account</span>
                 </Button>
               )}
             </div>
@@ -164,22 +164,22 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 gap-3 pl-2 pr-4 rounded-full hover:bg-accent">
-                  <Avatar className="h-8 w-8 ring-2 ring-primary/20">
+                <Button variant="ghost" className="relative h-8 sm:h-10 gap-1 sm:gap-2 pl-1 pr-1 sm:pl-2 sm:pr-3 rounded-full hover:bg-accent">
+                  <Avatar className="h-7 w-7 sm:h-8 sm:w-8 ring-1 sm:ring-2 ring-primary/20">
                     {employeeData?.profilePictureUrl ? (
                       <AvatarImage src={employeeData.profilePictureUrl} alt={`${user?.firstName} ${user?.lastName}`} />
                     ) : (
-                      <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-sm font-medium">
+                      <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-xs sm:text-sm font-medium">
                         {userInitials}
                       </AvatarFallback>
                     )}
                   </Avatar>
-                  <div className="hidden sm:flex flex-col items-start">
-                    <span className="text-sm font-medium text-foreground">
+                  <div className="hidden md:flex flex-col items-start">
+                    <span className="text-xs sm:text-sm font-medium text-foreground truncate max-w-[100px] lg:max-w-none">
                       {user?.firstName} {user?.lastName}
                     </span>
-                    <span className="text-xs text-emerald-500 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="text-[10px] sm:text-xs text-emerald-500 flex items-center gap-1">
+                      <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-500" />
                       Online
                     </span>
                   </div>
@@ -196,7 +196,7 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
                 </div>
                 
                 {/* Mobile-only items */}
-                <div className="md:hidden py-1">
+                <div className="lg:hidden py-1">
                   {user?.roleCode === 'SUPER_ADMIN' && title !== 'Admin Dashboard' && !isEmployeeDashboard && (
                     <DropdownMenuItem onClick={handleBackToAdmin}>
                       <Home className="h-4 w-4 mr-2" />
@@ -205,8 +205,14 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
                   )}
                   <DropdownMenuItem onClick={onViewDashboard}>
                     <Eye className="h-4 w-4 mr-2" />
-                    {isEmployeeDashboard ? 'View System' : 'View Dashboard'}
+                    {isEmployeeDashboard ? 'View Dashboard' : 'Employee Portal'}
                   </DropdownMenuItem>
+                  {isEmployeeDashboard && (
+                    <DropdownMenuItem onClick={() => navigate('/employee/info')}>
+                      <User className="h-4 w-4 mr-2" />
+                      My Account
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                 </div>
 
@@ -229,8 +235,8 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
       {showSidebar && <UnifySidebar />}
 
       {/* Main Content */}
-      <main className={`relative z-10 pt-16 min-h-screen transition-all duration-300 ease-in-out ${showSidebar ? 'ml-16' : ''}`}>
-        <div className="p-6">
+      <main className={`relative z-10 pt-14 sm:pt-16 min-h-screen transition-all duration-300 ease-in-out sm:ml-16`}>
+        <div className="p-2 sm:p-4 md:p-6">
           {children}
         </div>
       </main>

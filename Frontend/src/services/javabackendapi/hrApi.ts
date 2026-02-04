@@ -31,10 +31,11 @@ class HrApiService {
     return apiClient.put(`/hr/employees/id/${id}`, request);
   }
 
-  async updateProfilePicture(id: number, file: File): Promise<{ message: string }> {
+  async updateProfilePicture(id: number, file: File): Promise<User> {
     const formData = new FormData();
     formData.append('file', file);
-    return apiClient.put(`/hr/employees/id/${id}/profile-picture`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+    await apiClient.put(`/hr/employees/id/${id}/profile-picture`, formData);
+    return this.getEmployeeById(id);
   }
 
   // Attendance endpoints

@@ -11,11 +11,13 @@ import { toast } from 'sonner';
 import Navbar from '@/components/ui/Navbar';
 import { useNavigate } from 'react-router-dom';
 import { fetchEmployeeById, updateEmployeeById, uploadProfilePicture } from '@/services/api';
+import { LogoSpinner } from '@/components/ui/LogoSpinner';
 
 export const EmployeeAccount: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [profileImage, setProfileImage] = useState<string>('');
 
   const [personalInfo, setPersonalInfo] = useState({
@@ -40,9 +42,11 @@ export const EmployeeAccount: React.FC = () => {
   });
 
   useEffect(() => {
-    if (user?.userId) {
-      fetchEmployeeById(user.userId)
-        .then((employee) => {
+    const loadEmployeeData = async () => {
+      if (user?.userId) {
+        setInitialLoading(true);
+        try {
+          const employee = await fetchEmployeeById(user.userId);
           setPersonalInfo({
             firstName: employee.firstName || '',
             lastName: employee.lastName || '',
@@ -63,12 +67,18 @@ export const EmployeeAccount: React.FC = () => {
             momoProvider: '',
           });
           setProfileImage(employee.profilePictureUrl || '');
-        })
-        .catch((error) => {
+        } catch (error) {
           console.error('Failed to load employee information:', error);
           toast.error('Failed to load employee information');
-        });
-    }
+        } finally {
+          setInitialLoading(false);
+        }
+      } else {
+        setInitialLoading(false);
+      }
+    };
+
+    loadEmployeeData();
   }, [user?.userId]);
 
   const handleSavePersonalInfo = async () => {
@@ -155,20 +165,84 @@ export const EmployeeAccount: React.FC = () => {
     setBankingInfo(prev => ({ ...prev, [field]: value }));
   };
 
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxSize = 1024;
+          
+          if (width > height && width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          } else if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() });
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Compression failed'));
+            }
+          }, 'image/jpeg', 0.8);
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+    });
+  };
+
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && user?.userId) {
-      setLoading(true);
-      try {
-        const updatedEmployee = await uploadProfilePicture(user.userId, file);
-        setProfileImage(updatedEmployee.profilePictureUrl || '');
-        toast.success('Profile picture updated successfully');
-      } catch (error) {
-        console.error('Failed to upload profile picture:', error);
-        toast.error('Failed to upload profile picture');
-      } finally {
-        setLoading(false);
+    if (!file) return;
+    
+    if (!user?.userId) {
+      toast.error('User ID is missing');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let fileToUpload = file;
+      
+      // Compress if larger than 1MB
+      if (file.size > 1024 * 1024) {
+        toast.info('Compressing image...');
+        fileToUpload = await compressImage(file);
+        console.log('Compressed:', { original: file.size, compressed: fileToUpload.size });
       }
+      
+      console.log('Uploading file:', { name: fileToUpload.name, type: fileToUpload.type, size: fileToUpload.size });
+      const updatedEmployee = await uploadProfilePicture(user.userId, fileToUpload);
+      setProfileImage(updatedEmployee.profilePictureUrl || '');
+      toast.success('Profile picture updated successfully');
+      event.target.value = '';
+    } catch (error: any) {
+      console.error('Failed to upload profile picture:', error);
+      const errorMessage = error?.message || 'Failed to upload profile picture';
+      toast.error(errorMessage);
+      event.target.value = '';
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -182,6 +256,11 @@ export const EmployeeAccount: React.FC = () => {
         isEmployeeDashboard={true}
       />
       
+      {initialLoading ? (
+        <div className="pt-20 px-6 pb-6">
+          <LogoSpinner size="lg" className="min-h-[60vh]" />
+        </div>
+      ) : (
       <div className="pt-20 px-6 pb-6">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Profile Picture Section */}
@@ -191,12 +270,19 @@ export const EmployeeAccount: React.FC = () => {
               <CardDescription>Update your profile photo</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-4">
-              <Avatar className="h-32 w-32">
-                <AvatarImage src={profileImage} />
-                <AvatarFallback className="text-2xl">
-                  {personalInfo.firstName.charAt(0)}{personalInfo.lastName.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
+              {loading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <LogoSpinner size="lg" />
+                  <p className="text-sm text-gray-600">Uploading...</p>
+                </div>
+              ) : (
+                <Avatar className="h-32 w-32">
+                  <AvatarImage src={profileImage} />
+                  <AvatarFallback className="text-2xl">
+                    {personalInfo.firstName.charAt(0)}{personalInfo.lastName.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+              )}
               <div>
                 <Input
                   id="picture"
@@ -204,12 +290,13 @@ export const EmployeeAccount: React.FC = () => {
                   accept="image/*"
                   onChange={handleImageUpload}
                   className="hidden"
+                  disabled={loading}
                 />
                 <Label htmlFor="picture">
-                  <Button variant="outline" asChild>
+                  <Button variant="outline" asChild disabled={loading}>
                     <span className="flex items-center gap-2 cursor-pointer">
                       <Camera className="h-4 w-4" />
-                      Upload Photo
+                      {loading ? 'Uploading...' : 'Upload Photo'}
                     </span>
                   </Button>
                 </Label>
@@ -383,6 +470,7 @@ export const EmployeeAccount: React.FC = () => {
           </Card>
         </div>
       </div>
+      )}
     </div>
   );
 };

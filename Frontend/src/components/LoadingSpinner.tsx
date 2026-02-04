@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { LogoSpinner } from '@/components/ui/LogoSpinner';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +40,6 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
 export const PageLoadingSpinner: React.FC = () => (
   <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-    <LoadingSpinner size="lg" text="Loading page..." />
+    <LogoSpinner size="lg" />
   </div>
 );

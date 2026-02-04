@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import Navbar from '@/components/ui/Navbar';
 import { useNavigate } from 'react-router-dom';
+import { LogoSpinner } from '@/components/ui/LogoSpinner';
 import {
   fetchProvisionedEmployees,
   getManualFallbackAttendances,
@@ -112,7 +113,7 @@ export const HRDashboard: React.FC = () => {
         />
         <div className="pt-20 px-6 pb-6">
           <div className="flex justify-center items-center h-64">
-            <div className="text-lg">Loading HR Dashboard...</div>
+            <LogoSpinner size="lg" />
           </div>
         </div>
       </div>
@@ -129,12 +130,12 @@ export const HRDashboard: React.FC = () => {
         isEmployeeDashboard={false}
       />
 
-      <div className="pt-20 px-6 pb-6">
+      <div className="pt-8 px-6 pb-6">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Header */}
-          <div className="mb-6">
-            <h1 className="text-4xl font-bold text-blue-600 mb-2">HR Management Dashboard</h1>
-            <p className="text-gray-600">Monitor employee provisioning and attendance governance</p>
+          <div className="mb-4 sm:mb-6">
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-blue-600 mb-1 sm:mb-2">HR Dashboard</h1>
+            <p className="text-xs sm:text-sm md:text-base text-gray-600">Monitor employee provisioning and attendance governance</p>
           </div>
 
           {error && (
@@ -145,7 +146,7 @@ export const HRDashboard: React.FC = () => {
           )}
 
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
@@ -188,9 +189,9 @@ export const HRDashboard: React.FC = () => {
 
           {/* Main Content Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="provisioning">Identity & Lifecycle Management</TabsTrigger>
-              <TabsTrigger value="attendance">Attendance Governance</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-0 h-auto sm:h-10">
+              <TabsTrigger value="provisioning" className="text-xs sm:text-sm whitespace-normal h-auto py-2 sm:py-0">Identity & Lifecycle Management</TabsTrigger>
+              <TabsTrigger value="attendance" className="text-xs sm:text-sm whitespace-normal h-auto py-2 sm:py-0">Attendance Governance</TabsTrigger>
             </TabsList>
 
             {/* Pillar 1: Identity & Lifecycle Management */}
@@ -212,8 +213,8 @@ export const HRDashboard: React.FC = () => {
                       No provisioned employees pending activation
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
+                    <div className="overflow-x-auto -mx-2 sm:mx-0">
+                      <Table className="min-w-[640px]">
                         <TableHeader>
                           <TableRow>
                             <TableHead>Employee</TableHead>
@@ -296,7 +297,7 @@ export const HRDashboard: React.FC = () => {
                     <CardDescription>Monitor check-in methods to detect potential buddy punching</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <div className="text-sm text-gray-600">QR Code</div>
                         <div className="text-2xl font-bold text-blue-600">{methodStats.qrCount}</div>
@@ -337,8 +338,8 @@ export const HRDashboard: React.FC = () => {
                       No manual fallback entries detected
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
+                    <div className="overflow-x-auto -mx-2 sm:mx-0">
+                      <Table className="min-w-[640px]">
                         <TableHeader>
                           <TableRow>
                             <TableHead>Employee</TableHead>

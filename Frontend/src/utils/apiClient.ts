@@ -49,13 +49,19 @@ export class ApiClient {
       let errorMessage = 'An error occurred. Please try again.';
       
       try {
-        const errorData = await response.json();
-        console.log('Error response data:', errorData);
-        // Try multiple fields to extract the error message
-        errorMessage = errorData.message || errorData.error || errorData.detail || errorMessage;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          console.log('Error response data:', errorData);
+          errorMessage = errorData.message || errorData.error || errorData.detail || errorMessage;
+        } else {
+          // Handle non-JSON error responses (like plain text from Java backend)
+          const errorText = await response.text();
+          console.log('Error response text:', errorText);
+          errorMessage = errorText || errorMessage;
+        }
       } catch (parseError) {
         console.error('Failed to parse error response:', parseError);
-        // For 401 errors, provide a more user-friendly message
         if (response.status === 401) {
           errorMessage = 'Invalid credentials. Please check your employee ID and password.';
         } else {
@@ -152,13 +158,18 @@ export class ApiClient {
       delete headers['Content-Type'];
     }
 
-    const response = await this.fetchWithFallback(`${this.baseURL}${endpoint}`, {
-      method: 'PUT',
-      headers,
-      body,
-    });
+    try {
+      const response = await this.fetchWithFallback(`${this.baseURL}${endpoint}`, {
+        method: 'PUT',
+        headers,
+        body,
+      });
 
-    return this.handleResponse(response);
+      return this.handleResponse(response);
+    } catch (error) {
+      console.error('PUT request error:', error);
+      throw error;
+    }
   }
 
   async delete(endpoint: string) {

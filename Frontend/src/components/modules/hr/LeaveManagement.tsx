@@ -195,18 +195,18 @@ export const LeaveManagement: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex-1 flex flex-col p-6 bg-background">
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+    <div className="min-h-screen flex-1 flex flex-col p-2 sm:p-4 md:p-6 bg-background">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Leave Management</h1>
-            <p className="text-muted-foreground">Manage employee leave requests and balances</p>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Leave Management</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Manage employee leave requests and balances</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Filter className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-32 sm:w-48 text-xs sm:text-sm">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -222,7 +222,7 @@ export const LeaveManagement: React.FC = () => {
 
         {/* Leave Statistics */}
         {statistics && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
@@ -270,11 +270,11 @@ export const LeaveManagement: React.FC = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="requests">Leave Requests</TabsTrigger>
-            <TabsTrigger value="balances">Leave Balances</TabsTrigger>
-            <TabsTrigger value="calendar">Leave Calendar</TabsTrigger>
-            <TabsTrigger value="policies">Leave Policies</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-0 h-auto sm:h-10">
+            <TabsTrigger value="requests" className="text-xs sm:text-sm">Leave Requests</TabsTrigger>
+            <TabsTrigger value="balances" className="text-xs sm:text-sm">Leave Balances</TabsTrigger>
+            <TabsTrigger value="calendar" className="text-xs sm:text-sm">Leave Calendar</TabsTrigger>
+            <TabsTrigger value="policies" className="text-xs sm:text-sm">Leave Policies</TabsTrigger>
           </TabsList>
 
           <TabsContent value="requests" className="space-y-6">

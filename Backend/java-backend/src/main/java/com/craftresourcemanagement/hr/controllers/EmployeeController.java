@@ -145,12 +145,14 @@ public class EmployeeController {
                         User updatedUser = employeeService.registerEmployee(existingUser);
                         return ResponseEntity.ok(updatedUser);
                     } catch (IOException e) {
+                        e.printStackTrace();
                         return ResponseEntity.status(500).body("Failed to upload image: " + e.getMessage());
                     } catch (Exception e) {
+                        e.printStackTrace();
                         return ResponseEntity.status(500).body("Unexpected error during image upload: " + e.getMessage());
                     }
                 })
-                .orElse(ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.status(404).body("Employee not found"));
     }
 
     @PutMapping("/id/{id}/toggle-status")

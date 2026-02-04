@@ -46,35 +46,37 @@ export const BenefitsAdministration: React.FC = () => {
   if (loading) return <div className="flex items-center justify-center h-64">Loading...</div>;
 
   return (
-    <div className="min-h-screen flex-1 flex flex-col p-6 bg-background">
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+    <div className="min-h-screen flex-1 flex flex-col p-2 sm:p-4 md:p-6 bg-background">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Benefits Administration</h1>
-            <p className="text-muted-foreground">Manage employee benefits and enrollment</p>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Benefits Administration</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Manage employee benefits and enrollment</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Settings className="h-4 w-4 mr-2" />
-              Manage Plans
+            <Button variant="outline" className="text-xs sm:text-sm">
+              <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Manage Plans</span>
+              <span className="sm:hidden">Plans</span>
             </Button>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Benefit
+            <Button className="text-xs sm:text-sm">
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Add Benefit</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="plans">Benefit Plans</TabsTrigger>
-            <TabsTrigger value="enrollment">Enrollment</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-0 h-auto sm:h-10">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
+            <TabsTrigger value="plans" className="text-xs sm:text-sm">Benefit Plans</TabsTrigger>
+            <TabsTrigger value="enrollment" className="text-xs sm:text-sm">Enrollment</TabsTrigger>
+            <TabsTrigger value="reports" className="text-xs sm:text-sm">Reports</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Benefits Cost</CardTitle>

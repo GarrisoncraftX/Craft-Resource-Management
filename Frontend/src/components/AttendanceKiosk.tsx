@@ -128,64 +128,64 @@ export const AttendanceKiosk: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-indigo-900 flex items-center justify-center p-4">
-      <div className="max-w-6xl w-full space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-indigo-900 flex items-center justify-center p-2 sm:p-4">
+      <div className="max-w-6xl w-full space-y-4 sm:space-y-6">
         {/* Breadcrumb Navigation */}
-        <div className="flex items-center space-x-2 text-white/80 text-sm">
+        <div className="flex items-center space-x-2 text-white/80 text-xs sm:text-sm">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate('/')}
-            className="text-white/80 hover:text-white hover:bg-white/10 p-2"
+            className="text-white/80 hover:text-white hover:bg-white/10 p-1 sm:p-2 h-auto"
           >
-            <Home className="h-4 w-4 mr-1" />
-            Dashboard
+            <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+            <span className="hidden sm:inline">Dashboard</span>
           </Button>
           <span>/</span>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate(-1)}
-            className="text-white/80 hover:text-white hover:bg-white/10 p-2"
+            className="text-white/80 hover:text-white hover:bg-white/10 p-1 sm:p-2 h-auto"
           >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
+            <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+            <span className="hidden sm:inline">Back</span>
           </Button>
           <span>/</span>
-          <span className="text-white">Attendance Kiosk</span>
+          <span className="text-white text-xs sm:text-sm">Attendance Kiosk</span>
         </div>
 
         <div className="text-center text-white space-y-2">
           <div className="flex items-center justify-center mb-4">
-            <Clock className="h-12 w-12 mr-3" />
-            <h1 className="text-5xl font-bold">Employee Attendance</h1>
+            <Clock className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 mr-2 sm:mr-3" />
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold">Employee Attendance</h1>
           </div>
-          <p className="text-3xl font-mono font-bold">{formatTime(currentTime)}</p>
-          <p className="text-lg text-blue-100">{formatDate(currentTime)}</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-mono font-bold">{formatTime(currentTime)}</p>
+          <p className="text-sm sm:text-base md:text-lg text-blue-100">{formatDate(currentTime)}</p>
         </div>
 
         <Card className="bg-white/95 backdrop-blur shadow-2xl">
           <CardHeader className="text-center border-b">
-            <CardTitle className="text-2xl">Mark Your Attendance</CardTitle>
-            <CardDescription className="text-base">
+            <CardTitle className="text-lg sm:text-xl md:text-2xl">Mark Your Attendance</CardTitle>
+            <CardDescription className="text-xs sm:text-sm md:text-base">
               Scan the QR code to record your attendance
             </CardDescription>
           </CardHeader>
-          <CardContent className="pt-6 space-y-6">
+          <CardContent className="pt-4 sm:pt-6 space-y-4 sm:space-y-6">
             <QRCodeDisplay type="attendance" onScanFailure={() => setShowManualModal(true)} />
             
             <div className="text-center">
               <Button 
                 variant="outline" 
                 onClick={() => setShowManualModal(true)}
-                className="text-sm"
+                className="text-xs sm:text-sm"
               >
                 Having trouble? Try manual entry
               </Button>
             </div>
 
-            <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-900 text-center">
+            <div className="mt-6 sm:mt-8 p-3 sm:p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-xs sm:text-sm text-blue-900 text-center">
                 <strong>Security:</strong> AES-256 Encrypted | <strong>Audit:</strong> Fully Logged
               </p>
             </div>

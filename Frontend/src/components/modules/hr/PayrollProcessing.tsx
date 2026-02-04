@@ -14,6 +14,7 @@ import { ProcessPayrollForm } from './forms/ProcessPayrollForm';
 import { PayslipDetailsDialog } from './forms/PayslipDetailsDialog';
 import { ProcessingDialog } from './forms/ProcessingDialog';
 import { generatePayrollReport } from './utils/generatePayrollReport';
+import { LogoSpinner } from '@/components/ui/LogoSpinner';
 
 
 
@@ -217,7 +218,7 @@ export const PayrollProcessing: React.FC = () => {
     : '0';
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading payroll data...</div>;
+    return <div className="min-h-screen flex items-center justify-center"><LogoSpinner size="lg" /></div>;
   }
 
   if (error) {
@@ -238,21 +239,23 @@ export const PayrollProcessing: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex-1 flex flex-col p-6 bg-background">
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+    <div className="min-h-screen flex-1 flex flex-col p-2 sm:p-4 md:p-6 bg-background">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Payroll Processing</h1>
-            <p className="text-muted-foreground">Manage employee payroll and compensation</p>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Payroll Processing</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Manage employee payroll and compensation</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleDownloadReport}>
-              <Download className="h-4 w-4 mr-2" />
-              Download Report
+            <Button variant="outline" onClick={handleDownloadReport} className="text-xs sm:text-sm">
+              <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Download Report</span>
+              <span className="sm:hidden">Report</span>
             </Button>
-            <Button onClick={() => setIsProcessPayrollOpen(true)}>
-              <Calculator className="h-4 w-4 mr-2" />
-              Process Payroll
+            <Button onClick={() => setIsProcessPayrollOpen(true)} className="text-xs sm:text-sm">
+              <Calculator className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Process Payroll</span>
+              <span className="sm:hidden">Process</span>
             </Button>
           </div>
         </div>
@@ -283,7 +286,7 @@ export const PayrollProcessing: React.FC = () => {
         </Card>
 
         {/* Payroll Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Gross Pay</CardTitle>
@@ -334,11 +337,12 @@ export const PayrollProcessing: React.FC = () => {
         {/* Payroll Details */}
         <Card>
           <CardHeader>
-            <CardTitle>Payroll Details - {selectedPeriod}</CardTitle>
-            <CardDescription>Individual employee payroll information</CardDescription>
+            <CardTitle className="text-base sm:text-lg md:text-xl">Payroll Details - {selectedPeriod}</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Individual employee payroll information</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
+            <div className="overflow-x-auto -mx-2 sm:mx-0">
+              <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Employee</TableHead>
@@ -379,6 +383,7 @@ export const PayrollProcessing: React.FC = () => {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
 

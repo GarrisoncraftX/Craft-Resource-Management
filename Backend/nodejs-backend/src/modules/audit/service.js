@@ -21,9 +21,16 @@ class AuditService {
             console.log('[AUDIT SERVICE] logAction called:', { userId, action, details });
             
             // Convert to Rwanda timezone and format as ISO with 'T'
-            const now = new Date();
-            const rwandaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Kigali' }));
-            const timestamp = rwandaTime.toISOString().slice(0, 19); // Format: 2026-02-04T02:55:05
+            const timestamp = new Date().toLocaleString('en-US', { 
+                timeZone: 'Africa/Kigali',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            }).replace(/^(\d+)\/(\d+)\/(\d+),\s(\d+):(\d+):(\d+)$/, '$3-$1-$2T$4:$5:$6');
             
             const auditLog = {
                 userId: userId || null,
@@ -133,9 +140,16 @@ class AuditService {
 
     async logActionSync(userId, action, details = {}, entityType = null, entityId = null, ipAddress = null) {
         // Convert to Rwanda timezone and format as ISO with 'T'
-        const now = new Date();
-        const rwandaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Kigali' }));
-        const timestamp = rwandaTime.toISOString().slice(0, 19); // Format: 2026-02-04T02:55:05
+        const timestamp = new Date().toLocaleString('en-US', { 
+            timeZone: 'Africa/Kigali',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        }).replace(/^(\d+)\/(\d+)\/(\d+),\s(\d+):(\d+):(\d+)$/, '$3-$1-$2T$4:$5:$6');
         
         const auditLog = {
             userId: userId || null,
