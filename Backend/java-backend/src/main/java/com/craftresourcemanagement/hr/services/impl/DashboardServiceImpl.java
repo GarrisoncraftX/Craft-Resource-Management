@@ -17,21 +17,21 @@ public class DashboardServiceImpl implements DashboardService {
     @Value("${nodejs.service.url}")
     private String leaveManagementServiceUrl;
 
+    @Value("${python.service.url}")
+    private String pythonServiceUrl;
+
     private final RestTemplate restTemplate;
     private final UserRepository userRepository;
-    private final AttendanceRepository attendanceRepository;
     private final PayrollRunRepository payrollRunRepository;
     private final PerformanceReviewRepository performanceReviewRepository;
     private final EmployeeTrainingRepository employeeTrainingRepository;
 
     public DashboardServiceImpl(UserRepository userRepository,
-                               AttendanceRepository attendanceRepository,
                                PayrollRunRepository payrollRunRepository,
                                PerformanceReviewRepository performanceReviewRepository,
                                EmployeeTrainingRepository employeeTrainingRepository) {
         this.restTemplate = new RestTemplate();
         this.userRepository = userRepository;
-        this.attendanceRepository = attendanceRepository;
         this.payrollRunRepository = payrollRunRepository;
         this.performanceReviewRepository = performanceReviewRepository;
         this.employeeTrainingRepository = employeeTrainingRepository;
@@ -67,14 +67,24 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     public long getTodayAttendanceCount() {
-        return attendanceRepository.countByDate(LocalDate.now());
+        try {
+            String url = pythonServiceUrl + "/api/attendance/count/today";
+            ResponseEntity<Long> response = restTemplate.getForEntity(url, Long.class);
+            return response.getBody() != null ? response.getBody() : 0;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     public double getAttendanceRate() {
-        long activeEmployees = userRepository.countByIsActive(true);
-        if (activeEmployees == 0) return 0.0;
-        long todayAttendance = attendanceRepository.countByDate(LocalDate.now());
-        return (double) todayAttendance / activeEmployees * 100.0;
+        try {
+            long activeEmployees = userRepository.countByIsActive(true);
+            if (activeEmployees == 0) return 0.0;
+            long todayAttendance = getTodayAttendanceCount();
+            return (double) todayAttendance / activeEmployees * 100.0;
+        } catch (Exception e) {
+            return 0.0;
+        }
     }
 
     public long getPendingPayrollCount() {
@@ -102,12 +112,14 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     public Map<String, Long> getMonthlyAttendanceStats() {
-        LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
-        LocalDate endOfMonth = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
-        long totalAttendance = attendanceRepository.countByDateBetween(startOfMonth, endOfMonth);
-        
-        Map<String, Long> stats = new HashMap<>();
-        stats.put("totalAttendance", totalAttendance);
-        return stats;
+        try {
+            String url = pythonServiceUrl + "/api/attendance/stats/monthly";
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            return response.getBody() != null ? response.getBody() : new HashMap<>();
+        } catch (Exception e) {
+            Map<String, Long> stats = new HashMap<>();
+            stats.put("totalAttendance", 0L);
+            return stats;
+        }
     }
 }

@@ -45,6 +45,7 @@ const modules = [
     icon: Users,
     color: "from-rose-500 to-rose-600",
     subItems: [
+      { title: "Dashboard", url: "/hr/dashboard" },
       { title: "Attendance", url: "/hr/attendance" },
       { title: "Employees", url: "/hr/employees" },
       { title: "Payroll Processing", url: "/hr/payroll" },

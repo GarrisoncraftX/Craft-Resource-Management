@@ -160,6 +160,16 @@ const proxyRequest = async (req, res, targetUrl) => {
 app.use((req, res, next) => { 
   const path = req.path;
 
+  // Python Backend: Biometric, Visitors, Dashboard, Health & Safety, Reports, Analytics, Attendance
+  if (path.startsWith("/api/biometric") || 
+      path.startsWith("/api/visitors") || 
+      path.startsWith("/api/dashboard") || 
+      path.startsWith("/api/health-safety") || 
+      path.startsWith("/api/reports") || 
+      path.startsWith("/api/analytics") ||
+      path.startsWith("/api/attendance")) {
+    return proxyRequest(req, res, pythonBackend);
+  }
   // Java Backend: HR, Finance, Assets, Legal, Revenue, System, Admin
   if (path.startsWith("/hr/employees") || 
       path.startsWith("/hr/payroll") || 
@@ -171,16 +181,6 @@ app.use((req, res, next) => {
       path.startsWith("/system") ||
       path.startsWith("/admin")) {
     return proxyRequest(req, res, javaBackend);
-  }
-  // Python Backend: Biometric, Attendance, Visitors, Dashboard, Health & Safety, Reports, Analytics
-  if (path.startsWith("/api/biometric") || 
-      path.startsWith("/api/visitors") || 
-      path.startsWith("/api/dashboard") || 
-      path.startsWith("/api/health-safety") || 
-      path.startsWith("/api/reports") || 
-      path.startsWith("/api/analytics") || 
-      path.startsWith("/api/attendance")) {
-    return proxyRequest(req, res, pythonBackend);
   }
   // Node.js Backend: Auth, Lookup, Leave, Procurement, Public Relations, Planning, Transportation, Communication
   if (path.startsWith("/api/auth") || 

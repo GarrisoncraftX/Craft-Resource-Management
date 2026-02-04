@@ -107,7 +107,7 @@ class AttendanceApiService {
   // Manual fallback attendances
   async getManualFallbackAttendances(): Promise<ManualFallbackAttendance[]> {
     const response = await apiClient.get('/api/attendance/manual-fallbacks');
-    return response.attendances || [];
+    return response.attendances || response || []; // Handle both response formats
   }
 
   async getAttendancesByMethod(method: string): Promise<AttendanceRecord[]> {
@@ -140,7 +140,7 @@ class AttendanceApiService {
 
   async getAttendanceMethodStatistics(): Promise<AttendanceMethodStats> {
     const response = await apiClient.get('/api/attendance/method-statistics');
-    return response.stats || {};
+    return response.stats || response; 
   }
 
   async reviewAttendance(attendanceId: number, hrUserId: number, notes: string): Promise<AttendanceReviewResponse> {

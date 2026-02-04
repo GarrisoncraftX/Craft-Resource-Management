@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any, List, Tuple
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from src.database.connection import DatabaseManager
 from src.utils.logger import logger
@@ -179,43 +179,102 @@ class BiometricModel:
         """Record attendance check-in or check-out"""
         try:
             now = datetime.now()
+            today = now.date()
 
             if action == 'clock_in':
-                # Insert new attendance record - explicitly set clock_out_method to NULL
-                query = """
-                    INSERT INTO attendance_records (user_id, clock_in_time, clock_in_method, clock_out_method, status, created_at, updated_at)
-                    VALUES (%s, %s, %s, NULL, 'present', %s, %s)
+                # Check if user already has a record for today
+                check_query = """
+                    SELECT id, clock_in_time, clock_out_time 
+                    FROM attendance_records
+                    WHERE user_id = %s AND DATE(clock_in_time) = %s
+                    ORDER BY clock_in_time DESC
+                    LIMIT 1
                 """
-                params = (user_id, now, method, now, now)
+                existing_record = self.db.execute_query(check_query, (user_id, today))
+                
+                if existing_record and len(existing_record) > 0:
+                    record = existing_record[0]
+                    # If they already checked in today and haven't checked out, don't create new record
+                    if record['clock_out_time'] is None:
+                        logger.warning(f"User {user_id} already checked in today at {record['clock_in_time']}")
+                        return {
+                            'record_id': record['id'],
+                            'action': 'already_checked_in',
+                            'timestamp': record['clock_in_time'].isoformat(),
+                            'message': 'Already checked in today',
+                            'method': method
+                        }
+                    # If they checked out, don't allow another check-in for the same day
+                    else:
+                        logger.warning(f"User {user_id} already completed attendance for today")
+                        return {
+                            'record_id': record['id'],
+                            'action': 'already_completed',
+                            'timestamp': now.isoformat(),
+                            'message': 'Attendance already completed for today',
+                            'method': method
+                        }
+                
+                # Get work start time from settings (default 09:00:00)
+                settings_query = "SELECT setting_value FROM system_settings WHERE setting_key = 'attendance_work_start_time'"
+                work_start_result = self.db.execute_query(settings_query)
+                work_start_time_str = work_start_result[0]['setting_value'] if work_start_result else '09:00:00'
+                
+                # Get late threshold (default 0 minutes)
+                late_threshold_query = "SELECT setting_value FROM system_settings WHERE setting_key = 'attendance_late_threshold_minutes'"
+                late_threshold_result = self.db.execute_query(late_threshold_query)
+                late_threshold_minutes = int(late_threshold_result[0]['setting_value']) if late_threshold_result else 0
+                
+                # Calculate if late
+                from datetime import time as dt_time
+                work_start_parts = work_start_time_str.split(':')
+                work_start_time = dt_time(int(work_start_parts[0]), int(work_start_parts[1]), int(work_start_parts[2]) if len(work_start_parts) > 2 else 0)
+                
+                work_start_datetime = datetime.combine(today, work_start_time)
+                late_threshold_datetime = work_start_datetime + timedelta(minutes=late_threshold_minutes)
+                
+                # Determine status based on clock-in time
+                if now <= late_threshold_datetime:
+                    status = 'present'  # On time
+                else:
+                    status = 'late'
+                
+                # Insert new attendance record
+                query = """
+                    INSERT INTO attendance_records (user_id, clock_in_time, clock_in_method, clock_out_method, status, location, created_at, updated_at)
+                    VALUES (%s, %s, %s, NULL, %s, %s, %s, %s)
+                """
+                params = (user_id, now, method, status, location, now, now)
                 record_id = self.db.execute_query(query, params, fetch=False)
                 
-                logger.info(f"Clock-in recorded: user_id={user_id}, method={method}, record_id={record_id}")
+                logger.info(f"Clock-in recorded: user_id={user_id}, method={method}, status={status}, record_id={record_id}")
 
                 return {
                     'record_id': record_id,
                     'action': 'clock_in',
                     'timestamp': now.isoformat(),
+                    'status': status,
                     'method': method
                 }
 
             elif action == 'clock_out':
-                # Update existing attendance record with clock out time
+                # Find today's open attendance record
                 query = """
                     UPDATE attendance_records
                     SET clock_out_time = %s, clock_out_method = %s, 
                         total_hours = TIMESTAMPDIFF(MINUTE, clock_in_time, %s) / 60.0, 
                         updated_at = %s
-                    WHERE user_id = %s AND clock_out_time IS NULL
+                    WHERE user_id = %s AND DATE(clock_in_time) = %s AND clock_out_time IS NULL
                     ORDER BY clock_in_time DESC
                     LIMIT 1
                 """
-                params = (now, method, now, now, user_id)
+                params = (now, method, now, now, user_id, today)
                 affected_rows = self.db.execute_query(query, params, fetch=False)
                 
                 logger.info(f"Clock-out recorded: user_id={user_id}, method={method}, affected_rows={affected_rows}")
 
                 if affected_rows == 0:
-                    raise Exception("No open attendance record found for clock out")
+                    raise Exception("No open attendance record found for today")
 
                 return {
                     'action': 'clock_out',
@@ -349,44 +408,119 @@ class BiometricModel:
             raise e
 
     def get_attendance_stats(self, date: Optional[str] = None, department: Optional[str] = None) -> Dict[str, Any]:
-        """Get attendance statistics"""
+        """Get attendance statistics with proper late/on-time/absent calculation"""
         try:
-            base_query = """
-                SELECT
-                    COUNT(CASE WHEN ar.status = 'present' THEN 1 END) as present,
-                    COUNT(CASE WHEN ar.status = 'absent' THEN 1 END) as absent,
-                    COUNT(CASE WHEN TIMESTAMPDIFF(MINUTE, ar.clock_in_time, ar.clock_out_time) < 480 THEN 1 END) as late,
-                    COUNT(DISTINCT ar.user_id) as total_employees
+            target_date = date or datetime.now().date()
+            
+            # Get work start time and thresholds from settings
+            settings_query = """
+                SELECT setting_key, setting_value FROM system_settings 
+                WHERE setting_key IN ('attendance_work_start_time', 'attendance_late_threshold_minutes', 'attendance_absent_threshold_minutes')
+            """
+            settings_result = self.db.execute_query(settings_query)
+            settings = {row['setting_key']: row['setting_value'] for row in settings_result} if settings_result else {}
+            
+            work_start_time_str = settings.get('attendance_work_start_time', '09:00:00')
+            late_threshold_minutes = int(settings.get('attendance_late_threshold_minutes', '0'))
+            absent_threshold_minutes = int(settings.get('attendance_absent_threshold_minutes', '120'))
+            
+            # Parse work start time
+            from datetime import time as dt_time
+            work_start_parts = work_start_time_str.split(':')
+            work_start_time = dt_time(int(work_start_parts[0]), int(work_start_parts[1]), int(work_start_parts[2]) if len(work_start_parts) > 2 else 0)
+            
+            # Calculate threshold times for the target date
+            if isinstance(target_date, str):
+                target_date = datetime.strptime(target_date, '%Y-%m-%d').date()
+            
+            work_start_datetime = datetime.combine(target_date, work_start_time)
+            late_threshold_datetime = work_start_datetime + timedelta(minutes=late_threshold_minutes)
+            absent_threshold_datetime = work_start_datetime + timedelta(minutes=absent_threshold_minutes)
+            
+            # Get all active employees count
+            total_employees_query = """
+                SELECT COUNT(*) as total
+                FROM users
+                WHERE is_active = TRUE AND account_status = 'ACTIVE'
+            """
+            if department:
+                total_employees_query += " AND department_id = (SELECT id FROM departments WHERE name = %s LIMIT 1)"
+                total_result = self.db.execute_query(total_employees_query, (department,))
+            else:
+                total_result = self.db.execute_query(total_employees_query)
+            
+            total_employees = total_result[0]['total'] if total_result else 0
+            
+            # Get attendance records for the date
+            attendance_query = """
+                SELECT 
+                    ar.user_id,
+                    ar.clock_in_time,
+                    ar.clock_out_time,
+                    ar.status,
+                    u.first_name,
+                    u.last_name
                 FROM attendance_records ar
                 LEFT JOIN users u ON ar.user_id = u.id
                 WHERE DATE(ar.clock_in_time) = %s
+                GROUP BY ar.user_id
+                HAVING ar.clock_in_time = MIN(ar.clock_in_time)
             """
-            params = [date or datetime.now().date()]
-
+            params = [target_date]
+            
             if department:
-                base_query += " AND u.department = %s"
+                attendance_query = """
+                    SELECT 
+                        ar.user_id,
+                        ar.clock_in_time,
+                        ar.clock_out_time,
+                        ar.status,
+                        u.first_name,
+                        u.last_name
+                    FROM attendance_records ar
+                    LEFT JOIN users u ON ar.user_id = u.id
+                    WHERE DATE(ar.clock_in_time) = %s
+                      AND u.department_id = (SELECT id FROM departments WHERE name = %s LIMIT 1)
+                    GROUP BY ar.user_id
+                    HAVING ar.clock_in_time = MIN(ar.clock_in_time)
+                """
                 params.append(department)
-
-            result = self.db.execute_query(base_query, tuple(params))
-
-            if result:
-                stats = result[0]
-                # Calculate on_time as present minus late
-                stats['onTime'] = stats['present'] - stats['late']
-                return {
-                    'onTime': stats['onTime'],
-                    'late': stats['late'],
-                    'absent': stats['absent'],
-                    'present': stats['present'],
-                    'totalEmployees': stats['total_employees']
-                }
-
+            
+            attendance_records = self.db.execute_query(attendance_query, tuple(params))
+            
+            # Calculate statistics
+            present_count = 0
+            late_count = 0
+            on_time_count = 0
+            
+            if attendance_records:
+                for record in attendance_records:
+                    clock_in_time = record['clock_in_time']
+                    
+                    # Determine if on-time or late based on clock-in time
+                    if clock_in_time <= late_threshold_datetime:
+                        on_time_count += 1
+                        present_count += 1
+                    elif clock_in_time <= absent_threshold_datetime:
+                        late_count += 1
+                        present_count += 1
+                    # If clocked in after absent threshold, still count as present but late
+                    else:
+                        late_count += 1
+                        present_count += 1
+            
+            # Calculate absent (employees who didn't check in at all)
+            absent_count = total_employees - present_count
+            
             return {
-                'onTime': 0,
-                'late': 0,
-                'absent': 0,
-                'present': 0,
-                'totalEmployees': 0
+                'onTime': on_time_count,
+                'late': late_count,
+                'absent': absent_count,
+                'present': present_count,
+                'totalEmployees': total_employees,
+                'date': str(target_date),
+                'workStartTime': work_start_time_str,
+                'lateThresholdMinutes': late_threshold_minutes
             }
 
         except Exception as e:
@@ -472,8 +606,8 @@ class BiometricModel:
             logger.error(f"Error authenticating employee {employee_id}: {e}")
             raise e
 
-    def get_manual_fallback_attendances(self) -> List[Dict[str, Any]]:
-        """Get manual fallback attendances for HR review"""
+    def get_manual_fallback_attendances(self, date: Optional[Any] = None) -> List[Dict[str, Any]]:
+        """Get manual fallback attendances for HR review (only manual check-ins)"""
         try:
             query = """
                 SELECT
@@ -488,15 +622,26 @@ class BiometricModel:
                     ar.clock_out_method,
                     ar.total_hours,
                     ar.status,
-                    ar.created_at
+                    ar.created_at,
+                    ar.audit_notes,
+                    ar.reviewed_at,
+                    ar.reviewed_by,
+                    ar.flagged_for_review,
+                    ar.buddy_punch_risk
                 FROM attendance_records ar
                 LEFT JOIN users u ON ar.user_id = u.id
                 LEFT JOIN departments d ON u.department_id = d.id
-                WHERE ar.clock_in_method = 'manual' OR ar.clock_out_method = 'manual'
-                ORDER BY ar.created_at DESC
+                WHERE ar.clock_in_method = 'manual'
             """
+            params = []
+            
+            if date:
+                query += " AND DATE(ar.clock_in_time) = %s"
+                params.append(date)
+            
+            query += " ORDER BY ar.created_at DESC"
 
-            results = self.db.execute_query(query)
+            results = self.db.execute_query(query, tuple(params) if params else None)
             return results or []
 
         except Exception as e:
@@ -614,4 +759,39 @@ class BiometricModel:
 
         except Exception as e:
             logger.error(f"Error getting user attendance by date range for user {user_id}: {e}")
+            raise e
+
+    def flag_attendance_for_audit(self, attendance_id: int, audit_notes: str) -> bool:
+        """Flag attendance record for audit review"""
+        try:
+            query = """
+                UPDATE attendance_records
+                SET audit_notes = %s, flagged_for_review = TRUE, buddy_punch_risk = TRUE, 
+                    reviewed_at = NULL, reviewed_by = NULL, updated_at = %s
+                WHERE id = %s
+            """
+            affected_rows = self.db.execute_query(query, (audit_notes, datetime.now(), attendance_id), fetch=False)
+            logger.info(f"Flagged attendance {attendance_id} for audit")
+            return affected_rows > 0
+        except Exception as e:
+            logger.error(f"Error flagging attendance for audit: {e}")
+            raise e
+
+    def review_attendance_record(self, attendance_id: int, hr_user_id: int, notes: str) -> bool:
+        """Review and approve attendance record"""
+        try:
+            query = """
+                UPDATE attendance_records
+                SET reviewed_by = %s, reviewed_at = %s, audit_notes = %s, updated_at = %s
+                WHERE id = %s
+            """
+            affected_rows = self.db.execute_query(
+                query, 
+                (hr_user_id, datetime.now(), notes, datetime.now(), attendance_id), 
+                fetch=False
+            )
+            logger.info(f"Reviewed attendance {attendance_id} by HR user {hr_user_id}")
+            return affected_rows > 0
+        except Exception as e:
+            logger.error(f"Error reviewing attendance record: {e}")
             raise e

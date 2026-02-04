@@ -166,3 +166,14 @@ def review_attendance(attendance_id):
     response, status_code = biometric_controller.review_attendance(attendance_id)
     return jsonify(response), status_code
 
+# Java Backend Integration Endpoints
+@biometric_bp.route('/attendance/count/today', methods=['GET'])
+def get_today_attendance_count():
+    response, status_code = biometric_controller.get_today_attendance_count()
+    return jsonify(response), status_code
+
+@biometric_bp.route('/attendance/stats/monthly', methods=['GET'])
+def get_monthly_attendance_stats():
+    response, status_code = biometric_controller.get_monthly_attendance_stats()
+    return jsonify(response), status_code
+

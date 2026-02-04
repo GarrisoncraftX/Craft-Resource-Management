@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { Users, Clock, AlertTriangle, CheckCircle, Eye } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -33,6 +35,9 @@ export const HRDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [flaggingId, setFlaggingId] = useState<string | null>(null);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewNote, setReviewNote] = useState('');
+  const [selectedAttendanceId, setSelectedAttendanceId] = useState<string | null>(null);
 
   useEffect(() => {
     loadHRData();
@@ -47,12 +52,12 @@ export const HRDashboard: React.FC = () => {
         getAttendanceMethodStatistics(),
       ]);
       setProvisionedEmployees(provisionedData || []);
-      setManualAttendances(manualData || []);
+      setManualAttendances(Array.isArray(manualData) ? manualData : []);
       setMethodStats(statsData);
       setError(null);
     } catch (err) {
       setError('Failed to load HR data');
-      console.error(err);
+      console.error('Error loading HR data:', err);
     } finally {
       setLoading(false);
     }
@@ -65,28 +70,51 @@ export const HRDashboard: React.FC = () => {
   const handleFlagBuddyPunch = async (attendanceId: string) => {
     try {
       setFlaggingId(attendanceId);
-      await flagBuddyPunchRisk(Number(attendanceId), 'Flagged for buddy punch review by HR');
-      await loadHRData();
-      toast.success('Attendance flagged for review');
+      const response = await flagBuddyPunchRisk(Number(attendanceId), 'Flagged for buddy punch review by HR');
+      if (response.success) {
+        await loadHRData();
+        toast.success('Attendance flagged for review');
+      } else {
+        throw new Error(response.message || 'Failed to flag attendance');
+      }
     } catch (err) {
-      setError('Failed to flag attendance');
-      console.error(err);
-      toast.error('Failed to flag attendance');
+      const errorMsg = err?.message || 'Failed to flag attendance';
+      setError(errorMsg);
+      console.error('Error flagging attendance:', err);
+      toast.error(errorMsg);
     } finally {
       setFlaggingId(null);
     }
   };
 
-  const handleReviewAttendance = async (attendanceId: string) => {
+  const openReviewDialog = (attendanceId: string) => {
+    setSelectedAttendanceId(attendanceId);
+    setReviewNote('');
+    setReviewDialogOpen(true);
+  };
+
+  const handleReviewAttendance = async () => {
+    if (!selectedAttendanceId || !reviewNote.trim()) {
+      toast.error('Please provide review notes');
+      return;
+    }
     try {
-      setReviewingId(attendanceId);
-      await reviewAttendance(Number(attendanceId), Number(user?.userId) || 0, 'Reviewed by HR - No issues found');
-      await loadHRData();
-      toast.success('Attendance reviewed successfully');
+      setReviewingId(selectedAttendanceId);
+      const response = await reviewAttendance(Number(selectedAttendanceId), Number(user?.userId) || 0, reviewNote);
+      if (response.success) {
+        await loadHRData();
+        toast.success('Attendance reviewed successfully');
+        setReviewDialogOpen(false);
+        setReviewNote('');
+        setSelectedAttendanceId(null);
+      } else {
+        throw new Error(response.message || 'Failed to review attendance');
+      }
     } catch (err) {
-      setError('Failed to review attendance');
-      console.error(err);
-      toast.error('Failed to review attendance');
+      const errorMsg = err?.message || 'Failed to review attendance';
+      setError(errorMsg);
+      console.error('Error reviewing attendance:', err);
+      toast.error(errorMsg);
     } finally {
       setReviewingId(null);
     }
@@ -146,43 +174,43 @@ export const HRDashboard: React.FC = () => {
           )}
 
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-                  <Users className="h-4 w-4 mr-2" />
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 flex items-center">
+                  <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Provisioned Employees
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-blue-600">{provisionedEmployees.length}</div>
-                <p className="text-gray-600 text-sm">Awaiting profile completion</p>
+                <div className="text-2xl sm:text-3xl font-bold text-blue-600">{provisionedEmployees.length}</div>
+                <p className="text-gray-600 text-xs sm:text-sm">Awaiting profile completion</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 flex items-center">
+                  <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Manual Check-ins
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-red-600">{manualAttendances.length}</div>
-                <p className="text-gray-600 text-sm">Require HR review</p>
+                <div className="text-2xl sm:text-3xl font-bold text-red-600">{manualAttendances.length}</div>
+                <p className="text-gray-600 text-xs sm:text-sm">Require HR review</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-                  <Clock className="h-4 w-4 mr-2" />
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 flex items-center">
+                  <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Total Attendances
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-600">{methodStats?.totalAttendances || 0}</div>
-                <p className="text-gray-600 text-sm">This month</p>
+                <div className="text-2xl sm:text-3xl font-bold text-green-600">{methodStats?.totalAttendances || 0}</div>
+                <p className="text-gray-600 text-xs sm:text-sm">All time</p>
               </CardContent>
             </Card>
           </div>
@@ -293,27 +321,27 @@ export const HRDashboard: React.FC = () => {
               {methodStats && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Attendance Method Distribution</CardTitle>
-                    <CardDescription>Monitor check-in methods to detect potential buddy punching</CardDescription>
+                    <CardTitle className="text-sm sm:text-base">Attendance Method Distribution</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">Monitor check-in methods to detect potential buddy punching</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                      <div className="bg-blue-50 p-4 rounded-lg">
-                        <div className="text-sm text-gray-600">QR Code</div>
-                        <div className="text-2xl font-bold text-blue-600">{methodStats.qrCount}</div>
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4 lg:gap-4">
+                      <div className="bg-blue-50 p-2 sm:p-3 lg:p-4 rounded-lg">
+                        <div className="text-xs sm:text-sm text-gray-600">QR Code</div>
+                        <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">{methodStats.qrCount}</div>
                       </div>
-                      <div className="bg-red-50 p-4 rounded-lg">
-                        <div className="text-sm text-gray-600">Manual</div>
-                        <div className="text-2xl font-bold text-red-600">{methodStats.manualCount}</div>
+                      <div className="bg-red-50 p-2 sm:p-3 lg:p-4 rounded-lg">
+                        <div className="text-xs sm:text-sm text-gray-600">Manual</div>
+                        <div className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">{methodStats.manualCount}</div>
                         <div className="text-xs text-red-500">{(methodStats.manualPercentage || 0).toFixed(1)}%</div>
                       </div>
-                      <div className="bg-green-50 p-4 rounded-lg">
-                        <div className="text-sm text-gray-600">Card</div>
-                        <div className="text-2xl font-bold text-green-600">{methodStats.cardCount}</div>
+                      <div className="bg-green-50 p-2 sm:p-3 lg:p-4 rounded-lg">
+                        <div className="text-xs sm:text-sm text-gray-600">Card</div>
+                        <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-600">{methodStats.cardCount}</div>
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <div className="text-sm text-gray-600">Total</div>
-                        <div className="text-2xl font-bold text-gray-600">{methodStats.totalAttendances}</div>
+                      <div className="bg-gray-50 p-2 sm:p-3 lg:p-4 rounded-lg">
+                        <div className="text-xs sm:text-sm text-gray-600">Total</div>
+                        <div className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-600">{methodStats.totalAttendances}</div>
                       </div>
                     </div>
                   </CardContent>
@@ -395,7 +423,7 @@ export const HRDashboard: React.FC = () => {
                                     <Button
                                       size="sm"
                                       variant="default"
-                                      onClick={() => handleReviewAttendance(attendance.id)}
+                                      onClick={() => openReviewDialog(attendance.id)}
                                       disabled={reviewingId === attendance.id}
                                     >
                                       {reviewingId === attendance.id ? 'Reviewing...' : 'Review'}
@@ -425,6 +453,35 @@ export const HRDashboard: React.FC = () => {
           </Tabs>
         </div>
       </div>
+
+      {/* Review Dialog */}
+      <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Review Attendance</DialogTitle>
+            <DialogDescription>
+              Provide your review notes for this manual attendance entry.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Textarea
+              placeholder="Enter your review notes here... (e.g., 'Verified with employee - legitimate manual entry due to QR code scanner malfunction')" 
+              value={reviewNote}
+              onChange={(e) => setReviewNote(e.target.value)}
+              rows={4}
+              className="resize-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReviewDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleReviewAttendance} disabled={!reviewNote.trim() || !!reviewingId}>
+              {reviewingId ? 'Submitting...' : 'Submit Review'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

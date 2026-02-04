@@ -79,8 +79,15 @@ export interface AttendanceMethodStats {
   manualPercentage: number;
 }
 
-export interface ManualFallbackAttendance extends AttendanceRecord {
-  manual_fallback_flag: true;
+export interface ManualFallbackAttendance {
+  id: string;
+  user_id: number;
+  employee_id: string;
+  employee_name: string;
+  clock_in_time: string;
+  clock_out_time?: string;
+  clock_in_method?: string;
+  clock_out_method?: string;
   audit_notes?: string;
   reviewed_at?: string;
   reviewed_by?: number;

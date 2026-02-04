@@ -317,14 +317,39 @@ class BiometricController:
             logger.info(f"Recording clock-in with method: {method} for user: {user_id}")
             attendance_result = self.biometric_model.record_attendance(user_id, 'clock_in', method, location)
 
+            # Check if already checked in
+            if attendance_result.get('action') in ['already_checked_in', 'already_completed']:
+                return {
+                    'success': False, 
+                    'message': attendance_result.get('message', 'Already checked in'),
+                    'action': attendance_result.get('action'),
+                    'data': {
+                        'timestamp': attendance_result.get('timestamp'),
+                        'status': attendance_result.get('status', 'present'),
+                        'method': method,
+                        **attendance_result
+                    }
+                }, 200 
+
             self.biometric_model.log_attendance(user_id, 'clock_in', method, True, {
                 'location': location,
                 'verification_method': verification_method,
-                'biometric_verification': biometric_type is not None
+                'biometric_verification': biometric_type is not None,
+                'status': attendance_result.get('status', 'present')
             })
 
             logger.info(f"Attendance clock-in successful for user {user_id}")
-            return {'success': True, 'message': 'Clocked in successfully', 'data': attendance_result}, 200
+            return {
+                'success': True, 
+                'message': 'Welcome to work! You have successfully clocked in.',
+                'action': 'clock_in',
+                'data': {
+                    'timestamp': attendance_result.get('timestamp'),
+                    'status': attendance_result.get('status', 'present'),
+                    'method': method,
+                    **attendance_result
+                }
+            }, 200
 
         except Exception as e:
             logger.error(f"Error in attendance clock-in: {e}")
@@ -398,7 +423,16 @@ class BiometricController:
             })
 
             logger.info(f"Attendance clock-out successful for user {user_id}")
-            return {'success': True, 'message': 'Clocked out successfully', 'data': attendance_result}, 200
+            return {
+                'success': True, 
+                'message': 'Goodbye! You have successfully clocked out. Have a great day!',
+                'action': 'clock_out',
+                'data': {
+                    'timestamp': attendance_result.get('timestamp'),
+                    'method': method,
+                    **attendance_result
+                }
+            }, 200
 
         except Exception as e:
             logger.error(f"Error in attendance clock-out: {e}")
@@ -608,6 +642,20 @@ class BiometricController:
                 user_id, action, 'qr_scan', 'kiosk'
             )
 
+            # Check if already checked in or completed
+            if attendance_result.get('action') in ['already_checked_in', 'already_completed']:
+                return {
+                    'success': False,
+                    'message': attendance_result.get('message', 'Attendance already recorded'),
+                    'action': attendance_result.get('action'),
+                    'data': {
+                        'employee_id': user_id,
+                        'employee_name': employee_info.get('first_name', '') + ' ' + employee_info.get('last_name', '') if employee_info else 'Employee',
+                        'timestamp': attendance_result.get('timestamp'),
+                        'attendance': attendance_result
+                    }
+                }, 200  # Return 200 so frontend shows the pass with error message
+
             # Log attendance
             self.biometric_model.log_attendance(
                 user_id, action, 'qr_scan', True,
@@ -617,14 +665,21 @@ class BiometricController:
             logger.info(f"QR attendance processed for user {user_id}: {action}")
             logger.info(f"Attendance result: {attendance_result}")
             logger.info(f"Employee info: {employee_info}")
+            response_message = {
+                'clock_in': f'Welcome to work! You have successfully clocked in.',
+                'clock_out': f'Goodbye! You have successfully clocked out. Have a great day!'
+            }
 
             return {
                 'success': True,
-                'message': f'Successfully {action.replace("_", " ")}',
+                'message': response_message.get(action, f'Successfully {action.replace("_", " ")}'),
                 'action': action,
                 'data': {
                     'employee_id': user_id,
                     'employee_name': employee_info.get('first_name', '') + ' ' + employee_info.get('last_name', '') if employee_info else 'Employee',
+                    'timestamp': attendance_result.get('timestamp'),
+                    'status': attendance_result.get('status', 'present'),
+                    'method': 'qr_scan',
                     'attendance': attendance_result
                 }
             }, 200
@@ -718,7 +773,7 @@ class BiometricController:
 
     # Pillar 2: HR Dashboard monitoring methods
     def get_manual_fallback_attendances(self) -> tuple[Dict[str, Any], int]:
-        """Get manual fallback attendances for HR review"""
+        """Get manual fallback attendances for HR review (all time)"""
         try:
             attendances = self.biometric_model.get_manual_fallback_attendances()
             return {
@@ -837,20 +892,35 @@ class BiometricController:
             }, 500
 
     def get_attendance_method_statistics(self) -> tuple[Dict[str, Any], int]:
-        """Get attendance method distribution statistics"""
+        """Get attendance method distribution statistics (all time)"""
         try:
-            qr_attendances = self.biometric_model.get_attendances_by_method('qr')
-            manual_attendances = self.biometric_model.get_attendances_by_method('manual')
-            biometric_attendances = self.biometric_model.get_attendances_by_method('biometric')
-
-            total = len(qr_attendances) + len(manual_attendances) + len(biometric_attendances)
+            # Query database for all-time counts - only count manual check-ins
+            query = """
+                SELECT 
+                    COUNT(DISTINCT CASE WHEN clock_in_method LIKE '%qr%' THEN user_id END) as qr_count,
+                    COUNT(DISTINCT CASE WHEN clock_in_method = 'manual' THEN user_id END) as manual_count,
+                    COUNT(DISTINCT CASE WHEN clock_in_method IN ('card', 'biometric') THEN user_id END) as card_count,
+                    COUNT(DISTINCT user_id) as total_count
+                FROM attendance_records
+            """
+            
+            result = self.biometric_model.db.execute_query(query)
+            
+            if result and len(result) > 0:
+                data = result[0]
+                qr_count = data.get('qr_count', 0)
+                manual_count = data.get('manual_count', 0)
+                card_count = data.get('card_count', 0)
+                total = data.get('total_count', 0)
+            else:
+                qr_count = manual_count = card_count = total = 0
 
             stats = {
-                'qrCount': len(qr_attendances),
-                'manualCount': len(manual_attendances),
-                'biometricCount': len(biometric_attendances),
+                'qrCount': qr_count,
+                'manualCount': manual_count,
+                'cardCount': card_count,
                 'totalAttendances': total,
-                'manualPercentage': (len(manual_attendances) / total * 100) if total > 0 else 0
+                'manualPercentage': (manual_count / total * 100) if total > 0 else 0
             }
 
             return {
@@ -890,3 +960,29 @@ class BiometricController:
                 'success': False,
                 'message': 'Error reviewing attendance'
             }, 500
+
+    def get_today_attendance_count(self) -> tuple[Dict[str, Any], int]:
+        """Get today's attendance count for Java backend"""
+        try:
+            today = datetime.now().date()
+            query = "SELECT COUNT(DISTINCT user_id) as count FROM attendance_records WHERE DATE(clock_in_time) = %s"
+            result = self.biometric_model.db.execute_query(query, (today,))
+            count = result[0]['count'] if result else 0
+            return count, 200
+        except Exception as e:
+            logger.error(f"Error getting today attendance count: {e}")
+            return 0, 500
+
+    def get_monthly_attendance_stats(self) -> tuple[Dict[str, Any], int]:
+        """Get monthly attendance statistics for Java backend"""
+        try:
+            from datetime import date
+            today = date.today()
+            first_day = today.replace(day=1)
+            query = "SELECT COUNT(*) as total FROM attendance_records WHERE DATE(clock_in_time) >= %s AND DATE(clock_in_time) <= %s"
+            result = self.biometric_model.db.execute_query(query, (first_day, today))
+            total = result[0]['total'] if result else 0
+            return {'totalAttendance': total}, 200
+        except Exception as e:
+            logger.error(f"Error getting monthly attendance stats: {e}")
+            return {'totalAttendance': 0}, 500
