@@ -31,10 +31,10 @@ class VisitorService:
         self.db = DatabaseManager(db_config)
 
     def generate_qr_token(self, frontend_url=None):
-        """Generate a dynamic QR token that expires in 5 minutes"""
+        """Generate a dynamic QR token that expires in 30 seconds"""
         try:
             token = str(uuid.uuid4())
-            expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+            expires_at = datetime.now(timezone.utc) + timedelta(seconds=30)
 
             query = """
                 INSERT INTO qr_tokens (token, expires_at, is_used)

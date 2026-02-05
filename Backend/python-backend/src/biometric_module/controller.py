@@ -493,10 +493,10 @@ class BiometricController:
             cache_key = f"qr_session:{session_token}"
             session_data = {
                 'created_at': datetime.utcnow().isoformat(),
-                'expires_at': (datetime.utcnow().replace(second=0, microsecond=0) + timedelta(hours=1)).isoformat(),
+                'expires_at': (datetime.utcnow() + timedelta(seconds=30)).isoformat(),
                 'used': False
             }
-            cache.set(cache_key, session_data, timeout=3600)  
+            cache.set(cache_key, session_data, timeout=30)  
 
             frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
             from urllib.parse import urlparse
@@ -513,7 +513,7 @@ class BiometricController:
                 'success': True,
                 'qr_data': qr_data,
                 'session_token': session_token,
-                'expires_in': 3600
+                'expires_in': 30
             }, 200
 
         except Exception as e:
@@ -626,7 +626,7 @@ class BiometricController:
             # Encrypt sensitive data before storing in cache
             import hashlib
             session_data['used_by'] = hashlib.sha256(str(user_id).encode()).hexdigest()  # Hash user_id for privacy
-            cache.set(cache_key, session_data, timeout=3600)  # Extend cache for audit purposes
+            cache.set(cache_key, session_data, timeout=30)  # Extend cache for audit purposes
             logger.info("Session token marked as used")
 
             # Determine action based on last attendance

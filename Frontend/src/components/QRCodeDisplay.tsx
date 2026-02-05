@@ -17,7 +17,7 @@ interface ExtendedQRCodeDisplayProps extends QRCodeDisplayProps {
 
 export const QRCodeDisplay: React.FC<ExtendedQRCodeDisplayProps> = ({
   type = 'attendance',
-  refreshInterval = 3600000,
+  refreshInterval = 30000, // 30 seconds
   onScanFailure,
 }) => {
   const { toast } = useToast();
