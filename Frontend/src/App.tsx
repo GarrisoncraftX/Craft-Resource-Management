@@ -100,6 +100,8 @@ const BenefitsAdministration = lazy(() => import("@/components/modules/hr/Benefi
 const LeaveManagement = lazy(() => import("@/components/modules/hr/LeaveManagement").then(module => ({ default: module.LeaveManagement })));
 const TrainingDevelopment = lazy(() => import("@/components/modules/hr/TrainingDevelopment").then(module => ({ default: module.TrainingDevelopment })));
 const PerformanceManagement = lazy(() => import("@/components/modules/hr/PerformanceManagement").then(module => ({ default: module.PerformanceManagement })));
+const RecruitmentOnboarding = lazy(() => import("@/components/modules/hr/RecruitmentOnboarding").then(module => ({ default: module.RecruitmentOnboarding })));
+const EmployeeOffboarding = lazy(() => import("@/components/modules/hr/EmployeeOffboarding").then(module => ({ default: module.EmployeeOffboarding })));
 
 
 
@@ -258,6 +260,8 @@ const AppRoutes = () => {
       <Route path="/hr/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><HRDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/hr/attendance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><EmployeeAttendance moduleType="hr" /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/hr/employees" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><EmployeeProfiles /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/hr/onboarding" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><RecruitmentOnboarding /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/hr/offboarding" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><EmployeeOffboarding /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/hr/leave" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LeaveManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/hr/payroll" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PayrollProcessing /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/hr/performance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PerformanceManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />

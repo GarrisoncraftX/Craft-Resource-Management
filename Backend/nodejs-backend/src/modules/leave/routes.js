@@ -29,5 +29,6 @@ router.post("/requests/:id/complete", leaveController.completeLeaveRequest.bind(
 router.post("/process-expired", leaveController.processExpiredLeaves.bind(leaveController))
 router.get("/employees-on-leave", leaveController.getEmployeesOnLeave.bind(leaveController))
 router.get("/statistics", leaveController.getLeaveStatistics.bind(leaveController))
+router.get("/low-balance", leaveController.getLowLeaveBalanceEmployees.bind(leaveController))
 
 module.exports = router

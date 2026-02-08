@@ -48,6 +48,8 @@ const modules = [
       { title: "Dashboard", url: "/hr/dashboard" },
       { title: "Attendance", url: "/hr/attendance" },
       { title: "Employees", url: "/hr/employees" },
+      { title: "Onboarding", url: "/hr/onboarding" },
+      { title: "Offboarding", url: "/hr/offboarding" },
       { title: "Payroll Processing", url: "/hr/payroll" },
       { title: "Leave Management", url: "/hr/leave" },
       { title: "Training & Development", url: "/hr/training" },

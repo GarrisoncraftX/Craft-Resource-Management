@@ -92,6 +92,12 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
     }
   };
 
+  useEffect(() => {
+    if (searchParams.date_from || searchParams.date_to) {
+      handleSearch();
+    }
+  }, [searchParams.date_from, searchParams.date_to]);
+
   const refreshStats = async () => {
     try {
       setIsRefreshingStats(true);
@@ -253,7 +259,7 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
           <CardDescription>Find specific attendance records</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
               <Label htmlFor="employee_name">Employee Name</Label>
               <Input
@@ -270,7 +276,7 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
                 onValueChange={(value) => setSearchParams({ ...searchParams, department: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Filter by department" />
+                  <SelectValue placeholder="All Departments" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
@@ -300,23 +306,23 @@ export const EmployeeAttendance: React.FC<EmployeeAttendanceProps> = ({ moduleTy
                 onChange={(e) => setSearchParams({ ...searchParams, date_to: e.target.value })}
               />
             </div>
-            <div className="flex items-end gap-2 flex-col">
-              <Button onClick={handleSearch} className="flex-1">
+            <div className="flex items-end">
+              <Button onClick={handleSearch} className="w-full">
                 <Search className="mr-2 h-4 w-4" />
                 Search
               </Button>
-            <div className="flex flex-1 gap-2">
-              <Button onClick={loadAttendanceData} variant="outline">
+            </div>
+            <div className="flex items-end gap-2">
+              <Button onClick={loadAttendanceData} variant="outline" className="flex-1">
                 <RefreshCw className="h-4 w-4" />
               </Button>
-              <Button onClick={refreshStats} variant="outline" disabled={isRefreshingStats}>
+              <Button onClick={refreshStats} variant="outline" disabled={isRefreshingStats} className="flex-1">
                 {isRefreshingStats ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <RefreshCw className="h-4 w-4" />
                 )}
               </Button>
-              </div>
             </div>
           </div>
         </CardContent>

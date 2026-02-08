@@ -30,10 +30,12 @@ class LeaveService {
     })
 
     // Audit Log
-    auditService.logAction(data.actorId, "CREATE_LEAVE_TYPE", {
+    auditService.logAction(data.actorId, "created leave type", {
+      module: "leave_management",
+      operation: "CREATE",
       leaveTypeId: leaveType.id,
       name: leaveType.name,
-    })
+    }, "LEAVE_TYPE", leaveType.id.toString())
 
     return leaveType
   }
@@ -57,21 +59,33 @@ class LeaveService {
 
     // Audit Log
     if (data.actorId) {
-      auditService.logAction(data.actorId, "UPDATE_LEAVE_TYPE", {
+      auditService.logAction(data.actorId, "updated leave type", {
+        module: "leave_management",
+        operation: "UPDATE",
         leaveTypeId: id,
         changes: data,
-      });
+      }, "LEAVE_TYPE", id.toString());
     }
 
     return leaveType;
   }
 
-  async deleteLeaveType(id) {
+  async deleteLeaveType(id, actorId = null) {
     const leaveType = await LeaveType.findByPk(id);
     if (!leaveType) throw new NotFoundError("Leave type not found");
 
     // Soft delete by setting isActive to false
     await leaveType.update({ isActive: false, updatedAt: new Date() });
+
+    // Audit Log
+    if (actorId) {
+      auditService.logAction(actorId, "deleted leave type", {
+        module: "leave_management",
+        operation: "DELETE",
+        leaveTypeId: id,
+        name: leaveType.name,
+      }, "LEAVE_TYPE", id.toString());
+    }
 
     return true;
   }
@@ -104,7 +118,14 @@ class LeaveService {
     }
     return await LeaveRequest.findAll({
       where,
-      include: [{ model: LeaveType }],
+      include: [
+        { model: LeaveType },
+        { 
+          model: User, 
+          attributes: ['id', 'firstName', 'lastName', 'employeeId'],
+          required: false
+        }
+      ],
       order: [["createdAt", "DESC"]],
       limit: filters.limit ? Number.parseInt(filters.limit) : undefined,
     })
@@ -135,13 +156,23 @@ class LeaveService {
       where,
       include: [
         { model: LeaveType },
-        { model: User, attributes: ['firstName', 'lastName', 'employeeId'] }
+        { 
+          model: User, 
+          attributes: ['id', 'firstName', 'lastName', 'employeeId'],
+          required: false
+        }
       ],
       order: [["createdAt", "DESC"]],
       limit: filters && filters.limit ? Number.parseInt(filters.limit) : undefined,
     });
 
-    return result;
+    return result.map(request => {
+      const plainRequest = request.get({ plain: true });
+      return {
+        ...plainRequest,
+        User: plainRequest.User || null
+      };
+    });
   }
 
   async updateLeaveRequestStatus(id, status, reviewedBy, comments = null) {
@@ -155,11 +186,13 @@ class LeaveService {
     await leaveRequest.save()
 
     // Audit Log
-    auditService.logAction(reviewedBy, "UPDATE_LEAVE_REQUEST_STATUS", {
+    auditService.logAction(reviewedBy, "updated leave request status", {
+      module: "leave_management",
+      operation: "UPDATE",
       leaveRequestId: id,
       newStatus: status,
       comments,
-    })
+    }, "LEAVE_REQUEST", id)
 
     return leaveRequest
   }
@@ -313,17 +346,22 @@ class LeaveService {
       await transaction.commit();
 
       // Audit Log for approver
-      auditService.logAction(approverId, "APPROVE_LEAVE_REQUEST", {
+      auditService.logAction(approverId, "approved leave request", {
+        module: "leave_management",
+        operation: "APPROVE",
         leaveRequestId,
-        status: "approved"
-      });
+        status: "approved",
+        employeeId: leaveRequest.userId
+      }, "LEAVE_REQUEST", leaveRequestId);
 
       // Audit Log for employee (the one whose request was approved)
-      auditService.logAction(leaveRequest.userId, "LEAVE_REQUEST_APPROVED", {
+      auditService.logAction(leaveRequest.userId, "leave request approved", {
+        module: "leave_management",
+        operation: "APPROVED",
         leaveRequestId,
         status: "approved",
         approvedBy: approverId
-      });
+      }, "LEAVE_REQUEST", leaveRequestId);
 
       // Send notification to employee
       const leaveType = await LeaveType.findByPk(leaveRequest.leaveTypeId);
@@ -367,19 +405,24 @@ class LeaveService {
     })
 
     // Audit Log for approver
-    auditService.logAction(approverId, "REJECT_LEAVE_REQUEST", {
+    auditService.logAction(approverId, "rejected leave request", {
+      module: "leave_management",
+      operation: "REJECT",
       leaveRequestId,
       status: "rejected",
-      reason
-    });
+      reason,
+      employeeId: leaveRequest.userId
+    }, "LEAVE_REQUEST", leaveRequestId);
 
     // Audit Log for employee (the one whose request was rejected)
-    auditService.logAction(leaveRequest.userId, "LEAVE_REQUEST_REJECTED", {
+    auditService.logAction(leaveRequest.userId, "leave request rejected", {
+      module: "leave_management",
+      operation: "REJECTED",
       leaveRequestId,
       status: "rejected",
       rejectedBy: approverId,
       reason
-    });
+    }, "LEAVE_REQUEST", leaveRequestId);
 
     // Send notification to employee
     const leaveType = await LeaveType.findByPk(leaveRequest.leaveTypeId);
@@ -427,10 +470,15 @@ class LeaveService {
     })
 
     // Audit Log
-    auditService.logAction(data.userId, "CREATE_LEAVE_REQUEST", {
+    auditService.logAction(data.userId, "created leave request", {
+      module: "leave_management",
+      operation: "CREATE",
       leaveRequestId: leaveRequest.id,
       status: "pending",
-    })
+      startDate: data.startDate,
+      endDate: data.endDate,
+      totalDays: totalDays
+    }, "LEAVE_REQUEST", leaveRequest.id)
 
     // Send notification to employee
     const leaveType = await LeaveType.findByPk(data.leaveTypeId);
@@ -648,10 +696,12 @@ async getLeaveStatistics() {
       leave.updatedAt = new Date();
       await leave.save();
 
-      auditService.logAction(leave.userId, "LEAVE_COMPLETED", {
+      auditService.logAction(leave.userId, "leave completed", {
+        module: "leave_management",
+        operation: "COMPLETED",
         leaveRequestId: leave.id,
         endDate: leave.endDate
-      });
+      }, "LEAVE_REQUEST", leave.id);
 
       if (leave.LeaveType) {
         await notificationHelper.notifyLeaveCompleted(
@@ -676,10 +726,12 @@ async getLeaveStatistics() {
     leaveRequest.updatedAt = new Date();
     await leaveRequest.save();
 
-    auditService.logAction(actorId, "COMPLETE_LEAVE_REQUEST", {
+    auditService.logAction(actorId, "completed leave request", {
+      module: "leave_management",
+      operation: "COMPLETE",
       leaveRequestId,
       userId: leaveRequest.userId
-    });
+    }, "LEAVE_REQUEST", leaveRequestId);
 
     return leaveRequest;
   }
@@ -735,6 +787,20 @@ async getLeaveStatistics() {
       balance.updatedAt = new Date();
       await balance.save();
     }
+  }
+
+  // Get employees with low leave balance
+  async getLowLeaveBalanceEmployees(threshold = 5) {
+    const currentYear = new Date().getFullYear();
+    const balances = await LeaveBalance.findAll({
+      where: {
+        year: currentYear,
+        remainingDays: { [Op.lte]: threshold }
+      },
+      attributes: ['userId'],
+      group: ['userId']
+    });
+    return balances.map(b => b.userId);
   }
 }
 

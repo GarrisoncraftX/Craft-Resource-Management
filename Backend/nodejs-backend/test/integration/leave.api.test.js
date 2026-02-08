@@ -191,4 +191,27 @@ describe('Leave Management API - Integration Tests', () => {
       expect(response.body).toHaveProperty('approvedToday');
     });
   });
+
+  describe('POST /api/leave/process-expired', () => {
+    it('should mark expired leaves as completed', async () => {
+      const response = await request(app)
+        .post('/api/leave/process-expired')
+        .set('Authorization', `Bearer ${managerToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('success', true);
+    });
+  });
+
+  describe('GET /api/leave/employees-on-leave', () => {
+    it('should get employees currently on leave', async () => {
+      const response = await request(app)
+        .get('/api/leave/employees-on-leave')
+        .set('Authorization', `Bearer ${managerToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('success', true);
+      expect(Array.isArray(response.body.data)).toBe(true);
+    });
+  });
 });

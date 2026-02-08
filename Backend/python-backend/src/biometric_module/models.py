@@ -258,23 +258,23 @@ class BiometricModel:
                 }
 
             elif action == 'clock_out':
-                # Find today's open attendance record
+                # Find the most recent open attendance record for the user (regardless of date)
                 query = """
                     UPDATE attendance_records
-                    SET clock_out_time = %s, clock_out_method = %s, 
-                        total_hours = TIMESTAMPDIFF(MINUTE, clock_in_time, %s) / 60.0, 
+                    SET clock_in_time = clock_in_time, clock_out_time = %s, clock_out_method = %s,
+                        total_hours = TIMESTAMPDIFF(MINUTE, clock_in_time, %s) / 60.0,
                         updated_at = %s
-                    WHERE user_id = %s AND DATE(clock_in_time) = %s AND clock_out_time IS NULL
+                    WHERE user_id = %s AND clock_out_time IS NULL
                     ORDER BY clock_in_time DESC
                     LIMIT 1
                 """
-                params = (now, method, now, now, user_id, today)
+                params = (now, method, now, now, user_id)
                 affected_rows = self.db.execute_query(query, params, fetch=False)
-                
+
                 logger.info(f"Clock-out recorded: user_id={user_id}, method={method}, affected_rows={affected_rows}")
 
                 if affected_rows == 0:
-                    raise Exception("No open attendance record found for today")
+                    raise Exception("No open attendance record found")
 
                 return {
                     'action': 'clock_out',
@@ -629,9 +629,11 @@ class BiometricModel:
                     ar.flagged_for_review,
                     ar.buddy_punch_risk
                 FROM attendance_records ar
-                LEFT JOIN users u ON ar.user_id = u.id
+                INNER JOIN users u ON ar.user_id = u.id
                 LEFT JOIN departments d ON u.department_id = d.id
                 WHERE ar.clock_in_method = 'manual'
+                  AND u.first_name IS NOT NULL
+                  AND u.last_name IS NOT NULL
             """
             params = []
             

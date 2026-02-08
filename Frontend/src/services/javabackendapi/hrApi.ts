@@ -1,4 +1,3 @@
-import { ProvisioningResponse } from '@/types/hr';
 import { apiClient } from '@/utils/apiClient';
 import type {
   User,
@@ -10,7 +9,8 @@ import type {
   EmployeeBenefit,
   TrainingCourse,
   EmployeeTraining,
-  PerformanceReview
+  PerformanceReview,
+  ProvisionedEmployee
 } from '@/types/javabackendapi/hrTypes';
 
 class HrApiService {
@@ -275,7 +275,7 @@ class HrApiService {
     return apiClient.get(`/hr/payroll/payslips/${payslipId}/pdf`, { responseType: 'blob' });
   }
 
-  async getProvisionedEmployees(): Promise<ProvisioningResponse[]> {
+  async getProvisionedEmployees(): Promise<ProvisionedEmployee[]> {
     const response = await apiClient.get('/hr/employees/provisioned');
     return response.employees || [];
   }
@@ -283,7 +283,7 @@ class HrApiService {
 
 export const hrApiService = new HrApiService();
 
-export type { User, PerformanceReview };
+export type { User, PerformanceReview } from '@/types/javabackendapi/hrTypes';
 
 // ============================================================================
 // WRAPPER FUNCTIONS FOR BACKWARD COMPATIBILITY
@@ -313,6 +313,72 @@ export async function fetchProvisionedEmployees() {
   return hrApiService.getProvisionedEmployees();
 }
 
+// Recruitment & Onboarding endpoints
+export async function getAllJobPostings() {
+  return apiClient.get('/hr/recruitment/job-postings');
+}
+
+export async function getOpenJobPostings() {
+  return apiClient.get('/hr/recruitment/job-postings/open');
+}
+
+export async function createJobPosting(data: Partial<import('@/types/javabackendapi/hrTypes').JobPosting>) {
+  return apiClient.post('/hr/recruitment/job-postings', data);
+}
+
+export async function updateJobPosting(id: number, data: Partial<import('@/types/javabackendapi/hrTypes').JobPosting>) {
+  return apiClient.put(`/hr/recruitment/job-postings/${id}`, data);
+}
+
+export async function getOnboardingChecklist(userId: number): Promise<import('@/types/javabackendapi/hrTypes').OnboardingChecklist[]> {
+  return apiClient.get(`/hr/recruitment/onboarding/${userId}`);
+}
+
+export async function createOnboardingTask(data: Partial<import('@/types/javabackendapi/hrTypes').OnboardingChecklist>) {
+  return apiClient.post('/hr/recruitment/onboarding', data);
+}
+
+export async function completeOnboardingTask(id: number) {
+  return apiClient.put(`/hr/recruitment/onboarding/${id}/complete`, {});
+}
+
+export async function deleteJobPosting(id: number) {
+  return apiClient.delete(`/hr/recruitment/job-postings/${id}`);
+}
+
+export async function deleteOnboardingTask(id: number) {
+  return apiClient.delete(`/hr/recruitment/onboarding/${id}`);
+}
+
+export async function getAttendanceReview(userId: number, startDate: string, endDate: string) {
+  return apiClient.get(`/hr/payroll/attendance-review/${userId}?startDate=${startDate}&endDate=${endDate}`);
+}
+
+// Offboarding endpoints
+export async function initiateOffboarding(data: Partial<import('@/types/javabackendapi/hrTypes').EmployeeOffboarding>) {
+  return apiClient.post('/hr/offboarding', data);
+}
+
+export async function getAllOffboarding() {
+  return apiClient.get('/hr/offboarding');
+}
+
+export async function getOffboardingById(id: number) {
+  return apiClient.get(`/hr/offboarding/${id}`);
+}
+
+export async function getOffboardingByUserId(userId: number) {
+  return apiClient.get(`/hr/offboarding/user/${userId}`);
+}
+
+export async function updateOffboarding(id: number, data: Partial<import('@/types/javabackendapi/hrTypes').EmployeeOffboarding>) {
+  return apiClient.put(`/hr/offboarding/${id}`, data);
+}
+
+export async function completeOffboarding(id: number) {
+  return apiClient.post(`/hr/offboarding/${id}/complete`, {});
+}
+
 export async function fetchPayslips(userId?: string): Promise<Payslip[]> {
   if (userId) {
     return hrApiService.getPayslipsByUser(Number(userId));
@@ -322,12 +388,12 @@ export async function fetchPayslips(userId?: string): Promise<Payslip[]> {
 
 export const mapPayrollToUI = (payrollData: Payslip[]) => {
   return payrollData.map((payslip: Payslip) => ({
-    period: `${new Date(payslip.payPeriodStart).toLocaleDateString()} - ${new Date(payslip.payPeriodEnd).toLocaleDateString()}`,
-    basicSalary: `$${(payslip.grossPay * 0.8).toFixed(2)}`,
-    allowances: '$500.00',
-    overtime: '$156.25',
-    deductions: `$${(payslip.taxDeductions + payslip.otherDeductions).toFixed(2)}`,
-    netPay: `$${payslip.netPay.toFixed(2)}`,
-    status: payslip.payrollRun?.status === 'COMPLETED' ? 'Processed' : 'Pending'
+    period: `${payslip.generatedDate}`,
+    basicSalary: `$${(payslip.basicSalary ?? 0).toFixed(2)}`,
+    allowances: `$${(payslip.allowances ?? 0).toFixed(2)}`,
+    overtime: '$0.00',
+    deductions: `$${(payslip.deductions ?? 0).toFixed(2)}`,
+    netPay: `$${(payslip.netPay ?? 0).toFixed(2)}`,
+    status: 'Processed'
   }));
 };

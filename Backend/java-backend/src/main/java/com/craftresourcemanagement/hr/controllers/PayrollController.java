@@ -3,12 +3,15 @@ package com.craftresourcemanagement.hr.controllers;
 import com.craftresourcemanagement.hr.entities.*;
 import com.craftresourcemanagement.hr.services.PayrollService;
 import com.craftresourcemanagement.hr.services.EmployeeService;
+import com.craftresourcemanagement.hr.services.AttendanceIntegrationService;
+import com.craftresourcemanagement.utils.AuditClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -18,10 +21,15 @@ public class PayrollController {
     private static final Logger logger = LoggerFactory.getLogger(PayrollController.class);
     private final PayrollService payrollService;
     private final EmployeeService employeeService;
+    private final AuditClient auditClient;
+    private final AttendanceIntegrationService attendanceIntegrationService;
 
-    public PayrollController(PayrollService payrollService, EmployeeService employeeService) {
+    public PayrollController(PayrollService payrollService, EmployeeService employeeService, 
+                             AuditClient auditClient, AttendanceIntegrationService attendanceIntegrationService) {
         this.payrollService = payrollService;
         this.employeeService = employeeService;
+        this.auditClient = auditClient;
+        this.attendanceIntegrationService = attendanceIntegrationService;
     }
 
     // PayrollRun endpoints
@@ -451,6 +459,53 @@ public class PayrollController {
                 .body(bankFile.toString());
         } catch (Exception e) {
             logger.error("Error generating bank file: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/attendance-review/{userId}")
+    public ResponseEntity<?> getAttendanceReview(@PathVariable Long userId, 
+                                                  @RequestParam String startDate, 
+                                                  @RequestParam String endDate) {
+        try {
+            Optional<User> userOpt = employeeService.findById(userId);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body("User not found");
+            }
+            
+            List<Map<String, Object>> attendanceRecords = attendanceIntegrationService
+                .getUserAttendanceByDateRange(userId, startDate, endDate);
+            
+            Map<String, Object> summary = new java.util.HashMap<>();
+            summary.put("userId", userId);
+            summary.put("period", startDate + " to " + endDate);
+            summary.put("totalDays", attendanceRecords.size());
+            
+            long lateDays = attendanceRecords.stream()
+                .filter(rec -> Boolean.TRUE.equals(rec.get("is_late")))
+                .count();
+            long earlyDepartures = attendanceRecords.stream()
+                .filter(rec -> Boolean.TRUE.equals(rec.get("is_early_departure")))
+                .count();
+            double totalOvertimeHours = attendanceRecords.stream()
+                .mapToDouble(rec -> {
+                    Object overtimeObj = rec.get("overtime_hours");
+                    return overtimeObj != null ? Double.parseDouble(overtimeObj.toString()) : 0.0;
+                })
+                .sum();
+            
+            summary.put("lateDays", lateDays);
+            summary.put("earlyDepartures", earlyDepartures);
+            summary.put("totalOvertimeHours", totalOvertimeHours);
+            summary.put("records", attendanceRecords);
+            
+            auditClient.logActionAsync(userId, "viewed attendance review",
+                String.format("{\"module\":\"payroll\",\"operation\":\"VIEW\",\"period\":\"%s to %s\"}",
+                    startDate, endDate), "java-backend", "ATTENDANCE_REVIEW", userId.toString());
+            
+            return ResponseEntity.ok(summary);
+        } catch (Exception e) {
+            logger.error("Error fetching attendance review: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }

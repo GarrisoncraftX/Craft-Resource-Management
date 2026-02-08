@@ -27,7 +27,7 @@ import type { ProvisionedEmployee } from '@/types/javabackendapi/hrTypes';
 export const HRDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('provisioning');
+  const [activeTab, setActiveTab] = useState('attendance');
   const [provisionedEmployees, setProvisionedEmployees] = useState<ProvisionedEmployee[]>([]);
   const [manualAttendances, setManualAttendances] = useState<ManualFallbackAttendance[]>([]);
   const [methodStats, setMethodStats] = useState<AttendanceMethodStats | null>(null);
@@ -218,104 +218,11 @@ export const HRDashboard: React.FC = () => {
           {/* Main Content Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
             <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-0 h-auto sm:h-10">
-              <TabsTrigger value="provisioning" className="text-xs sm:text-sm whitespace-normal h-auto py-2 sm:py-0">Identity & Lifecycle Management</TabsTrigger>
               <TabsTrigger value="attendance" className="text-xs sm:text-sm whitespace-normal h-auto py-2 sm:py-0">Attendance Governance</TabsTrigger>
+              <TabsTrigger value="provisioning" className="text-xs sm:text-sm whitespace-normal h-auto py-2 sm:py-0">Identity & Lifecycle Management</TabsTrigger>
             </TabsList>
 
             {/* Pillar 1: Identity & Lifecycle Management */}
-            <TabsContent value="provisioning" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-blue-600" />
-                    Provisioned Employees (Gatekeeper Monitoring)
-                  </CardTitle>
-                  <CardDescription>
-                    New hires in PROVISIONED state - ensure they complete password change and bank info setup
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {provisionedEmployees.length === 0 ? (
-                    <div className="flex items-center justify-center py-8 text-gray-500">
-                      <CheckCircle className="h-5 w-5 mr-2" />
-                      No provisioned employees pending activation
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto -mx-2 sm:mx-0">
-                      <Table className="min-w-[640px]">
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Employee</TableHead>
-                            <TableHead>Employee ID</TableHead>
-                            <TableHead>Provisioned Date</TableHead>
-                            <TableHead>Profile Status</TableHead>
-                            <TableHead>Password Status</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {provisionedEmployees.map((employee) => (
-                            <TableRow key={employee.id}>
-                              <TableCell>
-                                <div className="flex items-center gap-3">
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarFallback>
-                                      {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <div className="font-medium">
-                                      {employee.firstName} {employee.lastName}
-                                    </div>
-                                    <div className="text-sm text-gray-500">{employee.email}</div>
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="font-mono">{employee.employeeId}</TableCell>
-                              <TableCell>
-                                {new Date(employee.provisionedDate).toLocaleDateString()}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={employee.profileCompleted ? "default" : "secondary"}>
-                                  {employee.profileCompleted ? "Completed" : "Pending"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={employee.defaultPasswordChanged ? "default" : "destructive"}>
-                                  {employee.defaultPasswordChanged ? "Changed" : "Default"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleViewEmployee(employee.id)}
-                                >
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {provisionedEmployees.length > 0 && (
-                <Alert className="border-blue-200 bg-blue-50">
-                  <Users className="h-4 w-4 text-blue-600" />
-                  <AlertDescription className="text-blue-800">
-                    {provisionedEmployees.length} employees are in PROVISIONED state. Monitor their progress
-                    in completing profiles (password change + bank info) to activate their accounts.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </TabsContent>
-
-            {/* Pillar 2: Attendance Governance */}
             <TabsContent value="attendance" className="space-y-4">
               {/* Method Statistics */}
               {methodStats && (
@@ -325,7 +232,7 @@ export const HRDashboard: React.FC = () => {
                     <CardDescription className="text-xs sm:text-sm">Monitor check-in methods to detect potential buddy punching</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4 lg:gap-4">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 lg:gap-4">
                       <div className="bg-blue-50 p-2 sm:p-3 lg:p-4 rounded-lg">
                         <div className="text-xs sm:text-sm text-gray-600">QR Code</div>
                         <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">{methodStats.qrCount}</div>
@@ -335,10 +242,7 @@ export const HRDashboard: React.FC = () => {
                         <div className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">{methodStats.manualCount}</div>
                         <div className="text-xs text-red-500">{(methodStats.manualPercentage || 0).toFixed(1)}%</div>
                       </div>
-                      <div className="bg-green-50 p-2 sm:p-3 lg:p-4 rounded-lg">
-                        <div className="text-xs sm:text-sm text-gray-600">Card</div>
-                        <div className="text-lg sm:text-xl lg:text-2xl font-bold text-green-600">{methodStats.cardCount}</div>
-                      </div>
+                   
                       <div className="bg-gray-50 p-2 sm:p-3 lg:p-4 rounded-lg">
                         <div className="text-xs sm:text-sm text-gray-600">Total</div>
                         <div className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-600">{methodStats.totalAttendances}</div>
@@ -446,6 +350,99 @@ export const HRDashboard: React.FC = () => {
                   <AlertDescription className="text-red-800">
                     {manualAttendances.length} manual check-in entries detected. HR review required to prevent
                     buddy punching. Review each entry and flag suspicious activities immediately.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </TabsContent>
+
+            {/* Pillar 2: Attendance Governance */}
+             <TabsContent value="provisioning" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-blue-600" />
+                    Provisioned Employees (Gatekeeper Monitoring)
+                  </CardTitle>
+                  <CardDescription>
+                    New hires in PROVISIONED state - ensure they complete password change and bank info setup
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {provisionedEmployees.length === 0 ? (
+                    <div className="flex items-center justify-center py-8 text-gray-500">
+                      <CheckCircle className="h-5 w-5 mr-2" />
+                      No provisioned employees pending activation
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto -mx-2 sm:mx-0">
+                      <Table className="min-w-[640px]">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Employee</TableHead>
+                            <TableHead>Employee ID</TableHead>
+                            <TableHead>Provisioned Date</TableHead>
+                            <TableHead>Profile Status</TableHead>
+                            <TableHead>Password Status</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {provisionedEmployees.map((employee) => (
+                            <TableRow key={employee.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback>
+                                      {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="font-medium">
+                                      {employee.firstName} {employee.lastName}
+                                    </div>
+                                    <div className="text-sm text-gray-500">{employee.email}</div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-mono">{employee.employeeId}</TableCell>
+                              <TableCell>
+                                {new Date(employee.provisionedDate).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={employee.profileCompleted ? "default" : "secondary"}>
+                                  {employee.profileCompleted ? "Completed" : "Pending"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={employee.defaultPasswordChanged ? "default" : "destructive"}>
+                                  {employee.defaultPasswordChanged ? "Changed" : "Default"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleViewEmployee(employee.id)}
+                                >
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Details
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {provisionedEmployees.length > 0 && (
+                <Alert className="border-blue-200 bg-blue-50">
+                  <Users className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800">
+                    {provisionedEmployees.length} employees are in PROVISIONED state. Monitor their progress
+                    in completing profiles (password change + bank info) to activate their accounts.
                   </AlertDescription>
                 </Alert>
               )}

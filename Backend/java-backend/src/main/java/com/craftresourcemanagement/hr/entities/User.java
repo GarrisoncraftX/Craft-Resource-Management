@@ -461,6 +461,9 @@ public class User {
         if (dateOfJoining == null) {
             dateOfJoining = LocalDateTime.now();
         }
+        if (hireDate == null) {
+            hireDate = LocalDate.now();
+        }
     }
 
     @PreUpdate

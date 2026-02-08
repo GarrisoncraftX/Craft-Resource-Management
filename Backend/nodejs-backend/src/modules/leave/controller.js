@@ -219,6 +219,16 @@ class LeaveController {
       next(error);
     }
   }
+
+  async getLowLeaveBalanceEmployees(req, res, next) {
+    try {
+      const threshold = req.query.threshold ? Number.parseInt(req.query.threshold) : 5;
+      const employees = await this.leaveService.getLowLeaveBalanceEmployees(threshold);
+      res.json({ success: true, data: employees });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = LeaveController

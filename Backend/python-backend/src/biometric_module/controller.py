@@ -894,13 +894,12 @@ class BiometricController:
     def get_attendance_method_statistics(self) -> tuple[Dict[str, Any], int]:
         """Get attendance method distribution statistics (all time)"""
         try:
-            # Query database for all-time counts - only count manual check-ins
             query = """
                 SELECT 
-                    COUNT(DISTINCT CASE WHEN clock_in_method LIKE '%qr%' THEN user_id END) as qr_count,
-                    COUNT(DISTINCT CASE WHEN clock_in_method = 'manual' THEN user_id END) as manual_count,
-                    COUNT(DISTINCT CASE WHEN clock_in_method IN ('card', 'biometric') THEN user_id END) as card_count,
-                    COUNT(DISTINCT user_id) as total_count
+                    COUNT(CASE WHEN clock_in_method LIKE '%qr%' THEN 1 END) as qr_count,
+                    COUNT(CASE WHEN clock_in_method = 'manual' THEN 1 END) as manual_count,
+                    COUNT(CASE WHEN clock_in_method IN ('card', 'biometric') THEN 1 END) as card_count,
+                    COUNT(*) as total_count
                 FROM attendance_records
             """
             

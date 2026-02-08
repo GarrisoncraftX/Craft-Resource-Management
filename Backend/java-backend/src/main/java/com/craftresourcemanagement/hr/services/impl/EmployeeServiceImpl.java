@@ -203,7 +203,14 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public User toggleUserStatus(Long id) {
         return userRepository.findById(id).map(user -> {
-            user.setIsActive(user.getIsActive() == 1 ? 0 : 1);
+            // Synchronize both fields
+            if (user.getIsActive() == 1) {
+                user.setIsActive(0);
+                user.setAccountStatus("INACTIVE");
+            } else {
+                user.setIsActive(1);
+                user.setAccountStatus("ACTIVE");
+            }
             User updated = userRepository.save(user);
             String statusAction = updated.getIsActive() == 1 ? "activated" : "deactivated";
             auditClient.logActionAsync(

@@ -73,35 +73,46 @@ CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `hr_create_employee` (IN `p
     DECLARE dept_max INT DEFAULT 0;
     DECLARE new_emp_id VARCHAR(10);
     DECLARE temp_password VARCHAR(255);
+    DECLARE email_exists INT DEFAULT 0;
     
-    SELECT current_headcount, max_headcount INTO dept_current, dept_max
-    FROM departments WHERE id = p_department_id;
+    -- Check if email already exists
+    SELECT COUNT(*) INTO email_exists FROM users WHERE email = p_email;
     
-    IF dept_current >= dept_max THEN
+    IF email_exists > 0 THEN
         SET p_success = FALSE;
-        SET p_message = CONCAT('Department at maximum capacity (', dept_max, '). Cannot create new employee.');
+        SET p_message = 'Email already exists. Please use a different email address.';
         SET p_employee_id = NULL;
     ELSE
-        SET new_emp_id = generate_employee_id();
-        SET temp_password = SHA2(CONCAT(new_emp_id, 'CRMSemp123!'), 256);
+        -- Check department capacity
+        SELECT current_headcount, max_headcount INTO dept_current, dept_max
+        FROM departments WHERE id = p_department_id;
         
-        INSERT INTO users (
-            employee_id, first_name, last_name, email, 
-            department_id, job_grade_id, role_id, 
-            password, account_status, default_password_changed, profile_completed,
-            provisioned_by, provisioned_date, temporary_password
-        ) VALUES (
-            new_emp_id, p_first_name, p_last_name, p_email,
-            p_department_id, p_job_grade_id, p_role_id,
-            temp_password, 'PROVISIONED', FALSE, FALSE,
-            p_hr_user_id, NOW(), temp_password
-        );
-        
-        UPDATE departments SET current_headcount = current_headcount + 1 WHERE id = p_department_id;
-        
-        SET p_employee_id = new_emp_id;
-        SET p_success = TRUE;
-        SET p_message = CONCAT('Employee created successfully. Temporary Key: ', new_emp_id, ' + CRMSemp123!');
+        IF dept_current >= dept_max THEN
+            SET p_success = FALSE;
+            SET p_message = CONCAT('Department at maximum capacity (', dept_max, '). Cannot create new employee.');
+            SET p_employee_id = NULL;
+        ELSE
+            SET new_emp_id = generate_employee_id();
+            SET temp_password = SHA2(CONCAT(new_emp_id, 'CRMSemp123!'), 256);
+            
+            INSERT INTO users (
+                employee_id, first_name, last_name, email, 
+                department_id, job_grade_id, role_id, 
+                password, account_status, default_password_changed, profile_completed,
+                provisioned_by, provisioned_date, temporary_password, hire_date
+            ) VALUES (
+                new_emp_id, p_first_name, p_last_name, p_email,
+                p_department_id, p_job_grade_id, p_role_id,
+                temp_password, 'PROVISIONED', FALSE, FALSE,
+                p_hr_user_id, NOW(), temp_password, CURDATE()
+            );
+            
+            UPDATE departments SET current_headcount = current_headcount + 1 WHERE id = p_department_id;
+            
+            SET p_employee_id = new_emp_id;
+            SET p_success = TRUE;
+            SET p_message = CONCAT('Employee created successfully. Temporary Key: ', new_emp_id, ' + CRMSemp123!');
+        END IF;
     END IF;
 END$$
 

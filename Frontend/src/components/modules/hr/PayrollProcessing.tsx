@@ -172,6 +172,17 @@ export const PayrollProcessing: React.FC = () => {
     }
   };
 
+  const handleViewAttendanceReview = async (userId: number) => {
+    if (!selectedPeriod) return;
+    const [start, end] = selectedPeriod.split(' - ');
+    try {
+      const review = await hrApiService.getAttendanceReview(userId, start, end);
+      alert(`Attendance Review:\nTotal Days: ${review.totalDays}\nLate Days: ${review.lateDays}\nOvertime Hours: ${review.totalOvertimeHours}`);
+    } catch (error) {
+      console.error('Failed to fetch attendance review:', error);
+    }
+  };
+
   useEffect(() => {
     const filtered = selectedPeriod
       ? payslips.filter(p => `${p.payPeriodStart} - ${p.payPeriodEnd}` === selectedPeriod)

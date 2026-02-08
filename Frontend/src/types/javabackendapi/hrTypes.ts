@@ -133,3 +133,43 @@ export interface ProvisionedEmployee {
   profileCompleted: boolean;
   defaultPasswordChanged: boolean;
 }
+
+export interface JobPosting {
+  id?: number;
+  title: string;
+  description?: string;
+  departmentId?: number;
+  jobGradeId?: number;
+  requiredQualifications?: string;
+  postingDate?: string;
+  closingDate?: string;
+  status: 'DRAFT' | 'OPEN' | 'CLOSED' | 'FILLED';
+  createdBy?: number;
+}
+
+export interface OnboardingChecklist {
+  id?: number;
+  userId: number;
+  taskName: string;
+  isCompleted: boolean;
+  completedAt?: string;
+  assignedDate?: string;
+}
+
+export interface EmployeeOffboarding {
+  id?: number;
+  userId: number;
+  resignationDate?: string;
+  lastWorkingDate?: string;
+  offboardingType: 'RESIGNATION' | 'TERMINATION' | 'RETIREMENT' | 'CONTRACT_END';
+  reason?: string;
+  status: 'NOTICE_PERIOD' | 'IN_PROGRESS' | 'COMPLETED';
+  exitInterviewScheduled?: boolean;
+  exitInterviewDate?: string;
+  assetsReturned?: boolean;
+  clearanceCompleted?: boolean;
+  finalSettlementAmount?: number;
+  finalSettlementPaid?: boolean;
+  accessRevoked?: boolean;
+  createdBy?: number;
+}

@@ -173,6 +173,7 @@ app.use((req, res, next) => {
   // Java Backend: HR, Finance, Assets, Legal, Revenue, System, Admin
   if (path.startsWith("/hr/employees") || 
       path.startsWith("/hr/payroll") || 
+      path.startsWith("/hr/recruitment") ||
       path.startsWith("/hr/dashboard-kpis") ||
       path.startsWith("/finance") || 
       path.startsWith("/assets") || 

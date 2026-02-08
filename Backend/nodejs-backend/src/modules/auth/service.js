@@ -561,6 +561,12 @@ const changePassword = async (userId, currentPassword, newPassword) => {
   const newPasswordHash = await bcrypt.hash(newPassword, 10);
   user.passwordHash = newPasswordHash;
   user.defaultPasswordChanged = true;
+  
+  // Activate account if profile is completed and password is changed
+  if (user.profileCompleted && user.accountStatus === 'PROVISIONED') {
+    user.accountStatus = 'ACTIVE';
+  }
+  
   await user.save();
 
   await auditService.logAction(userId, 'CHANGE_PASSWORD', { userId });
@@ -638,6 +644,11 @@ const updateUserProfile = async (userId, updates) => {
 
   if (updates.profileCompleted !== undefined) {
     user.profileCompleted = updates.profileCompleted;
+  }
+
+  // Activate account if profile is completed and password is changed
+  if (user.profileCompleted && user.defaultPasswordChanged && user.accountStatus === 'PROVISIONED') {
+    user.accountStatus = 'ACTIVE';
   }
 
   await user.save();
