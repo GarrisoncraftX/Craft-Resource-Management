@@ -51,11 +51,11 @@ class AttendanceController:
             template_data = result['template_data']
             template_hash = result['template_hash']
             
-            enrollment_result = self.biometric_model.enroll_biometric(
+            enrollment_result = self.attendance_model.enroll_biometric(
                 user_id, visitor_id, biometric_type, template_data, template_hash
             )
             
-            self.biometric_model.log_biometric_access(
+            self.attendance_model.log_biometric_access(
                 user_id, biometric_type, 'enrollment', True, 
                 {'enrollment_id': enrollment_result['biometric_id']}
             )
@@ -79,7 +79,7 @@ class AttendanceController:
                     'data': result
                 }, 200
             
-            stats = self.biometric_model.get_biometric_statistics()
+            stats = self.attendance_model.get_biometric_statistics()
             return {
                 'success': True,
                 'data': stats
@@ -116,10 +116,10 @@ class AttendanceController:
             processed = self.biometric_service.process_card_data(raw_data, user_id)
             live_template = processed['template_data']
             
-            stored_template = self.biometric_model.get_biometric_template(user_id, biometric_type)
+            stored_template = self.attendance_model.get_biometric_template(user_id, biometric_type)
             
             if not stored_template:
-                self.biometric_model.log_biometric_access(
+                self.attendance_model.log_biometric_access(
                     user_id, biometric_type, 'verification', False,
                     {'reason': 'No template found'}
                 )
@@ -129,7 +129,7 @@ class AttendanceController:
                 live_template, stored_template, biometric_type, user_id
             )
             
-            self.biometric_model.log_biometric_access(
+            self.attendance_model.log_biometric_access(
                 user_id, biometric_type, 'verification', verification_result['is_match'],
                 {'similarity_score': verification_result['similarity_score']}
             )
@@ -170,7 +170,7 @@ class AttendanceController:
             processed = self.biometric_service.process_card_data(raw_data, 'system')
             live_template = processed['template_data']
             
-            stored_templates = self.biometric_model.get_all_templates(biometric_type)
+            stored_templates = self.attendance_model.get_all_templates(biometric_type)
             
             if not stored_templates:
                 return {'success': False, 'message': 'No card templates found'}, 404
@@ -181,7 +181,7 @@ class AttendanceController:
             
             if identification_result:
                 user_id = identification_result['user_id']
-                last_attendance = self.biometric_model.get_employee_last_attendance(user_id)
+                last_attendance = self.attendance_model.get_employee_last_attendance(user_id)
 
                 if last_attendance and last_attendance['clock_out_time'] is None:
                     action = 'clock_out'
@@ -190,7 +190,7 @@ class AttendanceController:
 
                 identification_result['action'] = action
 
-                self.biometric_model.log_biometric_access(
+                self.attendance_model.log_biometric_access(
                     user_id, biometric_type, 'identification', True,
                     {'similarity_score': identification_result['similarity_score'], 'action': action}
                 )
@@ -198,7 +198,7 @@ class AttendanceController:
                 logger.info(f"Card identification successful: {identification_result}")
                 return {'success': True, 'data': identification_result}, 200
             else:
-                self.biometric_model.log_biometric_access(
+                self.attendance_model.log_biometric_access(
                     None, biometric_type, 'identification', False,
                     {'reason': 'No match found'}
                 )
@@ -236,7 +236,7 @@ class AttendanceController:
                     }, 404
 
             # Query database for card info
-            card_info = self.biometric_model.lookup_card(card_identifier)
+            card_info = self.attendance_model.lookup_card(card_identifier)
 
             if card_info:
                 return {
@@ -269,7 +269,7 @@ class AttendanceController:
             location = data.get('location')
 
             if verification_method == 'manual' and employee_id and password:
-                employee = self.biometric_model.authenticate_employee(employee_id, password)
+                employee = self.attendance_model.authenticate_employee(employee_id, password)
                 if not employee:
                     return {'success': False, 'message': 'Invalid employee credentials'}, 401
                 user_id = employee['id']
@@ -277,8 +277,8 @@ class AttendanceController:
                 return {'success': False, 'message': 'User ID or employee credentials are required'}, 400
 
             if self.use_mock_data:
-                attendance_result = self.biometric_model.record_attendance(user_id, 'clock_in', 'qr_mock', location)
-                self.biometric_model.log_attendance(user_id, 'clock_in', 'qr_mock', True, {'location': location})
+                attendance_result = self.attendance_model.record_attendance(user_id, 'clock_in', 'qr_mock', location)
+                self.attendance_model.log_attendance(user_id, 'clock_in', 'qr_mock', True, {'location': location})
                 return {'success': True, 'message': 'Clocked in successfully (mock)', 'data': attendance_result}, 200
 
             if biometric_type and raw_data and verification_method != 'manual':
@@ -288,10 +288,10 @@ class AttendanceController:
                 processed = self.biometric_service.process_card_data(raw_data, user_id)
                 live_template = processed['template_data']
                 
-                stored_template = self.biometric_model.get_biometric_template(user_id, biometric_type)
+                stored_template = self.attendance_model.get_biometric_template(user_id, biometric_type)
                 
                 if not stored_template:
-                    self.biometric_model.log_biometric_access(
+                    self.attendance_model.log_biometric_access(
                         user_id, biometric_type, 'verification', False,
                         {'reason': 'No template found'}
                     )
@@ -302,20 +302,20 @@ class AttendanceController:
                 )
                 
                 if not verification_result['is_match']:
-                    self.biometric_model.log_biometric_access(
+                    self.attendance_model.log_biometric_access(
                         user_id, biometric_type, 'verification', False,
                         {'similarity_score': verification_result['similarity_score']}
                     )
                     return {'success': False, 'message': 'Card verification failed'}, 401
                 
-                self.biometric_model.log_biometric_access(
+                self.attendance_model.log_biometric_access(
                     user_id, biometric_type, 'verification', True,
                     {'similarity_score': verification_result['similarity_score']}
                 )
 
             method = verification_method or biometric_type or 'manual'
             logger.info(f"Recording clock-in with method: {method} for user: {user_id}")
-            attendance_result = self.biometric_model.record_attendance(user_id, 'clock_in', method, location)
+            attendance_result = self.attendance_model.record_attendance(user_id, 'clock_in', method, location)
 
             # Check if already checked in
             if attendance_result.get('action') in ['already_checked_in', 'already_completed']:
@@ -331,7 +331,7 @@ class AttendanceController:
                     }
                 }, 200 
 
-            self.biometric_model.log_attendance(user_id, 'clock_in', method, True, {
+            self.attendance_model.log_attendance(user_id, 'clock_in', method, True, {
                 'location': location,
                 'verification_method': verification_method,
                 'biometric_verification': biometric_type is not None,
@@ -368,7 +368,7 @@ class AttendanceController:
             location = data.get('location')
 
             if verification_method == 'manual' and employee_id and password:
-                employee = self.biometric_model.authenticate_employee(employee_id, password)
+                employee = self.attendance_model.authenticate_employee(employee_id, password)
                 if not employee:
                     return {'success': False, 'message': 'Invalid employee credentials'}, 401
                 user_id = employee['id']
@@ -376,8 +376,8 @@ class AttendanceController:
                 return {'success': False, 'message': 'User ID or employee credentials are required'}, 400
 
             if self.use_mock_data:
-                attendance_result = self.biometric_model.record_attendance(user_id, 'clock_out', 'qr_mock', location)
-                self.biometric_model.log_attendance(user_id, 'clock_out', 'qr_mock', True, {'location': location})
+                attendance_result = self.attendance_model.record_attendance(user_id, 'clock_out', 'qr_mock', location)
+                self.attendance_model.log_attendance(user_id, 'clock_out', 'qr_mock', True, {'location': location})
                 return {'success': True, 'message': 'Clocked out successfully (mock)', 'data': attendance_result}, 200
 
             if biometric_type and raw_data and verification_method != 'manual':
@@ -387,10 +387,10 @@ class AttendanceController:
                 processed = self.biometric_service.process_card_data(raw_data, user_id)
                 live_template = processed['template_data']
                 
-                stored_template = self.biometric_model.get_biometric_template(user_id, biometric_type)
+                stored_template = self.attendance_model.get_biometric_template(user_id, biometric_type)
                 
                 if not stored_template:
-                    self.biometric_model.log_biometric_access(
+                    self.attendance_model.log_biometric_access(
                         user_id, biometric_type, 'verification', False,
                         {'reason': 'No template found'}
                     )
@@ -401,22 +401,22 @@ class AttendanceController:
                 )
                 
                 if not verification_result['is_match']:
-                    self.biometric_model.log_biometric_access(
+                    self.attendance_model.log_biometric_access(
                         user_id, biometric_type, 'verification', False,
                         {'similarity_score': verification_result['similarity_score']}
                     )
                     return {'success': False, 'message': 'Card verification failed'}, 401
                 
-                self.biometric_model.log_biometric_access(
+                self.attendance_model.log_biometric_access(
                     user_id, biometric_type, 'verification', True,
                     {'similarity_score': verification_result['similarity_score']}
                 )
 
             method = verification_method or biometric_type or 'manual'
             logger.info(f"Recording clock-out with method: {method} for user: {user_id}")
-            attendance_result = self.biometric_model.record_attendance(user_id, 'clock_out', method, location)
+            attendance_result = self.attendance_model.record_attendance(user_id, 'clock_out', method, location)
 
-            self.biometric_model.log_attendance(user_id, 'clock_out', method, True, {
+            self.attendance_model.log_attendance(user_id, 'clock_out', method, True, {
                 'location': location,
                 'verification_method': verification_method,
                 'biometric_verification': biometric_type is not None
@@ -450,7 +450,7 @@ class AttendanceController:
                 }, 401
 
             # Get last attendance record
-            last_attendance = self.biometric_model.get_employee_last_attendance(user_id)
+            last_attendance = self.attendance_model.get_employee_last_attendance(user_id)
 
             if not last_attendance:
                 return {
@@ -616,15 +616,15 @@ class AttendanceController:
             logger.info("Session token marked as used")
 
             # Determine action based on last attendance
-            last_attendance = self.biometric_model.get_employee_last_attendance(user_id)
+            last_attendance = self.attendance_model.get_employee_last_attendance(user_id)
             action = 'clock_in' if not last_attendance or last_attendance['clock_out_time'] else 'clock_out'
 
             # Get employee info for response
-            employee_info = self.biometric_model.get_employee_by_id(user_id)
+            employee_info = self.attendance_model.get_employee_by_id(user_id)
 
             # Record attendance
             logger.info(f"Recording QR attendance with method: qr_scan for user: {user_id}, action: {action}")
-            attendance_result = self.biometric_model.record_attendance(
+            attendance_result = self.attendance_model.record_attendance(
                 user_id, action, 'qr_scan', 'kiosk'
             )
 
@@ -643,7 +643,7 @@ class AttendanceController:
                 }, 200  # Return 200 so frontend shows the pass with error message
 
             # Log attendance
-            self.biometric_model.log_attendance(
+            self.attendance_model.log_attendance(
                 user_id, action, 'qr_scan', True,
                 {'session_token': session_token, 'location': 'kiosk', 'session_data': session_data}
             )
@@ -706,7 +706,7 @@ class AttendanceController:
             if user_id:
                 filters['user_id'] = user_id
 
-            records = self.biometric_model.get_attendance_records(filters)
+            records = self.attendance_model.get_attendance_records(filters)
 
             return {
                 'success': True,
@@ -726,7 +726,7 @@ class AttendanceController:
             date = request.args.get('date')
             department = request.args.get('department')
 
-            stats = self.biometric_model.get_attendance_stats(date, department)
+            stats = self.attendance_model.get_attendance_stats(date, department)
 
             return {
                 'success': True,
@@ -743,7 +743,7 @@ class AttendanceController:
     def get_checked_in_employees(self) -> tuple[Dict[str, Any], int]:
         """Get currently checked-in employees"""
         try:
-            employees = self.biometric_model.get_checked_in_employees()
+            employees = self.attendance_model.get_checked_in_employees()
 
             return {
                 'success': True,
@@ -761,7 +761,7 @@ class AttendanceController:
     def get_manual_fallback_attendances(self) -> tuple[Dict[str, Any], int]:
         """Get manual fallback attendances for HR review (all time)"""
         try:
-            attendances = self.biometric_model.get_manual_fallback_attendances()
+            attendances = self.attendance_model.get_manual_fallback_attendances()
             return {
                 'success': True,
                 'attendances': attendances
@@ -776,7 +776,7 @@ class AttendanceController:
     def get_attendances_by_method(self, method: str) -> tuple[Dict[str, Any], int]:
         """Get attendances by verification method"""
         try:
-            attendances = self.biometric_model.get_attendances_by_method(method)
+            attendances = self.attendance_model.get_attendances_by_method(method)
             return {
                 'success': True,
                 'attendances': attendances
@@ -793,7 +793,7 @@ class AttendanceController:
         try:
             data = request.get_json()
             audit_notes = data.get('auditNotes', 'Flagged for manual check-in review')
-            self.biometric_model.flag_attendance_for_audit(attendance_id, audit_notes)
+            self.attendance_model.flag_attendance_for_audit(attendance_id, audit_notes)
             return {
                 'success': True,
                 'message': 'Attendance flagged for audit successfully'
@@ -810,7 +810,7 @@ class AttendanceController:
         try:
             start_date = request.args.get('startDate')
             end_date = request.args.get('endDate')
-            attendances = self.biometric_model.get_manual_fallbacks_by_date_range(start_date, end_date)
+            attendances = self.attendance_model.get_manual_fallbacks_by_date_range(start_date, end_date)
             return {
                 'success': True,
                 'attendances': attendances
@@ -827,7 +827,7 @@ class AttendanceController:
         try:
             start_date = request.args.get('startDate')
             end_date = request.args.get('endDate')
-            attendances = self.biometric_model.get_user_attendance_by_date_range(user_id, start_date, end_date)
+            attendances = self.attendance_model.get_user_attendance_by_date_range(user_id, start_date, end_date)
             return {
                 'success': True,
                 'attendances': attendances
@@ -842,7 +842,7 @@ class AttendanceController:
     def get_buddy_punch_report(self) -> tuple[Dict[str, Any], int]:
         """Generate buddy punch risk report"""
         try:
-            manual_attendances = self.biometric_model.get_manual_fallback_attendances()
+            manual_attendances = self.attendance_model.get_manual_fallback_attendances()
             report = {
                 'totalManualEntries': len(manual_attendances),
                 'flaggedAttendances': manual_attendances,
@@ -865,7 +865,7 @@ class AttendanceController:
         try:
             data = request.get_json()
             reason = data.get('reason', 'Flagged for buddy punch review')
-            self.biometric_model.flag_attendance_for_audit(attendance_id, reason)
+            self.attendance_model.flag_attendance_for_audit(attendance_id, reason)
             return {
                 'success': True,
                 'message': 'Attendance flagged for buddy punch review'
@@ -889,7 +889,7 @@ class AttendanceController:
                 FROM attendance_records
             """
             
-            result = self.biometric_model.db.execute_query(query)
+            result = self.attendance_model.db.execute_query(query)
             
             if result and len(result) > 0:
                 data = result[0]
@@ -933,7 +933,7 @@ class AttendanceController:
                 }, 400
             
             # Update attendance record with review
-            self.biometric_model.review_attendance_record(attendance_id, hr_user_id, notes)
+            self.attendance_model.review_attendance_record(attendance_id, hr_user_id, notes)
             
             return {
                 'success': True,
@@ -951,7 +951,7 @@ class AttendanceController:
         try:
             today = datetime.now().date()
             query = "SELECT COUNT(DISTINCT user_id) as count FROM attendance_records WHERE DATE(clock_in_time) = %s"
-            result = self.biometric_model.db.execute_query(query, (today,))
+            result = self.attendance_model.db.execute_query(query, (today,))
             count = result[0]['count'] if result else 0
             return count, 200
         except Exception as e:
@@ -965,7 +965,7 @@ class AttendanceController:
             today = date.today()
             first_day = today.replace(day=1)
             query = "SELECT COUNT(*) as total FROM attendance_records WHERE DATE(clock_in_time) >= %s AND DATE(clock_in_time) <= %s"
-            result = self.biometric_model.db.execute_query(query, (first_day, today))
+            result = self.attendance_model.db.execute_query(query, (first_day, today))
             total = result[0]['total'] if result else 0
             return {'totalAttendance': total}, 200
         except Exception as e:

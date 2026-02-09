@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, Loader2, AlertTriangle, UserCheck } from 'lucide-react';
 import { visitorApiService } from '@/services/pythonbackendapi/visitorApi';
 import { useAuth } from '@/contexts/AuthContext';
-import type { EntryPass } from '@/types/visitor';
+import type { EntryPass } from '@/types/pythonbackendapi/visitorTypes';
 
 export const VisitorCheckIn: React.FC = () => {
   const [searchParams] = useSearchParams();
