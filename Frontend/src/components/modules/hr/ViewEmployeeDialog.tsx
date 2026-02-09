@@ -114,10 +114,6 @@ export const ViewEmployeeDialog: React.FC<ViewEmployeeDialogProps> = ({
                   <p className="font-medium">$ {employee.salary.toLocaleString()}</p>
                 </div>
               )}
-              <div>
-                <p className="text-muted-foreground">Biometric Status</p>
-                <p className="font-medium">{employee.biometricEnrollmentStatus}</p>
-              </div>
             </div>
           </div>
 

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class AuditService:
     def __init__(self):
-        self.java_backend_url = os.getenv('JAVA_BACKEND_URL', 'http://localhost:5002')
+        self.java_backend_url = os.getenv('API_GATEWAY_URL', 'http://localhost:5003')
         self.service_auth_token = os.getenv('SERVICE_AUTH_TOKEN', 'default-service-token-change-in-production')
         self.batch_size = 50
         self.flush_interval = 5
@@ -80,14 +80,13 @@ class AuditService:
 
     def _send_with_retry(self, audit_log: Dict[str, Any], max_retries: int = 3) -> bool:
         headers = {
-            'Content-Type': 'application/json',
-            'X-Service-Auth-Token': self.service_auth_token
+            'Content-Type': 'application/json'
         }
 
         for attempt in range(max_retries):
             try:
                 response = requests.post(
-                    f"{self.java_backend_url}/system/audit-logs",
+                    f"{self.java_backend_url}/api/system/audit-logs",
                     json=audit_log,
                     headers=headers,
                     timeout=5
@@ -95,15 +94,11 @@ class AuditService:
                 response.raise_for_status()
                 return True
             except requests.RequestException as e:
-                wait_time = (2 ** attempt) * 1
-                logger.warning(f"Audit send failed (attempt {attempt + 1}/{max_retries}): {e}")
-                
+                if attempt == 0:
+                    logger.debug(f"Audit send failed: {e}")
                 if attempt < max_retries - 1:
-                    time.sleep(wait_time)
+                    time.sleep(1)
                 else:
-                    logger.error(f"Failed after {max_retries} attempts")
-                    with self.lock:
-                        self.audit_queue.append(audit_log)
                     return False
         return False
 

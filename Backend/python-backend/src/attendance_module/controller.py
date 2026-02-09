@@ -3,8 +3,8 @@ from flask import request, g
 from typing import Dict, Any
 from datetime import datetime, timedelta
 
-from .models import BiometricModel
-from .service import BiometricService
+from .models import AttendanceModel
+from .service import AttendanceService
 from src.mockData.biometric_service import (
     enroll_biometric_mock, verify_biometric_mock, identify_biometric_mock,
     lookup_card_mock, get_biometric_statistics_mock
@@ -13,11 +13,11 @@ from src.utils.logger import logger
 from src.config.app import Config
 from src.extensions import cache
 
-class BiometricController:
+class AttendanceController:
     def __init__(self, db_manager):
         self.db_manager = db_manager
-        self.biometric_model = BiometricModel(db_manager) if not Config.USE_MOCK_DATA else None
-        self.biometric_service = BiometricService()
+        self.attendance_model = AttendanceModel(db_manager) if not Config.USE_MOCK_DATA else None
+        self.biometric_service = AttendanceService()
         self.use_mock_data = Config.USE_MOCK_DATA
     
     def enroll_biometric(self) -> tuple[Dict[str, Any], int]:
@@ -553,20 +553,6 @@ class BiometricController:
             logger.info(f"Global context g attributes: {dir(g)}")
             logger.info(f"Global context g user_id: {getattr(g, 'user_id', 'Not set')}")
 
-            # Debug JWT token if present
-            auth_header = request.headers.get('Authorization')
-            if auth_header and auth_header.startswith('Bearer '):
-                token = auth_header[7:]
-                logger.info(f"JWT token present, length: {len(token)}")
-                try:
-                    import jwt
-                    from src.config.app import Config
-                    decoded = jwt.decode(token, Config.JWT_SECRET, algorithms=['HS256'])
-                    logger.info(f"JWT decoded successfully: {decoded}")
-                except Exception as jwt_error:
-                    logger.error(f"JWT decode error: {jwt_error}")
-            else:
-                logger.info("No JWT token in request")
 
             if not session_token:
                 logger.warning("Session token is missing from request")

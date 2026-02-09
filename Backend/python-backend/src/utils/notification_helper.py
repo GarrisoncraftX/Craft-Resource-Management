@@ -2,14 +2,14 @@ import requests
 import os
 from src.utils.logger import logger
 
-JAVA_BACKEND_URL = os.getenv('JAVA_BACKEND_URL', 'http://localhost:5002')
+API_GATEWAY_URL = os.getenv('API_GATEWAY_URL', 'http://localhost:5003')
 
 class NotificationHelper:
     @staticmethod
     def send_notification(user_id, title, message, notification_type='INFO'):
         try:
             response = requests.post(
-                f'{JAVA_BACKEND_URL}/system/notifications',
+                f'{API_GATEWAY_URL}/api/system/notifications',
                 json={
                     'userId': user_id,
                     'title': title,
@@ -21,7 +21,7 @@ class NotificationHelper:
             response.raise_for_status()
             logger.info(f"Notification sent to user {user_id}: {title}")
         except Exception as e:
-            logger.error(f"Failed to send notification: {e}")
+            logger.debug(f"Failed to send notification: {e}")
 
     @staticmethod
     def notify_visitor_approval_request(host_user_id, visitor_name, purpose, visitor_id):

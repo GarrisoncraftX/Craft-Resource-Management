@@ -25,6 +25,7 @@ export const VisitorCheckIn: React.FC = () => {
   const [entryPass, setEntryPass] = useState<EntryPass | null>(null);
   const [employees, setEmployees] = useState<Array<{ id: number; name: string }>>([]);
   const [employeeSearch, setEmployeeSearch] = useState('');
+  const [pollIntervalId, setPollIntervalId] = useState<NodeJS.Timeout | null>(null);
 
   const [formData, setFormData] = useState({
     first_name: '',
@@ -37,7 +38,14 @@ export const VisitorCheckIn: React.FC = () => {
   });
 
   useEffect(() => {
-    // If user is authenticated, redirect to employee dashboard
+    return () => {
+      if (pollIntervalId) {
+        clearInterval(pollIntervalId);
+      }
+    };
+  }, [pollIntervalId]);
+
+  useEffect(() => {
     if (isAuthenticated) {
       navigate('/employee-dashboard');
       return;
@@ -54,7 +62,6 @@ export const VisitorCheckIn: React.FC = () => {
         const result = await visitorApiService.validateQRToken(token);
         if (result.valid) {
           setTokenValid(true);
-          // Load employees for dropdown
           setIsValidating(true);
           await loadEmployees();
         } else {
@@ -102,7 +109,7 @@ export const VisitorCheckIn: React.FC = () => {
 
   const handleEmployeeSearchChange = (searchValue: string) => {
     setEmployeeSearch(searchValue);
-    const emp = employees.find(emp => emp.name === searchValue);
+    const emp = employees.find(emp => emp.name.toLowerCase() === searchValue.toLowerCase());
     if (emp) {
       handleInputChange('visiting_employee_id', emp.id.toString());
     } else {
@@ -134,15 +141,40 @@ export const VisitorCheckIn: React.FC = () => {
         qr_token: token,
       });
 
-      // Generate entry pass
-      try {
-        const entryPassData = await visitorApiService.generateEntryPass(checkInResult.visitor_id);
-        setEntryPass(entryPassData);
-      } catch (error_) {
-        console.error('Failed to generate entry pass:', error_);
-      }
-
       setSuccess(true);
+      
+      const visitorId = checkInResult.visitor_id;
+      const interval = setInterval(async () => {
+        try {
+          const statusResponse = await visitorApiService.checkVisitorStatus(visitorId);
+          console.log('Status check:', statusResponse);
+          
+          if (statusResponse.status === 'approved') {
+            clearInterval(interval);
+            setPollIntervalId(null);
+            const entryPassData = await visitorApiService.generateEntryPass(visitorId);
+            if (entryPassData) {
+              setEntryPass(entryPassData);
+            }
+          } else if (statusResponse.status === 'rejected') {
+            clearInterval(interval);
+            setPollIntervalId(null);
+            setError('Your visit request was declined by the host.');
+            setSuccess(false);
+          }
+        } catch (err) {
+          console.error('Failed to check status:', err);
+        }
+      }, 3000);
+      
+      setPollIntervalId(interval);
+      
+      setTimeout(() => {
+        if (interval) {
+          clearInterval(interval);
+          setPollIntervalId(null);
+        }
+      }, 600000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to check in');
     } finally {
@@ -202,21 +234,30 @@ export const VisitorCheckIn: React.FC = () => {
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground mb-4">Welcome to CRMS, {formData.first_name} {formData.last_name}!</p>
 
+            {!entryPass && (
+              <div className="bg-yellow-50 p-4 rounded-lg border-2 border-yellow-200">
+                <Loader2 className="h-8 w-8 animate-spin text-yellow-600 mx-auto mb-2" />
+                <p className="font-semibold text-yellow-800">Awaiting Host Approval</p>
+                <p className="text-sm text-yellow-700 mt-2">
+                  Your host has been notified. Your entry pass will appear here once approved.
+                </p>
+              </div>
+            )}
+
             {entryPass && (
               <div className="bg-white p-4 rounded-lg border-2 border-green-200">
-                <h3 className="font-semibold text-lg mb-2">Your Entry Pass</h3>
+                <h3 className="font-semibold text-lg mb-2">✅ Your Entry Pass</h3>
                 <div className="text-sm space-y-1">
                   <p><strong>Visitor:</strong> {entryPass.visitor_name}</p>
                   <p><strong>Host:</strong> {entryPass.host_name}</p>
                   <p><strong>Purpose:</strong> {entryPass.purpose}</p>
                   <p><strong>Valid Until:</strong> {new Date(entryPass.valid_until).toLocaleString()}</p>
                 </div>
+                <p className="text-sm text-muted-foreground mt-3">
+                  Please show this entry pass at security checkpoints.
+                </p>
               </div>
             )}
-
-            <p className="text-sm text-muted-foreground">
-              Please show this entry pass at security checkpoints.
-            </p>
           </CardContent>
         </Card>
       </div>

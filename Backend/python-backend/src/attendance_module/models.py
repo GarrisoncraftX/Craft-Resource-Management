@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from src.database.connection import DatabaseManager
 from src.utils.logger import logger
 
-class BiometricModel:
+class AttendanceModel:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
     

@@ -18,7 +18,8 @@ export class ApiClient {
 
   private async fetchWithFallback(url: string, options: RequestInit): Promise<Response> {
     try {
-      const response = await fetch(url, { ...options, signal: AbortSignal.timeout(5000) });
+      const timeout = url.includes('/visitors/checkin') ? 60000 : 5000;
+      const response = await fetch(url, { ...options, signal: AbortSignal.timeout(timeout) });
       return response;
     } catch (error) {
       if (this.isNetworkError(error) || (error as Error).name === 'TimeoutError') {

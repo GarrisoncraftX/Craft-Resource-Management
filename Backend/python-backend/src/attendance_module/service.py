@@ -10,7 +10,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
 import secrets
 
-class BiometricService:
+class AttendanceService:
     def __init__(self):
         self.encryption_key = os.getenv('BIOMETRIC_ENCRYPTION_KEY', secrets.token_bytes(32))
     

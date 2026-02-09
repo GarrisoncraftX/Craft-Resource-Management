@@ -10,14 +10,15 @@ class VisitorController:
     def check_in_visitor(self):
         try:
             visitor_data = request.get_json()
-            # For visitor check-in, we don't have authenticated user, so pass None or default
             success, result = self.service.check_in_visitor(visitor_data, user_id=None)
             if success:
+                visitor_id = result
+                status_data = self.service.check_visitor_status(visitor_id)
                 return {
                     'success': True,
-                    'message': 'Visitor checked in successfully',
-                    'visitor_id': result,
-                    'check_in_time': visitor_data.get('check_in_time')
+                    'message': 'Visitor checked in successfully. Awaiting host approval.',
+                    'visitor_id': visitor_id,
+                    'status': status_data.get('status') if status_data else 'pending_approval'
                 }, 201
             else:
                 return {'success': False, 'message': result}, 400

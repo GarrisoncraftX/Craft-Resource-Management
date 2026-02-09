@@ -104,7 +104,8 @@ class VisitorApiService {
 
   // Check visitor status
   async checkVisitorStatus(visitorId: string): Promise<any> {
-    return apiClient.get(`/api/visitors/status?visitor_id=${visitorId}`);
+    const response = await apiClient.get(`/api/visitors/status?visitor_id=${visitorId}`);
+    return response.data || response;
   }
 }
 

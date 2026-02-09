@@ -140,13 +140,11 @@ const proxyRequest = async (req, res, targetUrl) => {
       method: req.method,
       headers,
       data: req.body,
-      responseType: "stream",
       validateStatus: () => true, 
     };
 
     const response = await axios(axiosConfig);
-    res.status(response.status);
-    response.data.pipe(res);
+    res.status(response.status).json(response.data);
   } catch (error) {
     console.error('Proxy request error:', error.message);
     res.status(500).json({ 

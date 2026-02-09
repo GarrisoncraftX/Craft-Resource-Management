@@ -31,10 +31,10 @@ class VisitorService:
         self.db = DatabaseManager(db_config)
 
     def generate_qr_token(self, frontend_url=None):
-        """Generate a dynamic QR token that expires in 30 seconds"""
+        """Generate a dynamic QR token that expires in 5 minutes"""
         try:
             token = str(uuid.uuid4())
-            expires_at = datetime.now(timezone.utc) + timedelta(seconds=30)
+            expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
 
             query = """
                 INSERT INTO qr_tokens (token, expires_at, is_used)
@@ -366,24 +366,30 @@ class VisitorService:
             logger.error(f"Error sending visitor notification: {e}")
 
     def generate_visitor_entry_pass(self, visitor_id):
-        """Generate an entry pass for the visitor"""
+        """Generate an entry pass for the visitor - only if approved"""
         try:
-            # Get visitor details
+            # Get visitor details - MUST be approved
             visitor_query = """
                 SELECT CONCAT(v.first_name, ' ', v.last_name) as full_name, vc.check_in_time, v.purpose_of_visit,
-                       u.first_name as host_first_name, u.last_name as host_last_name
+                       u.first_name as host_first_name, u.last_name as host_last_name, vc.status
                 FROM visitors v
                 LEFT JOIN visitor_checkins vc ON v.visitor_id = vc.visitor_id
                 LEFT JOIN users u ON v.employee_to_visit = u.id
-                WHERE v.visitor_id = %s AND vc.status = 'approved'
+                WHERE v.visitor_id = %s
                 ORDER BY vc.check_in_time DESC LIMIT 1
             """
             visitor_result = self.db.execute_query(visitor_query, (visitor_id,))
 
             if not visitor_result:
+                logger.warning(f"Entry pass request for non-existent visitor: {visitor_id}")
                 return None
-
+            
             visitor = visitor_result[0]
+            
+            # Check if visitor is approved
+            if visitor.get('status') != 'approved':
+                logger.warning(f"Entry pass request for non-approved visitor: {visitor_id}, status: {visitor.get('status')}")
+                return None
 
             # Generate entry pass data
             entry_pass = {
@@ -392,7 +398,7 @@ class VisitorService:
                 'host_name': f"{visitor['host_first_name']} {visitor['host_last_name']}",
                 'purpose': visitor['purpose_of_visit'],
                 'check_in_time': visitor['check_in_time'].isoformat() if visitor['check_in_time'] else None,
-                'valid_until': (datetime.now(timezone.utc) + timedelta(hours=8)).isoformat(),  # Valid for 8 hours
+                'valid_until': (datetime.now(timezone.utc) + timedelta(hours=8)).isoformat(),
                 'issued_at': datetime.now(timezone.utc).isoformat()
             }
 
@@ -404,7 +410,8 @@ class VisitorService:
             }).encode()).decode()
 
             entry_pass['qr_code'] = qr_data
-
+            
+            logger.info(f"Entry pass generated for approved visitor: {visitor_id}")
             return entry_pass
 
         except Exception as e:
