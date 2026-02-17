@@ -149,15 +149,8 @@ const EmployeeDashboard: React.FC = () => {
       'FINANCE': '/finance/dashboard',
       'HR': '/hr/dashboard',
       'PROCUREMENT': '/procurement/dashboard',
-      'LEGAL': '/legal/dashboard',
-      'PLANNING': '/planning/dashboard',
-      'TRANSPORTATION': '/transportation/dashboard',
-      'HEALTH_SAFETY': '/health-safety/dashboard',
-      'PUBLIC_RELATIONS': '/public-relations/dashboard',
-      'REVENUE_TAX': '/revenue-tax/dashboard',
       'SECURITY': '/security/dashboard',
       'ASSETS': '/assets/dashboard',
-      'OPERATIONS': '/operations/dashboard',
       'INFORMATION_TECHNOLOGY': '/admin/dashboard',
     };
 

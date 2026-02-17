@@ -59,38 +59,10 @@ const SecurityIncidents = lazy(() => import("@/components/modules/security/Secur
 const IdCardManagement = lazy(() => import("@/components/modules/security/IdCardManagement").then(module => ({ default: module.IdCardManagement })));
 
 const ProcurementDashboard = lazy(() => import("@/components/modules/procurement/ProcurementDashboard").then(module => ({ default: module.ProcurementDashboard })));
-const LegalDashboard = lazy(() => import("@/components/modules/legal/LegalDashboard").then(module => ({ default: module.LegalDashboard })));
-const LegalManagement = lazy(() => import("@/components/modules/legal/LegalManagement").then(module => ({ default: module.LegalManagement })));
-const LegalCases = lazy(() => import("@/components/modules/legal/LegalCases").then(module => ({ default: module.LegalCases })));
-const ComplianceRecords = lazy(() => import("@/components/modules/legal/ComplianceMonitoring").then(module => ({ default: module.ComplianceMonitoring })));
-const LegalDocuments = lazy(() => import("@/components/modules/legal/LegalDocuments").then(module => ({ default: module.LegalDocuments })));
-const ContractReview = lazy(() => import("@/components/modules/legal/ContractReview").then(module => ({ default: module.ContractReview })));
-const LegalOpinions = lazy(() => import("@/components/modules/legal/LegalOpinions").then(module => ({ default: module.LegalOpinions })));
-const PublicRelationsDashboard = lazy(() => import("@/components/modules/public-relations/PublicRelationsDashboard").then(module => ({ default: module.PublicRelationsDashboard })));
-const PlanningDashboard = lazy(() => import("@/components/modules/planning/PlanningDashboard").then(module => ({ default: module.PlanningDashboard })));
 
-
-const RevenueDashboard = lazy(() => import("@/components/modules/revenue/RevenueDashboard").then(module => ({ default: module.RevenueDashboard })));
-const UrbanPlanning = lazy(() => import("@/components/modules/planning/UrbanPlanning").then(module => ({ default: module.UrbanPlanning })));
-const ProjectManagement = lazy(() => import("@/components/modules/planning/ProjectManagement").then(module => ({ default: module.ProjectManagement })));
-const PressReleases = lazy(() => import("@/components/modules/public-relations/PressReleases").then(module => ({ default: module.PressReleases })));
-const MediaRelations = lazy(() => import("@/components/modules/public-relations/MediaRelations").then(module => ({ default: module.MediaRelations })));
-const PublicEvents = lazy(() => import("@/components/modules/public-relations/PublicEvents").then(module => ({ default: module.PublicEvents })));
-const SocialMedia = lazy(() => import("@/components/modules/public-relations/SocialMedia").then(module => ({ default: module.SocialMedia })));
-const TaxAssessment = lazy(() => import("@/components/modules/revenue/TaxAssessment").then(module => ({ default: module.TaxAssessment })));
 const ReportAnalytics = lazy(() => import("@/components/modules/reports/ReportAnalytics").then(module => ({ default: module.ReportAnalytics })));
 const CustomReportBuilder = lazy(() => import("@/components/modules/reports/CustomReportBuilder").then(module => ({ default: module.CustomReportBuilder })));
-const HealthSafetyDashboard = lazy(() => import("@/components/modules/health-safety/HealthSafetyDashboard").then(module => ({ default: module.HealthSafetyDashboard })));
-const IncidentReporting = lazy(() => import("@/components/modules/health-safety/IncidentReporting").then(module => ({ default: module.IncidentReporting })));
-const SafetyInspections = lazy(() => import("@/components/modules/health-safety/SafetyInspections").then(module => ({ default: module.SafetyInspections })));
-const SafetyTraining = lazy(() => import("@/components/modules/health-safety/SafetyTraining").then(module => ({ default: module.SafetyTraining })));
-const EnvironmentalHealth = lazy(() => import("@/components/modules/health-safety/EnvironmentalHealth").then(module => ({ default: module.EnvironmentalHealth })));
-const TransportationDashboard = lazy(() => import("@/components/modules/transportation/TransportationDashboard").then(module => ({ default: module.TransportationDashboard })));
-const FleetManagement = lazy(() => import("@/components/modules/transportation/FleetManagement").then(module => ({ default: module.FleetManagement })));
-const DriverManagement = lazy(() => import("@/components/modules/transportation/DriverManagement").then(module => ({ default: module.DriverManagement })));
-const VehicleMaintenance = lazy(() => import("@/components/modules/transportation/VehicleMaintenance").then(module => ({ default: module.VehicleMaintenance })));
-const FuelManagement = lazy(() => import("@/components/modules/transportation/FuelManagement").then(module => ({ default: module.FuelManagement })));
-const RouteManagement = lazy(() => import("@/components/modules/transportation/RouteManagement").then(module => ({ default: module.RouteManagement })));
+
 const ReportsDashboard = lazy(() => import("@/components/modules/reports/ReportsDashboard").then(module => ({ default: module.ReportsDashboard })));
 const FinancialReports = lazy(() => import("@/components/modules/finance/FinancialReports").then(module => ({ default: module.FinancialReports })));
 
@@ -108,7 +80,6 @@ const EmployeeOffboarding = lazy(() => import("@/components/modules/hr/EmployeeO
 
 const ProcurementPlanning = lazy(() => import("@/components/modules/procurement/ProcurementPlanning").then(module => ({ default: module.ProcurementPlanning })));
 const Requisitioning = lazy(() => import("@/components/modules/procurement/Requisitioning").then(module => ({ default: module.Requisitioning })));
-const TaxManagement = lazy(() => import("@/components/modules/revenue/TaxManagement").then(module => ({ default: module.TaxManagement })));
 const Tendering = lazy(() => import("@/components/modules/procurement/Tendering").then(module => ({ default: module.Tendering })));
 const BidEvaluation = lazy(() => import("@/components/modules/procurement/BidEvaluation").then(module => ({ default: module.BidEvaluation })));
 const ContractManagement = lazy(() => import("@/components/modules/procurement/ContractManagement").then(module => ({ default: module.ContractManagement })));
@@ -116,7 +87,6 @@ const VendorManagement = lazy(() => import("@/components/modules/procurement/Ven
 const VisitorCheckIn = lazy(() => import("@/pages/VisitorCheckIn").then(module => ({ default: module.VisitorCheckIn })));
 
 //Operations Modules
-const OperationsDashboard = lazy(() => import("@/components/modules/operations/OperationsDashboard").then(module => ({ default: module.OperationsDashboard })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -176,15 +146,8 @@ const AppRoutes = () => {
         'FINANCE': '/finance/dashboard',
         'HR': '/hr',
         'PROCUREMENT': '/procurement/dashboard',
-        'LEGAL': '/legal/dashboard',
-        'PLANNING': '/planning/dashboard',
-        'TRANSPORTATION': '/transportation',
-        'HEALTH_SAFETY': '/health-safety/dashboard',
-        'PUBLIC_RELATIONS': '/public-relations',
-        'REVENUE_TAX': '/revenue',
         'SECURITY': '/security',
         'ASSETS': '/assets/dashboard',
-        'OPERATIONS': '/operations/dashboard',
       };
       
       const departmentRoute = user?.departmentCode ? departmentRoutes[user.departmentCode] : null;
@@ -248,12 +211,6 @@ const AppRoutes = () => {
       <Route path="/finance/receivable" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Finance Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AccountsReceivable /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/finance/reports" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Finance Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><FinancialReports /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
-      {/* Health & Safety Routes */}
-      <Route path="/health-safety/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Health & Safety" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><HealthSafetyDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/health-safety/incidents" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Health & Safety" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><IncidentReporting /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/health-safety/inspections" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Health & Safety" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SafetyInspections /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/health-safety/training" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Health & Safety" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SafetyTraining /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/health-safety/environmental" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Health & Safety" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><EnvironmentalHealth /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
       {/* HR Routes */}
       <Route path="/hr/benefits" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><BenefitsAdministration /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
@@ -267,24 +224,8 @@ const AppRoutes = () => {
       <Route path="/hr/performance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PerformanceManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/hr/training" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="HR Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><TrainingDevelopment /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
-      {/* Legal Routes */}
-      <Route path="/legal/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/legal/management" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/legal/cases" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Cases" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalCases /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/legal/compliance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Compliance Monitoring" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ComplianceRecords /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/legal/documents" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Documents" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalDocuments /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/legal/contracts" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Contract Review" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ContractReview /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/legal/opinions" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Legal Opinions" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LegalOpinions /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
-      {/* Operations Routes */}
-      <Route path="/operations" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Operations Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><OperationsDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/operations/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Operations Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><OperationsDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-     
-      {/* Planning & Development Routes */}
-      <Route path="/planning/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Planning Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PlanningDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/planning/projects" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Planning" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ProjectManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/planning/urban" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Planning" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><UrbanPlanning /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-
+   
       {/* Procurement Routes */}
       <Route path="/procurement/bid-evaluation" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Procurement" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><BidEvaluation /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/procurement/contracts" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Procurement" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ContractManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
@@ -294,23 +235,12 @@ const AppRoutes = () => {
       <Route path="/procurement/tendering" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Procurement" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><Tendering /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/procurement/vendors" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Procurement" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><VendorManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
-      {/* Public Relations Routes */}
-      <Route path="/pr/releases" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Public Relations" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PressReleases /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/pr/media" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Public Relations" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><MediaRelations /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/pr/events" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Public Relations" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PublicEvents /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/pr/social" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Public Relations" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SocialMedia /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/public-relations" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Public Relations" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PublicRelationsDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
       {/* Reports Routes */}
       <Route path="/reports/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Reports" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ReportsDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/reports/analytics" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Reports" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ReportAnalytics /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/reports/custom" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Reports" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><CustomReportBuilder /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-
-      {/* Revenue & Tax Routes */}
-      <Route path="/revenue" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Revenue" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><RevenueDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/revenue/tax-assessment" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Tax Assessment" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><TaxAssessment /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/revenue/tax-management" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Tax Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><TaxManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      
+   
 
       {/* Security Routes */}
       <Route path="/security" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Security" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SecurityDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
@@ -323,14 +253,6 @@ const AppRoutes = () => {
       <Route path="/security/visitor-kiosk" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Visitor Kiosk" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><VisitorKiosk /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
 
-      {/* Transportation Routes */}
-      <Route path="/transportation" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><TransportationDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/transportation/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><TransportationDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/transportation/fleet" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><FleetManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/transportation/drivers" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><DriverManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/transportation/maintenance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><VehicleMaintenance /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/transportation/fuel" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><FuelManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/transportation/routes" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Transportation" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><RouteManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>
