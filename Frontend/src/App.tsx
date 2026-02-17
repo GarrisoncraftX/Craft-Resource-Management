@@ -41,6 +41,8 @@ const AssetAcquisition = lazy(() => import("@/components/modules/assets/AssetAcq
 const MaintenanceManagement = lazy(() => import("@/components/modules/assets/MaintenanceManagement").then(module => ({ default: module.MaintenanceManagement })));
 const AssetDisposal = lazy(() => import("@/components/modules/assets/AssetDisposal").then(module => ({ default: module.AssetDisposal })));
 const AssetValuation = lazy(() => import("@/components/modules/assets/AssetValuation").then(module => ({ default: module.AssetValuation })));
+const LicensesView = lazy(() => import("@/components/modules/assets/LicensesView").then(module => ({ default: module.LicensesView })));
+const AccessoriesView = lazy(() => import("@/components/modules/assets/AccessoriesView").then(module => ({ default: module.AccessoriesView })));
 
 //Employee Modules
 const EmployeeAccount = lazy(() => import("@/components/EmployeeAccount").then(module => ({ default: module.EmployeeAccount })));
@@ -187,6 +189,8 @@ const AppRoutes = () => {
       <Route path="/assets/maintenance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><MaintenanceManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/assets/register" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AssetRegister /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/assets/valuation" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AssetValuation /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/licenses" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LicensesView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/accessories" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AccessoriesView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
       {/* Authentication Routes */}
       <Route path="/register" element={<PublicRoute><SuspenseWrapper><AuthForm /></SuspenseWrapper></PublicRoute>} />

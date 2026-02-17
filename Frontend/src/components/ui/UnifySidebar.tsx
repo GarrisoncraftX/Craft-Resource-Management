@@ -2,10 +2,24 @@ import React, { useState } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 import {
   Calculator, Users, Package, ShoppingCart, Shield, Scale,
-  Megaphone, Map, Receipt, Heart, Truck, BarChart3, ChevronLeft, Settings, Lock
+  Megaphone, Map, Receipt, Heart, Truck, BarChart3, ChevronLeft, Settings, Lock,
+  ListFilter, Tag, FolderTree, TrendingDown, Boxes, Factory, Store, Building2, MapPin
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from '@/contexts/AuthContext'
+
+// Settings flyout items for Assets module
+const assetSettingsItems = [
+  { title: "Custom Fields", url: "/assets/settings/custom-fields", icon: ListFilter },
+  { title: "Status Labels", url: "/assets/settings/labels", icon: Tag },
+  { title: "Categories", url: "/assets/settings/categories", icon: FolderTree },
+  { title: "Depreciation", url: "/assets/settings/depreciation", icon: TrendingDown },
+  { title: "Models", url: "/assets/settings/models", icon: Boxes },
+  { title: "Manufacturers", url: "/assets/settings/manufacturers", icon: Factory },
+  { title: "Suppliers", url: "/assets/settings/suppliers", icon: Store },
+  { title: "Departments", url: "/assets/settings/departments", icon: Building2 },
+  { title: "Locations", url: "/assets/settings/locations", icon: MapPin },
+]
 
 const modules = [
   {
@@ -62,12 +76,21 @@ const modules = [
     icon: Package,
     color: "from-amber-500 to-amber-600",
     subItems: [
+      { title: "Dashboard", url: "/assets/dashboard" },
       { title: "Asset Register", url: "/assets/register" },
+      { title: "Licenses", url: "/assets/licenses" },
+      { title: "Accessories", url: "/assets/accessories" },
+      { title: "Consumables", url: "/assets/consumables" },
+      { title: "Components", url: "/assets/components" },
+      { title: "People", url: "/assets/people" },
+      { title: "Predefined Kits", url: "/assets/kits" },
       { title: "Asset Acquisition", url: "/assets/acquisition" },
       { title: "Maintenance", url: "/assets/maintenance" },
       { title: "Asset Disposal", url: "/assets/disposal" },
       { title: "Asset Valuation", url: "/assets/valuation" },
-    ]
+      { title: "Reports", url: "/assets/reports" },
+    ],
+    hasSettingsFlyout: true,
   },
   {
     title: "Procurement",
@@ -210,6 +233,7 @@ export function UnifySidebar() {
   const [manuallyOpenedModule, setManuallyOpenedModule] = useState<string | null>(null)
   const [preventHover, setPreventHover] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const [showSettingsFlyout, setShowSettingsFlyout] = useState(false)
   const location = useLocation()
   const { user } = useAuth()
 
@@ -428,6 +452,64 @@ export function UnifySidebar() {
                     </NavLink>
                   )
                 })}
+
+                {/* Settings flyout trigger for Assets module */}
+                {(currentHoveredOrActive as any).hasSettingsFlyout && (
+                  <div
+                    className="relative group/settings"
+                    onMouseEnter={() => setShowSettingsFlyout(true)}
+                    onMouseLeave={() => setShowSettingsFlyout(false)}
+                  >
+                    <button
+                      className={cn(
+                        "w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 mb-1",
+                        showSettingsFlyout || location.pathname.startsWith('/assets/settings')
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      )}
+                    >
+                      <Settings className="w-4 h-4" />
+                      Settings
+                    </button>
+
+                    {/* Floating Settings Panel */}
+                    {showSettingsFlyout && (
+                      <div
+                        className="absolute left-full top-0 ml-1 w-64 bg-card border border-border rounded-lg shadow-xl z-50 animate-in fade-in slide-in-from-left-2 duration-150"
+                      >
+                        <div className="p-3 border-b border-border">
+                          <h4 className="font-semibold text-sm text-foreground">Settings</h4>
+                        </div>
+                        <div className="p-2 grid grid-cols-2 gap-1">
+                          {assetSettingsItems.map((item) => {
+                            const isSettingActive = location.pathname === item.url
+                            return (
+                              <NavLink
+                                key={item.title}
+                                to={item.url}
+                                onClick={() => {
+                                  setHoveredModule(null)
+                                  setManuallyOpenedModule(null)
+                                  setIsMobileSidebarOpen(false)
+                                  setShowSettingsFlyout(false)
+                                }}
+                                className={cn(
+                                  "flex items-center gap-2 px-2 py-2 rounded text-xs transition-all duration-150",
+                                  isSettingActive
+                                    ? "bg-primary/10 text-primary font-medium"
+                                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                                )}
+                              >
+                                <item.icon className="w-3.5 h-3.5 flex-shrink-0" />
+                                <span className="truncate">{item.title}</span>
+                              </NavLink>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </nav>
             </div>
           )}

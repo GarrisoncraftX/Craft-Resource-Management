@@ -1,43 +1,120 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Package, Wrench, TrendingUp, AlertTriangle, FileText, BarChart3 } from 'lucide-react';
-import { PermissionGuard } from '@/components/PermissionGuard';
+import { Package, KeyRound, Keyboard, Droplets, Cpu, Users, Search, X, RefreshCw, Download, Printer, Maximize2, Minus, Pencil, RotateCcw, ClipboardCheck, ShieldCheck } from 'lucide-react';
 import { assetApiService } from '@/services/javabackendapi/assetApi';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
 import type { Asset, MaintenanceRecord } from '@/types/asset';
-import type { AssetStats, AssetCategory, AssetTrend, MaintenanceCost } from '@/services/mockData/assets';
+import type { AssetStats, AssetCategory } from '@/services/mockData/assets';
+
+// Big button card component matching Snipe-IT style
+const StatusCard: React.FC<{
+  icon: React.ReactNode;
+  count: number;
+  label: string;
+  bgClass: string;
+  onClick?: () => void;
+}> = ({ icon, count, label, bgClass, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`${bgClass} rounded-lg p-4 text-white flex flex-col items-start justify-between min-h-[110px] w-full transition-all hover:opacity-90 hover:shadow-lg relative overflow-hidden`}
+  >
+    <div className="absolute right-2 top-2 opacity-20">{icon}</div>
+    <span className="text-4xl font-bold leading-none">{count.toLocaleString()}</span>
+    <div className="flex items-center justify-between w-full mt-2">
+      <span className="text-sm font-medium">{label}</span>
+      <span className="text-xs opacity-80 hover:opacity-100 cursor-pointer">view all ➕</span>
+    </div>
+  </button>
+);
+
+// Mini table with search toolbar
+const DashboardTable: React.FC<{
+  title: string;
+  children: React.ReactNode;
+  collapsible?: boolean;
+}> = ({ title, children, collapsible = true }) => {
+  const [collapsed, setCollapsed] = useState(false);
+  const [search, setSearch] = useState('');
+
+  return (
+    <Card className="shadow-sm border-gray-200">
+      <CardHeader className="flex flex-row items-center justify-between py-3 px-4 border-b border-gray-100">
+        <CardTitle className="text-base font-semibold text-gray-800">{title}</CardTitle>
+        {collapsible && (
+          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={() => setCollapsed(!collapsed)}>
+            <Minus className="h-4 w-4" />
+          </Button>
+        )}
+      </CardHeader>
+      {!collapsed && (
+        <CardContent className="p-0">
+          <div className="flex items-center justify-end gap-1 p-3 border-b border-gray-50">
+            <div className="relative">
+              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search" className="h-7 w-36 text-xs border-gray-300" />
+            </div>
+            <Button variant="destructive" size="sm" className="h-7 w-7 p-0 bg-sky-500 hover:bg-sky-600"><X className="h-3 w-3" /></Button>
+            <Button variant="outline" size="sm" className="h-7 w-7 p-0 bg-sky-500 hover:bg-sky-600 text-white border-0"><RefreshCw className="h-3 w-3" /></Button>
+            <Button variant="outline" size="sm" className="h-7 w-7 p-0 bg-sky-500 hover:bg-sky-600 text-white border-0"><Download className="h-3 w-3" /></Button>
+            <Button variant="outline" size="sm" className="h-7 w-7 p-0 bg-sky-500 hover:bg-sky-600 text-white border-0"><Printer className="h-3 w-3" /></Button>
+            <Button variant="outline" size="sm" className="h-7 w-7 p-0 bg-sky-500 hover:bg-sky-600 text-white border-0"><Maximize2 className="h-3 w-3" /></Button>
+          </div>
+          {children}
+          <div className="p-2 text-center">
+            <Button variant="link" size="sm" className="text-xs text-white bg-sky-500 hover:bg-sky-600 w-full rounded h-7">View All</Button>
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
+};
+
+// Activity icon map
+const getActivityIcon = (action: string) => {
+  switch (action) {
+    case 'update': return <Pencil className="h-3.5 w-3.5 text-muted-foreground" />;
+    case 'checkout': return <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />;
+    case 'audit': return <ClipboardCheck className="h-3.5 w-3.5 text-muted-foreground" />;
+    default: return <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />;
+  }
+};
+
+// Mock activity data
+const mockActivities = [
+  { id: 1, date: 'Tue Feb 17, 2026 6:37AM', createdBy: 'Admin User', action: 'update', item: 'GSMR Handy #GSMR - GSMR', target: '' },
+  { id: 2, date: 'Tue Feb 17, 2026 6:37AM', createdBy: 'Admin User', action: 'checkout', item: '#205390976 - Macbook Pro 13"', target: '📍 Gerlachbury' },
+  { id: 3, date: 'Tue Feb 17, 2026 6:37AM', createdBy: 'Admin User', action: 'checkout', item: '#1460542631 - Macbook Pro 13"', target: '📍 Gerlachbury' },
+  { id: 4, date: 'Tue Feb 17, 2026 6:37AM', createdBy: 'Admin User', action: 'checkout', item: '#247822320 - Macbook Pro 13"', target: '📍 Gerlachbury' },
+  { id: 5, date: 'Tue Feb 17, 2026 6:35AM', createdBy: 'Admin User', action: 'audit', item: '#444620233 - iPhone 12', target: '' },
+];
+
+// Mock location data
+const mockLocations = [
+  { name: 'NL Leipzig', count: 2, assigned: 0 },
+  { name: 'Damarisstad', count: 251, assigned: 0 },
+  { name: 'Huelsborough', count: 236, assigned: 12 },
+  { name: 'New Nils', count: 262, assigned: 12 },
+  { name: 'North Derickfort', count: 231, assigned: 9 },
+  { name: 'Gerlachbury', count: 289, assigned: 15 },
+  { name: 'Port Elsie', count: 266, assigned: 11 },
+  { name: 'Allanport', count: 261, assigned: 12 },
+];
 
 export const AssetDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [recentAssets, setRecentAssets] = useState<Asset[]>([]);
-  const [maintenanceSchedule, setMaintenanceSchedule] = useState<MaintenanceRecord[]>([]);
   const [assetStats, setAssetStats] = useState<AssetStats | null>(null);
   const [assetsByCategory, setAssetsByCategory] = useState<AssetCategory[]>([]);
-  const [assetTrends, setAssetTrends] = useState<AssetTrend[]>([]);
-  const [maintenanceCosts, setMaintenanceCosts] = useState<MaintenanceCost[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [assets, maintenance, stats, categories, trends, costs] = await Promise.all([
-          assetApiService.getAllAssets(),
-          assetApiService.getAllMaintenanceRecords(),
+        const [stats, categories] = await Promise.all([
           assetApiService.getAssetStats(),
           assetApiService.getAssetsByCategory(),
-          assetApiService.getAssetTrends(),
-          assetApiService.getMaintenanceCosts()
         ]);
-        
-        setRecentAssets(assets.slice(0, 5));
-        setMaintenanceSchedule(maintenance.slice(0, 5));
         setAssetStats(stats);
         setAssetsByCategory(categories);
-        setAssetTrends(trends);
-        setMaintenanceCosts(costs);
       } catch (error) {
         console.error('Failed to fetch asset data:', error);
       }
@@ -47,300 +124,162 @@ export const AssetDashboard: React.FC = () => {
 
   if (!assetStats) return null;
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-2xl font-bold text-blue-900">Asset Management Module</h1>
-          <p className="text-gray-600">Track and manage organizational assets</p>
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <h1 className="text-xl font-bold text-gray-800">Dashboard</h1>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{assetStats.totalAssets}</div>
-              <p className="text-xs text-muted-foreground">{assetStats.activeAssets} active assets</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${assetStats.totalValue.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">{assetStats.depreciationRate}% depreciation rate</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Maintenance Due</CardTitle>
-              <Wrench className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{assetStats.maintenanceAssets}</div>
-              <p className="text-xs text-muted-foreground">Assets requiring maintenance</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Disposed Assets</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{assetStats.disposedAssets}</div>
-              <p className="text-xs text-muted-foreground">Completed disposals</p>
-            </CardContent>
-          </Card>
+      <main className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Big Button Status Cards - Snipe-IT style */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <StatusCard
+            icon={<Package className="h-12 w-12" />}
+            count={2599}
+            label="Assets"
+            bgClass="bg-sky-500"
+          />
+          <StatusCard
+            icon={<KeyRound className="h-12 w-12" />}
+            count={50}
+            label="Licenses"
+            bgClass="bg-emerald-500"
+          />
+          <StatusCard
+            icon={<Keyboard className="h-12 w-12" />}
+            count={4}
+            label="Accessories"
+            bgClass="bg-teal-500"
+          />
+          <StatusCard
+            icon={<Droplets className="h-12 w-12" />}
+            count={3}
+            label="Consumables"
+            bgClass="bg-amber-500"
+          />
+          <StatusCard
+            icon={<Cpu className="h-12 w-12" />}
+            count={4}
+            label="Components"
+            bgClass="bg-sky-600"
+          />
+          <StatusCard
+            icon={<Users className="h-12 w-12" />}
+            count={2009}
+            label="People"
+            bgClass="bg-rose-400"
+          />
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-            <TabsTrigger value="acquisition">Acquisition</TabsTrigger>
-            <TabsTrigger value="disposal">Disposal</TabsTrigger>
-          </TabsList>
+        {/* Recent Activity + Assets by Status */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-3">
+            <DashboardTable title="Recent Activity">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+                    <TableHead className="text-xs font-semibold py-2 px-3 w-8"></TableHead>
+                    <TableHead className="text-xs font-semibold py-2 px-3">Date</TableHead>
+                    <TableHead className="text-xs font-semibold py-2 px-3">Created By</TableHead>
+                    <TableHead className="text-xs font-semibold py-2 px-3">Action</TableHead>
+                    <TableHead className="text-xs font-semibold py-2 px-3">Item</TableHead>
+                    <TableHead className="text-xs font-semibold py-2 px-3">Target</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mockActivities.map(a => (
+                    <TableRow key={a.id} className="border-b border-gray-50">
+                      <TableCell className="py-2 px-3">{getActivityIcon(a.action)}</TableCell>
+                      <TableCell className="py-2 px-3 text-xs text-gray-600">{a.date}</TableCell>
+                      <TableCell className="py-2 px-3 text-xs text-sky-600 cursor-pointer hover:underline">{a.createdBy}</TableCell>
+                      <TableCell className="py-2 px-3 text-xs">{a.action}</TableCell>
+                      <TableCell className="py-2 px-3 text-xs text-sky-600 cursor-pointer hover:underline">║ {a.item}</TableCell>
+                      <TableCell className="py-2 px-3 text-xs text-sky-600">{a.target}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </DashboardTable>
+          </div>
 
-          <TabsContent value="overview">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Assets</CardTitle>
-                  <CardDescription>Recently added or updated assets</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Asset Tag</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Value</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {recentAssets.map((asset) => (
-                        <TableRow key={asset.id}>
-                          <TableCell className="font-medium">{asset.assetTag}</TableCell>
-                          <TableCell>{asset.assetName}</TableCell>
-                          <TableCell>
-                            <Badge variant={asset.status === 'Active' ? 'default' : 'secondary'}>
-                              {asset.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>${asset.currentValue.toLocaleString()}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Maintenance Schedule</CardTitle>
-                  <CardDescription>Upcoming maintenance activities</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {maintenanceSchedule.map((maintenance) => (
-                      <div key={maintenance.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{maintenance.asset}</p>
-                          <p className="text-sm text-gray-600">{maintenance.type} - {maintenance.performedBy}</p>
-                          <p className="text-xs text-gray-500">Scheduled: {new Date(maintenance.maintenanceDate).toLocaleDateString()}</p>
-                        </div>
-                        <Badge variant={maintenance.status === 'In Progress' ? 'default' : 'secondary'}>
-                          {maintenance.status}
-                        </Badge>
-                      </div>
-                    ))}
+          <div className="lg:col-span-2">
+            <DashboardTable title="Assets by Status">
+              <div className="p-4 text-sm text-muted-foreground text-center">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-2">
+                    <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" /> Ready to Deploy</span>
+                    <span className="font-semibold text-foreground">2,499</span>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+                  <div className="flex items-center justify-between px-2">
+                    <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-amber-500 inline-block" /> Pending</span>
+                    <span className="font-semibold text-foreground">50</span>
+                  </div>
+                  <div className="flex items-center justify-between px-2">
+                    <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500 inline-block" /> Archived</span>
+                    <span className="font-semibold text-foreground">50</span>
+                  </div>
+                </div>
+              </div>
+            </DashboardTable>
+          </div>
+        </div>
 
-          <TabsContent value="analytics">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5" />
-                    Assets by Category
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={assetsByCategory}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="category" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#3b82f6" name="Count" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+        {/* Locations + Asset Categories */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <DashboardTable title="Locations">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+                  <TableHead className="text-xs font-semibold py-2 px-3">Name</TableHead>
+                  <TableHead className="text-xs font-semibold py-2 px-3 text-center">║</TableHead>
+                  <TableHead className="text-xs font-semibold py-2 px-3 text-center">Assigned</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {mockLocations.map(loc => (
+                  <TableRow key={loc.name} className="border-b border-gray-50">
+                    <TableCell className="py-2 px-3 text-xs text-sky-600 cursor-pointer hover:underline">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-gray-400 inline-block" />
+                        {loc.name}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-2 px-3 text-xs text-center">{loc.count}</TableCell>
+                    <TableCell className="py-2 px-3 text-xs text-center">{loc.assigned}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </DashboardTable>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Asset Value Distribution</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={assetsByCategory}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={100}
-                        dataKey="value"
-                        label={({ category, value }) => `${category}: $${value.toLocaleString()}`}
-                      >
-                        {assetsByCategory.map((entry) => (
-                          <Cell key={entry.category} fill={COLORS[assetsByCategory.indexOf(entry) % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Value']} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Asset Acquisition Trends</CardTitle>
-                <CardDescription>Monthly asset acquisitions and disposals</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <LineChart data={assetTrends}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="acquisitions" stroke="#10b981" strokeWidth={2} name="Acquisitions" />
-                    <Line type="monotone" dataKey="disposals" stroke="#ef4444" strokeWidth={2} name="Disposals" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="maintenance">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Maintenance Cost Analysis</CardTitle>
-                  <CardDescription>Monthly maintenance costs by type</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <AreaChart data={maintenanceCosts}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => [`$${value}`, '']} />
-                      <Area type="monotone" dataKey="preventive" stackId="1" stroke="#10b981" fill="#10b981" name="Preventive" />
-                      <Area type="monotone" dataKey="corrective" stackId="1" stroke="#f59e0b" fill="#f59e0b" name="Corrective" />
-                      <Area type="monotone" dataKey="emergency" stackId="1" stroke="#ef4444" fill="#ef4444" name="Emergency" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Maintenance Management</CardTitle>
-                  <CardDescription>Schedule and track asset maintenance</CardDescription>
-                  <PermissionGuard requiredPermissions={['assets.maintenance.schedule']}>
-                    <Button>
-                      <Wrench className="h-4 w-4 mr-2" />
-                      Schedule Maintenance
-                    </Button>
-                  </PermissionGuard>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Asset</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Performed By</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {maintenanceSchedule.map((maintenance) => (
-                        <TableRow key={maintenance.id}>
-                          <TableCell className="font-medium">{maintenance.asset}</TableCell>
-                          <TableCell>{maintenance.type}</TableCell>
-                          <TableCell>{new Date(maintenance.maintenanceDate).toLocaleDateString()}</TableCell>
-                          <TableCell>{maintenance.performedBy}</TableCell>
-                          <TableCell>
-                            <Badge variant={maintenance.status === 'Completed' ? 'default' : 'secondary'}>
-                              {maintenance.status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="acquisition">
-            <Card>
-              <CardHeader>
-                <CardTitle>Asset Acquisition</CardTitle>
-                <CardDescription>Manage new asset purchases and acquisitions</CardDescription>
-                <PermissionGuard requiredPermissions={['assets.acquisition.create']}>
-                  <Button>
-                    <FileText className="h-4 w-4 mr-2" />
-                    New Acquisition Request
-                  </Button>
-                </PermissionGuard>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">Asset acquisition interface will be implemented here.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="disposal">
-            <Card>
-              <CardHeader>
-                <CardTitle>Asset Disposal</CardTitle>
-                <CardDescription>Manage end-of-life asset disposal</CardDescription>
-                <PermissionGuard requiredPermissions={['assets.disposal.create']}>
-                  <Button>Process Disposal</Button>
-                </PermissionGuard>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">Asset disposal interface will be implemented here.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+          <DashboardTable title="Asset Categories">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+                  <TableHead className="text-xs font-semibold py-2 px-3">Name</TableHead>
+                  <TableHead className="text-xs font-semibold py-2 px-3">Type</TableHead>
+                  <TableHead className="text-xs font-semibold py-2 px-3 text-center">║</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {assetsByCategory.map(cat => (
+                  <TableRow key={cat.category} className="border-b border-gray-50">
+                    <TableCell className="py-2 px-3 text-xs text-sky-600 cursor-pointer hover:underline">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block" />
+                        {cat.category}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-2 px-3 text-xs">Asset</TableCell>
+                    <TableCell className="py-2 px-3 text-xs text-center">{cat.count}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </DashboardTable>
+        </div>
       </main>
     </div>
   );
