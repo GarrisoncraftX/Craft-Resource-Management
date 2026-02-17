@@ -183,7 +183,6 @@ All colors MUST be HSL.
   }
   
   /* Ensure flyouts remain visible and clickable */
-  .fixed.left-\[210px\].top-16,
   .fixed.left-64.top-16,
   .fixed.left-\[210px\].top-14,
   .fixed.left-64.top-14 {
