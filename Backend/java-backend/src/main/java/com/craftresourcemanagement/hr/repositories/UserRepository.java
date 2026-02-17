@@ -13,6 +13,9 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmployeeId(String employeeId);
     List<User> findByAccountStatus(String accountStatus);
+    List<User> findByDepartmentId(Integer departmentId);
+    List<User> findByRoleId(Integer roleId);
+    List<User> findByIsActive(Integer isActive);
     
     @Query("SELECT COUNT(u) FROM User u WHERE u.isActive = CASE WHEN ?1 = true THEN 1 ELSE 0 END")
     long countByIsActive(boolean isActive);

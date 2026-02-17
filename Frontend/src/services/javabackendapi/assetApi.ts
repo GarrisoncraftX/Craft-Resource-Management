@@ -241,6 +241,13 @@ class AssetApiService {
       { ...record, id: Date.now() }
     );
   }
+
+  async getAssetCounts(): Promise<Record<string, number>> {
+    return this.handleApiCall(
+      () => apiClient.get('/assets/counts'),
+      { 'list-all': 0, deployed: 0, 'ready-to-deploy': 0, pending: 0, 'un-deployable': 0, archived: 0 }
+    );
+  }
 }
 
 export const assetApiService = new AssetApiService();

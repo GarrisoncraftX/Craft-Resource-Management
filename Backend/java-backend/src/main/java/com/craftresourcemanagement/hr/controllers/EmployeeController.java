@@ -49,13 +49,26 @@ public class EmployeeController {
     }
 
     @GetMapping("/list")
-    public ResponseEntity<List<User>> listEmployees() {
+    public ResponseEntity<List<User>> listEmployees(
+            @RequestParam(required = false) String filter,
+            @RequestParam(required = false) Integer departmentId,
+            @RequestParam(required = false) Integer roleId) {
         try {
-            List<User> employees = employeeService.listAllEmployees();
+            List<User> employees;
+            if (filter != null) {
+                employees = employeeService.getFilteredUsers(filter, departmentId, roleId);
+            } else {
+                employees = employeeService.listAllEmployees();
+            }
             return ResponseEntity.ok(employees);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(null);
         }
+    }
+
+    @GetMapping("/counts")
+    public ResponseEntity<Map<String, Long>> getPeopleCounts() {
+        return ResponseEntity.ok(employeeService.getPeopleCounts());
     }
 
     @GetMapping("/provisioned")

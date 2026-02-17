@@ -9,9 +9,11 @@ import type { Asset } from '@/types/asset';
 
 interface AssetFormDialogProps {
   onAssetCreated?: (asset: Asset) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export const AssetFormDialog: React.FC<AssetFormDialogProps> = ({ onAssetCreated }) => {
+export const AssetFormDialog: React.FC<AssetFormDialogProps> = ({ onAssetCreated, onOpenChange}) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -12,6 +12,7 @@ export interface Asset {
   acquisitionDate?: string;
   purchasePrice?: number;
   acquisitionCost?: number;
+  serialNumber?: string;
   currentValue?: number;
   depreciationRate?: number;
   assignedTo?: string;

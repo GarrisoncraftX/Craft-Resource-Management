@@ -11,6 +11,7 @@ import com.craftresourcemanagement.utils.AuditClient;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -42,6 +43,36 @@ public class AssetServiceImpl implements AssetService {
     @Override
     public List<Asset> getAllAssets() {
         return assetRepository.findAll();
+    }
+
+    @Override
+    public List<Asset> getFilteredAssets(String filter) {
+        List<Asset> all = assetRepository.findAll();
+        if ("deployed".equals(filter)) {
+            return all.stream().filter(a -> "Deployed".equals(a.getStatus()) || "In Use".equals(a.getStatus())).toList();
+        } else if ("ready-to-deploy".equals(filter)) {
+            return all.stream().filter(a -> "Ready to Deploy".equals(a.getStatus()) || "Deployable".equals(a.getStatus())).toList();
+        } else if ("pending".equals(filter)) {
+            return all.stream().filter(a -> "Pending".equals(a.getStatus())).toList();
+        } else if ("un-deployable".equals(filter)) {
+            return all.stream().filter(a -> "Maintenance".equals(a.getStatus())).toList();
+        } else if ("archived".equals(filter)) {
+            return all.stream().filter(a -> "Archived".equals(a.getStatus()) || "Disposed".equals(a.getStatus())).toList();
+        }
+        return all;
+    }
+
+    @Override
+    public Map<String, Long> getAssetCounts() {
+        List<Asset> all = assetRepository.findAll();
+        return Map.of(
+            "list-all", (long) all.size(),
+            "deployed", all.stream().filter(a -> "Deployed".equals(a.getStatus()) || "In Use".equals(a.getStatus())).count(),
+            "ready-to-deploy", all.stream().filter(a -> "Ready to Deploy".equals(a.getStatus()) || "Deployable".equals(a.getStatus())).count(),
+            "pending", all.stream().filter(a -> "Pending".equals(a.getStatus())).count(),
+            "un-deployable", all.stream().filter(a -> "Maintenance".equals(a.getStatus())).count(),
+            "archived", all.stream().filter(a -> "Archived".equals(a.getStatus()) || "Disposed".equals(a.getStatus())).count()
+        );
     }
 
     @Override

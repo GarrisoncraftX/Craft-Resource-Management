@@ -23,6 +23,8 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+
 
 @Service
 public class EmployeeServiceImpl implements EmployeeService {
@@ -183,6 +185,33 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public List<User> listAllEmployees() {
         return userRepository.findAll();
+    }
+
+    @Override
+    public List<User> getFilteredUsers(String filter, Integer departmentId, Integer roleId) {
+        if ("all".equals(filter)) {
+            return userRepository.findAll();
+        } else if ("admin".equals(filter)) {
+            return userRepository.findAll().stream()
+                .filter(u -> u.getRoleId() != null && (u.getRoleId() == 1 || u.getRoleId() == 2 || u.getRoleId() == 3))
+                .toList();
+        } else if ("assets".equals(filter)) {
+            return userRepository.findByDepartmentId(departmentId != null ? departmentId : 6);
+        } else if ("deleted".equals(filter)) {
+            return userRepository.findByIsActive(0);
+        }
+        return userRepository.findAll();
+    }
+
+    @Override
+    public Map<String, Long> getPeopleCounts() {
+        List<User> all = userRepository.findAll();
+        return Map.of(
+            "all", (long) all.size(),
+            "admin", all.stream().filter(u -> u.getRoleId() != null && (u.getRoleId() == 1 || u.getRoleId() == 2 || u.getRoleId() == 3)).count(),
+            "assets", all.stream().filter(u -> u.getDepartmentId() != null && u.getDepartmentId() == 6).count(),
+            "deleted", all.stream().filter(u -> u.getIsActive() == 0).count()
+        );
     }
 
     @Override

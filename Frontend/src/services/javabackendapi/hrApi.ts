@@ -279,6 +279,10 @@ class HrApiService {
     const response = await apiClient.get('/hr/employees/provisioned');
     return response.employees || [];
   }
+
+  async getPeopleCounts(): Promise<Record<string, number>> {
+    return apiClient.get('/hr/employees/counts');
+  }
 }
 
 export const hrApiService = new HrApiService();

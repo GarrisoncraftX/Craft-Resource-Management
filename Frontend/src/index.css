@@ -40,14 +40,14 @@ All colors MUST be HSL.
     --radius: 0.5rem;
 
     /* Sidebar - clean modern look */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 217 91% 35%;
+    --sidebar-background: 195 20% 15%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 214 95% 93%;
-    --sidebar-accent-foreground: 217 91% 35%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 217 91% 35%;
+    --sidebar-accent: 195 20% 20%;
+    --sidebar-accent-foreground: 0 0% 85%;
+    --sidebar-border: 195 20% 20%;
+    --sidebar-ring: 217 91% 60%;
   }
 
   .dark {
@@ -120,6 +120,100 @@ All colors MUST be HSL.
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: hsl(var(--muted));
     border-radius: 3px;
+  }
+}
+
+/* Sidebar custom styling - override bg-card and bg-white for sidebar elements */
+@layer components {
+  /* Override bg-card for sidebar */
+  .fixed.left-0.top-14 .bg-card,
+  .fixed.left-0.top-16 .bg-card,
+  .fixed.left-\[210px\] .bg-card,
+  .fixed.left-64 .bg-card {
+    background-color: #1e282c !important;
+  }
+  
+  /* Target the main sidebar container - uses fixed positioning */
+  .fixed.left-0.top-14, 
+  .fixed.left-0.top-16 {
+    background-color: #1e282c !important;
+    border-color: #2a3539 !important;
+  }
+  
+  /* Sidebar dropdowns and flyouts - uses fixed positioning with left-[210px] or left-64 */
+  .fixed.left-\[210px\].top-16,
+  .fixed.left-64.top-16,
+  .fixed.left-\[210px\].top-14,
+  .fixed.left-64.top-14 {
+    background-color: #1e282c !important;
+    border-color: #2a3539 !important;
+  }
+  
+  /* Override bg-white for assets hardware filter dropdown */
+  .fixed.left-\[210px\].top-16.w-72,
+  .fixed.left-64.top-16.w-72 {
+    background-color: #1e282c !important;
+    border-color: #2a3539 !important;
+  }
+  
+  /* Text colors for better readability on dark sidebar */
+  .fixed.left-0.top-14 .text-muted-foreground,
+  .fixed.left-0.top-16 .text-muted-foreground,
+  .fixed.left-\[210px\] .text-muted-foreground,
+  .fixed.left-64 .text-muted-foreground {
+    color: #d4d4d4 !important;
+  }
+  
+  /* Sidebar text colors */
+  .fixed.left-0.top-14 .text-sm,
+  .fixed.left-0.top-16 .text-sm,
+  .fixed.left-\[210px\] .text-sm,
+  .fixed.left-64 .text-sm,
+  .fixed.left-0.top-14 .text-xs,
+  .fixed.left-0.top-16 .text-xs,
+  .fixed.left-\[210px\] .text-xs,
+  .fixed.left-64 .text-xs {
+    color: #d4d4d4 !important;
+  }
+  
+  /* Flyout content text */
+  .fixed.left-\[210px\] span:not([class*="text-"]),
+  .fixed.left-64 span:not([class*="text-"]) {
+    color: #d4d4d4 !important;
+  }
+  
+  /* Ensure flyouts remain visible and clickable */
+  .fixed.left-\[210px\].top-16,
+  .fixed.left-64.top-16,
+  .fixed.left-\[210px\].top-14,
+  .fixed.left-64.top-14 {
+    pointer-events: auto !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  /* Preserve icon colors in sidebar and flyouts */
+  .fixed.left-0.top-14 svg,
+  .fixed.left-0.top-16 svg,
+  .fixed.left-\[210px\] svg,
+  .fixed.left-64 svg {
+    color: inherit !important;
+  }
+  
+  /* Active/selected item background */
+  .fixed.left-0.top-14 .bg-accent,
+  .fixed.left-0.top-16 .bg-accent,
+  .fixed.left-\[210px\] .bg-accent,
+  .fixed.left-64 .bg-accent {
+    background-color: #2a3539 !important;
+  }
+  
+  /* Ensure active/hover states work with dark background */
+  .fixed.left-0.top-14 .hover\:bg-accent:hover,
+  .fixed.left-0.top-16 .hover\:bg-accent:hover,
+  .fixed.left-\[210px\] .hover\:bg-accent:hover,
+  .fixed.left-64 .hover\:bg-accent:hover {
+    background-color: #2a3539 !important;
   }
 }
 

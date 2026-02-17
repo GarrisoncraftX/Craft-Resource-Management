@@ -1,14 +1,15 @@
 import React, { useState } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 import {
-  Calculator, Users, Package, ShoppingCart, Shield, Scale,
-  Megaphone, Map, Receipt, Heart, Truck, BarChart3, ChevronLeft, Settings, Lock,
-  ListFilter, Tag, FolderTree, TrendingDown, Boxes, Factory, Store, Building2, MapPin
+  Calculator, Users, Package, ShoppingCart, Shield, ChevronRight, Lock,
+  ListFilter, Tag, FolderTree, TrendingDown, Boxes, Factory, Store, Building2, MapPin, Menu,
+  Circle, X, Check, AlertCircle, Clock,
+  Crown
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from '@/contexts/AuthContext'
+import { assetApiService, hrApiService } from "@/services/api"
 
-// Settings flyout items for Assets module
 const assetSettingsItems = [
   { title: "Custom Fields", url: "/assets/settings/custom-fields", icon: ListFilter },
   { title: "Status Labels", url: "/assets/settings/labels", icon: Tag },
@@ -20,6 +21,27 @@ const assetSettingsItems = [
   { title: "Departments", url: "/assets/settings/departments", icon: Building2 },
   { title: "Locations", url: "/assets/settings/locations", icon: MapPin },
 ]
+
+const assetHardwareFilters = [
+  { label: 'List All', icon: Circle },
+  { label: 'Deployed', icon: Circle },
+  { label: 'Ready to Deploy', icon: Circle },
+  { label: 'Pending', icon: Circle },
+  { label: 'Un-deployable', icon: X },
+  { label: 'BYOD', icon: X },
+  { label: 'Archived', icon: X },
+  { label: 'Requestable', icon: Check },
+  { label: 'Due for Audit', icon: AlertCircle },
+  { label: 'Due for Checkin', icon: Clock },
+]
+
+const assetPeopleFilters = [
+  { label: 'List All', icon: Circle },
+  { label: 'Admin Users', icon: Crown },
+  { label: 'Asset Personel', icon: Crown },
+  { label: 'Deleted Users', icon: X }
+]
+
 
 const modules = [
   {
@@ -71,26 +93,23 @@ const modules = [
     ]
   },
   {
-    title: "Assets",
+    title: "Assets Management",
     url: "/assets",
     icon: Package,
     color: "from-amber-500 to-amber-600",
     subItems: [
       { title: "Dashboard", url: "/assets/dashboard" },
-      { title: "Asset Register", url: "/assets/register" },
+      { title: "Assets", url: "/assets/hardware", hasSubFlyout: true },
       { title: "Licenses", url: "/assets/licenses" },
       { title: "Accessories", url: "/assets/accessories" },
       { title: "Consumables", url: "/assets/consumables" },
       { title: "Components", url: "/assets/components" },
-      { title: "People", url: "/assets/people" },
       { title: "Predefined Kits", url: "/assets/kits" },
-      { title: "Asset Acquisition", url: "/assets/acquisition" },
-      { title: "Maintenance", url: "/assets/maintenance" },
-      { title: "Asset Disposal", url: "/assets/disposal" },
-      { title: "Asset Valuation", url: "/assets/valuation" },
+      { title: "People", url: "/assets/people", hasSubFlyout: true },
       { title: "Reports", url: "/assets/reports" },
+      { title: "Requestable Items", url: "/assets/requestable" },
+      { title: "Settings", url: "/assets/settings", hasSubFlyout: true },
     ],
-    hasSettingsFlyout: true,
   },
   {
     title: "Procurement",
@@ -120,122 +139,46 @@ const modules = [
       { title: "ID Cards", url: "/security/id-cards" },
     ]
   },
-  {
-    title: "Legal",
-    url: "/legal",
-    icon: Scale,
-    color: "from-slate-500 to-slate-600",
-    subItems: [
-      { title: "Management", url: "/legal/management" },
-      { title: "Cases", url: "/legal/cases" },
-      { title: "Contract Review", url: "/legal/contract-review" },
-      { title: "Compliance", url: "/legal/compliance" },
-      { title: "Documents", url: "/legal/documents" },
-      { title: "Opinions", url: "/legal/opinions" },
-    ]
-  },
-  {
-    title: "Operations",
-    url: "/operations",
-    icon: Settings,
-    color: "from-purple-500 to-purple-600",
-    subItems: [
-      { title: "Dashboard", url: "/operations/dashboard" },
-      { title: "Facilities", url: "/assets/dashboard" },
-      { title: "Maintenance", url: "/assets/maintenance" },
-      { title: "Procurement", url: "/procurement/dashboard" },
-      { title: "Vendors", url: "/procurement/vendors" },
-      { title: "Health & Safety", url: "/health-safety/dashboard" },
-      { title: "Transportation", url: "/transportation" },
-      { title: "Analytics", url: "/reports/analytics" },
-    ]
-  },
-  {
-    title: "PR",
-    url: "/pr",
-    icon: Megaphone,
-    color: "from-pink-500 to-pink-600",
-    subItems: [
-      { title: "Press Releases", url: "/pr/press-releases" },
-      { title: "Media Relations", url: "/pr/media-relations" },
-      { title: "Social Media", url: "/pr/social-media" },
-      { title: "Public Events", url: "/pr/events" },
-    ]
-  },
-  {
-    title: "Planning",
-    url: "/planning",
-    icon: Map,
-    color: "from-cyan-500 to-cyan-600",
-    subItems: [
-      { title: "Urban Planning", url: "/planning/urban" },
-      { title: "Projects", url: "/planning/projects" },
-      { title: "Policies", url: "/planning/policies" },
-      { title: "Strategic", url: "/planning/strategic" },
-      { title: "Permits", url: "/planning/permits" },
-    ]
-  },
-  {
-    title: "Revenue",
-    url: "/revenue",
-    icon: Receipt,
-    color: "from-orange-500 to-orange-600",
-    subItems: [
-      { title: "Tax Assessment", url: "/revenue/tax-assessment" },
-      { title: "Tax Management", url: "/revenue/tax-management" },
-      { title: "Tracking", url: "/revenue/tracking" },
-      { title: "Collection", url: "/revenue/collection" },
-      { title: "Property Tax", url: "/revenue/property-tax" },
-      { title: "Business Permits", url: "/revenue/business-permits" },
-    ]
-  },
-  {
-    title: "Health",
-    url: "/health-safety",
-    icon: Heart,
-    color: "from-red-500 to-red-600",
-    subItems: [
-      { title: "Inspections", url: "/health-safety/inspections" },
-      { title: "Incidents", url: "/health-safety/incidents" },
-      { title: "Training", url: "/health-safety/training" },
-      { title: "Environmental", url: "/health-safety/environmental" },
-    ]
-  },
-  {
-    title: "Transport",
-    url: "/transportation",
-    icon: Truck,
-    color: "from-indigo-500 to-indigo-600",
-    subItems: [
-      { title: "Fleet", url: "/transportation/fleet" },
-      { title: "Maintenance", url: "/transportation/maintenance" },
-      { title: "Drivers", url: "/transportation/drivers" },
-      { title: "Routes", url: "/transportation/routes" },
-      { title: "Fuel", url: "/transportation/fuel" },
-    ]
-  },
-  {
-    title: "Reports",
-    url: "/reports",
-    icon: BarChart3,
-    color: "from-teal-500 to-teal-600",
-    subItems: [
-      { title: "Dashboard", url: "/reports/dashboard" },
-      { title: "Custom Reports", url: "/reports/custom" },
-      { title: "AI Insights", url: "/reports/ai-insights" },
-      { title: "Analytics", url: "/reports/analytics" },
-    ]
-  }
 ]
 
 export function UnifySidebar() {
   const [hoveredModule, setHoveredModule] = useState<string | null>(null)
-  const [manuallyOpenedModule, setManuallyOpenedModule] = useState<string | null>(null)
-  const [preventHover, setPreventHover] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
-  const [showSettingsFlyout, setShowSettingsFlyout] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [expandedDropdown, setExpandedDropdown] = useState<string | null>(null)
+  const [hoveredSettings, setHoveredSettings] = useState(false)
+  const [hoveredHardware, setHoveredHardware] = useState(false)
+  const [hoveredPeople, setHoveredPeople] = useState(false)
+  const [assetCounts, setAssetCounts] = useState<Record<string, number>>({})
+  const [peopleCounts, setPeopleCounts] = useState<Record<string, number>>({})
   const location = useLocation()
   const { user } = useAuth()
+
+  React.useEffect(() => {
+    const fetchAssetCounts = async () => {
+      try {
+        const counts = await assetApiService.getAssetCounts()
+        setAssetCounts(counts)
+      } catch (err) {
+        console.error('Failed to fetch asset counts', err)
+      }
+    }
+    fetchAssetCounts()
+  }, [])
+
+  React.useEffect(() => {
+    const fetchPeopleCounts = async () => {
+      try {
+        const counts = await hrApiService.getPeopleCounts()
+        setPeopleCounts(counts)
+      } catch (err) {
+        console.error('Failed to fetch people counts', err)
+      }
+    }
+    fetchPeopleCounts()
+  }, [])
+
+  
 
   const getActiveModule = () => {
     for (const module of modules) {
@@ -250,272 +193,326 @@ export function UnifySidebar() {
 
   const filteredModules = React.useMemo(() => {
     if (!user) return []
-
     const departmentModuleMap: Record<string, string> = {
-      'ADMIN': 'Admin',
-      'FINANCE': 'Finance',
-      'HR': 'HR',
-      'PROCUREMENT': 'Procurement',
-      'LEGAL': 'Legal',
-      'PLANNING': 'Planning',
-      'TRANSPORTATION': 'Transport',
-      'HEALTH_SAFETY': 'Health',
-      'PUBLIC_RELATIONS': 'PR',
-      'REVENUE_TAX': 'Revenue',
-      'SECURITY': 'Security',
-      'ASSETS': 'Assets',
-      'OPERATIONS': 'Operations',
+      'ADMIN': 'Admin', 'FINANCE': 'Finance', 'HR': 'HR',
+      'PROCUREMENT': 'Procurement', 'SECURITY': 'Security', 'ASSETS': 'Assets',
     }
-
     const adminRoles = ['ADMIN', 'SYSTEM_ADMIN', 'SUPER_ADMIN']
-
-    if (adminRoles.includes(user.roleCode)) {
-      return modules
-    }
-
+    if (adminRoles.includes(user.roleCode)) return modules
     const moduleTitle = departmentModuleMap[user.departmentCode]
-    if (moduleTitle) {
-      return modules.filter(m => m.title === moduleTitle)
-    }
-
+    if (moduleTitle) return modules.filter(m => m.title === moduleTitle)
     return modules.filter(m => m.title === 'Reports')
   }, [user])
 
-  const currentHoveredOrActive = hoveredModule
-    ? modules.find(m => m.title === hoveredModule)
-    : manuallyOpenedModule
-    ? modules.find(m => m.title === manuallyOpenedModule)
-    : null
-
-  const hoveredOrManualIndex = filteredModules.findIndex(m => m.title === hoveredModule || m.title === manuallyOpenedModule)
+  const currentHoveredOrActive = hoveredModule ? modules.find(m => m.title === hoveredModule) : null
 
   return (
     <>
-      {/* Mobile Toggle Button - Only visible when sidebar is closed on mobile */}
-      {!isMobileSidebarOpen && (
-        <button
-          onClick={() => setIsMobileSidebarOpen(true)}
-          className="sm:hidden fixed left-2 top-1/2 -translate-y-1/2 z-50 w-12 h-12 rounded-xl bg-blue-100 border border-border shadow-lg flex items-center justify-center text-muted-foreground"
-        >
-          <ChevronLeft className="w-5 h-5 rotate-180" />
-        </button>
-      )}
-
-      {/* Mobile Overlay */}
-      {isMobileSidebarOpen && (
-        <div
-          className="sm:hidden fixed inset-0 bg-black/50 z-30 top-14"
-          onClick={() => setIsMobileSidebarOpen(false)}
-        />
-      )}
-
-      <div 
-        className={cn(
-          "fixed left-0 top-14 sm:top-16 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] z-40 flex transition-transform duration-300",
-          !isMobileSidebarOpen && "-translate-x-full sm:translate-x-0"
-        )}
-        onMouseLeave={() => setHoveredModule(null)}
-      >
-      {/* Icon Strip */}
-      <div className="w-16 bg-card border-r border-border flex flex-col items-center py-4 gap-1 relative overflow-y-auto">
-        {filteredModules.map((module) => {
-          const isActive = activeModule?.title === module.title
-          const isHovered = hoveredModule === module.title
-
-          return (
-            <div
-              key={module.title}
-              className="relative group"
-              onMouseEnter={() => {
-                if (!preventHover) {
-                  setHoveredModule(module.title)
-                }
-              }}
-            >
-              <button
-                className={cn(
-                  "w-12 h-12 rounded-xl flex flex-col items-center justify-center transition-all duration-300 ease-out",
-                  isActive || isHovered
-                    ? `bg-gradient-to-br ${module.color} text-muted-foreground shadow-lg scale-105`
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                )}
-              >
-                <module.icon className="w-5 h-5" />
-              </button>
-
-              {/* Module name below active or hovered icon */}
-              {(isActive || isHovered) && (
-                <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-16 text-center">
-                  <span className="text-[10px] font-medium text-primary truncate block">
-                    {module.title}
-                  </span>
-                </div>
-              )}
-            </div>
-          )
-        })}
-
-        {/* Collapse Button - Center of sidebar */}
-        <button
-          onClick={() => {
-            if (window.innerWidth < 640) {
-              // Mobile: First click shows icons, second click shows flyout, third click closes all
-              if (!isMobileSidebarOpen) {
-                setIsMobileSidebarOpen(true)
-              } else if (!hoveredModule && !manuallyOpenedModule && activeModule) {
-                setManuallyOpenedModule(activeModule.title)
-              } else {
-                setHoveredModule(null)
-                setManuallyOpenedModule(null)
-                setIsMobileSidebarOpen(false)
-              }
-            } else {
-              // Desktop: Toggle flyout panel
-              if (hoveredModule || manuallyOpenedModule) {
-                setHoveredModule(null)
-                setManuallyOpenedModule(null)
-              } else if (activeModule) {
-                setManuallyOpenedModule(activeModule.title)
-              }
-            }
-          }}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-xl flex flex-col items-center justify-center transition-all duration-300 ease-out text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-        >
-          <ChevronLeft className={cn(
-            "w-5 h-5 transition-transform",
-            (hoveredModule || manuallyOpenedModule) && "rotate-0",
-            !(hoveredModule || manuallyOpenedModule) && "rotate-180"
-          )} />
-        </button>
-      </div>
-
-      {/* Flyout Panel - Shows on hover */}
       <div
         className={cn(
-          "bg-card border-r border-border shadow-xl transition-all duration-300 ease-out overflow-hidden relative",
-          currentHoveredOrActive ? "w-56 opacity-100" : "w-0 opacity-0"
+          "fixed left-0 top-14 sm:top-16 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] z-40 flex transition-all duration-300",
+          !isMobileSidebarOpen && "-translate-x-full sm:translate-x-0"
         )}
+        onMouseLeave={() => {
+          if (!isExpanded) {
+            setHoveredModule(null)
+            setHoveredSettings(false)
+            setHoveredHardware(false)
+            setHoveredPeople(false)
+          }
+        }}
       >
-        {/* Arrow pointing to hovered or manually opened icon */}
-        {(hoveredModule || manuallyOpenedModule) && hoveredOrManualIndex >= 0 && (
-          <div
-            className="absolute left-0 top-0 w-4 h-4 bg-card border-l border-t border-border transform rotate-45 -translate-x-2 z-10"
-            style={{
-              top: `${16 + hoveredOrManualIndex * 52 + 24 - 8}px`,
+        <div className={cn(
+          "bg-card border-r border-border flex flex-col py-4 relative overflow-y-auto transition-all duration-300",
+          isExpanded ? "w-[210px]" : "w-16"
+        )}>
+          <button
+            onClick={() => {
+              setIsExpanded(!isExpanded)
+              if (!isExpanded) setExpandedDropdown(null)
             }}
-          />
-        )}
-          {currentHoveredOrActive && (
-            <div className="w-56 h-full flex flex-col animate-in fade-in slide-in-from-left-4 duration-200">
-              {/* Module Header */}
-              <div className="p-4 border-b border-border flex items-center justify-between">
-                <h3 className="font-semibold text-foreground text-lg">
-                  {currentHoveredOrActive.title}
-                </h3>
-                <button
-                  onClick={() => {
-                    setHoveredModule(null)
-                    setManuallyOpenedModule(null)
-                    // Close mobile sidebar on small screens
-                    if (window.innerWidth < 640) {
-                      setIsMobileSidebarOpen(false)
-                    }
-                  }}
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-                >
-                  <ChevronLeft className="w-4 h-4 rotate-180" />
-                </button>
-              </div>
+            className="w-12 h-12 mx-auto mb-2 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent transition-all"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
 
-              {/* Submenu Items */}
-              <nav className="flex-1 overflow-y-auto py-2 px-2 scrollbar-thin">
-                {currentHoveredOrActive.subItems.map((subItem) => {
-                  const isSubActive = location.pathname === subItem.url
+          {filteredModules.map((module) => {
+            const isActive = activeModule?.title === module.title
+            const isHovered = hoveredModule === module.title
+            const isDropdownOpen = expandedDropdown === module.title
 
-                  return (
-                    <NavLink
-                      key={subItem.title}
-                      to={subItem.url}
-                      onClick={() => {
-                        setHoveredModule(null)
-                        setManuallyOpenedModule(null)
-                        setIsMobileSidebarOpen(false)
-                      }}
-                      className={cn(
-                        "flex items-center px-3 py-2.5 rounded-lg text-sm transition-all duration-200 mb-1",
-                        isSubActive
-                          ? "bg-primary/10 text-primary font-medium border-l-4 border-primary pl-2"
-                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                      )}
-                    >
-                      {subItem.title}
-                    </NavLink>
-                  )
-                })}
-
-                {/* Settings flyout trigger for Assets module */}
-                {(currentHoveredOrActive as any).hasSettingsFlyout && (
-                  <div
-                    className="relative group/settings"
-                    onMouseEnter={() => setShowSettingsFlyout(true)}
-                    onMouseLeave={() => setShowSettingsFlyout(false)}
-                  >
+            return (
+              <div key={module.title} className="relative">
+                {isExpanded ? (
+                  <div className="px-2 mb-1">
                     <button
+                      onClick={() => setExpandedDropdown(isDropdownOpen ? null : module.title)}
                       className={cn(
-                        "w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 mb-1",
-                        showSettingsFlyout || location.pathname.startsWith('/assets/settings')
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        "w-full h-10 px-3 rounded-lg flex items-center gap-3 transition-all",
+                        isActive
+                          ? `bg-gradient-to-br ${module.color} text-white shadow-md`
+                          : "text-muted-foreground hover:bg-accent"
                       )}
                     >
-                      <Settings className="w-4 h-4" />
-                      Settings
+                      <module.icon className="w-5 h-5 flex-shrink-0" />
+                      <span className="text-sm font-medium truncate">{module.title}</span>
+                      <ChevronRight className={cn(
+                        "w-4 h-4 ml-auto transition-transform",
+                        isDropdownOpen && "rotate-90"
+                      )} />
                     </button>
-
-                    {/* Floating Settings Panel */}
-                    {showSettingsFlyout && (
-                      <div
-                        className="absolute left-full top-0 ml-1 w-64 bg-card border border-border rounded-lg shadow-xl z-50 animate-in fade-in slide-in-from-left-2 duration-150"
-                      >
-                        <div className="p-3 border-b border-border">
-                          <h4 className="font-semibold text-sm text-foreground">Settings</h4>
-                        </div>
-                        <div className="p-2 grid grid-cols-2 gap-1">
-                          {assetSettingsItems.map((item) => {
-                            const isSettingActive = location.pathname === item.url
-                            return (
-                              <NavLink
-                                key={item.title}
-                                to={item.url}
-                                onClick={() => {
-                                  setHoveredModule(null)
-                                  setManuallyOpenedModule(null)
-                                  setIsMobileSidebarOpen(false)
-                                  setShowSettingsFlyout(false)
+                    {isDropdownOpen && (
+                      <div className="mt-1 ml-4 space-y-0.5">
+                        {module.subItems.map(item => (
+                          <div key={item.url} className="relative">
+                            {(item).hasSubFlyout ? (
+                              <div
+                                onMouseEnter={() => {
+                                  if (item.title === 'Settings') setHoveredSettings(true)
+                                  else if (item.title === 'Assets') setHoveredHardware(true)
+                                  else if (item.title === 'People') setHoveredPeople(true)
                                 }}
-                                className={cn(
-                                  "flex items-center gap-2 px-2 py-2 rounded text-xs transition-all duration-150",
-                                  isSettingActive
-                                    ? "bg-primary/10 text-primary font-medium"
-                                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                                onMouseLeave={() => {
+                                  if (item.title === 'Settings') setHoveredSettings(false)
+                                  else if (item.title === 'Assets') setHoveredHardware(false)
+                                  else if (item.title === 'People') setHoveredPeople(false)
+                                }}
+                              >
+                                <div className="px-3 py-2 text-xs rounded-md text-muted-foreground hover:bg-accent/50 cursor-pointer">
+                                  {item.title}
+                                </div>
+                                {item.title === 'Settings' && hoveredSettings && (
+                                  <div className="fixed left-[210px] top-16 w-56 bg-card border border-border rounded-lg shadow-xl z-[100]">
+                                    <div className="p-2 grid grid-cols-1 gap-1">
+                                      {assetSettingsItems.map((settingItem) => (
+                                        <NavLink
+                                          key={settingItem.url}
+                                          to={settingItem.url}
+                                          className={({ isActive }) => cn(
+                                            "flex items-center gap-2 px-2 py-2 rounded text-xs transition-colors",
+                                            isActive
+                                              ? "bg-accent text-accent-foreground font-medium"
+                                              : "text-muted-foreground hover:bg-accent/50"
+                                          )}
+                                        >
+                                          <settingItem.icon className="w-3 h-3" />
+                                          <span className="truncate">{settingItem.title}</span>
+                                        </NavLink>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {item.title === 'People' && hoveredPeople && (
+                                  <div className="fixed left-[210px] top-16 w-64 bg-card rounded-lg shadow-xl border border-border z-[100] overflow-hidden">
+                                    <div className="p-3 space-y-1">
+                                      {assetPeopleFilters.map((filter) => {
+                                        const filterKey = filter.label.toLowerCase().replace(/\s+/g, '-')
+                                        const count = peopleCounts[filterKey] ?? 0
+                                        return (
+                                          <NavLink
+                                            key={filter.label}
+                                            to={`/assets/people?filter=${filterKey}`}
+                                            className="flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors hover:bg-accent"
+                                          >
+                                            <filter.icon className={cn("w-4 h-4")} />
+                                            <span className="flex-1">{filter.label}</span>
+                                            {filter.label !== 'Requestable' && (
+                                              <span className="px-2 py-0.5 bg-muted text-muted-foreground rounded text-xs font-medium">
+                                                {count}
+                                              </span>
+                                            )}
+                                          </NavLink>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                                {item.title === 'Assets' && hoveredHardware && (
+                                  <div className="fixed left-[210px] top-16 w-64 bg-card rounded-lg shadow-xl border border-border z-[100] overflow-hidden">
+                                    <div className="p-3 space-y-1">
+                                      {assetHardwareFilters.map((filter) => {
+                                        const filterKey = filter.label.toLowerCase().replace(/\s+/g, '-')
+                                        const count = assetCounts[filterKey] ?? 0
+                                        return (
+                                          <NavLink
+                                            key={filter.label}
+                                            to={`/assets/hardware?filter=${filterKey}`}
+                                            className="flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors hover:bg-accent"
+                                          >
+                                            <filter.icon className={cn("w-4 h-4")} />
+                                            <span className="flex-1">{filter.label}</span>
+                                            {filter.label !== 'Requestable' && (
+                                              <span className="px-2 py-0.5 bg-muted text-muted-foreground rounded text-xs font-medium">
+                                                {count}
+                                              </span>
+                                            )}
+                                          </NavLink>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <NavLink
+                                to={item.url}
+                                className={({ isActive }) => cn(
+                                  "block px-3 py-2 text-xs rounded-md transition-colors",
+                                  isActive
+                                    ? "bg-accent text-accent-foreground font-medium"
+                                    : "text-muted-foreground hover:bg-accent/50"
                                 )}
                               >
-                                <item.icon className="w-3.5 h-3.5 flex-shrink-0" />
-                                <span className="truncate">{item.title}</span>
+                                {item.title}
                               </NavLink>
-                            )
-                          })}
-                        </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
+                ) : (
+                  <div
+                    className="flex justify-center mb-1"
+                    onMouseEnter={() => setHoveredModule(module.title)}
+                  >
+                    <button
+                      className={cn(
+                        "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300",
+                        isActive || isHovered
+                          ? `bg-gradient-to-br ${module.color} text-white shadow-lg scale-105`
+                          : "text-muted-foreground hover:bg-accent"
+                      )}
+                    >
+                      <module.icon className="w-5 h-5" />
+                    </button>
+                  </div>
                 )}
+              </div>
+            )
+          })}
+        </div>
+
+        {!isExpanded && currentHoveredOrActive && (
+          <div className="w-48 bg-card border-r border-border shadow-xl overflow-y-auto">
+            <div className="p-4">
+              <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                <currentHoveredOrActive.icon className="w-4 h-4" />
+                {currentHoveredOrActive.title}
+              </h3>
+              <nav className="space-y-0.5">
+                {currentHoveredOrActive.subItems.map(item => (
+                  <div key={item.url} className="relative">
+                    {(item).hasSubFlyout ? (
+                      <div
+                        onMouseEnter={() => {
+                          if (item.title === 'Settings') setHoveredSettings(true)
+                          else if (item.title === 'Assets') setHoveredHardware(true)
+                          else if (item.title === 'People') setHoveredPeople(true)
+                        }}
+                        onMouseLeave={() => {
+                          if (item.title === 'Settings') setHoveredSettings(false)
+                          else if (item.title === 'Assets') setHoveredHardware(false)
+                          else if (item.title === 'People') setHoveredPeople(false)
+                        }}
+                      >
+                        <div className="px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-accent/50 cursor-pointer">
+                          {item.title}
+                        </div>
+                        {item.title === 'Settings' && hoveredSettings && (
+                          <div className="fixed left-64 top-16 w-56 bg-card border border-border rounded-lg shadow-xl z-[100]">
+                            <div className="p-2 grid grid-cols-1 gap-1">
+                              {assetSettingsItems.map((settingItem) => (
+                                <NavLink
+                                  key={settingItem.url}
+                                  to={settingItem.url}
+                                  className={({ isActive }) => cn(
+                                    "flex items-center gap-2 px-2 py-2 rounded text-xs transition-colors",
+                                    isActive
+                                      ? "bg-accent text-accent-foreground font-medium"
+                                      : "text-muted-foreground hover:bg-accent/50"
+                                  )}
+                                >
+                                  <settingItem.icon className="w-3 h-3" />
+                                  <span className="truncate">{settingItem.title}</span>
+                                </NavLink>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {item.title === 'People' && hoveredPeople && (
+                          <div className="fixed left-64 top-16 w-64 bg-card rounded-lg shadow-xl border border-border z-[100] overflow-hidden">
+                            <div className="p-3 space-y-1">
+                              {assetPeopleFilters.map((filter) => {
+                                const filterKey = filter.label.toLowerCase().replace(/\s+/g, '-')
+                                const count = peopleCounts[filterKey] ?? 0
+                                return (
+                                  <NavLink
+                                    key={filter.label}
+                                    to={`/assets/hardware?filter=${filterKey}`}
+                                    className="flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors hover:bg-accent"
+                                  >
+                                    <filter.icon className={cn("w-4 h-4")} />
+                                    <span className="flex-1">{filter.label}</span>
+                                    {filter.label !== 'Requestable' && (
+                                      <span className="px-2 py-0.5 bg-muted text-muted-foreground rounded text-xs font-medium">
+                                        {count}
+                                      </span>
+                                    )}
+                                  </NavLink>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {item.title === 'Assets' && hoveredHardware && (
+                          <div className="fixed left-64 top-16 w-64 bg-card rounded-lg shadow-xl border border-border z-[100] overflow-hidden">
+                            <div className="p-3 space-y-1">
+                              {assetHardwareFilters.map((filter) => {
+                                const filterKey = filter.label.toLowerCase().replace(/\s+/g, '-')
+                                const count = assetCounts[filterKey] ?? 0
+                                return (
+                                  <NavLink
+                                    key={filter.label}
+                                    to={`/assets/hardware?filter=${filterKey}`}
+                                    className="flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors hover:bg-accent"
+                                  >
+                                    <filter.icon className={cn("w-4 h-4")} />
+                                    <span className="flex-1">{filter.label}</span>
+                                    {filter.label !== 'Requestable' && (
+                                      <span className="px-2 py-0.5 bg-muted text-muted-foreground rounded text-xs font-medium">
+                                        {count}
+                                      </span>
+                                    )}
+                                  </NavLink>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <NavLink
+                        to={item.url}
+                        className={({ isActive }) => cn(
+                          "block px-3 py-2 text-sm rounded-md transition-colors",
+                          isActive
+                            ? "bg-accent text-accent-foreground font-medium"
+                            : "text-muted-foreground hover:bg-accent/50"
+                        )}
+                      >
+                        {item.title}
+                      </NavLink>
+                    )}
+                  </div>
+                ))}
               </nav>
             </div>
-          )}
-        </div>
-    </div>
+          </div>
+        )}
+      </div>
     </>
   )
 }
-

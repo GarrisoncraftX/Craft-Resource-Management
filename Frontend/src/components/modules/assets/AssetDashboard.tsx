@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Package, KeyRound, Keyboard, Droplets, Cpu, Users, Search, X, RefreshCw, Download, Printer, Maximize2, Minus, Pencil, RotateCcw, ClipboardCheck, ShieldCheck } from 'lucide-react';
+import { Package, KeyRound, Keyboard, Droplets, Cpu, Users, X, RefreshCw, Download, Printer, Maximize2, Minus, Pencil, RotateCcw, ClipboardCheck, ShieldCheck } from 'lucide-react';
 import { assetApiService } from '@/services/javabackendapi/assetApi';
-import type { Asset, MaintenanceRecord } from '@/types/asset';
 import type { AssetStats, AssetCategory } from '@/services/mockData/assets';
 
 // Big button card component matching Snipe-IT style

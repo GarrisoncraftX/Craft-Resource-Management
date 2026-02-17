@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/assets")
@@ -26,8 +27,16 @@ public class AssetController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Asset>> getAllAssets() {
+    public ResponseEntity<List<Asset>> getAllAssets(@RequestParam(required = false) String filter) {
+        if (filter != null) {
+            return ResponseEntity.ok(assetService.getFilteredAssets(filter));
+        }
         return ResponseEntity.ok(assetService.getAllAssets());
+    }
+
+    @GetMapping("/counts")
+    public ResponseEntity<Map<String, Long>> getAssetCounts() {
+        return ResponseEntity.ok(assetService.getAssetCounts());
     }
 
     @GetMapping("/{id}")

@@ -8,7 +8,7 @@ import { fetchDisposalRecords, createDisposalRecord } from '@/services/api';
 import type { DisposalRecord } from '@/types/asset';
 import { mockDisposalRecords } from '@/services/mockData/assets';
 
-export const AssetDisposal: React.FC = () => {
+export const AssetRequestable: React.FC = () => {
   const [disposals, setDisposals] = useState<DisposalRecord[]>(mockDisposalRecords);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -163,4 +163,4 @@ export const AssetDisposal: React.FC = () => {
   );
 };
 
-export default AssetDisposal;
+export default AssetRequestable;

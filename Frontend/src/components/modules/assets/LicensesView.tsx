@@ -35,11 +35,10 @@ const columns: ColumnDef<License>[] = [
 
 export const LicensesView: React.FC = () => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 bg-card p-2">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <span className="text-sky-600 cursor-pointer hover:underline">🏠</span>
-        <span>›</span>
-        <span className="font-medium text-foreground">Licenses</span>
+        <span className="font-bold text-2xl text-foreground">Licenses</span>
       </div>
 
       <AssetDataTable

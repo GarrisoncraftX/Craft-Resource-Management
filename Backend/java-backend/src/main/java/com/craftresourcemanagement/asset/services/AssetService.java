@@ -5,12 +5,15 @@ import com.craftresourcemanagement.asset.entities.MaintenanceRecord;
 import com.craftresourcemanagement.asset.entities.DisposalRecord;
 
 import java.util.List;
+import java.util.Map;
 
 public interface AssetService {
 
     // Asset
     Asset createAsset(Asset asset);
     List<Asset> getAllAssets();
+    List<Asset> getFilteredAssets(String filter);
+    Map<String, Long> getAssetCounts();
     Asset getAssetById(Long id);
     Asset updateAsset(Long id, Asset asset);
     void deleteAsset(Long id);
