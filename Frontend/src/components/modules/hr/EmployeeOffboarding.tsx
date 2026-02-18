@@ -13,15 +13,19 @@ import { Plus, UserMinus } from 'lucide-react';
 import { toast } from 'sonner';
 import { initiateOffboarding, getAllOffboarding, updateOffboarding, completeOffboarding } from '@/services/javabackendapi/hrApi';
 import { fetchEmployees } from '@/services/api';
+import { integrationService } from '@/services/integration/CrossModuleIntegration';
 import type { EmployeeOffboarding as OffboardingType } from '@/types/javabackendapi/hrTypes';
 import type { Employee } from '@/types/hr';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const EmployeeOffboarding: React.FC = () => {
+  const { user } = useAuth();
   const [offboardings, setOffboardings] = useState<OffboardingType[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedOffboarding, setSelectedOffboarding] = useState<OffboardingType | null>(null);
+  const [integrationStatus, setIntegrationStatus] = useState<Map<number, string>>(new Map());
   const [formData, setFormData] = useState<Partial<OffboardingType>>({
     userId: 0,
     offboardingType: 'RESIGNATION',
@@ -83,11 +87,32 @@ export const EmployeeOffboarding: React.FC = () => {
 
   const handleComplete = async (id: number) => {
     try {
+      const offboarding = offboardings.find(o => o.id === id);
+      const employee = employees.find(e => Number(e.id) === offboarding?.userId);
+
+      if (offboarding && employee && user) {
+        // Emit offboarding completed event to trigger asset returns and access revocation
+        const correlationId = integrationService.initiateEmployeeOffboarding(
+          {
+            employeeId: offboarding.userId,
+            employeeName: `${employee.firstName} ${employee.lastName}`,
+            offboardingType: offboarding.offboardingType as any,
+            exitDate: offboarding.lastWorkingDate || new Date().toISOString(),
+            assetsToReturn: [], // Would be populated from assets module
+            accessToRevoke: [], // Would be populated from security module
+          },
+          user.id
+        );
+
+        setIntegrationStatus(new Map(integrationStatus).set(id, `Offboarding initiated: ${correlationId}`));
+      }
+
       await completeOffboarding(id);
-      toast.success('Offboarding completed');
+      toast.success('Offboarding completed and cross-module events triggered');
       loadData();
-    } catch {
+    } catch (error) {
       toast.error('Failed to complete offboarding');
+      console.error('[v0] Offboarding completion error:', error);
     }
   };
 

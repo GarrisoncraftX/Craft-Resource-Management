@@ -13,10 +13,13 @@ import { Plus, Briefcase, CheckCircle, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAllJobPostings, createJobPosting, getOnboardingChecklist, createOnboardingTask, completeOnboardingTask } from '@/services/javabackendapi/hrApi';
 import { fetchEmployees } from '@/services/api';
+import { integrationService } from '@/services/integration/CrossModuleIntegration';
+import { useAuth } from '@/contexts/AuthContext';
 import type { JobPosting, OnboardingChecklist } from '@/types/javabackendapi/hrTypes';
 import type { Employee } from '@/types/hr';
 
 export const RecruitmentOnboarding: React.FC = () => {
+  const { user } = useAuth();
   const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
   const [onboardingTasks, setOnboardingTasks] = useState<OnboardingChecklist[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -114,11 +117,37 @@ export const RecruitmentOnboarding: React.FC = () => {
 
   const handleCompleteTask = async (taskId: number) => {
     try {
+      // Check if this is the final onboarding task completion
+      const allTasksBeforeComplete = onboardingTasks;
+      const remainingTasks = allTasksBeforeComplete.filter(t => t.id !== taskId && !t.completionDate);
+
       await completeOnboardingTask(taskId);
+
+      // If all onboarding tasks are now complete, trigger employee:onboarded event
+      if (remainingTasks.length === 0 && selectedUserId && user) {
+        const employee = employees.find(e => Number(e.id) === selectedUserId);
+        if (employee) {
+          const correlationId = integrationService.initializeEmployeeOnboarding(
+            {
+              employeeId: selectedUserId,
+              employeeName: `${employee.firstName} ${employee.lastName}`,
+              email: employee.email || '',
+              department: employee.department || '',
+              riskSensitivePosition: false, // Would come from employee profile
+              roles: [], // Would come from job position
+              joiningDate: new Date().toISOString(),
+            },
+            user.id
+          );
+          console.log(`[v0] Onboarding completed - correlation ID: ${correlationId}`);
+        }
+      }
+
       toast.success('Task marked as complete');
       if (selectedUserId) loadOnboardingTasks(selectedUserId);
     } catch (error) {
       toast.error('Failed to complete task');
+      console.error('[v0] Task completion error:', error);
     }
   };
 

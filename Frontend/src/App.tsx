@@ -37,9 +37,23 @@ const SupportTickets = lazy(() => import("@/components/modules/admin/SupportTick
 //Assets Modules
 const AssetDashboard = lazy(() => import("@/components/modules/assets/AssetDashboard").then(module => ({ default: module.AssetDashboard })));
 const AssetHardware = lazy(() => import("@/components/modules/assets/AssetHardware").then(module => ({ default: module.AssetHardware })));
-const AssetRequestable = lazy(() => import("@/components/modules/assets/AssetRequestable").then(module => ({ default: module.AssetRequestable })));
 const LicensesView = lazy(() => import("@/components/modules/assets/LicensesView").then(module => ({ default: module.LicensesView })));
 const AccessoriesView = lazy(() => import("@/components/modules/assets/AccessoriesView").then(module => ({ default: module.AccessoriesView })));
+const ComponentsView = lazy(() => import("@/components/modules/assets/ComponentsView").then(module => ({ default: module.ComponentsView })));
+const ConsumablesView = lazy(() => import("@/components/modules/assets/ConsumablesView").then(module => ({ default: module.ConsumablesView })));
+const PredefinedKitsView = lazy(() => import("@/components/modules/assets/PredefinedKitsView").then(module => ({ default: module.PredefinedKitsView })));
+const RequestableItemsView = lazy(() => import("@/components/modules/assets/RequestableItemsView").then(module => ({ default: module.RequestableItemsView })));
+const CustomFieldsView = lazy(() => import("@/components/modules/assets/CustomFieldsView").then(module => ({ default: module.CustomFieldsView })));
+const StatusLabelsView = lazy(() => import("@/components/modules/assets/StatusLabelsView").then(module => ({ default: module.StatusLabelsView })));
+const CategoriesView = lazy(() => import("@/components/modules/assets/CategoriesView").then(module => ({ default: module.CategoriesView })));
+const DepreciationView = lazy(() => import("@/components/modules/assets/DepreciationView").then(module => ({ default: module.DepreciationView })));
+const ModelsView = lazy(() => import("@/components/modules/assets/ModelsView").then(module => ({ default: module.ModelsView })));
+const ManufacturersView = lazy(() => import("@/components/modules/assets/ManufacturersView").then(module => ({ default: module.ManufacturersView })));
+const SuppliersView = lazy(() => import("@/components/modules/assets/SuppliersView").then(module => ({ default: module.SuppliersView })));
+const LocationsView = lazy(() => import("@/components/modules/assets/LocationsView").then(module => ({ default: module.LocationsView })));
+const CompaniesView = lazy(() => import("@/components/modules/assets/CompaniesView").then(module => ({ default: module.CompaniesView })));
+const DepartmentsView = lazy(() => import("@/components/modules/assets/DepartmentsView").then(module => ({ default: module.DepartmentsView })));
+const AssetFormPage = lazy(() => import("@/components/modules/assets/AssetFormPage").then(module => ({ default: module.AssetFormPage })));
 
 //Employee & Visitors Modules
 const EmployeeAccount = lazy(() => import("@/components/EmployeeAccount").then(module => ({ default: module.EmployeeAccount })));
@@ -178,9 +192,25 @@ const AppRoutes = () => {
       {/* Asset Management Routes */}
       <Route path="/assets/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AssetDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/assets/hardware" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AssetHardware /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/assets/requestable" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AssetRequestable /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/requestable" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><RequestableItemsView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/assets/licenses" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LicensesView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/assets/accessories" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AccessoriesView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/components" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ComponentsView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/consumables" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ConsumablesView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/kits" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PredefinedKitsView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      
+      {/* Asset Settings Routes */}
+      <Route path="/assets/settings/custom-fields" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><CustomFieldsView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/settings/labels" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><StatusLabelsView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/settings/categories" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><CategoriesView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/settings/depreciation" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><DepreciationView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/settings/models" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ModelsView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/settings/manufacturers" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ManufacturersView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/settings/suppliers" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SuppliersView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/settings/departments" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><DepartmentsView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/settings/locations" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LocationsView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/settings/companies" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><CompaniesView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/create" element={<ProtectedRoute><SuspenseWrapper><AssetFormPage /></SuspenseWrapper></ProtectedRoute>} />
 
       {/* Authentication Routes */}
       <Route path="/register" element={<PublicRoute><SuspenseWrapper><AuthForm /></SuspenseWrapper></PublicRoute>} />
