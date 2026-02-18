@@ -1,90 +1,4 @@
-export interface AssetStats {
-  totalAssets: number;
-  activeAssets: number;
-  maintenanceAssets: number;
-  disposedAssets: number;
-  totalValue: number;
-  depreciationRate: number;
-}
-
-export interface AcquisitionRequest {
-  id: string;
-  item: string;
-  department: string;
-  amount: number;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Completed';
-  requestedBy: string;
-  date: string;
-  priority: 'Low' | 'Medium' | 'High';
-  justification?: string;
-}
-
-export interface ValuationRecord {
-  id: number;
-  assetId: number;
-  assetName: string;
-  previousValue: number;
-  currentValue: number;
-  valuationDate: string;
-  valuationMethod: string;
-  valuedBy: string;
-  notes?: string;
-}
-
-export interface AssetCategory {
-  category: string;
-  count: number;
-  value: number;
-}
-
-export interface AssetTrend {
-  month: string;
-  acquisitions: number;
-  disposals: number;
-  value: number;
-}
-
-export interface MaintenanceCost {
-  month: string;
-  preventive: number;
-  corrective: number;
-  emergency: number;
-}
-
-import type { Asset, MaintenanceRecord, DisposalRecord } from '@/types/asset';
-
-export interface AssetStats {
-  totalAssets: number;
-  activeAssets: number;
-  maintenanceAssets: number;
-  disposedAssets: number;
-  totalValue: number;
-  depreciationRate: number;
-}
-
-export interface AcquisitionRequest {
-  id: string;
-  item: string;
-  department: string;
-  amount: number;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Completed';
-  requestedBy: string;
-  date: string;
-  priority: 'Low' | 'Medium' | 'High';
-  justification?: string;
-}
-
-export interface ValuationRecord {
-  id: number;
-  assetId: number;
-  assetName: string;
-  previousValue: number;
-  currentValue: number;
-  valuationDate: string;
-  valuationMethod: string;
-  valuedBy: string;
-  notes?: string;
-}
+import type { Asset, MaintenanceRecord, DisposalRecord, AcquisitionRequest, ValuationRecord, MaintenanceCost, AssetStats, AssetTrend, AssetCategory, Person, License, BaseInventoryItem, PredefinedKit } from '@/types/javabackendapi/assetTypes';
 
 export const mockAssets: Asset[] = [
   {
@@ -301,4 +215,40 @@ export const mockMaintenanceCosts: MaintenanceCost[] = [
   { month: 'Apr', preventive: 2600, corrective: 1900, emergency: 600 },
   { month: 'May', preventive: 3000, corrective: 1700, emergency: 400 },
   { month: 'Jun', preventive: 2900, corrective: 2000, emergency: 700 }
+];
+
+export const mockPeople = [
+  { id: 1, firstName: 'John', lastName: 'Doe', name: 'John Doe', email: 'john.doe@company.com', employeeNumber: 'EMP001', title: 'Software Engineer', department: 'IT', location: 'New York', assets: 2, licenses: 3, role: 'Employee', isAdmin: false, isDeleted: false, loginEnabled: true, lastLogin: '2024-01-15 10:30 AM', createdAt: '2023-01-10', updatedAt: '2024-01-15' },
+  { id: 2, firstName: 'Jane', lastName: 'Smith', name: 'Jane Smith', email: 'jane.smith@company.com', employeeNumber: 'EMP002', title: 'HR Manager', department: 'Human Resources', location: 'San Francisco', assets: 1, licenses: 5, role: 'Admin', isAdmin: true, isDeleted: false, loginEnabled: true, lastLogin: '2024-01-14 2:15 PM', createdAt: '2022-06-15', updatedAt: '2024-01-14' },
+  { id: 3, firstName: 'Mike', lastName: 'Johnson', name: 'Mike Johnson', email: 'mike.johnson@company.com', employeeNumber: 'EMP003', title: 'Finance Analyst', department: 'Finance', location: 'Chicago', assets: 1, licenses: 2, role: 'Employee', isAdmin: false, isDeleted: false, loginEnabled: false, lastLogin: '2024-01-10 9:00 AM', createdAt: '2023-03-20', updatedAt: '2024-01-10' },
+  { id: 4, firstName: 'Sarah', lastName: 'Williams', name: 'Sarah Williams', email: 'sarah.williams@company.com', employeeNumber: 'EMP004', title: 'Marketing Director', department: 'Marketing', location: 'Los Angeles', assets: 3, licenses: 4, role: 'Admin', isAdmin: true, isDeleted: false, loginEnabled: true, lastLogin: '2024-01-15 11:45 AM', createdAt: '2022-09-01', updatedAt: '2024-01-15' },
+  { id: 5, firstName: 'Robert', lastName: 'Brown', name: 'Robert Brown', email: 'robert.brown@company.com', employeeNumber: 'EMP005', title: 'Sales Representative', department: 'Sales', location: 'Boston', assets: 2, licenses: 2, role: 'Employee', isAdmin: false, isDeleted: true, loginEnabled: false, lastLogin: '2023-12-20 3:30 PM', createdAt: '2023-05-10', updatedAt: '2023-12-20' }
+];
+
+export const mockLicenses = [
+  { id: 1, name: 'Photoshop', productKey: '0281cda-...', expirationDate: '—', licensedToEmail: 'vsteuber@example.net', licensedTo: 'Adobe', manufacturer: 'Adobe', minQty: 10, total: 10, avail: 10 },
+  { id: 2, name: 'InDesign', productKey: '0c700f45-...', expirationDate: '—', licensedToEmail: 'liza65@example.com', licensedTo: 'Adobe', manufacturer: 'Adobe', minQty: 10, total: 10, avail: 8 },
+  { id: 3, name: 'Acrobat', productKey: '644532b9-...', expirationDate: '—', licensedToEmail: 'bquitzon@example.com', licensedTo: 'Adobe', manufacturer: 'Adobe', minQty: 10, total: 10, avail: 10 },
+  { id: 4, name: 'Office', productKey: '07be4282-...', expirationDate: '—', licensedToEmail: 'zakary.wunsch@example.com', licensedTo: 'Microsoft', manufacturer: 'Microsoft', minQty: 20, total: 20, avail: 15 }
+];
+
+export const mockAccessories: BaseInventoryItem[] = [
+  { id: 1, name: 'USB-C Cable', category: 'Cables', modelNo: 'USB-C-100', location: 'Storage Room A', minQty: 20, total: 50, avail: 35, checkedOut: 15, unitCost: 15, manufacturer: 'Anker', supplier: 'Tech Supply Co' },
+  { id: 2, name: 'Wireless Mouse', category: 'Peripherals', modelNo: 'WM-500', location: 'IT Department', minQty: 10, total: 30, avail: 22, checkedOut: 8, unitCost: 25, manufacturer: 'Logitech', supplier: 'Office Depot' }
+];
+
+export const mockConsumables: BaseInventoryItem[] = [
+  { id: 1, category: 'Office Supplies', modelNo: 'INK-BK-500', itemNo: 'CONS-001', location: 'Supply Closet', minQty: 10, total: 50, remaining: 32, unitCost: 45, manufacturer: 'HP', supplier: 'Staples' },
+  { id: 2, category: 'Cleaning', modelNo: 'CLN-WIPE-100', itemNo: 'CONS-002', location: 'Janitorial', minQty: 20, total: 100, remaining: 75, unitCost: 12, manufacturer: 'Clorox', supplier: 'Amazon Business' }
+];
+
+export const mockComponents: BaseInventoryItem[] = [
+  { id: 1, name: 'RAM Module 16GB', category: 'Memory', modelNo: 'DDR4-16GB', serial: 'RAM123456', location: 'IT Storage', minQty: 5, total: 20, remaining: 14, unitCost: 85, manufacturer: 'Crucial', supplier: 'Newegg' },
+  { id: 2, name: 'SSD 1TB', category: 'Storage', modelNo: 'SSD-1TB-NVMe', serial: 'SSD789012', location: 'IT Storage', minQty: 3, total: 15, remaining: 10, unitCost: 120, manufacturer: 'Samsung', supplier: 'B&H Photo' }
+];
+
+export const mockPredefinedKits: PredefinedKit[] = [
+  { id: 1, name: 'New Employee Starter Kit', createdBy: 'Admin', createdAt: '2023-05-10', updatedAt: '2024-01-15' },
+  { id: 2, name: 'Remote Worker Package', createdBy: 'IT Manager', createdAt: '2023-08-20', updatedAt: '2024-01-10' },
+  { id: 3, name: 'Developer Workstation', createdBy: 'Tech Lead', createdAt: '2023-11-05', updatedAt: '2024-01-12' }
 ];

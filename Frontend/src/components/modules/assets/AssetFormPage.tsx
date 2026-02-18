@@ -99,7 +99,13 @@ const initialFormData: AssetFormData = {
   depreciationRate: '20',
 };
 
-export const AssetFormPage: React.FC = () => {
+interface AssetFormPageProps {
+  onAssetCreated?: (asset) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export const AssetFormPage: React.FC<AssetFormPageProps> = ({ onAssetCreated, open, onOpenChange }) => {
   const [formData, setFormData] = useState<AssetFormData>(initialFormData);
   const [expandedSections, setExpandedSections] = useState({
     optional: false,
@@ -108,6 +114,8 @@ export const AssetFormPage: React.FC = () => {
     offboarding: false,
     depreciation: false,
   });
+
+  if (!open) return null;
 
   const handleInputChange = (field: keyof AssetFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -122,6 +130,12 @@ export const AssetFormPage: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
+    if (onAssetCreated) {
+      onAssetCreated(formData as any);
+    }
+    if (onOpenChange) {
+      onOpenChange(false);
+    }
   };
 
   const toggleSection = (section: 'optional' | 'order') => {
@@ -739,7 +753,7 @@ export const AssetFormPage: React.FC = () => {
 
           {/* Form Footer */}
           <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center gap-2">
-            <Button type="button" variant="outline">
+            <Button type="button" variant="outline" onClick={() => onOpenChange?.(false)}>
               Cancel
             </Button>
             <Select value={formData.purchaseCost} onValueChange={() => {}}>

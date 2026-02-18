@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Package, Eye, Edit, Trash2, Plus } from 'lucide-react';
+import { Package, Eye, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { fetchAssets } from '@/services/api';
-import type { Asset } from '@/types/asset';
+import type {Asset} from '@/types/javabackendapi/assetTypes';
 import { mockAssets } from '@/services/mockData/assets';
-import { AssetFormDialog } from './AssetFormDialog';
+import { AssetFormPage } from './AssetFormPage';
 import { AssetDataTable, ColumnDef, getStatusBadge } from './AssetDataTable';
-import { cn } from '@/lib/utils';
 
 interface FilterOption {
   label: string;
@@ -22,9 +21,10 @@ export const AssetHardware: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<Set<number | string>>(new Set());
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(globalThis.location.search);
     const filter = params.get('filter');
     if (filter) setActiveFilter(filter);
   }, []);
@@ -120,61 +120,96 @@ export const AssetHardware: React.FC = () => {
     ? assets 
     : assets.filter(filterOptions.find(f => f.label.toLowerCase().replace(/\s+/g, '-') === activeFilter)?.filter || (() => true));
 
+  const toggleRowSelection = (id: number | string) => {
+    setSelectedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllRows = () => {
+    if (selectedRows.size === filteredAssets.length) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(filteredAssets.map(a => a.id!)));
+    }
+  };
+
   const columns: ColumnDef<Asset>[] = [
     {
-      key: 'assetTag',
-      header: 'Asset Tag',
-      accessor: (row) => <span className="font-mono text-xs">{row.assetTag || row.id}</span>,
+      key: 'checkbox',
+      header: '',
+      accessor: (row) => (
+        <input
+          type="checkbox"
+          checked={selectedRows.has(row.id!)}
+          onChange={() => toggleRowSelection(row.id!)}
+          className="w-4 h-4 rounded border-gray-300"
+        />
+      ),
       defaultVisible: true
     },
+    { key: 'id', header: 'ID', accessor: (row) => row.id, defaultVisible: false },
+    { key: 'assetTag', header: 'Asset Tag', accessor: (row) => <span className="font-mono text-xs">{row.assetTag || row.id}</span>, defaultVisible: true },
+    { key: 'assetName', header: 'Asset Name', accessor: (row) => <span className="font-medium">{row.assetName}</span>, defaultVisible: true },
+    { key: 'company', header: 'Company', accessor: () => '-', defaultVisible: false },
+    { key: 'deviceImage', header: 'Device Image', accessor: () => <div className="w-8 h-8 bg-purple-100 rounded flex items-center justify-center"><Package className="w-4 h-4 text-purple-600" /></div>, defaultVisible: true },
+    { key: 'serial', header: 'Serial', accessor: (row) => <span className="font-mono text-xs">{row.serialNumber || 'N/A'}</span>, defaultVisible: true },
+    { key: 'model', header: 'Model', accessor: (row) => row.description || 'N/A', defaultVisible: true },
+    { key: 'modelNo', header: 'Model No.', accessor: () => '-', defaultVisible: false },
+    { key: 'category', header: 'Category', accessor: (row) => row.description || 'Laptops', defaultVisible: true },
+    { key: 'status', header: 'Status', accessor: (row) => getStatusBadge(row.status || 'Unknown'), defaultVisible: true },
+    { key: 'checkedOutTo', header: 'Checked Out To', accessor: () => '-', defaultVisible: true },
+    { key: 'employeeNumber', header: 'Employee Number', accessor: () => '-', defaultVisible: false },
+    { key: 'title', header: 'Title', accessor: () => '-', defaultVisible: false },
+    { key: 'location', header: 'Location', accessor: (row) => row.location || 'N/A', defaultVisible: true },
+    { key: 'defaultLocation', header: 'Default Location', accessor: () => '-', defaultVisible: false },
+    { key: 'manufacturer', header: 'Manufacturer', accessor: () => '-', defaultVisible: false },
+    { key: 'supplier', header: 'Supplier', accessor: () => '-', defaultVisible: false },
+    { key: 'purchaseDate', header: 'Purchase Date', accessor: () => '-', defaultVisible: false },
+    { key: 'age', header: 'Age', accessor: () => '-', defaultVisible: false },
+    { key: 'purchaseCost', header: 'Purchase Cost', accessor: () => '-', defaultVisible: false },
+    { key: 'currentValue', header: 'Current Value', accessor: () => '-', defaultVisible: false },
+    { key: 'orderNumber', header: 'Order Number', accessor: () => '-', defaultVisible: false },
+    { key: 'eolRate', header: 'EOL Rate', accessor: () => '-', defaultVisible: false },
+    { key: 'eolDate', header: 'EOL Date', accessor: () => '-', defaultVisible: false },
+    { key: 'warranty', header: 'Warranty', accessor: () => '-', defaultVisible: false },
+    { key: 'warrantyExpires', header: 'Warranty Expires', accessor: () => '-', defaultVisible: false },
+    { key: 'requestable', header: 'Requestable', accessor: () => '-', defaultVisible: false },
+    { key: 'notes', header: 'Notes', accessor: () => '-', defaultVisible: false },
+    { key: 'checkouts', header: 'Checkouts', accessor: () => '-', defaultVisible: false },
+    { key: 'checkins', header: 'Checkins', accessor: () => '-', defaultVisible: false },
+    { key: 'requests', header: 'Requests', accessor: () => '-', defaultVisible: false },
+    { key: 'createdBy', header: 'Created By', accessor: () => '-', defaultVisible: false },
+    { key: 'createdAt', header: 'Created At', accessor: () => '-', defaultVisible: false },
+    { key: 'updatedAt', header: 'Updated At', accessor: () => '-', defaultVisible: false },
+    { key: 'checkoutDate', header: 'Checkout Date', accessor: () => '-', defaultVisible: false },
+    { key: 'lastCheckinDate', header: 'Last Checkin Date', accessor: () => '-', defaultVisible: false },
+    { key: 'expectedCheckinDate', header: 'Expected Checkin Date', accessor: () => '-', defaultVisible: false },
+    { key: 'lastAudit', header: 'Last Audit', accessor: () => '-', defaultVisible: false },
+    { key: 'nextAuditDate', header: 'Next Audit Date', accessor: () => '-', defaultVisible: false },
+    { key: 'byod', header: 'BYOD', accessor: () => '-', defaultVisible: false },
+    { key: 'testRadio', header: 'Test Radio', accessor: () => '-', defaultVisible: false },
+    { key: 'testCheckbox', header: 'Test Checkbox', accessor: () => '-', defaultVisible: false },
+    { key: 'testEncrypted', header: 'Test Encrypted', accessor: () => '-', defaultVisible: false },
+    { key: 'phoneNumber', header: 'Phone Number', accessor: () => '-', defaultVisible: false },
+    { key: 'imei', header: 'IMEI', accessor: () => '-', defaultVisible: false },
+    { key: 'macAddress', header: 'MAC Address', accessor: () => '-', defaultVisible: false },
+    { key: 'cpu', header: 'CPU', accessor: () => '-', defaultVisible: false },
+    { key: 'ram', header: 'RAM', accessor: () => '-', defaultVisible: false },
     {
-      key: 'assetName',
-      header: 'Asset Name',
-      accessor: (row) => <span className="font-medium">{row.assetName}</span>,
-      defaultVisible: true
+      key: 'checkInOut',
+      header: 'Check In/Out',
+      accessor: (row) => (
+        <Button size="sm" variant="outline" className="h-7 bg-rose-500 hover:bg-rose-600 text-white text-xs px-3 rounded">
+          {row.status === 'Deployed' ? 'Check In' : 'Check Out'}
+        </Button>
+      ),
+      defaultVisible: true,
+      sticky: 'right'
     },
-    {
-      key: 'deviceImage',
-      header: 'Device Image',
-      accessor: () => <div className="w-8 h-8 bg-purple-100 rounded flex items-center justify-center"><Package className="w-4 h-4 text-purple-600" /></div>,
-      defaultVisible: true
-    },
-    {
-      key: 'serial',
-      header: 'Serial',
-      accessor: (row) => <span className="font-mono text-xs">{row.serialNumber || 'N/A'}</span>,
-      defaultVisible: true
-    },
-    {
-      key: 'model',
-      header: 'Model',
-      accessor: (row) => row.description || 'N/A',
-      defaultVisible: true
-    },
-    {
-      key: 'category',
-      header: 'Category',
-      accessor: (row) => row.description || 'Laptops',
-      defaultVisible: true
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      accessor: (row) => getStatusBadge(row.status || 'Unknown'),
-      defaultVisible: true
-    },
-    {
-      key: 'checkedOutTo',
-      header: 'Checked Out To',
-      accessor: () => '-',
-      defaultVisible: true
-    },
-    {
-      key: 'location',
-      header: 'Location',
-      accessor: (row) => row.location || 'N/A',
-      defaultVisible: true
-    }
   ];
 
   if (loading) return <div className="p-6">Loading assets…</div>;
@@ -185,15 +220,13 @@ export const AssetHardware: React.FC = () => {
         {/* Header with Filter Panel */}
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-2">
-            <Package className="w-8 h-8 text-amber-600" />
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Assets Hardware</h1>
-              <p className="text-sm text-muted-foreground">Manage and track all hardware assets</p>
+\            <div>
+              <h1 className="text-3xl lg:text-2xl sm:text-sm font-bold tracking-tight">Assets</h1>
             </div>
           </div>
 
           {showAddDialog && (
-            <AssetFormDialog 
+            <AssetFormPage 
               onAssetCreated={handleAssetCreated}
               open={showAddDialog}
               onOpenChange={setShowAddDialog}
@@ -221,6 +254,15 @@ export const AssetHardware: React.FC = () => {
         <AssetDataTable
           data={filteredAssets}
           columns={columns}
+          showCheckboxHeader
+          checkboxHeaderContent={
+            <input
+              type="checkbox"
+              checked={selectedRows.size === filteredAssets.length && filteredAssets.length > 0}
+              onChange={toggleAllRows}
+              className="w-4 h-4 rounded border-gray-300"
+            />
+          }
           actions={(row) => (
             <>
               <TooltipProvider delayDuration={200}>

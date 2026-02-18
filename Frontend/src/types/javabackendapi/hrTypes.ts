@@ -22,6 +22,19 @@ export interface User {
   hireDate: string;
   accountStatus?: string;
   isActive?: number;
+  employeeNumber?: string;
+  jobTitle?: string;
+  title?: string;
+  department?: { id?: number; name?: string };
+  departmentName?: string;
+  location?: { id?: number; name?: string };
+  locationName?: string;
+  role?: { id?: number; name?: string };
+  roleName?: string;
+  status?: string;
+  lastLogin?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface UpdateEmployeeRequest {

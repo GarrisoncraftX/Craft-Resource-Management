@@ -42,6 +42,7 @@ const AccessoriesView = lazy(() => import("@/components/modules/assets/Accessori
 const ComponentsView = lazy(() => import("@/components/modules/assets/ComponentsView").then(module => ({ default: module.ComponentsView })));
 const ConsumablesView = lazy(() => import("@/components/modules/assets/ConsumablesView").then(module => ({ default: module.ConsumablesView })));
 const PredefinedKitsView = lazy(() => import("@/components/modules/assets/PredefinedKitsView").then(module => ({ default: module.PredefinedKitsView })));
+const PeopleView = lazy(() => import("@/components/modules/assets/PeopleView").then(module => ({ default: module.PeopleView })));
 const RequestableItemsView = lazy(() => import("@/components/modules/assets/RequestableItemsView").then(module => ({ default: module.RequestableItemsView })));
 const CustomFieldsView = lazy(() => import("@/components/modules/assets/CustomFieldsView").then(module => ({ default: module.CustomFieldsView })));
 const StatusLabelsView = lazy(() => import("@/components/modules/assets/StatusLabelsView").then(module => ({ default: module.StatusLabelsView })));
@@ -198,6 +199,7 @@ const AppRoutes = () => {
       <Route path="/assets/components" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ComponentsView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/assets/consumables" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><ConsumablesView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/assets/kits" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PredefinedKitsView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/people" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><PeopleView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       
       {/* Asset Settings Routes */}
       <Route path="/assets/settings/custom-fields" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><CustomFieldsView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
