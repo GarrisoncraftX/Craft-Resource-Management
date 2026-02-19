@@ -103,6 +103,7 @@ export const ManufacturersView: React.FC = () => {
         <AssetDataTable<Manufacturer>
           data={filteredManufacturers}
           columns={columns}
+          viewType="settings"
           actions={(row) => (
             <div className="flex gap-2 items-center justify-end">
               <Button

@@ -23,7 +23,7 @@ interface AssetDataTableProps<T> {
   actions?: (row: T) => React.ReactNode;
   showCheckboxHeader?: boolean;
   checkboxHeaderContent?: React.ReactNode;
-  viewType?: 'assets' | 'licenses' | 'accessories' | 'components' | 'consumables' | 'kits' | 'people';
+  viewType?: 'assets' | 'licenses' | 'accessories' | 'components' | 'consumables' | 'kits' | 'people' | 'settings';
   onBulkGo?: (action: string) => void;
   onAction?: (action: string) => void;
   selectedCount?: number;

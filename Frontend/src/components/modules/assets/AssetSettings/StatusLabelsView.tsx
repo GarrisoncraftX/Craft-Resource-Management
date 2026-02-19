@@ -71,6 +71,7 @@ export const StatusLabelsView: React.FC = () => {
         data={mockStatusLabels}
         columns={columns}
         onAdd={() => {}}
+        viewType="settings"
         actions={(row) => (
           <>
             <Button size="sm" variant="ghost" className="h-7 w-7 p-0 bg-amber-400 hover:bg-amber-500 text-white rounded">

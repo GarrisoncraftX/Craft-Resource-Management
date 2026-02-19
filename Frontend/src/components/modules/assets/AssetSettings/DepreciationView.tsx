@@ -32,6 +32,7 @@ export const DepreciationView: React.FC = () => {
         data={mockDepreciations}
         columns={columns}
         onAdd={() => {}}
+        viewType="settings"
         actions={(row) => (
           <>
             <Button size="sm" variant="ghost" className="h-7 w-7 p-0 bg-amber-400 hover:bg-amber-500 text-white rounded">

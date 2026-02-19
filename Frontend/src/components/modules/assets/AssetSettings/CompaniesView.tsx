@@ -82,6 +82,7 @@ export const CompaniesView: React.FC = () => {
             <AssetDataTable<Company>
               data={filteredCompanies}
               columns={columns}
+              viewType="settings"
               actions={(row) => (
                 <div className="flex gap-2 items-center justify-end">
                   <Button

@@ -75,6 +75,7 @@ export const DepartmentsView: React.FC = () => {
         <AssetDataTable<Department>
           data={filteredDepartments}
           columns={columns}
+          viewType="settings"
           actions={(row) => (
             <div className="flex gap-2 items-center justify-end">
               <Button
