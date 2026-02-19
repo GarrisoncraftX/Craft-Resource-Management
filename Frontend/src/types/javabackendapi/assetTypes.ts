@@ -135,6 +135,102 @@ export interface BaseInventoryItem {
   updatedAt?: string;
 }
 
+export interface Category {
+  id: number;
+  name: string;
+  image: string;
+  type: string;
+  qty: number;
+  acceptance: boolean;
+  useDefaultEULA: boolean;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  email?: string;
+  image?: string;
+  assets: number;
+  licenses: number;
+  accessories: number;
+  components: number;
+}
+
+export interface CustomField {
+  id: number;
+  name: string;
+  helpText: string;
+  format: string;
+  isSortable?: boolean;
+  isSearchable?: boolean;
+  isFilterable?: boolean;
+  isRequired?: boolean;
+  isListColumn?: boolean;
+  element: string;
+  fieldsets: string[];
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  image?: string;
+  manager?: string;
+  location?: string;
+  assets: number;
+}
+
+export interface Depreciation {
+  id: number;
+  name: string;
+  term: string;
+  floorValue: number;
+  assets: number;
+  assetModels: number;
+  licenses: number;
+}
+
+export interface Location {
+  id: string;
+  name: string;
+  image?: string;
+  parent?: string;
+  assets: number;
+  licenses: number;
+  accessories: number;
+  components: number;
+  address: string;
+  city: string;
+  state: string;
+}
+
+export interface AssetModel {
+  id: string;
+  name: string;
+  image?: string;
+  modelNo: string;
+  minQty: number;
+  assets: number;
+  assigned: number;
+  remaining: number;
+  archived: number;
+  category: string;
+  eolRate?: string;
+  fieldset?: string;
+}
+
+export interface Manufacturer {
+  id: string;
+  name: string;
+  image?: string;
+  url?: string;
+  supportUrl?: string;
+  supportPhone?: string;
+  supportEmail?: string;
+  assets: number;
+  licenses: number;
+  accessories: number;
+}
+
 export interface PredefinedKit {
   id: number;
   name: string;
@@ -156,11 +252,36 @@ export interface AssetTrend {
   value: number;
 }
 
+export interface StatusLabel {
+  id: number;
+  name: string;
+  statusType: string;
+  assets: number;
+  chartColor: string;
+  showInSideNav: boolean;
+  defaultLabel: boolean;
+}
+
 export interface MaintenanceCost {
   month: string;
   preventive: number;
   corrective: number;
   emergency: number;
+}
+
+
+export interface Supplier {
+  id: string;
+  name: string;
+  image?: string;
+  url?: string;
+  assets: number;
+  components: number;
+  licenses: number;
+  accessories: number;
+  address: string;
+  city: string;
+  state: string;
 }
 
 export interface Asset {
@@ -284,6 +405,51 @@ export interface MaintenanceRecord {
   status: 'Scheduled' | 'Completed' | 'In Progress' | 'Cancelled' | string;
   cost?: number;
   nextMaintenanceDate?: string;
+}
+
+export interface MaintenanceReport {
+  id: number;
+  company: string;
+  assetTag: string;
+  assetName: string;
+  supplier: string;
+  assetMaintenanceType: string;
+  title: string;
+  startDate: string;
+  completionDate: string;
+  assetMaintenanceTime: number;
+  cost: number;
+  location: string;
+  defaultLocation: string;
+  warranty: string;
+  createdBy: string;
+  notes: string;
+}
+
+export interface DepreciationReport {
+  id: number;
+  company: string;
+  category: string;
+  assetTag: string;
+  model: string;
+  modelNo: string;
+  serial: string;
+  depreciation: string;
+  numberOfMonths: number;
+  status: string;
+  checkedOut: string;
+  location: string;
+  manufacturer: string;
+  supplier: string;
+  purchaseDate: string;
+  currency: string;
+  purchaseCost: number;
+  orderNumber: string;
+  eol: string;
+  currentValue: number;
+  monthlyDepreciation: number;
+  diff: number;
+  warrantyExpires: string;
 }
 
 export interface DisposalRecord {

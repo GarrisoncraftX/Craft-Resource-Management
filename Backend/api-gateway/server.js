@@ -158,39 +158,30 @@ const proxyRequest = async (req, res, targetUrl) => {
 app.use((req, res, next) => { 
   const path = req.path;
 
-  // Python Backend: Biometric, Visitors, Dashboard, Health & Safety, Reports, Analytics, Attendance
+  // Python Backend: Biometric, Visitors, Attendance
   if (path.startsWith("/api/biometric") || 
       path.startsWith("/api/visitors") || 
-      path.startsWith("/api/dashboard") || 
-      path.startsWith("/api/health-safety") || 
-      path.startsWith("/api/reports") || 
-      path.startsWith("/api/analytics") ||
       path.startsWith("/api/attendance")) {
     return proxyRequest(req, res, pythonBackend);
   }
-  // Java Backend: HR, Finance, Assets, Legal, Revenue, System, Admin
+  
+  // Java Backend: HR, Finance, Assets, System, Admin
   if (path.startsWith("/hr/employees") || 
       path.startsWith("/hr/payroll") || 
       path.startsWith("/hr/recruitment") ||
-      path.startsWith("/hr/dashboard-kpis") ||
       path.startsWith("/finance") || 
       path.startsWith("/assets") || 
-      path.startsWith("/legal") || 
-      path.startsWith("/revenue") ||
       path.startsWith("/system") ||
       path.startsWith("/admin")) {
     return proxyRequest(req, res, javaBackend);
   }
-  // Node.js Backend: Auth, Lookup, Leave, Procurement, Public Relations, Planning, Transportation, Communication
+  // Node.js Backend: Auth, Lookup, Leave, Procurement, Communication
   if (path.startsWith("/api/auth") || 
       path.startsWith("/api/lookup") || 
       path === "/departments" || 
       path === "/roles" || 
       path.startsWith("/api/leave") || 
       path.startsWith("/api/procurement") || 
-      path.startsWith("/api/public-relations") || 
-      path.startsWith("/api/planning") || 
-      path.startsWith("/api/transportation") || 
       path.startsWith("/api/communication")) {
     return proxyRequest(req, res, nodeBackend);
   }

@@ -24,6 +24,9 @@ interface AssetDataTableProps<T> {
   showCheckboxHeader?: boolean;
   checkboxHeaderContent?: React.ReactNode;
   viewType?: 'assets' | 'licenses' | 'accessories' | 'components' | 'consumables' | 'kits' | 'people';
+  onBulkGo?: (action: string) => void;
+  onAction?: (action: string) => void;
+  selectedCount?: number;
 }
 
 export function getStatusBadge(status: string) {
@@ -64,6 +67,9 @@ export function AssetDataTable<T extends { id?: number | string }>({
   showCheckboxHeader = false,
   checkboxHeaderContent,
   viewType = 'assets',
+  onBulkGo,
+  onAction,
+  selectedCount = 0,
 }: AssetDataTableProps<T>) {
   const [search, setSearch] = useState('');
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
@@ -143,6 +149,9 @@ export function AssetDataTable<T extends { id?: number | string }>({
       onSearchChange={setSearch}
       showPagination={filteredData.length > 19}
       viewType={viewType}
+      onBulkGo={onBulkGo}
+      onAction={onAction}
+      selectedCount={selectedCount}
     />
 
       {/* Table */}

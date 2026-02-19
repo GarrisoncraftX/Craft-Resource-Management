@@ -5,8 +5,6 @@ import com.craftresourcemanagement.asset.repositories.DisposalRecordRepository;
 import com.craftresourcemanagement.asset.repositories.MaintenanceRecordRepository;
 import com.craftresourcemanagement.finance.repositories.*;
 import com.craftresourcemanagement.hr.repositories.*;
-import com.craftresourcemanagement.legal.repositories.*;
-import com.craftresourcemanagement.revenue.repositories.*;
 import com.craftresourcemanagement.system.repositories.AuditLogRepository;
 import com.craftresourcemanagement.system.repositories.NotificationRepository;
 import com.craftresourcemanagement.system.repositories.*;
@@ -47,14 +45,6 @@ public class HRTestConfig {
     @MockBean private AccountReceivableRepository accountReceivableRepository;
     @MockBean private InvoiceSequenceRepository invoiceSequenceRepository;
     
-    // Legal repositories
-    @MockBean private LegalCaseRepository legalCaseRepository;
-    @MockBean private ComplianceRecordRepository complianceRecordRepository;
-    
-    // Revenue repositories
-    @MockBean private TaxAssessmentRepository taxAssessmentRepository;
-    @MockBean private BusinessPermitRepository businessPermitRepository;
-    @MockBean private RevenueCollectionRepository revenueCollectionRepository;
     
     // System repositories
     @MockBean private AccessRuleRepository accessRuleRepository;

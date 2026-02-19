@@ -60,21 +60,12 @@ class AuditService:
             employee_id = details.get('employeeId', 'unknown')
             return f"has enrolled biometric data for employee {employee_id}"
         
-        if module == 'dashboard' and operation == 'VIEW':
-            widget_name = details.get('widgetName', 'unknown widget')
-            return f"viewed the Employee Dashboard - {widget_name}"
         
         if module == 'visitor' and operation == 'CHECK_IN':
             visitor_name = details.get('visitorName', 'unknown visitor')
             return f"has checked in visitor {visitor_name}"
         
-        if module == 'health_safety' and operation == 'CREATE':
-            incident_type = details.get('incidentType', 'incident')
-            return f"has reported a new {incident_type}"
-        
-        if module == 'reports' and operation == 'GENERATE':
-            report_type = details.get('reportType', 'report')
-            return f"has generated a {report_type}"
+       
         
         return action
 

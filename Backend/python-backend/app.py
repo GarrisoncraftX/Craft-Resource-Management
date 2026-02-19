@@ -12,18 +12,11 @@ from src.middleware.session_tracker import session_tracker, start_cleanup_thread
 
 # Import controllers
 from src.attendance_module.controller import AttendanceController
-from src.reports_analytics_module.controller import AnalyticsController
-from src.reports_analytics_module.controller import ReportsController
-from src.health_safety_module.controller import HealthSafetyController
 from src.visitor_module.controller import VisitorController
-from src.dashboard_module.controller import DashboardController
 
 # Import blueprints
 from src.attendance_module.routes import attendance_bp
-from src.health_safety_module.routes import health_safety_bp
-from src.dashboard_module.routes import dashboard_bp
 from src.visitor_module.routes import visitor_bp
-from src.reports_analytics_module.routes import reports_analytics_bp
 
 # Import database connection
 from src.database.connection import DatabaseManager
@@ -73,18 +66,11 @@ db_manager = DatabaseManager(config_dict)
 
 # Initialize controllers
 attendance_controller = AttendanceController(db_manager)
-analytics_controller = AnalyticsController()
-reports_controller = ReportsController()
-health_safety_controller = HealthSafetyController()
 visitor_controller = VisitorController()
-dashboard_controller = DashboardController()
 
 # Register blueprints
-app.register_blueprint(dashboard_bp, url_prefix='/api')
 app.register_blueprint(attendance_bp, url_prefix='/api')
-app.register_blueprint(health_safety_bp, url_prefix='/api')
 app.register_blueprint(visitor_bp, url_prefix='/api')
-app.register_blueprint(reports_analytics_bp, url_prefix='/api')
 
 # Register error handlers
 register_error_handlers(app)

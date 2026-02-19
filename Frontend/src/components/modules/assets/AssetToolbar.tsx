@@ -28,6 +28,9 @@ export default function AssetsToolbar({
   
   // View type
   viewType = 'assets',
+  
+  // Selected count
+  selectedCount = 0,
 }) {
   const [bulkAction, setBulkAction] = useState("Bulk Edit")
   const [query, setQuery] = useState("")
@@ -116,9 +119,13 @@ export default function AssetsToolbar({
               <button
                 type="button"
                 onClick={() => onBulkGo?.(bulkAction)}
-                className="h-8 rounded-md border border-slate-300 bg-sky-100 px-5 font-semibold text-slate-800 hover:bg-sky-200 active:scale-[0.99]"
+                className={`h-8 rounded-md border px-5 font-semibold transition-all ${
+                  selectedCount > 0
+                    ? 'border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600 shadow-md'
+                    : 'border-slate-300 bg-sky-100 text-slate-800 hover:bg-sky-200'
+                } active:scale-[0.99]`}
               >
-                Go
+                Go {selectedCount > 0 && `(${selectedCount})`}
               </button>
             </div>
           )}

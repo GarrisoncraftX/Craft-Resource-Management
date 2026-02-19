@@ -2,11 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Package, Eye, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { fetchAssets } from '@/services/api';
+import { fetchAssets, deleteAsset } from '@/services/api';
 import type {Asset} from '@/types/javabackendapi/assetTypes';
 import { mockAssets } from '@/services/mockData/assets';
 import { AssetFormPage } from './AssetFormPage';
 import { AssetDataTable, ColumnDef, getStatusBadge } from './AssetDataTable';
+import { toast } from 'sonner';
 
 interface FilterOption {
   label: string;
@@ -31,6 +32,94 @@ export const AssetHardware: React.FC = () => {
 
   const handleAssetCreated = (newAsset: Asset) => {
     setAssets(prev => [newAsset, ...prev]);
+    toast.success('Asset created successfully');
+  };
+
+  const handleDelete = async (id: number | string) => {
+    try {
+      await deleteAsset(id);
+      setAssets(prev => prev.filter(a => a.id !== id));
+      setSelectedRows(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      toast.success('Asset deleted successfully');
+    } catch (err) {
+      toast.error('Failed to delete asset');
+      console.error(err);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedRows.size === 0) {
+      toast.error('No assets selected');
+      return;
+    }
+    
+    if (!confirm(`Are you sure you want to delete ${selectedRows.size} asset(s)?`)) {
+      return;
+    }
+
+    try {
+      await Promise.all(Array.from(selectedRows).map(id => deleteAsset(id)));
+      setAssets(prev => prev.filter(a => !selectedRows.has(a.id!)));
+      setSelectedRows(new Set());
+      toast.success(`${selectedRows.size} asset(s) deleted successfully`);
+    } catch (err) {
+      toast.error('Failed to delete some assets');
+      console.error(err);
+    }
+  };
+
+  const handleBulkAction = (action: string) => {
+    if (selectedRows.size === 0) {
+      toast.error('No assets selected');
+      return;
+    }
+
+    switch (action) {
+      case 'Bulk Delete':
+        handleBulkDelete();
+        break;
+      case 'Bulk Edit':
+        toast.info('Bulk edit feature coming soon');
+        break;
+      case 'Add Maintenance':
+        toast.info('Add maintenance feature coming soon');
+        break;
+      case 'Bulk Checkout':
+        toast.info('Bulk checkout feature coming soon');
+        break;
+      case 'Generate Labels':
+        toast.info('Generate labels feature coming soon');
+        break;
+      default:
+        toast.error('Unknown action');
+    }
+  };
+
+  const handleToolbarAction = (action: string) => {
+    switch (action) {
+      case 'add':
+        setShowAddDialog(true);
+        break;
+      case 'delete':
+        if (selectedRows.size > 0) {
+          handleBulkDelete();
+        } else {
+          toast.error('No assets selected');
+        }
+        break;
+      case 'refresh':
+        window.location.reload();
+        break;
+      case 'maintenance':
+        toast.info('Maintenance feature coming soon');
+        break;
+      default:
+        toast.info(`${action} feature coming soon`);
+    }
   };
 
   useEffect(() => {
@@ -116,9 +205,14 @@ export const AssetHardware: React.FC = () => {
     }
   ];
 
-  const filteredAssets = activeFilter === 'all' 
-    ? assets 
-    : assets.filter(filterOptions.find(f => f.label.toLowerCase().replace(/\s+/g, '-') === activeFilter)?.filter || (() => true));
+  const getFilteredAssets = () => {
+    if (activeFilter === 'all') return assets;
+    const filterKey = activeFilter.toLowerCase().replace(/\s+/g, '-');
+    const filterOption = filterOptions.find(f => f.label.toLowerCase().replace(/\s+/g, '-') === filterKey);
+    return filterOption ? assets.filter(filterOption.filter) : assets;
+  };
+
+  const filteredAssets = getFilteredAssets();
 
   const toggleRowSelection = (id: number | string) => {
     setSelectedRows(prev => {
@@ -263,6 +357,9 @@ export const AssetHardware: React.FC = () => {
               className="w-4 h-4 rounded border-gray-300"
             />
           }
+          onBulkGo={handleBulkAction}
+          onAction={handleToolbarAction}
+          selectedCount={selectedRows.size}
           actions={(row) => (
             <>
               <TooltipProvider delayDuration={200}>
@@ -288,7 +385,16 @@ export const AssetHardware: React.FC = () => {
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this asset?')) {
+                          handleDelete(row.id!);
+                        }
+                      }}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>

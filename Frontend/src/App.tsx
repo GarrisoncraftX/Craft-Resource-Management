@@ -44,17 +44,19 @@ const ConsumablesView = lazy(() => import("@/components/modules/assets/Consumabl
 const PredefinedKitsView = lazy(() => import("@/components/modules/assets/PredefinedKitsView").then(module => ({ default: module.PredefinedKitsView })));
 const PeopleView = lazy(() => import("@/components/modules/assets/PeopleView").then(module => ({ default: module.PeopleView })));
 const RequestableItemsView = lazy(() => import("@/components/modules/assets/RequestableItemsView").then(module => ({ default: module.RequestableItemsView })));
-const CustomFieldsView = lazy(() => import("@/components/modules/assets/CustomFieldsView").then(module => ({ default: module.CustomFieldsView })));
-const StatusLabelsView = lazy(() => import("@/components/modules/assets/StatusLabelsView").then(module => ({ default: module.StatusLabelsView })));
-const CategoriesView = lazy(() => import("@/components/modules/assets/CategoriesView").then(module => ({ default: module.CategoriesView })));
-const DepreciationView = lazy(() => import("@/components/modules/assets/DepreciationView").then(module => ({ default: module.DepreciationView })));
-const ModelsView = lazy(() => import("@/components/modules/assets/ModelsView").then(module => ({ default: module.ModelsView })));
-const ManufacturersView = lazy(() => import("@/components/modules/assets/ManufacturersView").then(module => ({ default: module.ManufacturersView })));
-const SuppliersView = lazy(() => import("@/components/modules/assets/SuppliersView").then(module => ({ default: module.SuppliersView })));
-const LocationsView = lazy(() => import("@/components/modules/assets/LocationsView").then(module => ({ default: module.LocationsView })));
-const CompaniesView = lazy(() => import("@/components/modules/assets/CompaniesView").then(module => ({ default: module.CompaniesView })));
-const DepartmentsView = lazy(() => import("@/components/modules/assets/DepartmentsView").then(module => ({ default: module.DepartmentsView })));
+const CustomFieldsView = lazy(() => import("@/components/modules/assets/AssetSettings/CustomFieldsView").then(module => ({ default: module.CustomFieldsView })));
+const StatusLabelsView = lazy(() => import("@/components/modules/assets/AssetSettings/StatusLabelsView").then(module => ({ default: module.StatusLabelsView })));
+const CategoriesView = lazy(() => import("@/components/modules/assets/AssetSettings/CategoriesView").then(module => ({ default: module.CategoriesView })));
+const DepreciationView = lazy(() => import("@/components/modules/assets/AssetSettings/DepreciationView").then(module => ({ default: module.DepreciationView })));
+const ModelsView = lazy(() => import("@/components/modules/assets/AssetSettings/ModelsView").then(module => ({ default: module.ModelsView })));
+const ManufacturersView = lazy(() => import("@/components/modules/assets/AssetSettings/ManufacturersView").then(module => ({ default: module.ManufacturersView })));
+const SuppliersView = lazy(() => import("@/components/modules/assets/AssetSettings/SuppliersView").then(module => ({ default: module.SuppliersView })));
+const LocationsView = lazy(() => import("@/components/modules/assets/AssetSettings/LocationsView").then(module => ({ default: module.LocationsView })));
+const CompaniesView = lazy(() => import("@/components/modules/assets/AssetSettings/CompaniesView").then(module => ({ default: module.CompaniesView })));
+const DepartmentsView = lazy(() => import("@/components/modules/assets/AssetSettings/DepartmentsView").then(module => ({ default: module.DepartmentsView })));
 const AssetFormPage = lazy(() => import("@/components/modules/assets/AssetFormPage").then(module => ({ default: module.AssetFormPage })));
+const MaintenanceReportView = lazy(() => import("@/components/modules/assets/AssetReports/MaintenanceReportView").then(module => ({ default: module.MaintenanceReportView })));
+const DepreciationReportView = lazy(() => import("@/components/modules/assets/AssetReports/DepreciationReportView").then(module => ({ default: module.DepreciationReportView })));
 
 //Employee & Visitors Modules
 const EmployeeAccount = lazy(() => import("@/components/EmployeeAccount").then(module => ({ default: module.EmployeeAccount })));
@@ -213,6 +215,8 @@ const AppRoutes = () => {
       <Route path="/assets/settings/locations" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LocationsView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/assets/settings/companies" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><CompaniesView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/assets/create" element={<ProtectedRoute><SuspenseWrapper><AssetFormPage /></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/reports/maintenance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Reports" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><MaintenanceReportView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/reports/depreciation" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Reports" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><DepreciationReportView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
       {/* Authentication Routes */}
       <Route path="/register" element={<PublicRoute><SuspenseWrapper><AuthForm /></SuspenseWrapper></PublicRoute>} />

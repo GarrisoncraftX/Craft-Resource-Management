@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { AssetDataTable, ColumnDef } from './AssetDataTable';
-import { Copy, Pencil, Trash2, Key } from 'lucide-react';
+import { Copy, Pencil, Trash2, } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { License } from '@/types/javabackendapi/assetTypes';
 import { mockLicenses } from '@/services/mockData/assets';

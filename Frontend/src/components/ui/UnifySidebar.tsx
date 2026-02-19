@@ -1,9 +1,14 @@
 import React, { useState } from "react"
 import { NavLink, useLocation } from "react-router-dom"
-import {Calculator,Users,Package,ShoppingCart,Shield,ChevronRight,Lock,ListFilter,Tag,FolderTree,TrendingDown,Boxes,Factory,Store,Building2,MapPin,Menu,Circle,X,Check,AlertCircle,Clock,Crown,Briefcase,} from "lucide-react"
+import {Calculator,Users,Package,ShoppingCart,Shield,ChevronRight,Lock,ListFilter,Tag,FolderTree,TrendingDown,Boxes,Factory,Store,Building2,MapPin,Menu,Circle,X,Check,AlertCircle,Clock,Crown,Briefcase,FileText,} from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/AuthContext"
 import { assetApiService, hrApiService } from "@/services/api"
+
+const assetReportFlyoutItems = [
+  { title: "Maintenance Report", url: "/assets/reports/maintenance", icon: FileText },
+  { title: "Depreciation Report", url: "/assets/reports/depreciation", icon: TrendingDown },
+]
 
 const assetSettingsItems = [
   { title: "Custom Fields", url: "/assets/settings/custom-fields", icon: ListFilter },
@@ -136,7 +141,7 @@ const modules = [
   },
 ] as const
 
-type FlyoutName = "Settings" | "Assets" | "People"
+type FlyoutName = "Settings" | "Assets" | "People" | "Reports"
 
 export function UnifySidebar() {
   const [hoveredModule, setHoveredModule] = useState<string | null>(null)
@@ -359,6 +364,25 @@ export function UnifySidebar() {
                                       </NavLink>
                                     ))}
 
+                                  {item.title === "Reports" &&
+                                    assetReportFlyoutItems.map((reportItem) => (
+                                      <NavLink
+                                        key={reportItem.url}
+                                        to={reportItem.url}
+                                        className={({ isActive }) =>
+                                          cn(
+                                            "flex items-center gap-2 px-2 py-2 rounded text-xs transition-colors",
+                                            isActive
+                                              ? "bg-accent text-accent-foreground font-medium"
+                                              : "text-muted-foreground hover:bg-accent/50"
+                                          )
+                                        }
+                                      >
+                                        <reportItem.icon className="w-4 h-4" />
+                                        <span className="flex-1 truncate">{reportItem.title}</span>
+                                      </NavLink>
+                                    ))}
+
                                   {item.title === "People" &&
                                     assetPeopleFilters.map((filter) => {
                                       const filterKey = filter.label.toLowerCase().replace(/\s+/g, "-")
@@ -469,6 +493,35 @@ export function UnifySidebar() {
                                 >
                                   <settingItem.icon className="w-4 h-4" />
                                   <span className="truncate">{settingItem.title}</span>
+                                </NavLink>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* REPORTS */}
+                        {item.title === "Reports" && activeFlyout === "Reports" && (
+                          <div
+                            className="fixed left-64 top-80 w-56 bg-card border border-border rounded-lg shadow-xl z-[100]"
+                            onMouseEnter={keepFlyoutOpen}
+                            onMouseLeave={closeFlyoutSoon}
+                          >
+                            <div className="p-2 grid grid-cols-1 gap-2">
+                              {assetReportFlyoutItems.map((reportItem) => (
+                                <NavLink
+                                  key={reportItem.url}
+                                  to={reportItem.url}
+                                  className={({ isActive }) =>
+                                    cn(
+                                      "flex items-center gap-2 px-2 py-2 rounded text-sm transition-colors",
+                                      isActive
+                                        ? "bg-accent text-accent-foreground font-medium"
+                                        : "text-muted-foreground hover:bg-accent/50"
+                                    )
+                                  }
+                                >
+                                  <reportItem.icon className="w-4 h-4" />
+                                  <span className="truncate">{reportItem.title}</span>
                                 </NavLink>
                               ))}
                             </div>
