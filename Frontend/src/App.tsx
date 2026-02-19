@@ -54,7 +54,7 @@ const SuppliersView = lazy(() => import("@/components/modules/assets/AssetSettin
 const LocationsView = lazy(() => import("@/components/modules/assets/AssetSettings/LocationsView").then(module => ({ default: module.LocationsView })));
 const CompaniesView = lazy(() => import("@/components/modules/assets/AssetSettings/CompaniesView").then(module => ({ default: module.CompaniesView })));
 const DepartmentsView = lazy(() => import("@/components/modules/assets/AssetSettings/DepartmentsView").then(module => ({ default: module.DepartmentsView })));
-const AssetFormPage = lazy(() => import("@/components/modules/assets/AssetForm").then(module => ({ default: module.AssetFormPage })));
+const AssetFormPage = lazy(() => import("@/components/modules/assets/AssetForm").then(module => ({ default: module.AssetForm })));
 const MaintenanceReportView = lazy(() => import("@/components/modules/assets/AssetReports/MaintenanceReportView").then(module => ({ default: module.MaintenanceReportView })));
 const DepreciationReportView = lazy(() => import("@/components/modules/assets/AssetReports/DepreciationReportView").then(module => ({ default: module.DepreciationReportView })));
 

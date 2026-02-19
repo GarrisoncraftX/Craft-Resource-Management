@@ -1,15 +1,7 @@
 import { apiClient } from '@/utils/apiClient';
-import type { AccessRule, SecurityIncident, IdCard, GuardPost, SOP } from '@/types/javabackendapi/securityTypes';
+import type { SecurityIncident, GuardPost, SOP } from '@/types/javabackendapi/securityTypes';
 
 class SecurityApiService {
-  // Access Control
-  async getAccessRules(): Promise<AccessRule[]> {
-    return apiClient.get('/system/security/access-rules');
-  }
-
-  async createAccessRule(data: Omit<AccessRule, 'id'>): Promise<AccessRule> {
-    return apiClient.post('/system/security/access-rules', data);
-  }
 
   // Security Incidents
   async getSecurityIncidents(): Promise<SecurityIncident[]> {

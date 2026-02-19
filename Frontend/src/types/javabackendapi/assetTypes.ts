@@ -293,63 +293,32 @@ export interface Asset {
   assetName?: string;
   description?: string;
   category?: string;
-  assetClass?: 'laptop' | 'phone' | 'server' | 'atm' | 'pos' | 'vehicle' | 'tool' | string;
+ 
   
-  // Location & Custody
-  location?: string;
-  defaultLocation?: string;
-  assignedTo?: string;
-  assignedToEmployee?: { id: string; name: string; email?: string };
-  department?: string;
-  company?: string;
-  
-  // Status & Lifecycle
-  status?: 'Active' | 'Maintenance' | 'Disposed' | 'In Use' | 'Available' | 'Archived' | 'Retired' | string;
-  condition?: string;
-  lifecycleStage?: 'procurement' | 'received' | 'tagged' | 'assigned' | 'in-use' | 'maintenance' | 'retired' | string;
-  
-  // Financial & Depreciation
-  purchaseDate?: string;
-  acquisitionDate?: string;
-  purchasePrice?: number;
-  acquisitionCost?: number;
-  currentValue?: number;
-  depreciationRate?: number;
-  depreciationMethod?: 'straight-line' | 'accelerated' | 'units-of-production' | string;
-  eolDate?: string; // End of life
-  
-  // Identification
-  serialNumber?: string;
-  modelNumber?: string;
+  // Model & Specifications
+  model?: string;
+  modelNo?: string;
+  serial?: string;
   manufacturer?: string;
-  
-  // Maintenance & Compliance
-  warrantyExpiration?: string;
-  nextMaintenanceDate?: string;
-  lastMaintenanceDate?: string;
-  maintenanceSchedule?: string;
-  
-  // Audit & Compliance
-  nextAuditDate?: string;
-  lastAuditDate?: string;
-  auditStatus?: 'pending' | 'in-progress' | 'completed' | 'discrepancy' | string;
-  complianceStatus?: 'compliant' | 'non-compliant' | 'pending-review' | string;
-  riskRegistryLink?: string;
-  
-  // Assignment History & Custody Chain
-  assignmentHistory?: AssignmentRecord[];
-  custodyChain?: CustodyRecord[];
-  checkInOutHistory?: CheckInOutRecord[];
-  
-  // Offboarding
-  offboardingStatus?: 'active' | 'pending-return' | 'returned' | 'missing' | string;
-  offboardingDate?: string;
-  returnedDate?: string;
-  returnedCondition?: string;
-  
-  // Request Management
+  supplier?: string;
+  company?: string;
+  location?: string;
+  status?: string;
+  defaultLocation?: string;
   requestable?: boolean;
-  requestStatus?: 'available' | 'requested' | 'checked-out' | string;
+  warranty?: string;
+  currentValue?: number;
+
+  //Audit
+  expectedCheckinDate?: string;
+  nextAuditDate?: string;
+  byod?: boolean;
+  orderNumber?: string;
+  purchaseDate?: string;
+  purchaseCost?: string;
+  eolDate?: string;
+  currency?: string;
+ 
   
   // Metadata
   notes?: string;

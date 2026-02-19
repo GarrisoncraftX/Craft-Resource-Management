@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Package, KeyRound, Keyboard, Droplets, Cpu, Users, X, RefreshCw, Download, Printer, Maximize2, Minus, Pencil, RotateCcw, ClipboardCheck, ShieldCheck } from 'lucide-react';
 import { assetApiService } from '@/services/javabackendapi/assetApi';
-import type { AssetStats, AssetCategory } from '@/services/mockData/assets';
+import type { AssetStats, AssetCategory } from '@/types/javabackendapi/assetTypes';
 
 // Big button card component matching Snipe-IT style
 const StatusCard: React.FC<{

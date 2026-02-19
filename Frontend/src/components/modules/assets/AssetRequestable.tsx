@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { fetchDisposalRecords, createDisposalRecord } from '@/services/api';
-import type { DisposalRecord } from '@/types/asset';
+import type { DisposalRecord } from '@/types/javabackendapi/assetTypes';
 import { mockDisposalRecords } from '@/services/mockData/assets';
 
 export const AssetRequestable: React.FC = () => {

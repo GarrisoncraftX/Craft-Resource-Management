@@ -134,9 +134,7 @@ const modules = [
       { title: "Management", url: "/security/management" },
       { title: "Attendance", url: "/security/attendance" },
       { title: "Visitors", url: "/security/visitors" },
-      { title: "Access Control", url: "/security/access-control" },
       { title: "Incidents", url: "/security/incidents" },
-      { title: "ID Cards", url: "/security/id-cards" },
     ],
   },
 ] as const
