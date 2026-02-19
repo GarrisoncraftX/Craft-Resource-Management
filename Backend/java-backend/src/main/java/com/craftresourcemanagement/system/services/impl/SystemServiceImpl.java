@@ -21,7 +21,6 @@ public class SystemServiceImpl implements SystemService {
 
     private final SystemConfigRepository systemConfigRepository;
     private final AuditLogRepository auditLogRepository;
-    private final AccessRuleRepository accessRuleRepository;
     private final GuardPostRepository guardPostRepository;
     private final SOPRepository sopRepository;
     private final SecurityIncidentRepository securityIncidentRepository;
@@ -32,7 +31,6 @@ public class SystemServiceImpl implements SystemService {
 
     public SystemServiceImpl(SystemConfigRepository systemConfigRepository,
                              AuditLogRepository auditLogRepository,
-                             AccessRuleRepository accessRuleRepository,
                              GuardPostRepository guardPostRepository,
                              SOPRepository sopRepository,
                              SecurityIncidentRepository securityIncidentRepository,
@@ -42,7 +40,6 @@ public class SystemServiceImpl implements SystemService {
                              NotificationRepository notificationRepository) {
         this.systemConfigRepository = systemConfigRepository;
         this.auditLogRepository = auditLogRepository;
-        this.accessRuleRepository = accessRuleRepository;
         this.guardPostRepository = guardPostRepository;
         this.sopRepository = sopRepository;
         this.securityIncidentRepository = securityIncidentRepository;
@@ -263,17 +260,7 @@ public class SystemServiceImpl implements SystemService {
         auditLogRepository.deleteById(id);
     }
 
-    // Security - Access Rules
-    @Override
-    public AccessRule createAccessRule(AccessRule accessRule) {
-        return accessRuleRepository.save(accessRule);
-    }
-
-    @Override
-    public List<AccessRule> getAllAccessRules() {
-        return accessRuleRepository.findAll();
-    }
-
+  
     // Security - Guard Posts
     @Override
     public GuardPost createGuardPost(GuardPost guardPost) {

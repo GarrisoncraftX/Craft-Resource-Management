@@ -47,7 +47,6 @@ public class HRTestConfig {
     
     
     // System repositories
-    @MockBean private AccessRuleRepository accessRuleRepository;
     @MockBean private ActiveSessionRepository activeSessionRepository;
     @MockBean private GuardPostRepository guardPostRepository;
     @MockBean private SecurityIncidentRepository securityIncidentRepository;

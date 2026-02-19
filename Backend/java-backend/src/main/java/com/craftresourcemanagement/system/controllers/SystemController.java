@@ -158,16 +158,6 @@ public class SystemController {
         return ResponseEntity.ok(systemService.getAuditStatistics(userId, action, startDate, endDate));
     }
 
-    // Security - Access Rules
-    @PostMapping("/security/access-rules")
-    public ResponseEntity<AccessRule> createAccessRule(@RequestBody AccessRule accessRule) {
-        return ResponseEntity.ok(systemService.createAccessRule(accessRule));
-    }
-
-    @GetMapping("/security/access-rules")
-    public ResponseEntity<List<AccessRule>> getAllAccessRules() {
-        return ResponseEntity.ok(systemService.getAllAccessRules());
-    }
 
     // Security - Guard Posts
     @PostMapping("/security/guard-posts")

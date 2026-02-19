@@ -34,10 +34,7 @@ public interface SystemService {
     AuditLog updateAuditLog(Long id, AuditLog auditLog);
     void deleteAuditLog(Long id);
 
-    // Security - Access Rules
-    AccessRule createAccessRule(AccessRule accessRule);
-    List<AccessRule> getAllAccessRules();
-
+  
     // Security - Guard Posts
     GuardPost createGuardPost(GuardPost guardPost);
     List<GuardPost> getAllGuardPosts();
