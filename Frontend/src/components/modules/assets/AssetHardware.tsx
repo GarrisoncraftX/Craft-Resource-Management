@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Package, Edit, Trash2, Copy } from 'lucide-react';
+import { Package, Edit, Trash2, Copy, FileClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { fetchAssets, deleteAsset } from '@/services/api';
@@ -369,7 +369,17 @@ export const AssetHardware: React.FC = () => {
                      <Copy className="h-4 w-4" />
                    </Button>
                  </TooltipTrigger>
-                 <TooltipContent><p>Clone Assets</p></TooltipContent>
+                 <TooltipContent><p>Clone Asset</p></TooltipContent>
+               </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider delayDuration={200}>
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-sky-600 hover:text-sky-700 hover:bg-sky-50">
+                     <FileClock className="h-4 w-4" />
+                   </Button>
+                 </TooltipTrigger>
+                 <TooltipContent><p>Audit Asset</p></TooltipContent>
                </Tooltip>
               </TooltipProvider>
               <TooltipProvider delayDuration={200}>
@@ -379,7 +389,7 @@ export const AssetHardware: React.FC = () => {
                       <Edit className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent><p>Edit Asset</p></TooltipContent>
+                  <TooltipContent><p>Update Asset</p></TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               <TooltipProvider delayDuration={200}>
