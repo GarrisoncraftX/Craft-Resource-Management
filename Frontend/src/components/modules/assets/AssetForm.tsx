@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState } from 'react';
 import { ChevronRight, AlertCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -99,13 +97,13 @@ const initialFormData: AssetFormData = {
   depreciationRate: '20',
 };
 
-interface AssetFormPageProps {
+interface AssetFormProps {
   onAssetCreated?: (asset) => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
 
-export const AssetFormPage: React.FC<AssetFormPageProps> = ({ onAssetCreated, open, onOpenChange }) => {
+export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOpenChange }) => {
   const [formData, setFormData] = useState<AssetFormData>(initialFormData);
   const [expandedSections, setExpandedSections] = useState({
     optional: false,
@@ -131,7 +129,7 @@ export const AssetFormPage: React.FC<AssetFormPageProps> = ({ onAssetCreated, op
     e.preventDefault();
     console.log('Form submitted:', formData);
     if (onAssetCreated) {
-      onAssetCreated(formData as any);
+      onAssetCreated(formData);
     }
     if (onOpenChange) {
       onOpenChange(false);
@@ -143,22 +141,7 @@ export const AssetFormPage: React.FC<AssetFormPageProps> = ({ onAssetCreated, op
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* DEMO Banner */}
-      <div className="bg-cyan-400 text-white px-4 py-3 flex items-center gap-3">
-        <AlertCircle className="w-5 h-5 flex-shrink-0" />
-        <p className="text-sm font-medium">DEMO MODE: Some features are disabled for this installation.</p>
-      </div>
-
-      {/* Breadcrumb */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-gray-600">Assets</span>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-          <span className="text-gray-900 font-medium">Create New</span>
-        </div>
-      </div>
-
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center overflow-auto z-50 py-10">      
       {/* Form Container */}
       <div className="max-w-2xl mx-auto py-8 px-4">
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -774,4 +757,4 @@ export const AssetFormPage: React.FC<AssetFormPageProps> = ({ onAssetCreated, op
   );
 };
 
-export default AssetFormPage;
+export default AssetForm;

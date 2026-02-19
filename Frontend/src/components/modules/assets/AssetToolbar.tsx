@@ -19,7 +19,7 @@ export default function AssetsToolbar({
   
   // Column mapping
   allColumns = [],
-  visibleColumns = new Set(),
+  visibleColumns = new Set<string>(),
   onColumnToggle,
   onToggleAll,
   
@@ -82,7 +82,7 @@ export default function AssetsToolbar({
     <div className="w-full bg-white p-4">
       <div className="border-t border-slate-200">
         {/* TOP ROW */}
-        <div className="p-2 flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 border-b border-gray-100">
+        <div className="p-2 flex flex-col sm:flex-row items-start sm:items-center justify-end gap-28 border-b border-gray-100">
           {/* Bulk Edit + Go */}
           {(viewType === 'assets' || viewType === 'people') && (
             <div className="flex items-center gap-2">
@@ -308,15 +308,16 @@ export default function AssetsToolbar({
               <PageBtn
                 onClick={() => setPageSafe(page - 1)}
                 disabled={page === 1}
+                active={false}
                 className="rounded-l-md"
               >
                 Previous
               </PageBtn>
 
-              {pages.map((p, idx) =>
+              {pages.map((p) =>
                 p === "…" ? (
                   <div
-                    key={`dots-${idx}`}
+                    key={`dots-${p}`}
                     className="flex h-8 items-center justify-center border-y border-sky-800 bg-sky-700 px-4 text-xs font-semibold text-white"
                   >
                     …
@@ -325,6 +326,7 @@ export default function AssetsToolbar({
                   <PageBtn
                     key={p}
                     onClick={() => setPageSafe(p)}
+                    disabled={false}
                     active={p === page}
                     className="rounded-none"
                   >
@@ -336,6 +338,7 @@ export default function AssetsToolbar({
               <PageBtn
                 onClick={() => setPageSafe(page + 1)}
                 disabled={page === totalPages}
+                active={false}
                 className="rounded-r-md"
               >
                 Next

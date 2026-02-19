@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Package, Eye, Edit, Trash2 } from 'lucide-react';
+import { Package, Edit, Trash2, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { fetchAssets, deleteAsset } from '@/services/api';
 import type {Asset} from '@/types/javabackendapi/assetTypes';
 import { mockAssets } from '@/services/mockData/assets';
-import { AssetFormPage } from './AssetFormPage';
+import { AssetForm } from './AssetForm';
 import { AssetDataTable, ColumnDef, getStatusBadge } from './AssetDataTable';
 import { toast } from 'sonner';
 
@@ -112,7 +112,7 @@ export const AssetHardware: React.FC = () => {
         }
         break;
       case 'refresh':
-        window.location.reload();
+        globalThis.location.reload();
         break;
       case 'maintenance':
         toast.info('Maintenance feature coming soon');
@@ -314,13 +314,13 @@ export const AssetHardware: React.FC = () => {
         {/* Header with Filter Panel */}
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-2">
-\            <div>
+           <div>
               <h1 className="text-3xl lg:text-2xl sm:text-sm font-bold tracking-tight">Assets</h1>
             </div>
           </div>
 
           {showAddDialog && (
-            <AssetFormPage 
+            <AssetForm 
               onAssetCreated={handleAssetCreated}
               open={showAddDialog}
               onOpenChange={setShowAddDialog}
@@ -362,15 +362,15 @@ export const AssetHardware: React.FC = () => {
           selectedCount={selectedRows.size}
           actions={(row) => (
             <>
-              <TooltipProvider delayDuration={200}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-sky-600 hover:text-sky-700 hover:bg-sky-50">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>View Details</p></TooltipContent>
-                </Tooltip>
+            <TooltipProvider delayDuration={200}>
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-sky-600 hover:text-sky-700 hover:bg-sky-50">
+                     <Copy className="h-4 w-4" />
+                   </Button>
+                 </TooltipTrigger>
+                 <TooltipContent><p>Clone Assets</p></TooltipContent>
+               </Tooltip>
               </TooltipProvider>
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
