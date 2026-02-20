@@ -2,7 +2,6 @@ export { AssetDashboard } from './AssetDashboard';
 export { AssetDataTable } from './AssetDataTable';
 export { AssetForm } from './AssetForm';
 export { AssetHardware } from './AssetHardware';
-export { AssetRequestable } from './AssetRequestable';
 export { AccessoriesView } from './AccessoriesView';
 export { ComponentsView } from './ComponentsView';
 export { ConsumablesView } from './ConsumablesView';

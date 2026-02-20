@@ -1,3 +1,4 @@
+import { assetApiService } from '@/services/javabackendapi/assetApi';
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -29,6 +30,8 @@ export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, on
   const [expectedCheckinDate, setExpectedCheckinDate] = useState('');
   const [notes, setNotes] = useState('');
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const removeAsset = (id: number | string) => {
     setSelectedAssetIds(prev => {
       const next = new Set(prev);
@@ -37,15 +40,35 @@ export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, on
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedAssetIds.size === 0) {
       toast.error('No assets selected');
       return;
     }
-    onCheckout?.({ assetIds: Array.from(selectedAssetIds), status, checkoutType, checkoutDate, expectedCheckinDate, notes });
-    toast.success(`${selectedAssetIds.size} assets checked out`);
-    onOpenChange(false);
+    
+    setIsSubmitting(true);
+    try {
+      // Checkout each asset individually
+      const checkoutPromises = Array.from(selectedAssetIds).map(assetId => 
+        assetApiService.checkoutAsset(
+          Number(assetId),
+          1, // assignedTo - should be dynamic based on checkoutType
+          checkoutType,
+          notes
+        )
+      );
+      
+      await Promise.all(checkoutPromises);
+      onCheckout?.({ assetIds: Array.from(selectedAssetIds), status, checkoutType, checkoutDate, expectedCheckinDate, notes });
+      toast.success(`${selectedAssetIds.size} assets checked out successfully`);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to checkout assets:', error);
+      toast.error('Failed to checkout some assets. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -142,7 +165,9 @@ export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, on
           {/* Footer */}
           <div className="flex justify-between items-center pt-4 border-t">
             <button type="button" onClick={() => onOpenChange(false)} className="text-sm text-sky-600 hover:underline">Cancel</button>
-            <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white"><Check className="w-4 h-4 mr-1" /> Checkout</Button>
+            <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Check className="w-4 h-4 mr-1" /> {isSubmitting ? 'Checking out...' : 'Checkout'}
+            </Button>
           </div>
         </form>
       </DialogContent>

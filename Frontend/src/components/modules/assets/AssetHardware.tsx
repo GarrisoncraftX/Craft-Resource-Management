@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Package, Edit, Trash2, Copy, FileClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { fetchAssets, deleteAsset } from '@/services/api';
+import { assetApiService } from '@/services/javabackendapi/assetApi';
 import type { Asset } from '@/types/javabackendapi/assetTypes';
 import { mockAssets } from '@/services/mockData/assets';
 import { AssetForm } from './AssetForm';
@@ -56,7 +56,7 @@ export const AssetHardware: React.FC = () => {
 
   const handleDelete = async (id: number | string) => {
     try {
-      await deleteAsset(id);
+      await assetApiService.deleteAsset(Number(id));
       setAssets(prev => prev.filter(a => a.id !== id));
       setSelectedRows(prev => {
         const next = new Set(prev);
@@ -128,7 +128,7 @@ export const AssetHardware: React.FC = () => {
 
   const handleBulkDeleteConfirm = async (ids: (number | string)[]) => {
     try {
-      await Promise.all(ids.map(id => deleteAsset(id)));
+      await Promise.all(ids.map(id => assetApiService.deleteAsset(Number(id))));
       setAssets(prev => prev.filter(a => !ids.includes(a.id)));
       setSelectedRows(new Set());
       toast.success(`${ids.length} asset(s) deleted successfully`);
@@ -144,13 +144,14 @@ export const AssetHardware: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const list = await fetchAssets();
+        const list = await assetApiService.getAllAssets();
         if (!cancelled && Array.isArray(list) && list.length > 0) {
           setAssets(list);
         }
       } catch (err) {
-        console.warn('Failed to fetch assets — using fallback dummies.', err instanceof Error ? err.message : err);
+        console.warn('Failed to fetch assets — using fallback data.', err instanceof Error ? err.message : err);
         setError(err instanceof Error ? err.message : 'Failed to fetch assets');
+        // Fallback already handled by assetApiService
       } finally {
         if (!cancelled) setLoading(false);
       }

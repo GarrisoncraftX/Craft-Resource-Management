@@ -5,11 +5,21 @@ const jwt = require("jsonwebtoken");
 const axios = require("axios");
 const http = require("node:http");
 const https = require("node:https");
+const { v4: uuidv4 } = require("uuid");
 
 require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 5003;
+
+// Correlation ID middleware - MUST be first
+app.use((req, res, next) => {
+  const correlationId = req.headers['x-correlation-id'] || uuidv4();
+  req.correlationId = correlationId;
+  req.headers['x-correlation-id'] = correlationId;
+  res.setHeader('x-correlation-id', correlationId);
+  next();
+});
 
 // Middleware for logging
 app.use(morgan("combined"));
@@ -92,6 +102,10 @@ app.use((req, res, next) => {
     req.headers["x-department-id"] = departmentId;
     req.headers["x-role-id"] = roleId;
     req.headers["x-permissions"] = JSON.stringify(permissions);
+  }
+  // Ensure correlation ID is always propagated
+  if (req.correlationId) {
+    req.headers["x-correlation-id"] = req.correlationId;
   }
   next();
 });

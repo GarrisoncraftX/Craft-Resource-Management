@@ -117,6 +117,26 @@ public class EmployeeServiceImpl implements EmployeeService {
                 user.getMomoNumber() != null && !user.getMomoNumber().isEmpty()) {
                 user.setProfileCompleted(true);
             }
+            
+            // Update employee_id if DOB was updated from placeholder (Jan 1st)
+            if (user.getDateOfBirth() != null && existing.isPresent()) {
+                User existingUser = existing.get();
+                LocalDate existingDob = existingUser.getDateOfBirth();
+                LocalDate newDob = user.getDateOfBirth();
+                
+                // Check if DOB changed from placeholder (Jan 1st) to actual DOB
+                if (existingDob != null && existingDob.getMonthValue() == 1 && existingDob.getDayOfMonth() == 1 
+                    && !newDob.equals(existingDob)) {
+                    // Regenerate employee_id with actual DOB
+                    String newEmployeeId = String.format("CRMS%d%d00%d", 
+                        newDob.getYear(), 
+                        existingUser.getHireDate().getYear(), 
+                        existingUser.getDepartmentId());
+                    user.setEmployeeId(newEmployeeId);
+                    log.info("Updated employee_id from {} to {} after DOB update", 
+                        existingUser.getEmployeeId(), newEmployeeId);
+                }
+            }
 
             User updatedUser = userRepository.save(user);
             auditClient.logActionAsync(
@@ -134,14 +154,24 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     /**
      * Pillar 1: Provisions a new employee using the hr_create_employee stored procedure
+     * Employee ID format: CRMS{YearOfBirth}{HireYear}00{DeptId}
+     * If DOB not provided, uses January 1st of hire year as placeholder
      */
     private User provisionNewEmployee(User user) {
+        // Use January 1st of current year if DOB not provided
+        LocalDate dob = user.getDateOfBirth();
+        if (dob == null) {
+            dob = LocalDate.of(LocalDate.now().getYear(), 1, 1);
+            log.info("DOB not provided, using placeholder: {}", dob);
+        }
+        
         StoredProcedureQuery query = entityManager.createStoredProcedureQuery("hr_create_employee");
 
         // Input parameters
         query.registerStoredProcedureParameter("p_first_name", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_last_name", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_email", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("p_dob", java.sql.Date.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_department_id", Integer.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_job_grade_id", Integer.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("p_role_id", Integer.class, ParameterMode.IN);
@@ -156,10 +186,11 @@ public class EmployeeServiceImpl implements EmployeeService {
         query.setParameter("p_first_name", user.getFirstName());
         query.setParameter("p_last_name", user.getLastName());
         query.setParameter("p_email", user.getEmail());
+        query.setParameter("p_dob", java.sql.Date.valueOf(dob));
         query.setParameter("p_department_id", user.getDepartmentId());
         query.setParameter("p_job_grade_id", user.getJobGradeId());
         query.setParameter("p_role_id", user.getRoleId());
-        query.setParameter("p_hr_user_id", 1); // Assuming HR user ID is 1, should be passed from context
+        query.setParameter("p_hr_user_id", 1);
 
         // Execute the stored procedure
         query.execute();

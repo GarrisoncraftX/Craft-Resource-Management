@@ -3,15 +3,10 @@ import {
   mockAssets, 
   mockMaintenanceRecords, 
   mockDisposalRecords, 
-  mockAcquisitionRequests,
-  type AcquisitionRequest,
-  type ValuationRecord,
-  type AssetStats,
-  type AssetCategory,
-  type AssetTrend,
-  type MaintenanceCost
 } from '@/services/mockData/assets';
-import type { Asset, MaintenanceRecord, DisposalRecord } from '@/types/javabackendapi/assetTypes';
+import type { Asset, MaintenanceRecord, DisposalRecord, MaintenanceCost } from '@/types/javabackendapi/assetTypes';
+
+const API_BASE = '/api/assets';
 
 class AssetApiService {
   private async handleApiCall<T>(apiCall: () => Promise<T>, fallback: T): Promise<T> {
@@ -27,116 +22,86 @@ class AssetApiService {
   // Assets
   async getAllAssets(): Promise<Asset[]> {
     return this.handleApiCall(
-      () => apiClient.get('/assets'),
+      () => apiClient.get(`${API_BASE}`),
       mockAssets
     );
   }
 
   async getAssetById(id: number): Promise<Asset> {
     return this.handleApiCall(
-      () => apiClient.get(`/assets/${id}`),
-      mockAssets[0]
+      () => apiClient.get(`${API_BASE}/${id}`),
+      mockAssets.find(a => a.id === id) || mockAssets[0]
     );
   }
 
   async createAsset(asset: Omit<Asset, 'id'>): Promise<Asset> {
     return this.handleApiCall(
-      () => apiClient.post('/assets', asset),
+      () => apiClient.post(`${API_BASE}`, asset),
       { ...asset, id: Date.now() }
     );
   }
 
   async updateAsset(id: number, asset: Partial<Asset>): Promise<Asset> {
     return this.handleApiCall(
-      () => apiClient.put(`/assets/${id}`, asset),
+      () => apiClient.put(`${API_BASE}/${id}`, asset),
       { ...mockAssets[0], ...asset, id }
     );
   }
 
   async deleteAsset(id: number): Promise<void> {
     return this.handleApiCall(
-      () => apiClient.delete(`/assets/${id}`),
+      () => apiClient.delete(`${API_BASE}/${id}`),
       undefined
     );
   }
 
-  // Asset Statistics
-  async getAssetStats(): Promise<AssetStats> {
-    const mockStats: AssetStats = {
-      totalAssets: mockAssets.length,
-      activeAssets: mockAssets.filter(a => a.status === 'Active').length,
-      maintenanceAssets: mockAssets.filter(a => a.status === 'Maintenance').length,
-      disposedAssets: 2,
-      totalValue: mockAssets.reduce((sum, asset) => sum + asset.currentValue, 0),
-      depreciationRate: 8.5
-    };
+  async checkoutAsset(id: number, assignedTo: number, assignedType: string, note?: string): Promise<Asset> {
     return this.handleApiCall(
-      () => apiClient.get('/assets/stats'),
-      mockStats
+      () => apiClient.post(`${API_BASE}/${id}/checkout`, { assigned_to: assignedTo, assigned_type: assignedType, note }),
+      mockAssets[0]
     );
   }
 
-  async getAssetsByCategory(): Promise<AssetCategory[]> {
-    const mockCategories: AssetCategory[] = [
-      { category: 'IT Equipment', count: 15, value: 18500 },
-      { category: 'Furniture', count: 25, value: 12000 },
-      { category: 'Vehicles', count: 8, value: 145000 },
-      { category: 'Machinery', count: 12, value: 85000 },
-      { category: 'Office Equipment', count: 18, value: 22000 }
-    ];
+  async checkinAsset(id: number, note?: string): Promise<Asset> {
     return this.handleApiCall(
-      () => apiClient.get('/assets/by-category'),
-      mockCategories
+      () => apiClient.post(`${API_BASE}/${id}/checkin`, { note }),
+      mockAssets[0]
     );
   }
 
-  async getAssetTrends(): Promise<AssetTrend[]> {
-    const mockTrends: AssetTrend[] = [
-      { month: 'Jan', acquisitions: 12, disposals: 3, value: 285000 },
-      { month: 'Feb', acquisitions: 8, disposals: 5, value: 287000 },
-      { month: 'Mar', acquisitions: 15, disposals: 2, value: 295000 },
-      { month: 'Apr', acquisitions: 10, disposals: 4, value: 298000 },
-      { month: 'May', acquisitions: 18, disposals: 6, value: 305000 },
-      { month: 'Jun', acquisitions: 14, disposals: 3, value: 312000 }
-    ];
-    return this.handleApiCall(
-      () => apiClient.get('/assets/trends'),
-      mockTrends
-    );
-  }
 
   // Maintenance
   async getAllMaintenanceRecords(): Promise<MaintenanceRecord[]> {
     return this.handleApiCall(
-      () => apiClient.get('/assets/maintenance-records'),
+      () => apiClient.get(`${API_BASE}/maintenance-records`),
       mockMaintenanceRecords
     );
   }
 
   async getMaintenanceRecordById(id: number): Promise<MaintenanceRecord> {
     return this.handleApiCall(
-      () => apiClient.get(`/assets/maintenance-records/${id}`),
-      mockMaintenanceRecords[0]
+      () => apiClient.get(`${API_BASE}/maintenance-records/${id}`),
+      mockMaintenanceRecords.find(r => r.id === id) || mockMaintenanceRecords[0]
     );
   }
 
   async createMaintenanceRecord(record: Omit<MaintenanceRecord, 'id'>): Promise<MaintenanceRecord> {
     return this.handleApiCall(
-      () => apiClient.post('/assets/maintenance-records', record),
+      () => apiClient.post(`${API_BASE}/maintenance-records`, record),
       { ...record, id: Date.now() }
     );
   }
 
   async updateMaintenanceRecord(id: number, record: Partial<MaintenanceRecord>): Promise<MaintenanceRecord> {
     return this.handleApiCall(
-      () => apiClient.put(`/assets/maintenance-records/${id}`, record),
+      () => apiClient.put(`${API_BASE}/maintenance-records/${id}`, record),
       { ...mockMaintenanceRecords[0], ...record, id }
     );
   }
 
   async deleteMaintenanceRecord(id: number): Promise<void> {
     return this.handleApiCall(
-      () => apiClient.delete(`/assets/maintenance-records/${id}`),
+      () => apiClient.delete(`${API_BASE}/maintenance-records/${id}`),
       undefined
     );
   }
@@ -151,7 +116,7 @@ class AssetApiService {
       { month: 'Jun', preventive: 2900, corrective: 2000, emergency: 700 }
     ];
     return this.handleApiCall(
-      () => apiClient.get('/assets/maintenance/costs'),
+      () => apiClient.get(`${API_BASE}/maintenance/costs`),
       mockCosts
     );
   }
@@ -159,93 +124,124 @@ class AssetApiService {
   // Disposal
   async getAllDisposalRecords(): Promise<DisposalRecord[]> {
     return this.handleApiCall(
-      () => apiClient.get('/assets/disposal-records'),
+      () => apiClient.get(`${API_BASE}/disposal-records`),
       mockDisposalRecords
     );
   }
 
   async getDisposalRecordById(id: number): Promise<DisposalRecord> {
     return this.handleApiCall(
-      () => apiClient.get(`/assets/disposal-records/${id}`),
-      mockDisposalRecords[0]
+      () => apiClient.get(`${API_BASE}/disposal-records/${id}`),
+      mockDisposalRecords.find(r => r.id === id) || mockDisposalRecords[0]
     );
   }
 
   async createDisposalRecord(record: Omit<DisposalRecord, 'id'>): Promise<DisposalRecord> {
     return this.handleApiCall(
-      () => apiClient.post('/assets/disposal-records', record),
+      () => apiClient.post(`${API_BASE}/disposal-records`, record),
       { ...record, id: Date.now() }
     );
   }
 
   async updateDisposalRecord(id: number, record: Partial<DisposalRecord>): Promise<DisposalRecord> {
     return this.handleApiCall(
-      () => apiClient.put(`/assets/disposal-records/${id}`, record),
+      () => apiClient.put(`${API_BASE}/disposal-records/${id}`, record),
       { ...mockDisposalRecords[0], ...record, id }
     );
   }
 
   async deleteDisposalRecord(id: number): Promise<void> {
     return this.handleApiCall(
-      () => apiClient.delete(`/assets/disposal-records/${id}`),
+      () => apiClient.delete(`${API_BASE}/disposal-records/${id}`),
       undefined
     );
   }
 
-  // Acquisition
-  async getAcquisitionRequests(): Promise<AcquisitionRequest[]> {
-    return this.handleApiCall(
-      () => apiClient.get('/assets/acquisition-requests'),
-      mockAcquisitionRequests
-    );
-  }
 
-  async submitAcquisitionRequest(request: Omit<AcquisitionRequest, 'id'>): Promise<AcquisitionRequest> {
-    return this.handleApiCall(
-      () => apiClient.post('/assets/acquisition-requests', request),
-      { ...request, id: `AQ-${Date.now()}` }
-    );
-  }
-
-  async updateAcquisitionStatus(id: string, status: AcquisitionRequest['status']): Promise<AcquisitionRequest> {
-    return this.handleApiCall(
-      () => apiClient.put(`/assets/acquisition-requests/${id}`, { status }),
-      { ...mockAcquisitionRequests[0], id, status }
-    );
-  }
-
-  // Valuation
-  async getValuationRecords(): Promise<ValuationRecord[]> {
-    const mockRecords: ValuationRecord[] = [
-      {
-        id: 1,
-        assetId: 1,
-        assetName: 'Dell Laptop OptiPlex 7090',
-        previousValue: 1200,
-        currentValue: 1100,
-        valuationDate: '2024-01-15',
-        valuationMethod: 'Depreciation',
-        valuedBy: 'Asset Manager',
-        notes: 'Standard depreciation applied'
-      }
-    ];
-    return this.handleApiCall(
-      () => apiClient.get('/assets/valuation'),
-      mockRecords
-    );
-  }
-
-  async createValuationRecord(record: Omit<ValuationRecord, 'id'>): Promise<ValuationRecord> {
-    return this.handleApiCall(
-      () => apiClient.post('/assets/valuation', record),
-      { ...record, id: Date.now() }
-    );
-  }
 
   async getAssetCounts(): Promise<Record<string, number>> {
     return this.handleApiCall(
-      () => apiClient.get('/assets/counts'),
+      () => apiClient.get(`${API_BASE}/counts`),
       { 'list-all': 0, deployed: 0, 'ready-to-deploy': 0, pending: 0, 'un-deployable': 0, archived: 0 }
+    );
+  }
+
+  // Settings
+  async getAllCategories(): Promise<any[]> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/categories`),
+      []
+    );
+  }
+
+  async getAllManufacturers(): Promise<any[]> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/manufacturers`),
+      []
+    );
+  }
+
+  async getAllSuppliers(): Promise<any[]> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/suppliers`),
+      []
+    );
+  }
+
+  async getAllLocations(): Promise<any[]> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/locations`),
+      []
+    );
+  }
+
+  async getAllModels(): Promise<any[]> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/models`),
+      []
+    );
+  }
+
+  async getAllStatusLabels(): Promise<any[]> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/status-labels`),
+      []
+    );
+  }
+
+  async getAllDepreciations(): Promise<any[]> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/depreciations`),
+      []
+    );
+  }
+
+  async getAllCompanies(): Promise<any[]> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/companies`),
+      []
+    );
+  }
+
+  async getAllDepartments(): Promise<any[]> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/departments`),
+      []
+    );
+  }
+
+  // Reports
+  async getDepreciationReport(): Promise<any[]> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/reports/depreciation`),
+      []
+    );
+  }
+
+  async getMaintenanceReport(): Promise<any[]> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/reports/maintenance`),
+      []
     );
   }
 }
@@ -305,12 +301,4 @@ export async function updateDisposalRecordItem(id: number | string, record: unkn
 
 export async function deleteDisposalRecordItem(id: number | string) {
   return assetApiService.deleteDisposalRecord(Number(id));
-}
-
-export async function fetchAcquisitionRequests() {
-  return assetApiService.getAcquisitionRequests();
-}
-
-export async function submitAcquisitionRequestItem(request: AcquisitionRequest) {
-  return assetApiService.submitAcquisitionRequest(request);
 }

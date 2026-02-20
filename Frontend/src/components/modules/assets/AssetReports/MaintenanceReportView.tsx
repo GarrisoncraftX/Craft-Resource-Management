@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AssetDataTable, ColumnDef } from '../AssetDataTable';
 import type { MaintenanceReport } from '@/types/javabackendapi/assetTypes';
 import { mockMaintenanceReports } from '@/services/mockData/assets';
+import { assetApiService } from '@/services/javabackendapi/assetApi';
 
 const columns: ColumnDef<MaintenanceReport>[] = [
   { key: 'company', header: 'Company', accessor: (r) => r.company },
@@ -23,6 +24,12 @@ const columns: ColumnDef<MaintenanceReport>[] = [
 ];
 
 export const MaintenanceReportView: React.FC = () => {
+  const [data, setData] = useState<MaintenanceReport[]>(mockMaintenanceReports);
+
+  useEffect(() => {
+    assetApiService.getMaintenanceReport().then(setData).catch(() => setData(mockMaintenanceReports));
+  }, []);
+
   return (
     <div className="space-y-4 bg-card p-2">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -31,7 +38,7 @@ export const MaintenanceReportView: React.FC = () => {
       </div>
 
       <AssetDataTable
-        data={mockMaintenanceReports}
+        data={data}
         columns={columns}
         onAdd={() => {}}
       />

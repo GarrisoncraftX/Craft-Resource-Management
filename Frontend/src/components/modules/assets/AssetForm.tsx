@@ -1,3 +1,5 @@
+import { assetApiService } from '@/services/javabackendapi/assetApi';
+import { toast } from 'sonner';
 import React, { useState } from 'react';
 import { Plus, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -47,18 +49,54 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
     currency: initialData?.currency || 'USD',
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   if (!open) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const asset = {
-      id: Date.now(),
-      company, assetTag, serial, model, status, notes, defaultLocation, requestable,
-      assetName: optionalData.assetName,
-      ...optionalData, ...orderData,
-    };
-    onAssetCreated?.(asset);
-    onOpenChange?.(false);
+    setIsSubmitting(true);
+    
+    try {
+      const assetData = {
+        company, 
+        asset_tag: assetTag, 
+        serial, 
+        model, 
+        status, 
+        notes, 
+        defaultLocation, 
+        requestable,
+        asset_name: optionalData.assetName,
+        warranty: optionalData.warranty,
+        expected_checkin_date: optionalData.expectedCheckinDate,
+        next_audit_date: optionalData.nextAuditDate,
+        byod: optionalData.byod,
+        order_number: orderData.orderNumber,
+        purchase_date: orderData.purchaseDate,
+        eol_date: orderData.eolDate,
+        supplier: orderData.supplier,
+        purchase_cost: orderData.purchaseCost,
+        currency: orderData.currency,
+      };
+
+      let result;
+      if (initialData?.id) {
+        result = await assetApiService.updateAsset(initialData.id, assetData);
+        toast.success('Asset updated successfully');
+      } else {
+        result = await assetApiService.createAsset(assetData);
+        toast.success('Asset created successfully');
+      }
+      
+      onAssetCreated?.(result);
+      onOpenChange?.(false);
+    } catch (error) {
+      console.error('Failed to save asset:', error);
+      toast.error('Failed to save asset. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -68,8 +106,8 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
           {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
-            <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              <Check className="w-4 h-4 mr-1" /> Save
+            <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Check className="w-4 h-4 mr-1" /> {isSubmitting ? 'Saving...' : 'Save'}
             </Button>
           </div>
 
@@ -203,8 +241,8 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
                 <SelectTrigger className="w-44"><SelectValue placeholder="Go to Previous Page" /></SelectTrigger>
                 <SelectContent><SelectItem value="previous">Go to Previous Page</SelectItem></SelectContent>
               </Select>
-              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                <Check className="w-4 h-4 mr-1" /> Save
+              <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Check className="w-4 h-4 mr-1" /> {isSubmitting ? 'Saving...' : 'Save'}
               </Button>
             </div>
           </div>

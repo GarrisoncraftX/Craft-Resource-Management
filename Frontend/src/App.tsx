@@ -72,9 +72,7 @@ const SecurityDashboard = lazy(() => import("@/components/modules/security/Secur
 const SecurityManagement = lazy(() => import("@/components/modules/security/SecurityManagement").then(module => ({ default: module.SecurityManagement })));
 const VisitorManagement = lazy(() => import("@/components/modules/security/VisitorManagement").then(module => ({ default: module.VisitorManagement })));
 const VisitorKiosk = lazy(() => import("@/components/modules/security/VisitorKiosk").then(module => ({ default: module.VisitorKiosk })));
-const AccessControl = lazy(() => import("@/components/modules/security/AccessControl").then(module => ({ default: module.AccessControl })));
 const SecurityIncidents = lazy(() => import("@/components/modules/security/SecurityIncidents").then(module => ({ default: module.SecurityIncidents })));
-const IdCardManagement = lazy(() => import("@/components/modules/security/IdCardManagement").then(module => ({ default: module.IdCardManagement })));
 
 
 
@@ -270,9 +268,7 @@ const AppRoutes = () => {
       {/* Security Routes */}
       <Route path="/security" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Security" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SecurityDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/security/attendance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Security Attendance" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><EmployeeAttendance moduleType="security" /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/security/access-control" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Access Control" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AccessControl /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/security/incidents" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Security Incidents" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SecurityIncidents /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/security/id-cards" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="ID Card Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><IdCardManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/security/management" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Security Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SecurityManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/security/visitors" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Visitor Management" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><VisitorManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/security/visitor-kiosk" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Visitor Kiosk" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><VisitorKiosk /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />

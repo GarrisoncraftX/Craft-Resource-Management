@@ -284,6 +284,20 @@ export interface Supplier {
   state: string;
 }
 
+
+export interface RequestableItem {
+  id: string;
+  image?: string;
+  assetTag: string;
+  model: string;
+  modelNo: string;
+  assetName: string;
+  serial: string;
+  location: string;
+  status: string;
+  expectedCheckinDate?: string;
+  cpu?: string;
+}
 export interface Asset {
   // Identification & Classification
   id: number;

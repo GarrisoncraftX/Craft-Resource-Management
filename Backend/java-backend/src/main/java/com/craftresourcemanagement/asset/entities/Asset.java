@@ -3,6 +3,7 @@ package com.craftresourcemanagement.asset.entities;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "assets")
@@ -12,93 +13,159 @@ public class Asset {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "asset_tag", nullable = false, unique = true)
     private String assetTag;
 
-    @Column(nullable = false)
-    private String assetName;
+    @Column(name = "name")
+    private String name;
 
-    private String description;
+    @Column(name = "serial")
+    private String serial;
 
-    @Column(nullable = true)
-    private LocalDate acquisitionDate;
+    @Column(name = "model_id", nullable = false)
+    private Long modelId;
 
-    @Column(nullable = false)
-    private BigDecimal acquisitionCost;
+    @Column(name = "status_id", nullable = false)
+    private Long statusId;
 
-    private BigDecimal currentValue;
+    @Column(name = "company_id")
+    private Long companyId;
 
-    private String location;
+    @Column(name = "location_id")
+    private Long locationId;
 
-    private String status; // e.g., Active, Maintenance, Disposed
+    @Column(name = "supplier_id")
+    private Long supplierId;
+
+    @Column(name = "order_number")
+    private String orderNumber;
+
+    @Column(name = "purchase_date")
+    private LocalDate purchaseDate;
+
+    @Column(name = "purchase_cost", precision = 13, scale = 4)
+    private BigDecimal purchaseCost;
+
+    @Column(name = "warranty_months")
+    private Integer warrantyMonths;
+
+    @Column(name = "eol_date")
+    private LocalDate eolDate;
+
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes;
+
+    @Column(name = "image")
+    private String image;
+
+    @Column(name = "assigned_to")
+    private Long assignedTo;
+
+    @Column(name = "assigned_type")
+    private String assignedType;
+
+    @Column(name = "requestable")
+    private Boolean requestable = false;
+
+    @Column(name = "last_checkout")
+    private LocalDateTime lastCheckout;
+
+    @Column(name = "expected_checkin")
+    private LocalDate expectedCheckin;
+
+    @Column(name = "next_audit_date")
+    private LocalDate nextAuditDate;
+
+    @Column(name = "byod")
+    private Boolean byod = false;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 
     // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public Long getId() {
-        return id;
-    }
+    public String getAssetTag() { return assetTag; }
+    public void setAssetTag(String assetTag) { this.assetTag = assetTag; }
 
-    public String getAssetTag() {
-        return assetTag;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public void setAssetTag(String assetTag) {
-        this.assetTag = assetTag;
-    }
+    public String getSerial() { return serial; }
+    public void setSerial(String serial) { this.serial = serial; }
 
-    public String getAssetName() {
-        return assetName;
-    }
+    public Long getModelId() { return modelId; }
+    public void setModelId(Long modelId) { this.modelId = modelId; }
 
-    public void setAssetName(String assetName) {
-        this.assetName = assetName;
-    }
+    public Long getStatusId() { return statusId; }
+    public void setStatusId(Long statusId) { this.statusId = statusId; }
 
-    public String getDescription() {
-        return description;
-    }
+    public Long getCompanyId() { return companyId; }
+    public void setCompanyId(Long companyId) { this.companyId = companyId; }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    public Long getLocationId() { return locationId; }
+    public void setLocationId(Long locationId) { this.locationId = locationId; }
 
-    public LocalDate getAcquisitionDate() {
-        return acquisitionDate;
-    }
+    public Long getSupplierId() { return supplierId; }
+    public void setSupplierId(Long supplierId) { this.supplierId = supplierId; }
 
-    public void setAcquisitionDate(LocalDate acquisitionDate) {
-        this.acquisitionDate = acquisitionDate;
-    }
+    public String getOrderNumber() { return orderNumber; }
+    public void setOrderNumber(String orderNumber) { this.orderNumber = orderNumber; }
 
-    public BigDecimal getAcquisitionCost() {
-        return acquisitionCost;
-    }
+    public LocalDate getPurchaseDate() { return purchaseDate; }
+    public void setPurchaseDate(LocalDate purchaseDate) { this.purchaseDate = purchaseDate; }
 
-    public void setAcquisitionCost(BigDecimal acquisitionCost) {
-        this.acquisitionCost = acquisitionCost;
-    }
+    public BigDecimal getPurchaseCost() { return purchaseCost; }
+    public void setPurchaseCost(BigDecimal purchaseCost) { this.purchaseCost = purchaseCost; }
 
-    public BigDecimal getCurrentValue() {
-        return currentValue;
-    }
+    public Integer getWarrantyMonths() { return warrantyMonths; }
+    public void setWarrantyMonths(Integer warrantyMonths) { this.warrantyMonths = warrantyMonths; }
 
-    public void setCurrentValue(BigDecimal currentValue) {
-        this.currentValue = currentValue;
-    }
+    public LocalDate getEolDate() { return eolDate; }
+    public void setEolDate(LocalDate eolDate) { this.eolDate = eolDate; }
 
-    public String getLocation() {
-        return location;
-    }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 
-    public void setLocation(String location) {
-        this.location = location;
-    }
+    public String getImage() { return image; }
+    public void setImage(String image) { this.image = image; }
 
-    public String getStatus() {
-        return status;
-    }
+    public Long getAssignedTo() { return assignedTo; }
+    public void setAssignedTo(Long assignedTo) { this.assignedTo = assignedTo; }
 
-    public void setStatus(String status) {
-        this.status = status;
-    }
+    public String getAssignedType() { return assignedType; }
+    public void setAssignedType(String assignedType) { this.assignedType = assignedType; }
+
+    public Boolean getRequestable() { return requestable; }
+    public void setRequestable(Boolean requestable) { this.requestable = requestable; }
+
+    public LocalDateTime getLastCheckout() { return lastCheckout; }
+    public void setLastCheckout(LocalDateTime lastCheckout) { this.lastCheckout = lastCheckout; }
+
+    public LocalDate getExpectedCheckin() { return expectedCheckin; }
+    public void setExpectedCheckin(LocalDate expectedCheckin) { this.expectedCheckin = expectedCheckin; }
+
+    public LocalDate getNextAuditDate() { return nextAuditDate; }
+    public void setNextAuditDate(LocalDate nextAuditDate) { this.nextAuditDate = nextAuditDate; }
+
+    public Boolean getByod() { return byod; }
+    public void setByod(Boolean byod) { this.byod = byod; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

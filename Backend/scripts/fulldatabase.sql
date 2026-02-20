@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 19, 2026 at 09:04 PM
+-- Generation Time: Feb 19, 2026 at 11:50 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -214,20 +214,6 @@ DELIMITER ;
 -- --------------------------------------------------------
 
 --
--- Table structure for table `access_rules`
---
-
-CREATE TABLE `access_rules` (
-  `id` bigint(20) NOT NULL,
-  `door` varchar(255) NOT NULL,
-  `role` varchar(255) NOT NULL,
-  `schedule` varchar(255) NOT NULL,
-  `status` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `account_payables`
 --
 
@@ -317,85 +303,130 @@ CREATE TABLE `active_sessions` (
 --
 
 CREATE TABLE `assets` (
-  `id` int(11) NOT NULL,
-  `asset_tag` varchar(50) NOT NULL,
-  `name` varchar(100) NOT NULL,
-  `description` text DEFAULT NULL,
-  `category_id` int(11) NOT NULL,
-  `serial_number` varchar(100) DEFAULT NULL,
-  `model` varchar(100) DEFAULT NULL,
-  `manufacturer` varchar(100) DEFAULT NULL,
+  `id` bigint(20) NOT NULL,
+  `asset_tag` varchar(100) NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `serial` varchar(255) DEFAULT NULL,
+  `model_id` bigint(20) NOT NULL,
+  `status_id` bigint(20) NOT NULL,
+  `company_id` bigint(20) DEFAULT NULL,
+  `location_id` bigint(20) DEFAULT NULL,
+  `rtd_location_id` bigint(20) DEFAULT NULL COMMENT 'Default location',
+  `supplier_id` bigint(20) DEFAULT NULL,
+  `order_number` varchar(100) DEFAULT NULL,
   `purchase_date` date DEFAULT NULL,
-  `purchase_cost` decimal(12,2) DEFAULT NULL,
-  `current_value` decimal(12,2) DEFAULT NULL,
-  `depreciation_rate` decimal(5,2) DEFAULT NULL,
-  `location` varchar(100) DEFAULT NULL,
-  `assigned_to` int(11) DEFAULT NULL,
-  `department_id` int(11) DEFAULT NULL,
-  `status` enum('active','inactive','maintenance','disposed','lost') DEFAULT 'active',
-  `warranty_expiry` date DEFAULT NULL,
-  `last_maintenance_date` date DEFAULT NULL,
-  `next_maintenance_date` date DEFAULT NULL,
-  `created_by` int(11) NOT NULL,
+  `purchase_cost` decimal(13,4) DEFAULT NULL,
+  `warranty_months` int(11) DEFAULT NULL,
+  `eol_date` date DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `image` varchar(255) DEFAULT NULL,
+  `assigned_to` bigint(20) DEFAULT NULL COMMENT 'User ID',
+  `assigned_type` varchar(100) DEFAULT NULL COMMENT 'User, Location, Asset',
+  `requestable` tinyint(1) DEFAULT 0,
+  `last_checkout` timestamp NULL DEFAULT NULL,
+  `expected_checkin` date DEFAULT NULL,
+  `last_audit_date` timestamp NULL DEFAULT NULL,
+  `next_audit_date` date DEFAULT NULL,
+  `byod` tinyint(1) DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `acquisition_cost` decimal(38,2) NOT NULL,
-  `asset_name` varchar(255) NOT NULL,
-  `acquisition_date` date DEFAULT NULL
+  `deleted_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `assets`
 --
 
-INSERT INTO `assets` (`id`, `asset_tag`, `name`, `description`, `category_id`, `serial_number`, `model`, `manufacturer`, `purchase_date`, `purchase_cost`, `current_value`, `depreciation_rate`, `location`, `assigned_to`, `department_id`, `status`, `warranty_expiry`, `last_maintenance_date`, `next_maintenance_date`, `created_by`, `created_at`, `updated_at`, `acquisition_cost`, `asset_name`, `acquisition_date`) VALUES
-(1, 'COMP001', 'Dell Laptop - HR Manager', 'Dell Latitude 5520 Laptop', 1, 'DL5520001', 'Latitude 5520', 'Dell', '2024-01-15', 1200.00, 1200.00, NULL, 'HR Office', 6, 1, 'active', NULL, NULL, NULL, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0.00, '', NULL),
-(2, 'COMP002', 'HP Desktop - Finance', 'HP EliteDesk 800 G8', 1, 'HP800G8001', 'EliteDesk 800 G8', 'HP', '2024-01-20', 800.00, 800.00, NULL, 'Finance Department', 7, 2, 'active', NULL, NULL, NULL, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0.00, '', NULL),
-(3, 'FURN001', 'Executive Desk - HR Head', 'Wooden executive desk', 2, 'ED001', 'Executive Series', 'Office Pro', '2024-01-10', 500.00, 500.00, NULL, 'HR Head Office', 2, 1, 'active', NULL, NULL, NULL, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0.00, '', NULL),
-(4, 'VEHI001', 'Toyota Camry - Official', 'Official vehicle for department heads', 3, 'TC2024001', 'Camry 2024', 'Toyota', '2024-02-01', 25000.00, 25000.00, NULL, 'Parking Lot A', NULL, 4, 'active', NULL, NULL, NULL, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0.00, '', NULL),
-(5, 'SOFT001', 'Microsoft Office 365', 'Office productivity suite license', 4, 'MS365-001', 'Office 365 Business', 'Microsoft', '2024-01-01', 150.00, 150.00, NULL, 'IT Department', NULL, 3, 'active', NULL, NULL, NULL, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0.00, '', NULL),
-(1, 'COMP001', 'Dell Laptop - HR Manager', 'Dell Latitude 5520 Laptop', 1, 'DL5520001', 'Latitude 5520', 'Dell', '2024-01-15', 1200.00, 1200.00, NULL, 'HR Office', 6, 1, 'active', NULL, NULL, NULL, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0.00, '', NULL),
-(2, 'COMP002', 'HP Desktop - Finance', 'HP EliteDesk 800 G8', 1, 'HP800G8001', 'EliteDesk 800 G8', 'HP', '2024-01-20', 800.00, 800.00, NULL, 'Finance Department', 7, 2, 'active', NULL, NULL, NULL, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0.00, '', NULL),
-(3, 'FURN001', 'Executive Desk - HR Head', 'Wooden executive desk', 2, 'ED001', 'Executive Series', 'Office Pro', '2024-01-10', 500.00, 500.00, NULL, 'HR Head Office', 2, 1, 'active', NULL, NULL, NULL, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0.00, '', NULL),
-(4, 'VEHI001', 'Toyota Camry - Official', 'Official vehicle for department heads', 3, 'TC2024001', 'Camry 2024', 'Toyota', '2024-02-01', 25000.00, 25000.00, NULL, 'Parking Lot A', NULL, 4, 'active', NULL, NULL, NULL, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0.00, '', NULL),
-(5, 'SOFT001', 'Microsoft Office 365', 'Office productivity suite license', 4, 'MS365-001', 'Office 365 Business', 'Microsoft', '2024-01-01', 150.00, 150.00, NULL, 'IT Department', NULL, 3, 'active', NULL, NULL, NULL, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0.00, '', NULL);
+INSERT INTO `assets` (`id`, `asset_tag`, `name`, `serial`, `model_id`, `status_id`, `company_id`, `location_id`, `rtd_location_id`, `supplier_id`, `order_number`, `purchase_date`, `purchase_cost`, `warranty_months`, `eol_date`, `notes`, `image`, `assigned_to`, `assigned_type`, `requestable`, `last_checkout`, `expected_checkin`, `last_audit_date`, `next_audit_date`, `byod`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'AST001', 'Dell Laptop OptiPlex 7090', 'SN123456', 1, 2, NULL, 2, 2, NULL, NULL, '2023-06-15', 1200.0000, NULL, NULL, 'IT Equipment', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(2, 'AST002', 'Conference Room Table', 'TBL-001', 2, 2, NULL, 4, 4, NULL, NULL, '2022-03-20', 800.0000, NULL, NULL, 'Furniture', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(3, 'AST003', 'Industrial Printer HP LaserJet', 'PRN-789', 5, 5, NULL, 2, 2, NULL, NULL, '2023-01-10', 1500.0000, NULL, NULL, 'Office Equipment', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(4, 'AST004', 'Server Rack Dell PowerEdge', 'SRV-456', 6, 2, NULL, 2, 2, NULL, NULL, '2023-08-20', 5000.0000, NULL, NULL, 'IT Infrastructure', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(5, 'AST005', 'Vehicle - Toyota Camry', 'VIN-XYZ123', 7, 2, NULL, 6, 6, NULL, NULL, '2022-11-10', 25000.0000, NULL, NULL, 'Transportation', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(6, '888255196', 'iPhone-mobile-7046-80cd-c1fe1b84d816', 'a0c7f7f84-2d84-8d67-6ecb9c3fbd16', 3, 2, NULL, 2, 2, NULL, NULL, '2023-05-10', 999.0000, NULL, NULL, '6GB RAM', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(7, '1654990322', 'iPhone-mobile-d5efd89b-34ca-8ec3-4888809901c74', 'cfe93abdf-0777-34ca-8ec3-4888809015c74', 3, 2, NULL, 1, 1, NULL, NULL, '2023-03-15', 899.0000, NULL, NULL, '4GB RAM', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(8, '1011481556', 'iPhone-mobile-dbc819dd-1498-360c-b27c-171be0236689', 'dbc819dd-1498-360c-b27c-1b6b26d0236689', 3, 2, NULL, 1, 1, NULL, NULL, '2023-04-20', 999.0000, NULL, NULL, '6GB RAM', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(9, 'MAC001', 'Macbook Air', 'MBA-SN-001', 4, 2, NULL, 2, 2, NULL, NULL, '2023-07-01', 1299.0000, NULL, NULL, 'Developer laptop', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(10, 'MAC002', 'Macbook Air', 'MBA-SN-002', 4, 2, NULL, 2, 2, NULL, NULL, '2023-07-01', 1299.0000, NULL, NULL, 'Designer laptop', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `asset_categories`
+-- Table structure for table `asset_disposals`
 --
 
-CREATE TABLE `asset_categories` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) NOT NULL,
-  `description` text DEFAULT NULL,
-  `depreciation_method` enum('straight_line','declining_balance','units_of_production') DEFAULT 'straight_line',
-  `useful_life_years` int(11) DEFAULT 5,
-  `is_active` tinyint(1) DEFAULT 1,
+CREATE TABLE `asset_disposals` (
+  `id` bigint(20) NOT NULL,
+  `asset_id` bigint(20) NOT NULL,
+  `disposal_date` date NOT NULL,
+  `disposal_method` enum('sale','donation','recycling','trash','auction') NOT NULL,
+  `disposal_reason` text DEFAULT NULL,
+  `proceeds` decimal(13,4) DEFAULT NULL,
+  `approved_by` bigint(20) DEFAULT NULL,
+  `disposed_by` bigint(20) DEFAULT NULL,
+  `status` enum('pending','approved','completed','cancelled') DEFAULT 'pending',
+  `notes` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- --------------------------------------------------------
+
 --
--- Dumping data for table `asset_categories`
+-- Table structure for table `asset_maintenances`
 --
 
-INSERT INTO `asset_categories` (`id`, `name`, `description`, `depreciation_method`, `useful_life_years`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'Computer Equipment', 'Laptops, desktops, servers', 'straight_line', 3, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(2, 'Office Furniture', 'Desks, chairs, cabinets', 'straight_line', 7, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(3, 'Vehicles', 'Cars, trucks, motorcycles', 'declining_balance', 5, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(4, 'Software', 'Software licenses and applications', 'straight_line', 2, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(5, 'Network Equipment', 'Routers, switches, access points', 'straight_line', 5, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(6, 'Office Equipment', 'Printers, scanners, phones', 'straight_line', 4, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(7, 'Security Equipment', 'Cameras, access control systems', 'straight_line', 6, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(1, 'Computer Equipment', 'Laptops, desktops, servers', 'straight_line', 3, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(2, 'Office Furniture', 'Desks, chairs, cabinets', 'straight_line', 7, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(3, 'Vehicles', 'Cars, trucks, motorcycles', 'declining_balance', 5, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(4, 'Software', 'Software licenses and applications', 'straight_line', 2, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(5, 'Network Equipment', 'Routers, switches, access points', 'straight_line', 5, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(6, 'Office Equipment', 'Printers, scanners, phones', 'straight_line', 4, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01'),
-(7, 'Security Equipment', 'Cameras, access control systems', 'straight_line', 6, 1, '2025-07-07 13:16:01', '2025-07-07 13:16:01');
+CREATE TABLE `asset_maintenances` (
+  `id` bigint(20) NOT NULL,
+  `asset_id` bigint(20) NOT NULL,
+  `supplier_id` bigint(20) DEFAULT NULL,
+  `maintenance_type` enum('maintenance','repair','upgrade','inspection','calibration') NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `start_date` date NOT NULL,
+  `completion_date` date DEFAULT NULL,
+  `asset_maintenance_time` int(11) DEFAULT NULL COMMENT 'Days',
+  `cost` decimal(13,4) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `user_id` bigint(20) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `asset_models`
+--
+
+CREATE TABLE `asset_models` (
+  `id` bigint(20) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `model_number` varchar(100) DEFAULT NULL,
+  `category_id` bigint(20) NOT NULL,
+  `manufacturer_id` bigint(20) DEFAULT NULL,
+  `depreciation_id` bigint(20) DEFAULT NULL,
+  `eol` int(11) DEFAULT NULL,
+  `min_amt` int(11) DEFAULT NULL,
+  `image` varchar(255) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `requestable` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `asset_models`
+--
+
+INSERT INTO `asset_models` (`id`, `name`, `model_number`, `category_id`, `manufacturer_id`, `depreciation_id`, `eol`, `min_amt`, `image`, `notes`, `requestable`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'OptiPlex 7090', 'OPT7090', 2, 1, 1, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(2, 'Ultrasharp U2415', 'U2415', 5, 1, 2, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(3, 'iPhone 12', 'A2172', 3, 2, 1, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(4, 'Macbook Air', '5575783075815347', 1, 2, 1, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(5, 'HP LaserJet', 'LJ-PRO', 2, 3, 1, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(6, 'PowerEdge Server', 'PE-R740', 2, 1, 1, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(7, 'Toyota Camry', 'CAMRY-2024', 1, 6, 3, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL);
 
 -- --------------------------------------------------------
 
@@ -1545,6 +1576,43 @@ INSERT INTO `business_permits` (`id`, `permit_number`, `business_name`, `busines
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `categories`
+--
+
+CREATE TABLE `categories` (
+  `id` bigint(20) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `category_type` enum('asset','accessory','consumable','component','license') NOT NULL DEFAULT 'asset',
+  `eula_text` text DEFAULT NULL,
+  `use_default_eula` tinyint(1) DEFAULT 0,
+  `require_acceptance` tinyint(1) DEFAULT 0,
+  `checkin_email` tinyint(1) DEFAULT 0,
+  `image` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `categories`
+--
+
+INSERT INTO `categories` (`id`, `name`, `category_type`, `eula_text`, `use_default_eula`, `require_acceptance`, `checkin_email`, `image`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'Laptops', 'asset', NULL, 0, 1, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(2, 'Desktops', 'asset', NULL, 0, 1, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(3, 'Mobile Phones', 'asset', NULL, 0, 1, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(4, 'Tablets', 'asset', NULL, 0, 1, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(5, 'Displays', 'asset', NULL, 0, 0, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(6, 'Keyboards', 'accessory', NULL, 0, 0, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(7, 'Mouse', 'accessory', NULL, 0, 0, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(8, 'RAM', 'component', NULL, 0, 0, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(9, 'HDD/SSD', 'component', NULL, 0, 0, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(10, 'Office Software', 'license', NULL, 0, 1, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(11, 'Printer Ink', 'consumable', NULL, 0, 0, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `chart_of_accounts`
 --
 
@@ -1647,6 +1715,32 @@ INSERT INTO `chart_of_accounts` (`id`, `account_code`, `account_name`, `account_
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `companies`
+--
+
+CREATE TABLE `companies` (
+  `id` bigint(20) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `phone` varchar(50) DEFAULT NULL,
+  `fax` varchar(50) DEFAULT NULL,
+  `image` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `companies`
+--
+
+INSERT INTO `companies` (`id`, `name`, `email`, `phone`, `fax`, `image`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'Main Office', 'info@company.com', NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(2, 'Branch Office', 'branch@company.com', NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `compliance_records`
 --
 
@@ -1674,38 +1768,66 @@ CREATE TABLE `departments` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `max_headcount` int(11) DEFAULT 50,
-  `current_headcount` int(11) DEFAULT 0
+  `current_headcount` int(11) DEFAULT 0,
+  `company_id` bigint(20) DEFAULT NULL,
+  `location_id` bigint(20) DEFAULT NULL,
+  `manager_id` bigint(20) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `departments`
 --
 
-INSERT INTO `departments` (`id`, `name`, `description`, `head_of_department`, `budget_allocation`, `is_active`, `created_at`, `updated_at`, `max_headcount`, `current_headcount`) VALUES
-(1, 'Human Resources', 'Manages employee relations, recruitment, and HR policies', 2, 500000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(2, 'Finance', 'Handles financial planning, accounting, and budget management', 3, 750000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(3, 'Information Technology', 'Manages IT infrastructure, software development, and technical support', 4, 1000000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(4, 'Operations', 'Oversees daily operations and process management', 5, 800000.00, 1, '2025-07-07 13:16:00', '2026-01-11 18:57:04', 50, 1),
-(5, 'Legal Affairs', 'Handles legal matters, contracts, and compliance', NULL, 400000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(6, 'Procurement', 'Manages purchasing, vendor relations, and supply chain', NULL, 600000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(7, 'Asset Management', 'Tracks and maintains organizational assets', NULL, 300000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(8, 'Public Relations', 'Manages public communications and media relations', NULL, 250000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(9, 'Planning & Development', 'Strategic planning and organizational development', NULL, 450000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(10, 'Transportation', 'Manages fleet and transportation services', NULL, 350000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(11, 'Health & Safety', 'Ensures workplace safety and health compliance', NULL, 200000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(12, 'Revenue & Tax', 'Handles revenue collection and tax management', NULL, 550000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(1, 'Human Resources', 'Manages employee relations, recruitment, and HR policies', 2, 500000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(2, 'Finance', 'Handles financial planning, accounting, and budget management', 3, 750000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(3, 'Information Technology', 'Manages IT infrastructure, software development, and technical support', 4, 1000000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(4, 'Operations', 'Oversees daily operations and process management', 5, 800000.00, 1, '2025-07-07 13:16:00', '2026-01-11 18:57:04', 50, 1),
-(5, 'Legal Affairs', 'Handles legal matters, contracts, and compliance', NULL, 400000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(6, 'Procurement', 'Manages purchasing, vendor relations, and supply chain', NULL, 600000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(7, 'Asset Management', 'Tracks and maintains organizational assets', NULL, 300000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(8, 'Public Relations', 'Manages public communications and media relations', NULL, 250000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(9, 'Planning & Development', 'Strategic planning and organizational development', NULL, 450000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(10, 'Transportation', 'Manages fleet and transportation services', NULL, 350000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(11, 'Health & Safety', 'Ensures workplace safety and health compliance', NULL, 200000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0),
-(12, 'Revenue & Tax', 'Handles revenue collection and tax management', NULL, 550000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0);
+INSERT INTO `departments` (`id`, `name`, `description`, `head_of_department`, `budget_allocation`, `is_active`, `created_at`, `updated_at`, `max_headcount`, `current_headcount`, `company_id`, `location_id`, `manager_id`) VALUES
+(1, 'Human Resources', 'Manages employee relations, recruitment, and HR policies', 2, 500000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(2, 'Finance', 'Handles financial planning, accounting, and budget management', 3, 750000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(3, 'Information Technology', 'Manages IT infrastructure, software development, and technical support', 4, 1000000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(4, 'Operations', 'Oversees daily operations and process management', 5, 800000.00, 1, '2025-07-07 13:16:00', '2026-01-11 18:57:04', 50, 1, NULL, NULL, NULL),
+(5, 'Legal Affairs', 'Handles legal matters, contracts, and compliance', NULL, 400000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(6, 'Procurement', 'Manages purchasing, vendor relations, and supply chain', NULL, 600000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(7, 'Asset Management', 'Tracks and maintains organizational assets', NULL, 300000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(8, 'Public Relations', 'Manages public communications and media relations', NULL, 250000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(9, 'Planning & Development', 'Strategic planning and organizational development', NULL, 450000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(10, 'Transportation', 'Manages fleet and transportation services', NULL, 350000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(11, 'Health & Safety', 'Ensures workplace safety and health compliance', NULL, 200000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(12, 'Revenue & Tax', 'Handles revenue collection and tax management', NULL, 550000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(1, 'Human Resources', 'Manages employee relations, recruitment, and HR policies', 2, 500000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(2, 'Finance', 'Handles financial planning, accounting, and budget management', 3, 750000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(3, 'Information Technology', 'Manages IT infrastructure, software development, and technical support', 4, 1000000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(4, 'Operations', 'Oversees daily operations and process management', 5, 800000.00, 1, '2025-07-07 13:16:00', '2026-01-11 18:57:04', 50, 1, NULL, NULL, NULL),
+(5, 'Legal Affairs', 'Handles legal matters, contracts, and compliance', NULL, 400000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(6, 'Procurement', 'Manages purchasing, vendor relations, and supply chain', NULL, 600000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(7, 'Asset Management', 'Tracks and maintains organizational assets', NULL, 300000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(8, 'Public Relations', 'Manages public communications and media relations', NULL, 250000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(9, 'Planning & Development', 'Strategic planning and organizational development', NULL, 450000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(10, 'Transportation', 'Manages fleet and transportation services', NULL, 350000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(11, 'Health & Safety', 'Ensures workplace safety and health compliance', NULL, 200000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(12, 'Revenue & Tax', 'Handles revenue collection and tax management', NULL, 550000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `depreciations`
+--
+
+CREATE TABLE `depreciations` (
+  `id` bigint(20) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `months` int(11) NOT NULL,
+  `depreciation_min` decimal(13,4) DEFAULT 0.0000,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `depreciations`
+--
+
+INSERT INTO `depreciations` (`id`, `name`, `months`, `depreciation_min`, `created_at`, `updated_at`) VALUES
+(1, 'Computer Depreciation', 36, 0.0000, '2026-02-19 22:49:14', '2026-02-19 22:49:14'),
+(2, 'Display Depreciation', 12, 0.0000, '2026-02-19 22:49:14', '2026-02-19 22:49:14'),
+(3, 'Furniture Depreciation', 24, 0.0000, '2026-02-19 22:49:14', '2026-02-19 22:49:14'),
+(4, 'Mobile Device Depreciation', 24, 0.0000, '2026-02-19 22:49:14', '2026-02-19 22:49:14');
 
 -- --------------------------------------------------------
 
@@ -2497,6 +2619,41 @@ INSERT INTO `leave_types` (`id`, `name`, `description`, `max_days_per_year`, `ca
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `locations`
+--
+
+CREATE TABLE `locations` (
+  `id` bigint(20) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `address` text DEFAULT NULL,
+  `address2` text DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `state` varchar(100) DEFAULT NULL,
+  `country` varchar(100) DEFAULT NULL,
+  `zip` varchar(20) DEFAULT NULL,
+  `parent_id` bigint(20) DEFAULT NULL,
+  `currency` varchar(10) DEFAULT NULL,
+  `image` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `locations`
+--
+
+INSERT INTO `locations` (`id`, `name`, `address`, `address2`, `city`, `state`, `country`, `zip`, `parent_id`, `currency`, `image`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'Headquarters', '123 Main St', NULL, 'New York', 'NY', 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(2, 'IT Department', '123 Main St, Floor 3', NULL, 'New York', 'NY', 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(3, 'Warehouse', '456 Storage Ave', NULL, 'New York', 'NY', 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(4, 'HR Office', '123 Main St, Floor 2', NULL, 'New York', 'NY', 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(5, 'Finance Department', '123 Main St, Floor 4', NULL, 'New York', 'NY', 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(6, 'Parking Lot A', '123 Main St, Parking', NULL, 'New York', 'NY', 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `maintenance_records`
 --
 
@@ -2507,6 +2664,38 @@ CREATE TABLE `maintenance_records` (
   `performed_by` varchar(255) DEFAULT NULL,
   `asset_id` bigint(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `manufacturers`
+--
+
+CREATE TABLE `manufacturers` (
+  `id` bigint(20) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `url` varchar(255) DEFAULT NULL,
+  `support_url` varchar(255) DEFAULT NULL,
+  `support_phone` varchar(50) DEFAULT NULL,
+  `support_email` varchar(100) DEFAULT NULL,
+  `image` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `manufacturers`
+--
+
+INSERT INTO `manufacturers` (`id`, `name`, `url`, `support_url`, `support_phone`, `support_email`, `image`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'Dell', 'https://dell.com', NULL, NULL, 'support@dell.com', NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(2, 'Apple', 'https://apple.com', NULL, NULL, 'support@apple.com', NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(3, 'HP', 'https://hp.com', NULL, NULL, 'support@hp.com', NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(4, 'Lenovo', 'https://lenovo.com', NULL, NULL, 'support@lenovo.com', NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(5, 'Office Pro', 'https://officepro.com', NULL, NULL, 'support@officepro.com', NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(6, 'Toyota', 'https://toyota.com', NULL, NULL, 'support@toyota.com', NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(7, 'Microsoft', 'https://microsoft.com', NULL, NULL, 'support@microsoft.com', NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL);
 
 -- --------------------------------------------------------
 
@@ -3099,6 +3288,63 @@ CREATE TABLE `sops` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `status_labels`
+--
+
+CREATE TABLE `status_labels` (
+  `id` bigint(20) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `status_type` enum('deployable','pending','undeployable','archived') NOT NULL DEFAULT 'deployable',
+  `status_meta` enum('deployed','deployable','requestable') NOT NULL DEFAULT 'deployable',
+  `color` varchar(10) DEFAULT NULL,
+  `show_in_nav` tinyint(1) DEFAULT 1,
+  `default_label` tinyint(1) DEFAULT 0,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `status_labels`
+--
+
+INSERT INTO `status_labels` (`id`, `name`, `status_type`, `status_meta`, `color`, `show_in_nav`, `default_label`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 'Ready to Deploy', 'deployable', 'deployable', '#28a745', 1, 1, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14'),
+(2, 'Deployed', 'deployable', 'deployed', '#007bff', 1, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14'),
+(3, 'Pending', 'pending', 'deployable', '#ffc107', 1, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14'),
+(4, 'Archived', 'archived', 'deployable', '#6c757d', 0, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14'),
+(5, 'Broken - Not Fixable', 'undeployable', 'deployable', '#dc3545', 0, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14'),
+(6, 'Out for Repair', 'undeployable', 'deployable', '#fd7e14', 0, 0, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `suppliers`
+--
+
+CREATE TABLE `suppliers` (
+  `id` bigint(20) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `address` text DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `state` varchar(100) DEFAULT NULL,
+  `country` varchar(100) DEFAULT NULL,
+  `zip` varchar(20) DEFAULT NULL,
+  `phone` varchar(50) DEFAULT NULL,
+  `fax` varchar(50) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `contact` varchar(100) DEFAULT NULL,
+  `url` varchar(255) DEFAULT NULL,
+  `image` varchar(255) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `support_tickets`
 --
 
@@ -3382,10 +3628,43 @@ INSERT INTO `visitor_logs` (`id`, `visitor_id`, `purpose`, `employee_to_visit_id
 --
 
 --
--- Indexes for table `access_rules`
+-- Indexes for table `assets`
 --
-ALTER TABLE `access_rules`
-  ADD PRIMARY KEY (`id`);
+ALTER TABLE `assets`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `asset_tag` (`asset_tag`),
+  ADD KEY `company_id` (`company_id`),
+  ADD KEY `location_id` (`location_id`),
+  ADD KEY `rtd_location_id` (`rtd_location_id`),
+  ADD KEY `supplier_id` (`supplier_id`),
+  ADD KEY `idx_asset_tag` (`asset_tag`),
+  ADD KEY `idx_serial` (`serial`),
+  ADD KEY `idx_model_id` (`model_id`),
+  ADD KEY `idx_status_id` (`status_id`);
+
+--
+-- Indexes for table `asset_disposals`
+--
+ALTER TABLE `asset_disposals`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_asset_id` (`asset_id`);
+
+--
+-- Indexes for table `asset_maintenances`
+--
+ALTER TABLE `asset_maintenances`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `supplier_id` (`supplier_id`),
+  ADD KEY `idx_asset_id` (`asset_id`);
+
+--
+-- Indexes for table `asset_models`
+--
+ALTER TABLE `asset_models`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `category_id` (`category_id`),
+  ADD KEY `manufacturer_id` (`manufacturer_id`),
+  ADD KEY `depreciation_id` (`depreciation_id`);
 
 --
 -- Indexes for table `attendance`
@@ -3401,6 +3680,26 @@ ALTER TABLE `audit_logs`
   ADD KEY `idx_timestamp` (`timestamp`),
   ADD KEY `idx_action` (`action`),
   ADD KEY `idx_service_name` (`service_name`);
+
+--
+-- Indexes for table `categories`
+--
+ALTER TABLE `categories`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `companies`
+--
+ALTER TABLE `companies`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `name` (`name`);
+
+--
+-- Indexes for table `depreciations`
+--
+ALTER TABLE `depreciations`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `name` (`name`);
 
 --
 -- Indexes for table `employee_offboarding`
@@ -3421,26 +3720,90 @@ ALTER TABLE `job_postings`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `locations`
+--
+ALTER TABLE `locations`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `parent_id` (`parent_id`);
+
+--
+-- Indexes for table `manufacturers`
+--
+ALTER TABLE `manufacturers`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `name` (`name`);
+
+--
 -- Indexes for table `onboarding_checklists`
 --
 ALTER TABLE `onboarding_checklists`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `status_labels`
+--
+ALTER TABLE `status_labels`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `name` (`name`);
+
+--
+-- Indexes for table `suppliers`
+--
+ALTER TABLE `suppliers`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `name` (`name`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT for table `access_rules`
+-- AUTO_INCREMENT for table `assets`
 --
-ALTER TABLE `access_rules`
+ALTER TABLE `assets`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `asset_disposals`
+--
+ALTER TABLE `asset_disposals`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `asset_maintenances`
+--
+ALTER TABLE `asset_maintenances`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `asset_models`
+--
+ALTER TABLE `asset_models`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `attendance`
 --
 ALTER TABLE `attendance`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `categories`
+--
+ALTER TABLE `categories`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- AUTO_INCREMENT for table `companies`
+--
+ALTER TABLE `companies`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `depreciations`
+--
+ALTER TABLE `depreciations`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `employee_offboarding`
@@ -3461,10 +3824,76 @@ ALTER TABLE `job_postings`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `locations`
+--
+ALTER TABLE `locations`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `manufacturers`
+--
+ALTER TABLE `manufacturers`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
 -- AUTO_INCREMENT for table `onboarding_checklists`
 --
 ALTER TABLE `onboarding_checklists`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `status_labels`
+--
+ALTER TABLE `status_labels`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `suppliers`
+--
+ALTER TABLE `suppliers`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `assets`
+--
+ALTER TABLE `assets`
+  ADD CONSTRAINT `assets_ibfk_1` FOREIGN KEY (`model_id`) REFERENCES `asset_models` (`id`),
+  ADD CONSTRAINT `assets_ibfk_2` FOREIGN KEY (`status_id`) REFERENCES `status_labels` (`id`),
+  ADD CONSTRAINT `assets_ibfk_3` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `assets_ibfk_4` FOREIGN KEY (`location_id`) REFERENCES `locations` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `assets_ibfk_5` FOREIGN KEY (`rtd_location_id`) REFERENCES `locations` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `assets_ibfk_6` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `asset_disposals`
+--
+ALTER TABLE `asset_disposals`
+  ADD CONSTRAINT `asset_disposals_ibfk_1` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `asset_maintenances`
+--
+ALTER TABLE `asset_maintenances`
+  ADD CONSTRAINT `asset_maintenances_ibfk_1` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `asset_maintenances_ibfk_2` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `asset_models`
+--
+ALTER TABLE `asset_models`
+  ADD CONSTRAINT `asset_models_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`),
+  ADD CONSTRAINT `asset_models_ibfk_2` FOREIGN KEY (`manufacturer_id`) REFERENCES `manufacturers` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `asset_models_ibfk_3` FOREIGN KEY (`depreciation_id`) REFERENCES `depreciations` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `locations`
+--
+ALTER TABLE `locations`
+  ADD CONSTRAINT `locations_ibfk_1` FOREIGN KEY (`parent_id`) REFERENCES `locations` (`id`) ON DELETE SET NULL;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

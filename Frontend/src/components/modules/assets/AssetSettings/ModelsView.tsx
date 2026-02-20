@@ -1,14 +1,19 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2, Edit, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AssetDataTable, ColumnDef } from '../AssetDataTable';
 import type {AssetModel} from '@/types/javabackendapi/assetTypes'
 import { mockModels } from '@/services/mockData/assets';
+import { assetApiService } from '@/services/javabackendapi/assetApi';
 
 export const ModelsView: React.FC = () => {
-  const [models] = useState<AssetModel[]>(mockModels);
+  const [models, setModels] = useState<AssetModel[]>(mockModels);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    assetApiService.getAllModels().then(setModels).catch(() => setModels(mockModels));
+  }, []);
 
   const filteredModels = models.filter(m =>
     m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

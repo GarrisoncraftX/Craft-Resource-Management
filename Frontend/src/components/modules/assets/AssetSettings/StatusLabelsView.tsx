@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AssetDataTable, ColumnDef } from '../AssetDataTable';
 import { Pencil, Trash2, Check, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { StatusLabel } from '@/types/javabackendapi/assetTypes';
 import { mockStatusLabels } from '@/services/mockData/assets';
+import { assetApiService } from '@/services/javabackendapi/assetApi';
 
 const columns: ColumnDef<StatusLabel>[] = [
   { key: 'name', header: 'Name', accessor: (r) => <span className="text-sky-600 font-medium hover:underline cursor-pointer">{r.name}</span> },
@@ -16,6 +17,12 @@ const columns: ColumnDef<StatusLabel>[] = [
 ];
 
 export const StatusLabelsView: React.FC = () => {
+  const [data, setData] = useState<StatusLabel[]>(mockStatusLabels);
+
+  useEffect(() => {
+    assetApiService.getAllStatusLabels().then(setData).catch(() => setData(mockStatusLabels));
+  }, []);
+
   return (
     <div className="space-y-4 bg-card p-2">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -68,7 +75,7 @@ export const StatusLabelsView: React.FC = () => {
       </div>
 
       <AssetDataTable
-        data={mockStatusLabels}
+        data={data}
         columns={columns}
         onAdd={() => {}}
         viewType="settings"

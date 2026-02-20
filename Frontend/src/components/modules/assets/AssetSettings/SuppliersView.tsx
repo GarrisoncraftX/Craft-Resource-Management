@@ -1,15 +1,20 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AssetDataTable, ColumnDef } from '../AssetDataTable';
 import type { Supplier } from '@/types/javabackendapi/assetTypes';
 import { mockSuppliers } from '@/services/mockData/assets';
+import { assetApiService } from '@/services/javabackendapi/assetApi';
 
 
 export const SuppliersView: React.FC = () => {
-  const [suppliers] = useState<Supplier[]>(mockSuppliers);
+  const [suppliers, setSuppliers] = useState<Supplier[]>(mockSuppliers);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    assetApiService.getAllSuppliers().then(setSuppliers).catch(() => setSuppliers(mockSuppliers));
+  }, []);
 
   const filteredSuppliers = suppliers.filter(s =>
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

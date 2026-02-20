@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AssetDataTable, ColumnDef, getStatusBadge } from '../AssetDataTable';
 import type { DepreciationReport } from '@/types/javabackendapi/assetTypes';
 import { mockDepreciationReports } from '@/services/mockData/assets';
+import { assetApiService } from '@/services/javabackendapi/assetApi';
 
 const columns: ColumnDef<DepreciationReport>[] = [
   { key: 'company', header: 'Company', accessor: (r) => r.company },
@@ -29,6 +30,12 @@ const columns: ColumnDef<DepreciationReport>[] = [
 ];
 
 export const DepreciationReportView: React.FC = () => {
+  const [data, setData] = useState<DepreciationReport[]>(mockDepreciationReports);
+
+  useEffect(() => {
+    assetApiService.getDepreciationReport().then(setData).catch(() => setData(mockDepreciationReports));
+  }, []);
+
   return (
     <div className="space-y-4 bg-card p-2">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -37,7 +44,7 @@ export const DepreciationReportView: React.FC = () => {
       </div>
 
       <AssetDataTable
-        data={mockDepreciationReports}
+        data={data}
         columns={columns}
         onAdd={() => {}}
       />

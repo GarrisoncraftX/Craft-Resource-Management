@@ -1,16 +1,21 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2, Edit, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AssetDataTable, ColumnDef } from '../AssetDataTable';
 import type { Manufacturer } from '@/types/javabackendapi/assetTypes';
 import { mockManufacturers } from '@/services/mockData/assets';
+import { assetApiService } from '@/services/javabackendapi/assetApi';
 
 
 
 export const ManufacturersView: React.FC = () => {
-  const [manufacturers] = useState<Manufacturer[]>(mockManufacturers);
+  const [manufacturers, setManufacturers] = useState<Manufacturer[]>(mockManufacturers);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    assetApiService.getAllManufacturers().then(setManufacturers).catch(() => setManufacturers(mockManufacturers));
+  }, []);
 
   const filteredManufacturers = manufacturers.filter(m =>
     m.name.toLowerCase().includes(searchTerm.toLowerCase())

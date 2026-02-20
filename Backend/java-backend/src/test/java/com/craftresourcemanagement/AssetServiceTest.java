@@ -1,5 +1,6 @@
 package com.craftresourcemanagement;
 
+import com.craftresourcemanagement.asset.dto.AssetDTO;
 import com.craftresourcemanagement.asset.entities.Asset;
 import com.craftresourcemanagement.asset.repositories.AssetRepository;
 import com.craftresourcemanagement.asset.services.impl.AssetServiceImpl;
@@ -37,17 +38,19 @@ class AssetServiceTest {
     @BeforeEach
     void setUp() {
         testAsset = new Asset();
+        testAsset.setId(1L);
         testAsset.setAssetTag("ASSET001");
-        testAsset.setAssetName("Laptop");
-        testAsset.setAcquisitionCost(new BigDecimal("1200.00"));
-        testAsset.setStatus("active");
+        testAsset.setName("Laptop");
+        testAsset.setModelId(1L);
+        testAsset.setStatusId(1L);
+        testAsset.setPurchaseCost(new BigDecimal("1200.00"));
     }
 
     @Test
     void testCreateAsset_Success() {
         when(assetRepository.save(any(Asset.class))).thenReturn(testAsset);
 
-        Asset result = assetService.createAsset(testAsset);
+        AssetDTO result = assetService.createAsset(testAsset);
 
         assertNotNull(result);
         assertEquals("ASSET001", result.getAssetTag());
@@ -58,10 +61,10 @@ class AssetServiceTest {
     void testGetAssetById_Success() {
         when(assetRepository.findById(1L)).thenReturn(Optional.of(testAsset));
 
-        Asset result = assetService.getAssetById(1L);
+        AssetDTO result = assetService.getAssetById(1L);
 
         assertNotNull(result);
-        assertEquals("Laptop", result.getAssetName());
+        assertEquals("Laptop", result.getName());
     }
 
     @Test
@@ -69,7 +72,7 @@ class AssetServiceTest {
         List<Asset> mockAssets = Arrays.asList(testAsset);
         when(assetRepository.findAll()).thenReturn(mockAssets);
 
-        List<Asset> result = assetService.getAllAssets();
+        List<AssetDTO> result = assetService.getAllAssets(null, null);
 
         assertEquals(1, result.size());
     }
@@ -79,7 +82,7 @@ class AssetServiceTest {
         when(assetRepository.findById(1L)).thenReturn(Optional.of(testAsset));
         when(assetRepository.save(any(Asset.class))).thenReturn(testAsset);
 
-        Asset result = assetService.updateAsset(1L, testAsset);
+        AssetDTO result = assetService.updateAsset(1L, testAsset);
 
         assertNotNull(result);
         verify(assetRepository, times(1)).save(any(Asset.class));

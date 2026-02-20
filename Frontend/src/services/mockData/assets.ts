@@ -1,4 +1,47 @@
-import type { Asset, Category, MaintenanceRecord, DisposalRecord, AcquisitionRequest, Manufacturer, ValuationRecord, MaintenanceCost, AssetStats, AssetTrend, AssetCategory, Person, License, BaseInventoryItem, PredefinedKit, Supplier, StatusLabel, AssetModel, Location, Depreciation, Department, CustomField, Company, MaintenanceReport, DepreciationReport } from '@/types/javabackendapi/assetTypes';
+import type { Asset, Category, RequestableItem, MaintenanceRecord, DisposalRecord, AcquisitionRequest, Manufacturer, ValuationRecord, MaintenanceCost, AssetStats, AssetTrend, AssetCategory, Person, License, BaseInventoryItem, PredefinedKit, Supplier, StatusLabel, AssetModel, Location, Depreciation, Department, CustomField, Company, MaintenanceReport, DepreciationReport } from '@/types/javabackendapi/assetTypes';
+
+
+export const mockRequestableItems: RequestableItem[] = [
+  {
+    id: '1',
+    image: '📱',
+    assetTag: '888255196',
+    model: 'iPhone 12',
+    modelNo: '4708395437118939',
+    assetName: 'iPhone-mobile-7046-80cd-c1fe1b84d816',
+    serial: 'a0c7f7f84-2d84-8d67-6ecb9c3fbd16',
+    location: 'New Nils',
+    status: 'deployable',
+    expectedCheckinDate: 'Jan 12, 2025',
+    cpu: '6GB RAM',
+  },
+  {
+    id: '2',
+    image: '📱',
+    assetTag: '1654990322',
+    model: 'iPhone 11',
+    modelNo: '5466429538486827',
+    assetName: 'iPhone-mobile-d5efd89b-34ca-8ec3-4888809901c74',
+    serial: 'cfe93abdf-0777-34ca-8ec3-4888809015c74',
+    location: 'North Derickfort',
+    status: 'deployable',
+    expectedCheckinDate: 'Mar 5, 2025',
+    cpu: '4GB RAM',
+  },
+  {
+    id: '3',
+    image: '📱',
+    assetTag: '1011481556',
+    model: 'iPhone 12',
+    modelNo: '4708395437118939',
+    assetName: 'iPhone-mobile-dbc819dd-1498-360c-b27c-171be0236689',
+    serial: 'dbc819dd-1498-360c-b27c-1b6b26d0236689',
+    location: 'Alycefurt',
+    status: 'deployable',
+    expectedCheckinDate: 'Feb 20, 2025',
+    cpu: '6GB RAM',
+  },
+];
 
 export const mockCompanies: Company[] = [
   {
@@ -356,8 +399,8 @@ export const mockAssets: Asset[] = [
     description: 'IT Equipment',
     location: 'IT Department',
     status: 'Active',
-    acquisitionDate: '2023-06-15',
-    acquisitionCost: 1200,
+    purchaseDate: '2023-06-15',
+    purchaseC: 1200,
     currentValue: 1100,
     condition: 'Good'
   },

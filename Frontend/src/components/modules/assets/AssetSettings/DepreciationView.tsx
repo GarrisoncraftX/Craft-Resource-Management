@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AssetDataTable, ColumnDef } from '../AssetDataTable';
 import { Pencil, Trash2 } from 'lucide-react';
 import type { Depreciation } from '@/types/javabackendapi/assetTypes';
 import { mockDepreciations } from '@/services/mockData/assets';
+import { assetApiService } from '@/services/javabackendapi/assetApi';
 
 
 
@@ -19,6 +20,12 @@ const columns: ColumnDef<Depreciation>[] = [
 ];
 
 export const DepreciationView: React.FC = () => {
+  const [data, setData] = useState<Depreciation[]>(mockDepreciations);
+
+  useEffect(() => {
+    assetApiService.getAllDepreciations().then(setData).catch(() => setData(mockDepreciations));
+  }, []);
+
   return (
     <div className="space-y-4 bg-card p-2">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -29,7 +36,7 @@ export const DepreciationView: React.FC = () => {
       
 
       <AssetDataTable
-        data={mockDepreciations}
+        data={data}
         columns={columns}
         onAdd={() => {}}
         viewType="settings"

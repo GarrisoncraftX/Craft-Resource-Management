@@ -1,3 +1,4 @@
+import { assetApiService } from '@/services/javabackendapi/assetApi';
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,8 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
   const [notes, setNotes] = useState('');
   const [assetSearch, setAssetSearch] = useState('');
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const filteredAssets = mockAssets.filter(a => 
     !selectedAssets.includes(String(a.id)) &&
     (a.assetName?.toLowerCase().includes(assetSearch.toLowerCase()) || 
@@ -48,15 +51,41 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
     setSelectedAssets(prev => prev.filter(a => a !== id));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || selectedAssets.length === 0 || !maintenanceType) {
       toast.error('Please fill required fields (Name, Assets, Type)');
       return;
     }
-    onSubmit?.({ name, assets: selectedAssets, maintenanceType, startDate, completionDate, supplier, warrantyImprovement, cost, url, notes });
-    toast.success('Maintenance record created');
-    onOpenChange(false);
+    
+    setIsSubmitting(true);
+    try {
+      const maintenanceData = {
+        name,
+        asset_ids: selectedAssets,
+        maintenance_type: maintenanceType,
+        start_date: startDate,
+        completion_date: completionDate,
+        supplier_id: supplier,
+        warranty_improvement: warrantyImprovement,
+        cost: cost ? parseFloat(cost) : 0,
+        url,
+        notes,
+      };
+      
+      const result = await assetApiService.createMaintenanceRecord(maintenanceData);
+      onSubmit?.(result);
+      toast.success('Maintenance record created successfully');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to create maintenance record:', error);
+      toast.error('Failed to create maintenance record. Using fallback.');
+      // Fallback to local handling
+      onSubmit?.({ name, assets: selectedAssets, maintenanceType, startDate, completionDate, supplier, warrantyImprovement, cost, url, notes });
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -210,8 +239,8 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
 
           {/* Footer */}
           <div className="flex justify-end pt-4 border-t">
-            <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              ✓ Save
+            <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              ✓ {isSubmitting ? 'Saving...' : 'Save'}
             </Button>
           </div>
         </form>

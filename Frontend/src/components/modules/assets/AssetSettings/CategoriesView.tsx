@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AssetDataTable, ColumnDef } from '../AssetDataTable';
 import { Pencil, Trash2, Check, X } from 'lucide-react';
 import type { Category } from '@/types/javabackendapi/assetTypes';
 import { mockCategories } from '@/services/mockData/assets';
+import { assetApiService } from '@/services/javabackendapi/assetApi';
 
 
 const columns: ColumnDef<Category>[] = [
@@ -16,6 +17,12 @@ const columns: ColumnDef<Category>[] = [
 ];
 
 export const CategoriesView: React.FC = () => {
+  const [data, setData] = useState<Category[]>(mockCategories);
+
+  useEffect(() => {
+    assetApiService.getAllCategories().then(setData).catch(() => setData(mockCategories));
+  }, []);
+
   return (
     <div className="space-y-4 bg-card p-2">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -24,7 +31,7 @@ export const CategoriesView: React.FC = () => {
       </div>
 
       <AssetDataTable
-        data={mockCategories}
+        data={data}
         columns={columns}
         onAdd={() => {}}
         viewType="settings"

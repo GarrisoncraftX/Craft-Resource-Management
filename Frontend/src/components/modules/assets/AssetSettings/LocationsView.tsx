@@ -1,16 +1,21 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AssetDataTable, ColumnDef } from '../AssetDataTable';
 import type { Location } from '@/types/javabackendapi/assetTypes';
 import { mockLocations } from '@/services/mockData/assets';
+import { assetApiService } from '@/services/javabackendapi/assetApi';
 
 
 
 export const LocationsView: React.FC = () => {
-  const [locations] = useState<Location[]>(mockLocations);
+  const [locations, setLocations] = useState<Location[]>(mockLocations);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    assetApiService.getAllLocations().then(setLocations).catch(() => setLocations(mockLocations));
+  }, []);
 
   const filteredLocations = locations.filter(l =>
     l.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -11,8 +11,6 @@
 export { hrApiService } from '@/services/javabackendapi/hrApi';
 export { financeApiService } from '@/services/javabackendapi/financeApi';
 export { assetApiService } from '@/services/javabackendapi/assetApi';
-export { legalApiService } from '@/services/javabackendapi/legalApi';
-export { revenueApiService } from '@/services/javabackendapi/revenueApi';
 export { systemApiService as javaSystemApiService } from '@/services/javabackendapi/systemApi';
 
 // ============================================================================
@@ -25,10 +23,7 @@ export { authApiService } from '@/services/nodejsbackendapi/authApi';
 // PYTHON BACKEND API SERVICES
 // ============================================================================
 export { attendanceApiService } from '@/services/pythonbackendapi/attendanceApi';
-export { healthSafetyApiService } from '@/services/pythonbackendapi/healthSafetyApi';
-export { reportsApiService } from '@/services/pythonbackendapi/reportsApi';
 export { visitorApiService } from '@/services/pythonbackendapi/visitorApi';
-export { dashboardApiService } from '@/services/pythonbackendapi/dashboardApi';
 
 // ============================================================================
 // JAVA BACKEND - HR & PAYROLL WRAPPER FUNCTIONS
@@ -70,41 +65,9 @@ export {
   createDisposalRecordItem as createDisposalRecord,
   updateDisposalRecordItem as updateDisposalRecord,
   deleteDisposalRecordItem as deleteDisposalRecord,
-  fetchAcquisitionRequests,
-  submitAcquisitionRequestItem as submitAcquisitionRequest
 } from '@/services/javabackendapi/assetApi';
 
-// ============================================================================
-// JAVA BACKEND - LEGAL WRAPPER FUNCTIONS
-// ============================================================================
-export {
-  createLegalCaseRecord as createLegalCase,
-  fetchLegalCases,
-  updateLegalCaseRecord as updateLegalCase,
-  deleteLegalCaseRecord as deleteLegalCase,
-  fetchLegalCaseById,
-  createComplianceRecordItem as createComplianceRecord,
-  fetchComplianceRecords,
-  fetchComplianceRecordById,
-  updateComplianceRecordItem as updateComplianceRecord,
-  deleteComplianceRecordItem as deleteComplianceRecord
-} from '@/services/javabackendapi/legalApi';
 
-// ============================================================================
-// JAVA BACKEND - REVENUE WRAPPER FUNCTIONS
-// ============================================================================
-export {
-  createTaxAssessmentRecord as createTaxAssessment,
-  fetchTaxAssessments,
-  fetchTaxAssessmentById,
-  updateTaxAssessmentRecord as updateTaxAssessment,
-  deleteTaxAssessmentRecord as deleteTaxAssessment,
-  createRevenueCollectionRecord as createRevenueCollection,
-  fetchRevenueCollections,
-  fetchRevenueCollectionById,
-  updateRevenueCollectionRecord as updateRevenueCollection,
-  deleteRevenueCollectionRecord as deleteRevenueCollection
-} from '@/services/javabackendapi/revenueApi';
 
 // ============================================================================
 // JAVA BACKEND - SYSTEM CONFIG WRAPPER FUNCTIONS
@@ -148,5 +111,5 @@ export {
 // ============================================================================
 export type { Department, Role, BudgetItem, Payslip, AuditLog } from '@/types/api';
 export type { Employee, UpdateEmployeeRequest } from '@/types/hr';
-export type { Asset } from '@/types/asset';
+export type { Asset } from '@/types/javabackendapi/assetTypes';
 

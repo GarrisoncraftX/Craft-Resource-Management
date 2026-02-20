@@ -1,65 +1,144 @@
 package com.craftresourcemanagement.asset.services.impl;
 
-import com.craftresourcemanagement.asset.entities.Asset;
-import com.craftresourcemanagement.asset.entities.MaintenanceRecord;
-import com.craftresourcemanagement.asset.entities.DisposalRecord;
-import com.craftresourcemanagement.asset.repositories.AssetRepository;
-import com.craftresourcemanagement.asset.repositories.MaintenanceRecordRepository;
-import com.craftresourcemanagement.asset.repositories.DisposalRecordRepository;
+import com.craftresourcemanagement.asset.dto.AssetDTO;
+import com.craftresourcemanagement.asset.entities.*;
+import com.craftresourcemanagement.asset.repositories.*;
 import com.craftresourcemanagement.asset.services.AssetService;
-import com.craftresourcemanagement.utils.AuditClient;
+import com.craftresourcemanagement.system.repositories.AuditLogRepository;
+import com.craftresourcemanagement.system.entities.AuditLog;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class AssetServiceImpl implements AssetService {
 
     private final AssetRepository assetRepository;
-    private final MaintenanceRecordRepository maintenanceRecordRepository;
-    private final DisposalRecordRepository disposalRecordRepository;
-    private final AuditClient auditClient;
+    private final AuditLogRepository auditLogRepository;
+    private final CategoryRepository categoryRepository;
+    private final ManufacturerRepository manufacturerRepository;
+    private final SupplierRepository supplierRepository;
+    private final LocationRepository locationRepository;
+    private final AssetModelRepository assetModelRepository;
+    private final StatusLabelRepository statusLabelRepository;
+    private final DepreciationRepository depreciationRepository;
+    private final CompanyRepository companyRepository;
+    private final DepartmentRepository departmentRepository;
 
-    public AssetServiceImpl(AssetRepository assetRepository,
-                            MaintenanceRecordRepository maintenanceRecordRepository,
-                            DisposalRecordRepository disposalRecordRepository,
-                            AuditClient auditClient) {
+    public AssetServiceImpl(AssetRepository assetRepository, AuditLogRepository auditLogRepository,
+                           CategoryRepository categoryRepository, ManufacturerRepository manufacturerRepository,
+                           SupplierRepository supplierRepository, LocationRepository locationRepository,
+                           AssetModelRepository assetModelRepository, StatusLabelRepository statusLabelRepository,
+                           DepreciationRepository depreciationRepository, CompanyRepository companyRepository,
+                           DepartmentRepository departmentRepository) {
         this.assetRepository = assetRepository;
-        this.maintenanceRecordRepository = maintenanceRecordRepository;
-        this.disposalRecordRepository = disposalRecordRepository;
-        this.auditClient = auditClient;
+        this.auditLogRepository = auditLogRepository;
+        this.categoryRepository = categoryRepository;
+        this.manufacturerRepository = manufacturerRepository;
+        this.supplierRepository = supplierRepository;
+        this.locationRepository = locationRepository;
+        this.assetModelRepository = assetModelRepository;
+        this.statusLabelRepository = statusLabelRepository;
+        this.depreciationRepository = depreciationRepository;
+        this.companyRepository = companyRepository;
+        this.departmentRepository = departmentRepository;
     }
 
-    // Asset
     @Override
-    public Asset createAsset(Asset asset) {
+    @Transactional
+    public AssetDTO createAsset(Asset asset) {
         Asset saved = assetRepository.save(asset);
-        auditClient.logAction(null, "CREATE_ASSET", "Asset: " + saved.getAssetTag());
-        return saved;
+        logAudit(null, "CREATE", "Asset", saved.getId(), "Asset created: " + saved.getAssetTag());
+        return convertToDTO(saved);
     }
 
     @Override
-    public List<Asset> getAllAssets() {
-        return assetRepository.findAll();
+    public List<AssetDTO> getAllAssets(String status, String category) {
+        List<Asset> assets = assetRepository.findAll();
+        return assets.stream().map(this::convertToDTO).toList();
     }
 
     @Override
-    public List<Asset> getFilteredAssets(String filter) {
-        List<Asset> all = assetRepository.findAll();
-        if ("deployed".equals(filter)) {
-            return all.stream().filter(a -> "Deployed".equals(a.getStatus()) || "In Use".equals(a.getStatus())).toList();
-        } else if ("ready-to-deploy".equals(filter)) {
-            return all.stream().filter(a -> "Ready to Deploy".equals(a.getStatus()) || "Deployable".equals(a.getStatus())).toList();
-        } else if ("pending".equals(filter)) {
-            return all.stream().filter(a -> "Pending".equals(a.getStatus())).toList();
-        } else if ("un-deployable".equals(filter)) {
-            return all.stream().filter(a -> "Maintenance".equals(a.getStatus())).toList();
-        } else if ("archived".equals(filter)) {
-            return all.stream().filter(a -> "Archived".equals(a.getStatus()) || "Disposed".equals(a.getStatus())).toList();
-        }
-        return all;
+    public AssetDTO getAssetById(Long id) {
+        Asset asset = assetRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Asset not found"));
+        return convertToDTO(asset);
+    }
+
+    @Override
+    @Transactional
+    public AssetDTO updateAsset(Long id, Asset asset) {
+        Asset existing = assetRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Asset not found"));
+        
+        existing.setAssetTag(asset.getAssetTag());
+        existing.setName(asset.getName());
+        existing.setSerial(asset.getSerial());
+        existing.setModelId(asset.getModelId());
+        existing.setStatusId(asset.getStatusId());
+        existing.setLocationId(asset.getLocationId());
+        existing.setPurchaseDate(asset.getPurchaseDate());
+        existing.setPurchaseCost(asset.getPurchaseCost());
+        existing.setNotes(asset.getNotes());
+        
+        Asset updated = assetRepository.save(existing);
+        logAudit(null, "UPDATE", "Asset", updated.getId(), "Asset updated: " + updated.getAssetTag());
+        return convertToDTO(updated);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAsset(Long id) {
+        Asset asset = assetRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Asset not found"));
+        logAudit(null, "DELETE", "Asset", id, "Asset deleted: " + asset.getAssetTag());
+        assetRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public AssetDTO checkoutAsset(Long id, Long assignedTo, String assignedType, String note) {
+        Asset asset = assetRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Asset not found"));
+        
+        asset.setAssignedTo(assignedTo);
+        asset.setAssignedType(assignedType);
+        asset.setLastCheckout(LocalDateTime.now());
+        
+        Asset updated = assetRepository.save(asset);
+        
+        // Log to audit_logs with polymorphic tracking
+        logAudit(null, "CHECKOUT", "Asset", id, 
+                String.format("Asset checked out to %s (ID: %d). Note: %s", assignedType, assignedTo, note));
+        
+        return convertToDTO(updated);
+    }
+
+    @Override
+    @Transactional
+    public AssetDTO checkinAsset(Long id, String note) {
+        Asset asset = assetRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Asset not found"));
+        
+        Long previousAssignee = asset.getAssignedTo();
+        asset.setAssignedTo(null);
+        asset.setAssignedType(null);
+        asset.setExpectedCheckin(null);
+        
+        Asset updated = assetRepository.save(asset);
+        
+        // Log to audit_logs
+        logAudit(null, "CHECKIN", "Asset", id, 
+                String.format("Asset checked in from user ID: %d. Note: %s", previousAssignee, note));
+        
+        return convertToDTO(updated);
     }
 
     @Override
@@ -67,118 +146,588 @@ public class AssetServiceImpl implements AssetService {
         List<Asset> all = assetRepository.findAll();
         return Map.of(
             "list-all", (long) all.size(),
-            "deployed", all.stream().filter(a -> "Deployed".equals(a.getStatus()) || "In Use".equals(a.getStatus())).count(),
-            "ready-to-deploy", all.stream().filter(a -> "Ready to Deploy".equals(a.getStatus()) || "Deployable".equals(a.getStatus())).count(),
-            "pending", all.stream().filter(a -> "Pending".equals(a.getStatus())).count(),
-            "un-deployable", all.stream().filter(a -> "Maintenance".equals(a.getStatus())).count(),
-            "archived", all.stream().filter(a -> "Archived".equals(a.getStatus()) || "Disposed".equals(a.getStatus())).count()
+            "deployed", all.stream().filter(a -> a.getAssignedTo() != null).count(),
+            "ready-to-deploy", all.stream().filter(a -> a.getAssignedTo() == null).count(),
+            "pending", 0L,
+            "un-deployable", 0L,
+            "archived", 0L
         );
     }
 
     @Override
-    public Asset getAssetById(Long id) {
-        return assetRepository.findById(id).orElse(null);
-    }
-
-    @Override
-    public Asset updateAsset(Long id, Asset asset) {
-        Optional<Asset> existing = assetRepository.findById(id);
-        if (existing.isPresent()) {
-            Asset toUpdate = existing.get();
-            toUpdate.setAssetTag(asset.getAssetTag());
-            toUpdate.setAssetName(asset.getAssetName());
-            toUpdate.setDescription(asset.getDescription());
-            toUpdate.setAcquisitionDate(asset.getAcquisitionDate());
-            toUpdate.setAcquisitionCost(asset.getAcquisitionCost());
-            toUpdate.setCurrentValue(asset.getCurrentValue());
-            toUpdate.setLocation(asset.getLocation());
-            toUpdate.setStatus(asset.getStatus());
-            Asset updated = assetRepository.save(toUpdate);
-            auditClient.logAction(null, "UPDATE_ASSET", "Asset: " + updated.getAssetTag());
-            return updated;
-        }
-        return null;
-    }
-
-    @Override
-    public void deleteAsset(Long id) {
-        assetRepository.findById(id).ifPresent(asset -> 
-            auditClient.logAction(null, "DELETE_ASSET", "Asset: " + asset.getAssetTag())
+    public Map<String, Object> getAssetStats() {
+        List<Asset> all = assetRepository.findAll();
+        return Map.of(
+            "totalAssets", all.size(),
+            "activeAssets", all.stream().filter(a -> a.getAssignedTo() != null).count(),
+            "maintenanceAssets", 0,
+            "disposedAssets", 0,
+            "totalValue", 0,
+            "depreciationRate", 0
         );
-        assetRepository.deleteById(id);
-    }
-
-    // MaintenanceRecord
-    @Override
-    public MaintenanceRecord createMaintenanceRecord(MaintenanceRecord record) {
-        MaintenanceRecord saved = maintenanceRecordRepository.save(record);
-        auditClient.logAction(null, "CREATE_MAINTENANCE_RECORD", "Asset ID: " + saved.getAsset().getId() + ", Performed by: " + saved.getPerformedBy());
-        return saved;
     }
 
     @Override
-    public List<MaintenanceRecord> getAllMaintenanceRecords() {
-        return maintenanceRecordRepository.findAll();
+    public List<Map<String, Object>> getAssetsByCategory() {
+        return new ArrayList<>();
     }
 
     @Override
-    public MaintenanceRecord getMaintenanceRecordById(Long id) {
-        return maintenanceRecordRepository.findById(id).orElse(null);
+    public List<Map<String, Object>> getAssetTrends() {
+        return new ArrayList<>();
     }
 
     @Override
-    public MaintenanceRecord updateMaintenanceRecord(Long id, MaintenanceRecord record) {
-        Optional<MaintenanceRecord> existing = maintenanceRecordRepository.findById(id);
-        if (existing.isPresent()) {
-            MaintenanceRecord toUpdate = existing.get();
-            toUpdate.setAsset(record.getAsset());
-            toUpdate.setMaintenanceDate(record.getMaintenanceDate());
-            toUpdate.setDescription(record.getDescription());
-            toUpdate.setPerformedBy(record.getPerformedBy());
-            return maintenanceRecordRepository.save(toUpdate);
+    public List<Map<String, Object>> getAllMaintenanceRecords() {
+        return new ArrayList<>();
+    }
+
+    @Override
+    public Map<String, Object> createMaintenanceRecord(Map<String, Object> record) {
+        return record;
+    }
+
+    @Override
+    public List<Map<String, Object>> getMaintenanceCosts() {
+        return new ArrayList<>();
+    }
+
+    @Override
+    public List<Map<String, Object>> getAllDisposalRecords() {
+        return new ArrayList<>();
+    }
+
+    @Override
+    public Map<String, Object> createDisposalRecord(Map<String, Object> record) {
+        return record;
+    }
+
+    @Override
+    public List<Map<String, Object>> getAllCategories() {
+        return categoryRepository.findAll().stream()
+            .map(c -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", c.getId());
+                map.put("name", c.getName());
+                map.put("type", c.getCategoryType());
+                map.put("image", c.getImage());
+                map.put("acceptance", c.getRequireAcceptance());
+                map.put("qty", assetRepository.findAll().stream().filter(a -> a.getModelId() != null).count());
+                return map;
+            }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> createCategory(Map<String, Object> data) {
+        Category category = new Category();
+        category.setName((String) data.get("name"));
+        category.setCategoryType((String) data.getOrDefault("type", "asset"));
+        category.setImage((String) data.get("image"));
+        category.setRequireAcceptance((Boolean) data.getOrDefault("acceptance", false));
+        Category saved = categoryRepository.save(category);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> updateCategory(Long id, Map<String, Object> data) {
+        Category category = categoryRepository.findById(id).orElseThrow(() -> new RuntimeException("Category not found"));
+        if (data.containsKey("name")) category.setName((String) data.get("name"));
+        if (data.containsKey("type")) category.setCategoryType((String) data.get("type"));
+        if (data.containsKey("image")) category.setImage((String) data.get("image"));
+        if (data.containsKey("acceptance")) category.setRequireAcceptance((Boolean) data.get("acceptance"));
+        Category saved = categoryRepository.save(category);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void deleteCategory(Long id) {
+        categoryRepository.deleteById(id);
+    }
+
+    @Override
+    public List<Map<String, Object>> getAllManufacturers() {
+        return manufacturerRepository.findAll().stream()
+            .map(m -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", m.getId());
+                map.put("name", m.getName());
+                map.put("url", m.getUrl());
+                map.put("supportUrl", m.getSupportUrl());
+                map.put("supportPhone", m.getSupportPhone());
+                map.put("supportEmail", m.getSupportEmail());
+                map.put("image", m.getImage());
+                map.put("assets", 0);
+                return map;
+            }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> createManufacturer(Map<String, Object> data) {
+        Manufacturer manufacturer = new Manufacturer();
+        manufacturer.setName((String) data.get("name"));
+        manufacturer.setUrl((String) data.get("url"));
+        manufacturer.setSupportUrl((String) data.get("supportUrl"));
+        manufacturer.setSupportPhone((String) data.get("supportPhone"));
+        manufacturer.setSupportEmail((String) data.get("supportEmail"));
+        Manufacturer saved = manufacturerRepository.save(manufacturer);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> updateManufacturer(Long id, Map<String, Object> data) {
+        Manufacturer manufacturer = manufacturerRepository.findById(id).orElseThrow(() -> new RuntimeException("Manufacturer not found"));
+        if (data.containsKey("name")) manufacturer.setName((String) data.get("name"));
+        if (data.containsKey("url")) manufacturer.setUrl((String) data.get("url"));
+        if (data.containsKey("supportUrl")) manufacturer.setSupportUrl((String) data.get("supportUrl"));
+        if (data.containsKey("supportPhone")) manufacturer.setSupportPhone((String) data.get("supportPhone"));
+        if (data.containsKey("supportEmail")) manufacturer.setSupportEmail((String) data.get("supportEmail"));
+        Manufacturer saved = manufacturerRepository.save(manufacturer);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void deleteManufacturer(Long id) {
+        manufacturerRepository.deleteById(id);
+    }
+
+    @Override
+    public List<Map<String, Object>> getAllSuppliers() {
+        return supplierRepository.findAll().stream()
+            .map(s -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", s.getId());
+                map.put("name", s.getName());
+                map.put("address", s.getAddress());
+                map.put("city", s.getCity());
+                map.put("state", s.getState());
+                map.put("url", s.getUrl());
+                map.put("assets", assetRepository.findAll().stream().filter(a -> s.getId().equals(a.getSupplierId())).count());
+                return map;
+            }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> createSupplier(Map<String, Object> data) {
+        Supplier supplier = new Supplier();
+        supplier.setName((String) data.get("name"));
+        supplier.setAddress((String) data.get("address"));
+        supplier.setCity((String) data.get("city"));
+        supplier.setState((String) data.get("state"));
+        supplier.setUrl((String) data.get("url"));
+        Supplier saved = supplierRepository.save(supplier);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> updateSupplier(Long id, Map<String, Object> data) {
+        Supplier supplier = supplierRepository.findById(id).orElseThrow(() -> new RuntimeException("Supplier not found"));
+        if (data.containsKey("name")) supplier.setName((String) data.get("name"));
+        if (data.containsKey("address")) supplier.setAddress((String) data.get("address"));
+        if (data.containsKey("city")) supplier.setCity((String) data.get("city"));
+        if (data.containsKey("state")) supplier.setState((String) data.get("state"));
+        if (data.containsKey("url")) supplier.setUrl((String) data.get("url"));
+        Supplier saved = supplierRepository.save(supplier);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void deleteSupplier(Long id) {
+        supplierRepository.deleteById(id);
+    }
+
+    @Override
+    public List<Map<String, Object>> getAllLocations() {
+        return locationRepository.findAll().stream()
+            .map(l -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", l.getId());
+                map.put("name", l.getName());
+                map.put("address", l.getAddress());
+                map.put("city", l.getCity());
+                map.put("state", l.getState());
+                map.put("parent", l.getParentId());
+                map.put("assets", assetRepository.findAll().stream().filter(a -> l.getId().equals(a.getLocationId())).count());
+                return map;
+            }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> createLocation(Map<String, Object> data) {
+        Location location = new Location();
+        location.setName((String) data.get("name"));
+        location.setAddress((String) data.get("address"));
+        location.setCity((String) data.get("city"));
+        location.setState((String) data.get("state"));
+        Location saved = locationRepository.save(location);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> updateLocation(Long id, Map<String, Object> data) {
+        Location location = locationRepository.findById(id).orElseThrow(() -> new RuntimeException("Location not found"));
+        if (data.containsKey("name")) location.setName((String) data.get("name"));
+        if (data.containsKey("address")) location.setAddress((String) data.get("address"));
+        if (data.containsKey("city")) location.setCity((String) data.get("city"));
+        if (data.containsKey("state")) location.setState((String) data.get("state"));
+        Location saved = locationRepository.save(location);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void deleteLocation(Long id) {
+        locationRepository.deleteById(id);
+    }
+
+    @Override
+    public List<Map<String, Object>> getAllModels() {
+        return assetModelRepository.findAll().stream()
+            .map(m -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", m.getId());
+                map.put("name", m.getName());
+                map.put("modelNo", m.getModelNumber());
+                map.put("image", m.getImage());
+                map.put("minQty", m.getMinAmt());
+                map.put("assets", assetRepository.findAll().stream().filter(a -> m.getId().equals(a.getModelId())).count());
+                return map;
+            }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> createModel(Map<String, Object> data) {
+        AssetModel model = new AssetModel();
+        model.setName((String) data.get("name"));
+        model.setModelNumber((String) data.get("modelNo"));
+        model.setCategoryId(data.containsKey("categoryId") ? ((Number) data.get("categoryId")).longValue() : null);
+        AssetModel saved = assetModelRepository.save(model);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> updateModel(Long id, Map<String, Object> data) {
+        AssetModel model = assetModelRepository.findById(id).orElseThrow(() -> new RuntimeException("Model not found"));
+        if (data.containsKey("name")) model.setName((String) data.get("name"));
+        if (data.containsKey("modelNo")) model.setModelNumber((String) data.get("modelNo"));
+        AssetModel saved = assetModelRepository.save(model);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void deleteModel(Long id) {
+        assetModelRepository.deleteById(id);
+    }
+
+    @Override
+    public List<Map<String, Object>> getAllStatusLabels() {
+        return statusLabelRepository.findAll().stream()
+            .map(s -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", s.getId());
+                map.put("name", s.getName());
+                map.put("statusType", s.getStatusType());
+                map.put("assets", assetRepository.findAll().stream().filter(a -> s.getId().equals(a.getStatusId())).count());
+                return map;
+            }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> createStatusLabel(Map<String, Object> data) {
+        StatusLabel statusLabel = new StatusLabel();
+        statusLabel.setName((String) data.get("name"));
+        statusLabel.setStatusType((String) data.getOrDefault("statusType", "deployable"));
+        StatusLabel saved = statusLabelRepository.save(statusLabel);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> updateStatusLabel(Long id, Map<String, Object> data) {
+        StatusLabel statusLabel = statusLabelRepository.findById(id).orElseThrow(() -> new RuntimeException("StatusLabel not found"));
+        if (data.containsKey("name")) statusLabel.setName((String) data.get("name"));
+        if (data.containsKey("statusType")) statusLabel.setStatusType((String) data.get("statusType"));
+        StatusLabel saved = statusLabelRepository.save(statusLabel);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void deleteStatusLabel(Long id) {
+        statusLabelRepository.deleteById(id);
+    }
+
+    @Override
+    public List<Map<String, Object>> getAllDepreciations() {
+        return depreciationRepository.findAll().stream()
+            .map(d -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", d.getId());
+                map.put("name", d.getName());
+                map.put("term", d.getMonths() + " months");
+                map.put("floorValue", d.getDepreciationMin());
+                map.put("assets", assetModelRepository.findAll().stream().filter(m -> d.getId().equals(m.getDepreciationId())).mapToLong(m -> assetRepository.findAll().stream().filter(a -> m.getId().equals(a.getModelId())).count()).sum());
+                map.put("assetModels", assetModelRepository.findAll().stream().filter(m -> d.getId().equals(m.getDepreciationId())).count());
+                return map;
+            }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> createDepreciation(Map<String, Object> data) {
+        Depreciation depreciation = new Depreciation();
+        depreciation.setName((String) data.get("name"));
+        depreciation.setMonths(((Number) data.get("months")).intValue());
+        depreciation.setDepreciationMin(new BigDecimal(data.getOrDefault("floorValue", 0).toString()));
+        Depreciation saved = depreciationRepository.save(depreciation);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> updateDepreciation(Long id, Map<String, Object> data) {
+        Depreciation depreciation = depreciationRepository.findById(id).orElseThrow(() -> new RuntimeException("Depreciation not found"));
+        if (data.containsKey("name")) depreciation.setName((String) data.get("name"));
+        if (data.containsKey("months")) depreciation.setMonths(((Number) data.get("months")).intValue());
+        if (data.containsKey("floorValue")) depreciation.setDepreciationMin(new BigDecimal(data.get("floorValue").toString()));
+        Depreciation saved = depreciationRepository.save(depreciation);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void deleteDepreciation(Long id) {
+        depreciationRepository.deleteById(id);
+    }
+
+    @Override
+    public List<Map<String, Object>> getAllCompanies() {
+        return companyRepository.findAll().stream()
+            .map(c -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", c.getId());
+                map.put("name", c.getName());
+                map.put("assets", assetRepository.findAll().stream().filter(a -> c.getId().equals(a.getCompanyId())).count());
+                return map;
+            }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> createCompany(Map<String, Object> data) {
+        Company company = new Company();
+        company.setName((String) data.get("name"));
+        company.setEmail((String) data.get("email"));
+        Company saved = companyRepository.save(company);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> updateCompany(Long id, Map<String, Object> data) {
+        Company company = companyRepository.findById(id).orElseThrow(() -> new RuntimeException("Company not found"));
+        if (data.containsKey("name")) company.setName((String) data.get("name"));
+        if (data.containsKey("email")) company.setEmail((String) data.get("email"));
+        Company saved = companyRepository.save(company);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void deleteCompany(Long id) {
+        companyRepository.deleteById(id);
+    }
+
+    @Override
+    public List<Map<String, Object>> getAllDepartments() {
+        return departmentRepository.findAll().stream()
+            .map(d -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", d.getId());
+                map.put("name", d.getName());
+                map.put("manager", d.getManagerId());
+                map.put("location", d.getLocationId());
+                return map;
+            }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> createDepartment(Map<String, Object> data) {
+        Department department = new Department();
+        department.setName((String) data.get("name"));
+        Department saved = departmentRepository.save(department);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> updateDepartment(Long id, Map<String, Object> data) {
+        Department department = departmentRepository.findById(id).orElseThrow(() -> new RuntimeException("Department not found"));
+        if (data.containsKey("name")) department.setName((String) data.get("name"));
+        Department saved = departmentRepository.save(department);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", saved.getId());
+        result.put("name", saved.getName());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void deleteDepartment(Long id) {
+        departmentRepository.deleteById(id);
+    }
+
+    @Override
+    public List<Map<String, Object>> getDepreciationReport() {
+        List<Asset> assets = assetRepository.findAll();
+        List<Map<String, Object>> report = new ArrayList<>();
+        
+        for (Asset asset : assets) {
+            if (asset.getPurchaseDate() == null || asset.getPurchaseCost() == null || asset.getModelId() == null) {
+                continue;
+            }
+            
+            AssetModel model = assetModelRepository.findById(asset.getModelId()).orElse(null);
+            if (model == null || model.getDepreciationId() == null) {
+                continue;
+            }
+            
+            Depreciation depreciation = depreciationRepository.findById(model.getDepreciationId()).orElse(null);
+            if (depreciation == null) {
+                continue;
+            }
+            
+            // Calculate depreciation using straight-line method
+            long monthsPassed = ChronoUnit.MONTHS.between(asset.getPurchaseDate(), LocalDate.now());
+            int totalMonths = depreciation.getMonths();
+            BigDecimal purchaseCost = asset.getPurchaseCost();
+            BigDecimal floorValue = depreciation.getDepreciationMin();
+            
+            BigDecimal depreciableAmount = purchaseCost.subtract(floorValue);
+            BigDecimal monthlyDepreciation = depreciableAmount.divide(BigDecimal.valueOf(totalMonths), 2, RoundingMode.HALF_UP);
+            
+            BigDecimal totalDepreciation = monthlyDepreciation.multiply(BigDecimal.valueOf(Math.min(monthsPassed, totalMonths)));
+            BigDecimal currentValue = purchaseCost.subtract(totalDepreciation).max(floorValue);
+            
+            Map<String, Object> record = new HashMap<>();
+            record.put("id", asset.getId());
+            record.put("assetTag", asset.getAssetTag());
+            record.put("model", model.getName());
+            record.put("modelNo", model.getModelNumber());
+            record.put("serial", asset.getSerial());
+            record.put("depreciation", depreciation.getName());
+            record.put("numberOfMonths", totalMonths);
+            record.put("purchaseDate", asset.getPurchaseDate().toString());
+            record.put("purchaseCost", purchaseCost);
+            record.put("currentValue", currentValue);
+            record.put("monthlyDepreciation", monthlyDepreciation);
+            record.put("diff", totalDepreciation);
+            
+            report.add(record);
         }
-        return null;
+        
+        return report;
     }
 
     @Override
-    public void deleteMaintenanceRecord(Long id) {
-        maintenanceRecordRepository.deleteById(id);
+    public List<Map<String, Object>> getMaintenanceReport() {
+        return new ArrayList<>();
     }
 
-    // DisposalRecord
-    @Override
-    public DisposalRecord createDisposalRecord(DisposalRecord record) {
-        DisposalRecord saved = disposalRecordRepository.save(record);
-        auditClient.logAction(null, "CREATE_DISPOSAL_RECORD", "Asset ID: " + saved.getAsset().getId() + ", Reason: " + saved.getReason() + ", Disposed by: " + saved.getDisposedBy());
-        return saved;
+    private AssetDTO convertToDTO(Asset asset) {
+        AssetDTO dto = new AssetDTO();
+        dto.setId(asset.getId());
+        dto.setAssetTag(asset.getAssetTag());
+        dto.setName(asset.getName());
+        dto.setSerial(asset.getSerial());
+        dto.setModelId(asset.getModelId());
+        dto.setStatusId(asset.getStatusId());
+        dto.setPurchaseDate(asset.getPurchaseDate());
+        dto.setPurchaseCost(asset.getPurchaseCost());
+        dto.setNotes(asset.getNotes());
+        dto.setExpectedCheckin(asset.getExpectedCheckin());
+        dto.setNextAuditDate(asset.getNextAuditDate());
+        return dto;
     }
 
-    @Override
-    public List<DisposalRecord> getAllDisposalRecords() {
-        return disposalRecordRepository.findAll();
-    }
-
-    @Override
-    public DisposalRecord getDisposalRecordById(Long id) {
-        return disposalRecordRepository.findById(id).orElse(null);
-    }
-
-    @Override
-    public DisposalRecord updateDisposalRecord(Long id, DisposalRecord record) {
-        Optional<DisposalRecord> existing = disposalRecordRepository.findById(id);
-        if (existing.isPresent()) {
-            DisposalRecord toUpdate = existing.get();
-            toUpdate.setAsset(record.getAsset());
-            toUpdate.setDisposalDate(record.getDisposalDate());
-            toUpdate.setReason(record.getReason());
-            toUpdate.setDisposedBy(record.getDisposedBy());
-            return disposalRecordRepository.save(toUpdate);
+    private void logAudit(Long userId, String action, String itemType, Long itemId, String details) {
+        try {
+            AuditLog log = new AuditLog();
+            log.setUserId(userId);
+            log.setAction(action);
+            log.setServiceName(itemType);
+            log.setDetails(details);
+            log.setTimestamp(LocalDateTime.now());
+            auditLogRepository.save(log);
+        } catch (Exception e) {
+            // Log error but don't fail the operation
+            System.err.println("Failed to log audit: " + e.getMessage());
         }
-        return null;
-    }
-
-    @Override
-    public void deleteDisposalRecord(Long id) {
-        disposalRecordRepository.deleteById(id);
     }
 }

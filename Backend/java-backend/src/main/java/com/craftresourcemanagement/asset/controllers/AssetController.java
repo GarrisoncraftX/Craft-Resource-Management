@@ -1,8 +1,7 @@
 package com.craftresourcemanagement.asset.controllers;
 
+import com.craftresourcemanagement.asset.dto.AssetDTO;
 import com.craftresourcemanagement.asset.entities.Asset;
-import com.craftresourcemanagement.asset.entities.MaintenanceRecord;
-import com.craftresourcemanagement.asset.entities.DisposalRecord;
 import com.craftresourcemanagement.asset.services.AssetService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,7 +10,8 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/assets")
+@RequestMapping("/api/assets")
+@CrossOrigin(origins = "*")
 public class AssetController {
 
     private final AssetService assetService;
@@ -20,41 +20,26 @@ public class AssetController {
         this.assetService = assetService;
     }
 
-    // Asset endpoints
-    @PostMapping
-    public ResponseEntity<Asset> createAsset(@RequestBody Asset asset) {
-        return ResponseEntity.ok(assetService.createAsset(asset));
-    }
-
     @GetMapping
-    public ResponseEntity<List<Asset>> getAllAssets(@RequestParam(required = false) String filter) {
-        if (filter != null) {
-            return ResponseEntity.ok(assetService.getFilteredAssets(filter));
-        }
-        return ResponseEntity.ok(assetService.getAllAssets());
-    }
-
-    @GetMapping("/counts")
-    public ResponseEntity<Map<String, Long>> getAssetCounts() {
-        return ResponseEntity.ok(assetService.getAssetCounts());
+    public ResponseEntity<List<AssetDTO>> getAllAssets(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String category) {
+        return ResponseEntity.ok(assetService.getAllAssets(status, category));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Asset> getAssetById(@PathVariable Long id) {
-        Asset assetData = assetService.getAssetById(id);
-        if (assetData == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(assetData);
+    public ResponseEntity<AssetDTO> getAssetById(@PathVariable Long id) {
+        return ResponseEntity.ok(assetService.getAssetById(id));
+    }
+
+    @PostMapping
+    public ResponseEntity<AssetDTO> createAsset(@RequestBody Asset asset) {
+        return ResponseEntity.ok(assetService.createAsset(asset));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Asset> updateAsset(@PathVariable Long id, @RequestBody Asset assetRequest) {
-        Asset updatedAsset = assetService.updateAsset(id, assetRequest);
-        if (updatedAsset == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(updatedAsset);
+    public ResponseEntity<AssetDTO> updateAsset(@PathVariable Long id, @RequestBody Asset asset) {
+        return ResponseEntity.ok(assetService.updateAsset(id, asset));
     }
 
     @DeleteMapping("/{id}")
@@ -63,73 +48,115 @@ public class AssetController {
         return ResponseEntity.noContent().build();
     }
 
-    // MaintenanceRecord endpoints
-    @PostMapping("/maintenance-records")
-    public ResponseEntity<MaintenanceRecord> createMaintenanceRecord(@RequestBody MaintenanceRecord maintenanceRecord) {
-        return ResponseEntity.ok(assetService.createMaintenanceRecord(maintenanceRecord));
+    @PostMapping("/{id}/checkout")
+    public ResponseEntity<AssetDTO> checkoutAsset(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> checkoutData) {
+        Long assignedTo = Long.valueOf(checkoutData.get("assigned_to").toString());
+        String assignedType = (String) checkoutData.get("assigned_type");
+        String note = (String) checkoutData.get("note");
+        return ResponseEntity.ok(assetService.checkoutAsset(id, assignedTo, assignedType, note));
     }
 
+    @PostMapping("/{id}/checkin")
+    public ResponseEntity<AssetDTO> checkinAsset(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> checkinData) {
+        String note = (String) checkinData.get("note");
+        return ResponseEntity.ok(assetService.checkinAsset(id, note));
+    }
+
+    @GetMapping("/counts")
+    public ResponseEntity<Map<String, Long>> getAssetCounts() {
+        return ResponseEntity.ok(assetService.getAssetCounts());
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getAssetStats() {
+        return ResponseEntity.ok(assetService.getAssetStats());
+    }
+
+    @GetMapping("/by-category")
+    public ResponseEntity<List<Map<String, Object>>> getAssetsByCategory() {
+        return ResponseEntity.ok(assetService.getAssetsByCategory());
+    }
+
+    @GetMapping("/trends")
+    public ResponseEntity<List<Map<String, Object>>> getAssetTrends() {
+        return ResponseEntity.ok(assetService.getAssetTrends());
+    }
+
+    // Maintenance endpoints
     @GetMapping("/maintenance-records")
-    public ResponseEntity<List<MaintenanceRecord>> getAllMaintenanceRecords() {
+    public ResponseEntity<List<Map<String, Object>>> getAllMaintenanceRecords() {
         return ResponseEntity.ok(assetService.getAllMaintenanceRecords());
     }
 
-    @GetMapping("/maintenance-records/{id}")
-    public ResponseEntity<MaintenanceRecord> getMaintenanceRecordById(@PathVariable Long id) {
-        MaintenanceRecord maintenanceRecord = assetService.getMaintenanceRecordById(id);
-        if (maintenanceRecord == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(maintenanceRecord);
+    @PostMapping("/maintenance-records")
+    public ResponseEntity<Map<String, Object>> createMaintenanceRecord(@RequestBody Map<String, Object> record) {
+        return ResponseEntity.ok(assetService.createMaintenanceRecord(record));
     }
 
-    @PutMapping("/maintenance-records/{id}")
-    public ResponseEntity<MaintenanceRecord> updateMaintenanceRecord(@PathVariable Long id, @RequestBody MaintenanceRecord maintenanceRecord) {
-        MaintenanceRecord updatedRecord = assetService.updateMaintenanceRecord(id, maintenanceRecord);
-        if (updatedRecord == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(updatedRecord);
+    @GetMapping("/maintenance/costs")
+    public ResponseEntity<List<Map<String, Object>>> getMaintenanceCosts() {
+        return ResponseEntity.ok(assetService.getMaintenanceCosts());
     }
 
-    @DeleteMapping("/maintenance-records/{id}")
-    public ResponseEntity<Void> deleteMaintenanceRecord(@PathVariable Long id) {
-        assetService.deleteMaintenanceRecord(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    // DisposalRecord endpoints
-    @PostMapping("/disposal-records")
-    public ResponseEntity<DisposalRecord> createDisposalRecord(@RequestBody DisposalRecord disposalRecord) {
-        return ResponseEntity.ok(assetService.createDisposalRecord(disposalRecord));
-    }
-
+    // Disposal endpoints
     @GetMapping("/disposal-records")
-    public ResponseEntity<List<DisposalRecord>> getAllDisposalRecords() {
+    public ResponseEntity<List<Map<String, Object>>> getAllDisposalRecords() {
         return ResponseEntity.ok(assetService.getAllDisposalRecords());
     }
 
-    @GetMapping("/disposal-records/{id}")
-    public ResponseEntity<DisposalRecord> getDisposalRecordById(@PathVariable Long id) {
-        DisposalRecord disposalRecord = assetService.getDisposalRecordById(id);
-        if (disposalRecord == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(disposalRecord);
+    @PostMapping("/disposal-records")
+    public ResponseEntity<Map<String, Object>> createDisposalRecord(@RequestBody Map<String, Object> record) {
+        return ResponseEntity.ok(assetService.createDisposalRecord(record));
     }
 
-    @PutMapping("/disposal-records/{id}")
-    public ResponseEntity<DisposalRecord> updateDisposalRecord(@PathVariable Long id, @RequestBody DisposalRecord disposalRecord) {
-        DisposalRecord updatedDisposalRecord = assetService.updateDisposalRecord(id, disposalRecord);
-        if (updatedDisposalRecord == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(updatedDisposalRecord);
+    // Settings endpoints
+    @GetMapping("/categories")
+    public ResponseEntity<List<Map<String, Object>>> getAllCategories() {
+        return ResponseEntity.ok(assetService.getAllCategories());
     }
-
-    @DeleteMapping("/disposal-records/{id}")
-    public ResponseEntity<Void> deleteDisposalRecord(@PathVariable Long id) {
-        assetService.deleteDisposalRecord(id);
+    @PostMapping("/categories")
+    public ResponseEntity<Map<String, Object>> createCategory(@RequestBody Map<String, Object> data) {
+        return ResponseEntity.ok(assetService.createCategory(data));
+    }
+    @PutMapping("/categories/{id}")
+    public ResponseEntity<Map<String, Object>> updateCategory(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+        return ResponseEntity.ok(assetService.updateCategory(id, data));
+    }
+    @DeleteMapping("/categories/{id}")
+    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
+        assetService.deleteCategory(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/depreciations")
+    public ResponseEntity<List<Map<String, Object>>> getAllDepreciations() {
+        return ResponseEntity.ok(assetService.getAllDepreciations());
+    }
+    @PostMapping("/depreciations")
+    public ResponseEntity<Map<String, Object>> createDepreciation(@RequestBody Map<String, Object> data) {
+        return ResponseEntity.ok(assetService.createDepreciation(data));
+    }
+    @PutMapping("/depreciations/{id}")
+    public ResponseEntity<Map<String, Object>> updateDepreciation(@PathVariable Long id, @RequestBody Map<String, Object> data) {
+        return ResponseEntity.ok(assetService.updateDepreciation(id, data));
+    }
+    @DeleteMapping("/depreciations/{id}")
+    public ResponseEntity<Void> deleteDepreciation(@PathVariable Long id) {
+        assetService.deleteDepreciation(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/reports/depreciation")
+    public ResponseEntity<List<Map<String, Object>>> getDepreciationReport() {
+        return ResponseEntity.ok(assetService.getDepreciationReport());
+    }
+
+    @GetMapping("/reports/maintenance")
+    public ResponseEntity<List<Map<String, Object>>> getMaintenanceReport() {
+        return ResponseEntity.ok(assetService.getMaintenanceReport());
     }
 }

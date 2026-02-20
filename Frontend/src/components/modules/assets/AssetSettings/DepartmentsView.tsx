@@ -1,16 +1,21 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2, Edit, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AssetDataTable, ColumnDef } from '../AssetDataTable';
 import type { Department } from '@/types/javabackendapi/assetTypes';
 import { mockDepartments } from '@/services/mockData/assets';
+import { assetApiService } from '@/services/javabackendapi/assetApi';
 
 
 
 export const DepartmentsView: React.FC = () => {
-  const [departments] = useState<Department[]>(mockDepartments);
+  const [departments, setDepartments] = useState<Department[]>(mockDepartments);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    assetApiService.getAllDepartments().then(setDepartments).catch(() => setDepartments(mockDepartments));
+  }, []);
 
   const filteredDepartments = departments.filter(d =>
     d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
