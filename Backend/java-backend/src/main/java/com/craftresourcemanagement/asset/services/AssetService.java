@@ -3,8 +3,10 @@ package com.craftresourcemanagement.asset.services;
 import com.craftresourcemanagement.asset.dto.AssetDTO;
 import com.craftresourcemanagement.asset.entities.Asset;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface AssetService {
 
@@ -14,6 +16,9 @@ public interface AssetService {
     AssetDTO getAssetById(Long id);
     AssetDTO updateAsset(Long id, Asset asset);
     void deleteAsset(Long id);
+
+    // Asset Image Upload
+    AssetDTO uploadAssetImage(Long id, MultipartFile file) throws IOException;
 
     // Asset Checkout/Checkin
     AssetDTO checkoutAsset(Long id, Long assignedTo, String assignedType, String note);

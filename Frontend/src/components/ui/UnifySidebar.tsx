@@ -401,9 +401,21 @@ export function UnifySidebar() {
                                     })}
 
                                   {item.title === "Assets" &&
-                                    assetHardwareFilters.map((filter) => {
+                                    assetHardwareFilters.map((filter, idx) => {
                                       const filterKey = filter.label.toLowerCase().replace(/\s+/g, "-")
                                       const count = assetCounts[filterKey] ?? 0
+                                      const badgeColors = [
+                                        "bg-gray-500 text-white",
+                                        "bg-blue-500 text-white",
+                                        "bg-green-500 text-white",
+                                        "bg-amber-500 text-white",
+                                        "bg-gray-600 text-white",
+                                        "bg-gray-600 text-white",
+                                        "bg-gray-600 text-white",
+                                        "bg-blue-400 text-white",
+                                        "bg-orange-500 text-white",
+                                        "bg-orange-500 text-white",
+                                      ]
                                       return (
                                         <NavLink
                                           key={filter.label}
@@ -412,7 +424,7 @@ export function UnifySidebar() {
                                         >
                                           <filter.icon className="w-3.5 h-3.5" />
                                           <span className="flex-1 truncate">{filter.label}</span>
-                                          <span className="px-2 py-0.5 bg-red text-red-500 rounded text-[10px] font-medium">
+                                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${badgeColors[idx]}`}>
                                             {count}
                                           </span>
                                         </NavLink>
@@ -563,9 +575,21 @@ export function UnifySidebar() {
                             onMouseLeave={closeFlyoutSoon}
                           >
                             <div className="p-3 space-y-1">
-                              {assetHardwareFilters.map((filter) => {
+                              {assetHardwareFilters.map((filter, idx) => {
                                 const filterKey = filter.label.toLowerCase().replace(/\s+/g, "-")
                                 const count = assetCounts[filterKey] ?? 0
+                                const badgeColors = [
+                                  "bg-gray-500 text-white",
+                                  "bg-blue-500 text-white",
+                                  "bg-green-500 text-white",
+                                  "bg-amber-500 text-white",
+                                  "bg-gray-600 text-white",
+                                  "bg-gray-600 text-white",
+                                  "bg-gray-600 text-white",
+                                  "bg-blue-400 text-white",
+                                  "bg-orange-500 text-white",
+                                  "bg-orange-500 text-white",
+                                ]
                                 return (
                                   <NavLink
                                     key={filter.label}
@@ -574,7 +598,7 @@ export function UnifySidebar() {
                                   >
                                     <filter.icon className="w-4 h-4" />
                                     <span className="flex-1">{filter.label}</span>
-                                    <span className="px-2 py-0.5 bg-muted text-muted-foreground rounded text-xs font-medium">
+                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${badgeColors[idx]}`}>
                                       {count}
                                     </span>
                                   </NavLink>

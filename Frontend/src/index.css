@@ -177,8 +177,8 @@ All colors MUST be HSL.
   }
   
   /* Flyout content text */
-  .fixed.left-\[210px\] span:not([class*="text-"]),
-  .fixed.left-64 span:not([class*="text-"]) {
+  .fixed.left-\[210px\] span:not([class*="text-"]):not(.font-semibold),
+  .fixed.left-64 span:not([class*="text-"]):not(.font-semibold) {
     color: #d4d4d4 !important;
   }
   

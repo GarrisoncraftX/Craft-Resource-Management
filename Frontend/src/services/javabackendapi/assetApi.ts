@@ -4,7 +4,7 @@ import {
   mockMaintenanceRecords, 
   mockDisposalRecords, 
 } from '@/services/mockData/assets';
-import type { Asset, MaintenanceRecord, DisposalRecord, MaintenanceCost } from '@/types/javabackendapi/assetTypes';
+import type { Asset, MaintenanceRecord, DisposalRecord, MaintenanceCost, Category, Manufacturer, Supplier, Location, AssetModel, StatusLabel, Depreciation, Company, Department, DepreciationReport, MaintenanceReport } from '@/types/javabackendapi/assetTypes';
 
 const API_BASE = '/api/assets';
 
@@ -19,10 +19,27 @@ class AssetApiService {
     }
   }
 
+// Asset Image Upload
+  async uploadAssetImage(id: number, file: File): Promise<Asset> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post(`${API_BASE}/${id}/image`, formData);
+    return response;
+  }
+
   // Assets
   async getAllAssets(): Promise<Asset[]> {
     return this.handleApiCall(
-      () => apiClient.get(`${API_BASE}`),
+      async () => {
+        const response = await apiClient.get(`${API_BASE}`);
+        // Transform API response to match frontend Asset type
+        return Array.isArray(response) ? response.map(asset => ({
+          ...asset,
+          assetName: asset.name || asset.assetName,
+          assetTag: asset.asset_tag || asset.assetTag,
+          status: asset.statusLabel?.name || asset.status,
+        })) : response;
+      },
       mockAssets
     );
   }
@@ -167,63 +184,63 @@ class AssetApiService {
   }
 
   // Settings
-  async getAllCategories(): Promise<any[]> {
+  async getAllCategories(): Promise<Category[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/categories`),
       []
     );
   }
 
-  async getAllManufacturers(): Promise<any[]> {
+  async getAllManufacturers(): Promise<Manufacturer[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/manufacturers`),
       []
     );
   }
 
-  async getAllSuppliers(): Promise<any[]> {
+  async getAllSuppliers(): Promise<Supplier[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/suppliers`),
       []
     );
   }
 
-  async getAllLocations(): Promise<any[]> {
+  async getAllLocations(): Promise<Location[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/locations`),
       []
     );
   }
 
-  async getAllModels(): Promise<any[]> {
+  async getAllModels(): Promise<AssetModel[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/models`),
       []
     );
   }
 
-  async getAllStatusLabels(): Promise<any[]> {
+  async getAllStatusLabels(): Promise<StatusLabel[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/status-labels`),
       []
     );
   }
 
-  async getAllDepreciations(): Promise<any[]> {
+  async getAllDepreciations(): Promise<Depreciation[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/depreciations`),
       []
     );
   }
 
-  async getAllCompanies(): Promise<any[]> {
+  async getAllCompanies(): Promise<Company[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/companies`),
       []
     );
   }
 
-  async getAllDepartments(): Promise<any[]> {
+  async getAllDepartments(): Promise<Department[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/departments`),
       []
@@ -231,14 +248,14 @@ class AssetApiService {
   }
 
   // Reports
-  async getDepreciationReport(): Promise<any[]> {
+  async getDepreciationReport(): Promise<DepreciationReport[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/reports/depreciation`),
       []
     );
   }
 
-  async getMaintenanceReport(): Promise<any[]> {
+  async getMaintenanceReport(): Promise<MaintenanceReport[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/reports/maintenance`),
       []
@@ -301,4 +318,8 @@ export async function updateDisposalRecordItem(id: number | string, record: unkn
 
 export async function deleteDisposalRecordItem(id: number | string) {
   return assetApiService.deleteDisposalRecord(Number(id));
+}
+
+export async function uploadAssetImage(id: number | string, file: File) {
+  return assetApiService.uploadAssetImage(Number(id), file);
 }

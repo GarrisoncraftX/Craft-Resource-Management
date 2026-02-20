@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 19, 2026 at 11:50 PM
+-- Generation Time: Feb 20, 2026 at 01:26 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -68,14 +68,13 @@ CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `check_department_capacity`
     SET p_at_capacity = (current_count >= max_count);
 END$$
 
-CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `hr_create_employee` (IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_email` VARCHAR(100), IN `p_department_id` INT, IN `p_job_grade_id` INT, IN `p_role_id` INT, IN `p_hr_user_id` INT, OUT `p_employee_id` VARCHAR(10), OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(255))   BEGIN
+CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `hr_create_employee` (IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_email` VARCHAR(100), IN `p_dob` DATE, IN `p_department_id` INT, IN `p_job_grade_id` INT, IN `p_role_id` INT, IN `p_hr_user_id` INT, OUT `p_employee_id` VARCHAR(20), OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(255))   BEGIN
     DECLARE dept_current INT DEFAULT 0;
     DECLARE dept_max INT DEFAULT 0;
-    DECLARE new_emp_id VARCHAR(10);
+    DECLARE new_emp_id VARCHAR(20);
     DECLARE temp_password VARCHAR(255);
     DECLARE email_exists INT DEFAULT 0;
     
-    -- Check if email already exists
     SELECT COUNT(*) INTO email_exists FROM users WHERE email = p_email;
     
     IF email_exists > 0 THEN
@@ -83,7 +82,6 @@ CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `hr_create_employee` (IN `p
         SET p_message = 'Email already exists. Please use a different email address.';
         SET p_employee_id = NULL;
     ELSE
-        -- Check department capacity
         SELECT current_headcount, max_headcount INTO dept_current, dept_max
         FROM departments WHERE id = p_department_id;
         
@@ -92,26 +90,26 @@ CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `hr_create_employee` (IN `p
             SET p_message = CONCAT('Department at maximum capacity (', dept_max, '). Cannot create new employee.');
             SET p_employee_id = NULL;
         ELSE
-            SET new_emp_id = generate_employee_id();
-            SET temp_password = SHA2(CONCAT(new_emp_id, 'CRMSemp123!'), 256);
+            SET new_emp_id = generate_employee_id(p_dob, CURDATE(), p_department_id);
+            SET temp_password = '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2';
             
             INSERT INTO users (
-                employee_id, first_name, last_name, email, 
+                employee_id, first_name, last_name, email, date_of_birth,
                 department_id, job_grade_id, role_id, 
                 password, account_status, default_password_changed, profile_completed,
-                provisioned_by, provisioned_date, temporary_password, hire_date
+                provisioned_by, provisioned_date, temporary_password, hire_date, is_active
             ) VALUES (
-                new_emp_id, p_first_name, p_last_name, p_email,
+                new_emp_id, p_first_name, p_last_name, p_email, p_dob,
                 p_department_id, p_job_grade_id, p_role_id,
                 temp_password, 'PROVISIONED', FALSE, FALSE,
-                p_hr_user_id, NOW(), temp_password, CURDATE()
+                p_hr_user_id, NOW(), temp_password, CURDATE(), 1
             );
             
             UPDATE departments SET current_headcount = current_headcount + 1 WHERE id = p_department_id;
             
             SET p_employee_id = new_emp_id;
             SET p_success = TRUE;
-            SET p_message = CONCAT('Employee created successfully. Temporary Key: ', new_emp_id, ' + CRMSemp123!');
+            SET p_message = CONCAT('Employee created successfully. Employee ID: ', new_emp_id, '. Default password: UNILAK2026!');
         END IF;
     END IF;
 END$$
@@ -202,11 +200,8 @@ END$$
 --
 -- Functions
 --
-CREATE DEFINER=`garrisonsayor`@`localhost` FUNCTION `generate_employee_id` () RETURNS VARCHAR(10) CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci DETERMINISTIC READS SQL DATA BEGIN
-    DECLARE next_number INT;
-    UPDATE `employee_id_sequence` SET `last_employee_number` = `last_employee_number` + 1 WHERE `id` = 1;
-    SELECT `last_employee_number` INTO next_number FROM `employee_id_sequence` WHERE `id` = 1;
-    RETURN CONCAT('EMP', LPAD(next_number, 3, '0'));
+CREATE DEFINER=`garrisonsayor`@`localhost` FUNCTION `generate_employee_id` (`p_dob` DATE, `p_hire_date` DATE, `p_dept_id` INT) RETURNS VARCHAR(20) CHARSET utf8mb4 COLLATE utf8mb4_general_ci DETERMINISTIC BEGIN
+    RETURN CONCAT('CRMS', YEAR(p_dob), YEAR(p_hire_date), '00', p_dept_id);
 END$$
 
 DELIMITER ;
@@ -1779,25 +1774,25 @@ CREATE TABLE `departments` (
 --
 
 INSERT INTO `departments` (`id`, `name`, `description`, `head_of_department`, `budget_allocation`, `is_active`, `created_at`, `updated_at`, `max_headcount`, `current_headcount`, `company_id`, `location_id`, `manager_id`) VALUES
-(1, 'Human Resources', 'Manages employee relations, recruitment, and HR policies', 2, 500000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(2, 'Finance', 'Handles financial planning, accounting, and budget management', 3, 750000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(3, 'Information Technology', 'Manages IT infrastructure, software development, and technical support', 4, 1000000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(4, 'Operations', 'Oversees daily operations and process management', 5, 800000.00, 1, '2025-07-07 13:16:00', '2026-01-11 18:57:04', 50, 1, NULL, NULL, NULL),
-(5, 'Legal Affairs', 'Handles legal matters, contracts, and compliance', NULL, 400000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(6, 'Procurement', 'Manages purchasing, vendor relations, and supply chain', NULL, 600000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(7, 'Asset Management', 'Tracks and maintains organizational assets', NULL, 300000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(1, 'Administration / Governance', 'Manages employee relations, recruitment, and HR policies', 2, 500000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 4, NULL, NULL, NULL),
+(2, 'Security (includes Reception)', 'Handles financial planning, accounting, and budget management', 3, 750000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 4, NULL, NULL, NULL),
+(3, 'Procurement', 'Manages IT infrastructure, software development, and technical support', 4, 1000000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 5, NULL, NULL, NULL),
+(4, 'Finance', 'Oversees daily operations and process management', 5, 800000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 3, NULL, NULL, NULL),
+(5, 'Human Resources', 'Handles legal matters, contracts, and compliance', NULL, 400000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 1, NULL, NULL, NULL),
+(6, 'ICT / Facilities', 'Manages purchasing, vendor relations, and supply chain', NULL, 600000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 1, NULL, NULL, NULL),
+(7, 'Asset Management', 'Tracks and maintains organizational assets', NULL, 300000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 1, NULL, NULL, NULL),
 (8, 'Public Relations', 'Manages public communications and media relations', NULL, 250000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
 (9, 'Planning & Development', 'Strategic planning and organizational development', NULL, 450000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
 (10, 'Transportation', 'Manages fleet and transportation services', NULL, 350000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
 (11, 'Health & Safety', 'Ensures workplace safety and health compliance', NULL, 200000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
 (12, 'Revenue & Tax', 'Handles revenue collection and tax management', NULL, 550000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(1, 'Human Resources', 'Manages employee relations, recruitment, and HR policies', 2, 500000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(2, 'Finance', 'Handles financial planning, accounting, and budget management', 3, 750000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(3, 'Information Technology', 'Manages IT infrastructure, software development, and technical support', 4, 1000000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(4, 'Operations', 'Oversees daily operations and process management', 5, 800000.00, 1, '2025-07-07 13:16:00', '2026-01-11 18:57:04', 50, 1, NULL, NULL, NULL),
-(5, 'Legal Affairs', 'Handles legal matters, contracts, and compliance', NULL, 400000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(6, 'Procurement', 'Manages purchasing, vendor relations, and supply chain', NULL, 600000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(7, 'Asset Management', 'Tracks and maintains organizational assets', NULL, 300000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
+(1, 'Administration / Governance', 'Manages employee relations, recruitment, and HR policies', 2, 500000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 4, NULL, NULL, NULL),
+(2, 'Security (includes Reception)', 'Handles financial planning, accounting, and budget management', 3, 750000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 4, NULL, NULL, NULL),
+(3, 'Procurement', 'Manages IT infrastructure, software development, and technical support', 4, 1000000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 5, NULL, NULL, NULL),
+(4, 'Finance', 'Oversees daily operations and process management', 5, 800000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 3, NULL, NULL, NULL),
+(5, 'Human Resources', 'Handles legal matters, contracts, and compliance', NULL, 400000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 1, NULL, NULL, NULL),
+(6, 'ICT / Facilities', 'Manages purchasing, vendor relations, and supply chain', NULL, 600000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 1, NULL, NULL, NULL),
+(7, 'Asset Management', 'Tracks and maintains organizational assets', NULL, 300000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 1, NULL, NULL, NULL),
 (8, 'Public Relations', 'Manages public communications and media relations', NULL, 250000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
 (9, 'Planning & Development', 'Strategic planning and organizational development', NULL, 450000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
 (10, 'Transportation', 'Manages fleet and transportation services', NULL, 350000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
@@ -2509,52 +2504,52 @@ CREATE TABLE `leave_requests` (
 --
 
 INSERT INTO `leave_requests` (`id`, `user_id`, `leave_type_id`, `start_date`, `end_date`, `total_days`, `reason`, `status`, `supporting_documents`, `applied_at`, `reviewed_by`, `reviewed_at`, `review_comments`, `emergency_contact`, `emergency_phone`, `handover_notes`, `created_at`, `updated_at`, `blackout_created`) VALUES
-(1, 9, 1, '2024-12-15', '2024-12-19', 5.0, 'Family vacation', 'approved', NULL, '2025-07-07 13:16:01', 6, '2024-12-01 08:00:00', NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0),
-(2, 10, 2, '2024-12-10', '2024-12-10', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-07 13:16:01', 7, '2024-12-01 09:00:00', NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2025-07-07 13:16:01', 0),
-(3, 11, 1, '2024-12-20', '2024-12-31', 10.0, 'Year-end vacation', 'approved', NULL, '2025-07-07 13:16:01', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2026-01-25 14:34:06', 0),
-(4, 19, 3, '2024-12-12', '2024-12-12', 1.0, 'Personal matter', 'approved', NULL, '2025-07-07 13:16:01', 5, '2024-12-01 12:00:00', NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2025-07-15 00:44:37', 0),
+(1, 9, 1, '2024-12-15', '2024-12-19', 5.0, 'Family vacation', 'completed', NULL, '2025-07-07 13:16:01', 6, '2024-12-01 08:00:00', NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2026-02-19 23:00:01', 0),
+(2, 10, 2, '2024-12-10', '2024-12-10', 1.0, 'Medical appointment', 'completed', NULL, '2025-07-07 13:16:01', 7, '2024-12-01 09:00:00', NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2026-02-19 23:00:01', 0),
+(3, 11, 1, '2024-12-20', '2024-12-31', 10.0, 'Year-end vacation', 'completed', NULL, '2025-07-07 13:16:01', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2026-02-19 23:00:01', 0),
+(4, 19, 3, '2024-12-12', '2024-12-12', 1.0, 'Personal matter', 'completed', NULL, '2025-07-07 13:16:01', 5, '2024-12-01 12:00:00', NULL, NULL, NULL, NULL, '2025-07-07 13:16:01', '2026-02-19 23:00:02', 0),
 (5, 19, 1, '2025-07-17', '2025-08-02', 17.0, 'It\'s unplanned', 'rejected', NULL, '2025-07-15 02:00:29', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:00:29', '2026-01-25 14:36:23', 0),
 (6, 1, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'rejected', NULL, '2025-07-15 02:11:53', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:11:53', '2026-01-25 14:36:12', 0),
 (7, 1, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'rejected', NULL, '2025-07-15 02:11:53', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:11:53', '2026-01-25 14:36:16', 0),
-(8, 1, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 10:26:15', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 10:26:15', 0),
-(9, 1, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 12:59:38', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 12:59:38', 0),
-(10, 2, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 13:00:11', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 13:00:11', 0),
-(11, 2, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 13:56:34', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 13:56:34', 0),
+(8, 1, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'completed', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 10:26:15', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:00', 0),
+(9, 1, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'completed', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 12:59:38', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:00', 0),
+(10, 2, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'completed', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 13:00:11', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:01', 0),
+(11, 2, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'completed', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 13:56:34', NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:00', 0),
 (12, 3, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'rejected', NULL, '2025-07-15 02:16:40', 1, '2025-09-24 14:14:13', 'Request rejected', NULL, NULL, NULL, '2025-07-15 02:16:40', '2025-09-24 14:14:13', 0),
-(13, 3, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-19 20:22:41', 0),
-(14, 4, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-19 20:27:43', 0),
-(15, 4, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-19 20:28:03', 0),
+(13, 3, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:01', 0),
+(14, 4, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:01', 0),
+(15, 4, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:01', 0),
 (16, 5, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'rejected', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:25:42', 0),
-(17, 5, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:31:40', 0),
-(18, 6, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:31:43', 0),
+(17, 5, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:01', 0),
+(18, 6, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:01', 0),
 (19, 6, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'rejected', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:31:46', 0),
 (20, 7, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'rejected', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:31:56', 0),
-(21, 7, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:31:58', 0),
-(22, 8, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:00', 0),
-(23, 8, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:02', 0),
-(24, 9, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:04', 0),
-(25, 9, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:08', 0),
+(21, 7, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:01', 0),
+(22, 8, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:01', 0),
+(23, 8, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:01', 0),
+(24, 9, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:01', 0),
+(25, 9, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:01', 0),
 (26, 10, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'rejected', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:10', 0),
 (27, 10, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'rejected', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:13', 0),
 (28, 11, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'rejected', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:15', 0),
-(29, 11, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:18', 0),
-(30, 12, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:20', 0),
-(31, 12, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:22', 0),
-(32, 13, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:25', 0),
-(33, 13, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:27', 0),
-(34, 14, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:29', 0),
-(35, 14, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:31', 0),
-(36, 15, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:33', 0),
-(37, 15, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:35', 0),
-(38, 19, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:37', 0),
-(39, 19, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'approved', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-01-25 14:32:40', 0),
-(40, 19, 5, '2025-08-07', '2025-08-29', 23.0, 'Gonna be a father', 'approved', NULL, '2025-07-15 15:29:15', 1, '2025-09-24 10:22:05', NULL, NULL, NULL, NULL, '2025-07-15 15:29:15', '2025-09-24 10:22:05', 0),
-(41, 21, 1, '2025-11-20', '2025-11-22', 3.0, 'Vacation', 'approved', NULL, '2025-11-19 07:55:02', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-19 07:55:02', '2025-11-20 11:51:07', 0),
-(42, 21, 8, '2025-11-21', '2025-11-22', 2.0, 'Thesis defense', 'approved', NULL, '2025-11-20 12:00:35', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-20 12:00:35', '2025-11-20 12:15:37', 0),
-(43, 21, 4, '2025-11-21', '2026-01-22', 63.0, 'Birth', 'approved', NULL, '2025-11-20 12:18:08', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-20 12:18:08', '2026-01-19 20:19:39', 0),
-(44, 21, 8, '2025-11-21', '2025-11-22', 2.0, 'Sick', 'approved', NULL, '2025-11-20 16:01:05', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-20 16:01:05', '2026-01-19 20:18:49', 0),
-(45, 1, 1, '2026-01-14', '2026-01-23', 10.0, 'Going for break', 'approved', NULL, '2026-01-13 15:22:47', NULL, NULL, NULL, NULL, NULL, NULL, '2026-01-13 15:22:47', '2026-01-19 20:18:32', 0),
-(46, 1, 2, '2026-01-25', '2026-01-27', 3.0, 'On leave', 'approved', NULL, '2026-01-13 15:33:31', NULL, NULL, NULL, NULL, NULL, NULL, '2026-01-13 15:33:31', '2026-01-19 20:15:00', 0);
+(29, 11, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:02', 0),
+(30, 12, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:02', 0),
+(31, 12, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:02', 0),
+(32, 13, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:02', 0),
+(33, 13, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:02', 0),
+(34, 14, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:02', 0),
+(35, 14, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:02', 0),
+(36, 15, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:02', 0),
+(37, 15, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:02', 0),
+(38, 19, 2, '2024-05-30', '2024-05-30', 1.0, 'Medical appointment', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:02', 0),
+(39, 19, 1, '2024-05-15', '2024-05-17', 3.0, 'Personal vacation', 'completed', NULL, '2025-07-15 02:16:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 02:16:40', '2026-02-19 23:00:02', 0),
+(40, 19, 5, '2025-08-07', '2025-08-29', 23.0, 'Gonna be a father', 'completed', NULL, '2025-07-15 15:29:15', 1, '2025-09-24 10:22:05', NULL, NULL, NULL, NULL, '2025-07-15 15:29:15', '2026-02-19 23:00:02', 0),
+(41, 21, 1, '2025-11-20', '2025-11-22', 3.0, 'Vacation', 'completed', NULL, '2025-11-19 07:55:02', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-19 07:55:02', '2026-02-19 23:00:02', 0),
+(42, 21, 8, '2025-11-21', '2025-11-22', 2.0, 'Thesis defense', 'completed', NULL, '2025-11-20 12:00:35', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-20 12:00:35', '2026-02-19 23:00:02', 0),
+(43, 21, 4, '2025-11-21', '2026-01-22', 63.0, 'Birth', 'completed', NULL, '2025-11-20 12:18:08', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-20 12:18:08', '2026-02-19 23:00:02', 0),
+(44, 21, 8, '2025-11-21', '2025-11-22', 2.0, 'Sick', 'completed', NULL, '2025-11-20 16:01:05', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-20 16:01:05', '2026-02-19 23:00:02', 0),
+(45, 1, 1, '2026-01-14', '2026-01-23', 10.0, 'Going for break', 'completed', NULL, '2026-01-13 15:22:47', NULL, NULL, NULL, NULL, NULL, NULL, '2026-01-13 15:22:47', '2026-02-19 23:00:00', 0),
+(46, 1, 2, '2026-01-25', '2026-01-27', 3.0, 'On leave', 'completed', NULL, '2026-01-13 15:33:31', NULL, NULL, NULL, NULL, NULL, NULL, '2026-01-13 15:33:31', '2026-02-19 23:00:00', 0);
 
 --
 -- Triggers `leave_requests`
@@ -2924,7 +2919,51 @@ INSERT INTO `permissions` (`id`, `name`, `description`) VALUES
 (38, 'analytics.view', 'View analytics dashboard'),
 (39, 'system.settings', 'Manage system settings'),
 (40, 'system.audit', 'View audit logs'),
-(41, 'system.backup', 'Perform system backups');
+(41, 'system.backup', 'Perform system backups'),
+(0, 'admin.all', 'Full admin access'),
+(0, 'admin.users.create', 'Create users'),
+(0, 'admin.users.read', 'View users'),
+(0, 'admin.users.update', 'Update users'),
+(0, 'admin.users.delete', 'Delete users'),
+(0, 'security.incidents.create', 'Create security incidents'),
+(0, 'security.incidents.read', 'View security incidents'),
+(0, 'security.incidents.update', 'Update security incidents'),
+(0, 'security.incidents.approve', 'Approve security incidents'),
+(0, 'security.sop.read', 'View SOPs'),
+(0, 'security.logs.create', 'Create entry logs'),
+(0, 'security.logs.read', 'View entry logs'),
+(0, 'security.visitors.create', 'Register visitors'),
+(0, 'security.visitors.read', 'View visitors'),
+(0, 'security.visitors.update', 'Update visitor records'),
+(0, 'procurement.requisitions.create', 'Create requisitions'),
+(0, 'procurement.requisitions.read', 'View requisitions'),
+(0, 'procurement.requisitions.update', 'Update requisitions'),
+(0, 'procurement.vendors.create', 'Create vendors'),
+(0, 'procurement.vendors.read', 'View vendors'),
+(0, 'procurement.vendors.update', 'Update vendors'),
+(0, 'procurement.tenders.read', 'View tenders'),
+(0, 'procurement.contracts.read', 'View contracts'),
+(0, 'assets.create', 'Create assets'),
+(0, 'assets.read', 'View assets'),
+(0, 'assets.update', 'Update assets'),
+(0, 'assets.assign', 'Assign assets'),
+(0, 'assets.own.read', 'View own assigned assets'),
+(0, 'hr.employees.create', 'Create employee records'),
+(0, 'hr.employees.read', 'View employee records'),
+(0, 'hr.employees.update', 'Update employee records'),
+(0, 'hr.leave.create', 'Create leave requests'),
+(0, 'hr.leave.read', 'View leave requests'),
+(0, 'hr.leave.update', 'Update leave requests'),
+(0, 'hr.leave.approve', 'Approve leave requests'),
+(0, 'hr.policies.read', 'View HR policies'),
+(0, 'hr.self.read', 'View own profile'),
+(0, 'hr.self.update', 'Update own profile'),
+(0, 'finance.expenses.create', 'Create expenses'),
+(0, 'finance.expenses.read', 'View expenses'),
+(0, 'finance.expenses.update', 'Update expenses'),
+(0, 'finance.transactions.create', 'Create transactions'),
+(0, 'finance.transactions.read', 'View transactions'),
+(0, 'finance.reports.read', 'View financial reports');
 
 -- --------------------------------------------------------
 
@@ -3069,18 +3108,18 @@ CREATE TABLE `roles` (
 --
 
 INSERT INTO `roles` (`id`, `name`, `description`) VALUES
-(1, 'Super Admin', 'Full system access and administration'),
-(2, 'Department Head', 'Manages department operations and staff'),
-(3, 'Manager', 'Supervises team members and projects'),
-(4, 'Senior Officer', 'Experienced staff with specialized skills'),
-(5, 'Officer', 'Regular staff member'),
-(6, 'Junior Officer', 'Entry-level staff member'),
-(7, 'Intern', 'Temporary learning position'),
-(8, 'Contractor', 'External service provider'),
-(9, 'HR Manager', 'Human Resources management'),
-(10, 'Finance Manager', 'Financial operations management'),
-(11, 'IT Manager', 'Information Technology management'),
-(12, 'Operations Manager', 'Operations oversight');
+(1, 'Admin', 'System administrator with full access'),
+(2, 'Internal Auditor', 'Auditor with read-only access across all modules'),
+(3, 'Security Supervisor', 'Security supervisor with incident and SOP management'),
+(4, 'Security Guard', 'Security guard with entry log and incident draft access'),
+(5, 'Reception', 'Reception staff with visitor registration access'),
+(6, 'Procurement Manager', 'Procurement manager with approval authority'),
+(7, 'Procurement Officer', 'Procurement officer with requisition and vendor management'),
+(8, 'Finance Manager', 'Finance manager with approval and budget authority'),
+(9, 'Finance Officer', 'Finance officer with transaction processing'),
+(10, 'HR Manager', 'HR manager with employee approval authority'),
+(11, 'HR Officer', 'HR officer with employee record management'),
+(12, 'Asset Manager', 'Asset manager with disposal approval authority');
 
 -- --------------------------------------------------------
 
@@ -3250,7 +3289,191 @@ INSERT INTO `role_permissions` (`id`, `role_id`, `permission_id`, `granted_at`, 
 (158, 15, 38, '2025-09-10 15:27:17', NULL),
 (159, 15, 39, '2025-09-10 15:27:17', NULL),
 (160, 15, 40, '2025-09-10 15:27:17', NULL),
-(161, 15, 41, '2025-09-10 15:27:17', NULL);
+(161, 15, 41, '2025-09-10 15:27:17', NULL),
+(0, 1, 1, '2026-02-20 00:13:03', NULL),
+(0, 1, 2, '2026-02-20 00:13:03', NULL),
+(0, 1, 3, '2026-02-20 00:13:03', NULL),
+(0, 1, 4, '2026-02-20 00:13:03', NULL),
+(0, 1, 5, '2026-02-20 00:13:03', NULL),
+(0, 1, 6, '2026-02-20 00:13:03', NULL),
+(0, 1, 7, '2026-02-20 00:13:03', NULL),
+(0, 1, 8, '2026-02-20 00:13:03', NULL),
+(0, 1, 9, '2026-02-20 00:13:03', NULL),
+(0, 1, 10, '2026-02-20 00:13:03', NULL),
+(0, 1, 11, '2026-02-20 00:13:03', NULL),
+(0, 1, 12, '2026-02-20 00:13:03', NULL),
+(0, 1, 13, '2026-02-20 00:13:03', NULL),
+(0, 1, 14, '2026-02-20 00:13:03', NULL),
+(0, 1, 15, '2026-02-20 00:13:03', NULL),
+(0, 1, 16, '2026-02-20 00:13:03', NULL),
+(0, 1, 17, '2026-02-20 00:13:03', NULL),
+(0, 1, 18, '2026-02-20 00:13:03', NULL),
+(0, 1, 19, '2026-02-20 00:13:03', NULL),
+(0, 1, 20, '2026-02-20 00:13:03', NULL),
+(0, 1, 21, '2026-02-20 00:13:03', NULL),
+(0, 1, 22, '2026-02-20 00:13:03', NULL),
+(0, 1, 23, '2026-02-20 00:13:03', NULL),
+(0, 1, 24, '2026-02-20 00:13:03', NULL),
+(0, 1, 25, '2026-02-20 00:13:03', NULL),
+(0, 1, 26, '2026-02-20 00:13:03', NULL),
+(0, 1, 27, '2026-02-20 00:13:03', NULL),
+(0, 1, 28, '2026-02-20 00:13:03', NULL),
+(0, 1, 29, '2026-02-20 00:13:03', NULL),
+(0, 1, 30, '2026-02-20 00:13:03', NULL),
+(0, 1, 31, '2026-02-20 00:13:03', NULL),
+(0, 1, 35, '2026-02-20 00:13:03', NULL),
+(0, 1, 36, '2026-02-20 00:13:03', NULL),
+(0, 1, 37, '2026-02-20 00:13:03', NULL),
+(0, 1, 38, '2026-02-20 00:13:03', NULL),
+(0, 1, 39, '2026-02-20 00:13:03', NULL),
+(0, 1, 40, '2026-02-20 00:13:03', NULL),
+(0, 1, 41, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 1, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 2, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 2, 0, '2026-02-20 00:13:03', NULL),
+(0, 3, 0, '2026-02-20 00:13:03', NULL),
+(0, 3, 0, '2026-02-20 00:13:03', NULL),
+(0, 3, 0, '2026-02-20 00:13:03', NULL),
+(0, 3, 0, '2026-02-20 00:13:03', NULL),
+(0, 3, 0, '2026-02-20 00:13:03', NULL),
+(0, 3, 0, '2026-02-20 00:13:03', NULL),
+(0, 3, 0, '2026-02-20 00:13:03', NULL),
+(0, 4, 0, '2026-02-20 00:13:04', NULL),
+(0, 4, 0, '2026-02-20 00:13:04', NULL),
+(0, 4, 0, '2026-02-20 00:13:04', NULL),
+(0, 4, 0, '2026-02-20 00:13:04', NULL),
+(0, 5, 0, '2026-02-20 00:13:04', NULL),
+(0, 5, 0, '2026-02-20 00:13:04', NULL),
+(0, 5, 0, '2026-02-20 00:13:04', NULL),
+(0, 6, 22, '2026-02-20 00:13:04', NULL),
+(0, 6, 23, '2026-02-20 00:13:04', NULL),
+(0, 6, 24, '2026-02-20 00:13:04', NULL),
+(0, 6, 25, '2026-02-20 00:13:04', NULL),
+(0, 6, 26, '2026-02-20 00:13:04', NULL),
+(0, 6, 0, '2026-02-20 00:13:04', NULL),
+(0, 6, 0, '2026-02-20 00:13:04', NULL),
+(0, 6, 0, '2026-02-20 00:13:04', NULL),
+(0, 6, 0, '2026-02-20 00:13:04', NULL),
+(0, 6, 0, '2026-02-20 00:13:04', NULL),
+(0, 6, 0, '2026-02-20 00:13:04', NULL),
+(0, 6, 0, '2026-02-20 00:13:04', NULL),
+(0, 6, 0, '2026-02-20 00:13:04', NULL),
+(0, 7, 0, '2026-02-20 00:13:04', NULL),
+(0, 7, 0, '2026-02-20 00:13:04', NULL),
+(0, 7, 0, '2026-02-20 00:13:04', NULL),
+(0, 7, 0, '2026-02-20 00:13:04', NULL),
+(0, 7, 0, '2026-02-20 00:13:04', NULL),
+(0, 7, 0, '2026-02-20 00:13:04', NULL),
+(0, 7, 0, '2026-02-20 00:13:04', NULL),
+(0, 8, 16, '2026-02-20 00:13:04', NULL),
+(0, 8, 17, '2026-02-20 00:13:04', NULL),
+(0, 8, 18, '2026-02-20 00:13:04', NULL),
+(0, 8, 19, '2026-02-20 00:13:04', NULL),
+(0, 8, 20, '2026-02-20 00:13:04', NULL),
+(0, 8, 21, '2026-02-20 00:13:04', NULL),
+(0, 8, 0, '2026-02-20 00:13:04', NULL),
+(0, 8, 0, '2026-02-20 00:13:04', NULL),
+(0, 8, 0, '2026-02-20 00:13:04', NULL),
+(0, 8, 0, '2026-02-20 00:13:04', NULL),
+(0, 8, 0, '2026-02-20 00:13:04', NULL),
+(0, 8, 0, '2026-02-20 00:13:04', NULL),
+(0, 8, 0, '2026-02-20 00:13:04', NULL),
+(0, 9, 0, '2026-02-20 00:13:04', NULL),
+(0, 9, 0, '2026-02-20 00:13:04', NULL),
+(0, 9, 0, '2026-02-20 00:13:04', NULL),
+(0, 9, 0, '2026-02-20 00:13:04', NULL),
+(0, 9, 0, '2026-02-20 00:13:04', NULL),
+(0, 9, 0, '2026-02-20 00:13:04', NULL),
+(0, 10, 0, '2026-02-20 00:13:04', NULL),
+(0, 10, 0, '2026-02-20 00:13:04', NULL),
+(0, 10, 0, '2026-02-20 00:13:04', NULL),
+(0, 10, 0, '2026-02-20 00:13:04', NULL),
+(0, 10, 0, '2026-02-20 00:13:04', NULL),
+(0, 10, 0, '2026-02-20 00:13:04', NULL),
+(0, 10, 0, '2026-02-20 00:13:04', NULL),
+(0, 10, 0, '2026-02-20 00:13:04', NULL),
+(0, 10, 0, '2026-02-20 00:13:04', NULL),
+(0, 10, 0, '2026-02-20 00:13:04', NULL),
+(0, 10, 0, '2026-02-20 00:13:04', NULL),
+(0, 11, 0, '2026-02-20 00:13:04', NULL),
+(0, 11, 0, '2026-02-20 00:13:04', NULL),
+(0, 11, 0, '2026-02-20 00:13:04', NULL),
+(0, 11, 0, '2026-02-20 00:13:04', NULL),
+(0, 11, 0, '2026-02-20 00:13:04', NULL),
+(0, 11, 0, '2026-02-20 00:13:04', NULL),
+(0, 12, 0, '2026-02-20 00:13:04', NULL),
+(0, 12, 0, '2026-02-20 00:13:04', NULL),
+(0, 12, 0, '2026-02-20 00:13:04', NULL),
+(0, 12, 0, '2026-02-20 00:13:04', NULL),
+(0, 12, 0, '2026-02-20 00:13:04', NULL),
+(0, 13, 0, '2026-02-20 00:13:04', NULL),
+(0, 13, 0, '2026-02-20 00:13:04', NULL),
+(0, 13, 0, '2026-02-20 00:13:04', NULL),
+(0, 13, 0, '2026-02-20 00:13:04', NULL),
+(0, 14, 0, '2026-02-20 00:13:04', NULL),
+(0, 14, 0, '2026-02-20 00:13:04', NULL),
+(0, 14, 0, '2026-02-20 00:13:04', NULL),
+(0, 14, 0, '2026-02-20 00:13:04', NULL);
 
 -- --------------------------------------------------------
 
@@ -3481,25 +3704,25 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `employee_id`, `email`, `password`, `first_name`, `last_name`, `middle_name`, `phone`, `address`, `date_of_birth`, `hire_date`, `department_id`, `role_id`, `manager_id`, `salary`, `is_active`, `biometric_enrollment_status`, `last_login`, `failed_login_attempts`, `account_locked_until`, `password_reset_token`, `password_reset_expires`, `date_of_joining`, `account_number`, `momo_number`, `profile_picture_url`, `emergency_contact_name`, `emergency_contact_phone`, `created_at`, `updated_at`, `account_status`, `bank_name`, `default_password_changed`, `job_grade_id`, `profile_completed`, `provisioned_by`, `provisioned_date`, `temporary_password`, `personal_contact`, `contract_end_date`, `probation_end_date`, `tenant_id`) VALUES
-(1, 'EMP001', 'garrisonsayor@gmail.com', '$2a$10$ZgXncgsDbc7.wCKGUCY0Veorgz4xjD2c3/VsxJAYh6IEgH11abPce', 'Dr. Enan', 'Nyesheja', 'Muhire', '+250791955398', 'Kanombe', '2002-02-04', '2025-01-01', 3, 1, NULL, 120000.00, 1, 'NONE', '2026-02-19 16:45:21', 0, NULL, NULL, NULL, NULL, '100235367283', '0791955398', 'http://res.cloudinary.com/dgfeef4ot/image/upload/v1770163325/uq8dsnadkdyzf3qmopzc.png', 'Albertine Tenneh Wilson', '079001274', '2025-07-07 15:16:00', '2026-02-19 16:45:21', 'ACTIVE', 'Bank of Kigali', b'1', NULL, b'1', NULL, NULL, NULL, NULL, '2027-01-01', '2024-04-01', NULL),
-(2, 'EMP002', 'hr.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Garrison', 'Sayor III', 'Nyunti', '+250791955398', 'Barnesville Estate, Area B53', '2002-10-30', '2024-01-15', 1, 2, NULL, 95000.00, 1, 'NONE', '2026-02-04 05:38:58', 0, NULL, NULL, NULL, NULL, NULL, NULL, 'http://res.cloudinary.com/dgfeef4ot/image/upload/v1770176080/vxogpmt0okleow6vzcnq.jpg', 'Floyd Sayor', '+231777512084', '2025-07-07 15:16:00', '2026-02-04 05:38:58', 'ACTIVE', NULL, NULL, NULL, b'1', NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
-(3, 'EMP003', 'finance.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Christopher', 'Leabon', NULL, '+1234567892', NULL, NULL, '2024-01-15', 2, 2, NULL, 98000.00, 1, 'NONE', '2025-12-29 11:59:25', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
-(4, 'EMP004', 'it.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'George', 'Kona', NULL, '+1234567893', NULL, NULL, '2024-01-15', 3, 2, NULL, 105000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
-(5, 'EMP005', 'ops.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Thomas', 'Sneh', NULL, '+1234567894', NULL, NULL, '2024-01-15', 4, 2, NULL, 92000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
-(6, 'EMP006', 'hr.manager@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Jennifer', 'Davis', NULL, '+1234567895', NULL, NULL, '2024-02-01', 1, 9, NULL, 75000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-02-01', '2024-05-01', NULL),
-(7, 'EMP007', 'finance.manager@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Robert', 'Wilson', NULL, '+1234567896', NULL, NULL, '2024-02-01', 2, 10, NULL, 78000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-02-01', '2024-05-01', NULL),
-(8, 'EMP008', 'it.manager@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Amanda', 'Brown', NULL, '+1234567897', NULL, NULL, '2024-02-01', 3, 11, NULL, 82000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-02-01', '2024-05-01', NULL),
-(9, 'EMP009', 'john.doe@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'John', 'Doe', NULL, '+1234567898', NULL, NULL, '2024-03-01', 1, 5, NULL, 55000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-01', '2024-06-01', NULL),
-(10, 'EMP010', 'jane.smith@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Jane', 'Smith', NULL, '+1234567899', NULL, NULL, '2024-03-01', 2, 5, NULL, 58000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-01', '2024-06-01', NULL),
-(11, 'EMP011', 'mark.jones@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Mark', 'Jones', NULL, '+1234567800', NULL, NULL, '2024-03-15', 3, 5, NULL, 62000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-15', '2024-06-15', NULL),
-(12, 'EMP012', 'emily.white@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Emily', 'White', NULL, '+1234567801', NULL, NULL, '2024-03-15', 4, 5, NULL, 54000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-15', '2024-06-15', NULL),
-(13, 'EMP013', 'alex.green@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Alex', 'Green', NULL, '+1234567802', NULL, NULL, '2024-04-01', 5, 5, NULL, 59000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-04-01', '2024-07-01', NULL),
-(14, 'EMP014', 'maria.garcia@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Maria', 'Garcia', NULL, '+1234567803', NULL, NULL, '2024-04-01', 6, 5, NULL, 56000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-04-01', '2024-07-01', NULL),
-(15, 'EMP015', 'chris.taylor@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Chris', 'Taylor', NULL, '+1234567804', NULL, NULL, '2024-04-15', 7, 5, NULL, 57000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-04-15', '2024-07-15', NULL),
-(19, 'EMP016', 'garrisonsay@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Crafty', 'Dev', NULL, NULL, NULL, NULL, '2024-01-01', 2, 5, NULL, NULL, 1, 'NONE', '2025-12-18 15:43:46', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 18:06:52', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-01', '2024-04-01', NULL),
-(20, 'EMP017', 'issaadamx@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Issa', 'Adams', NULL, NULL, NULL, NULL, '2024-01-01', 1, 5, NULL, NULL, 1, 'NONE', '2025-10-06 16:17:19', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 17:32:26', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-01', '2024-04-01', NULL),
-(21, 'EMP018', 'albertinewilson29@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Albertine', 'Wilson', 'Tenneh', '0790001273', 'Kanombe', '2003-01-05', '2025-09-10', 3, 1, NULL, NULL, 1, 'NONE', '2025-11-20 16:08:32', 0, NULL, NULL, NULL, NULL, '4493339187', '0791955398', 'http://res.cloudinary.com/dgfeef4ot/image/upload/v1759757113/kkofine7tqq8wug8jesv.jpg', 'Garrison Nyunti Sayor III', '07919555398', '2025-09-10 23:06:21', '2026-02-03 04:45:36', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-10', '2025-12-10', NULL),
-(23, 'EMP022', 'sabbahkarsor@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Crayton', 'Kamara', 'Morientes', '0791374847', 'Sonatube', '2003-05-21', '2026-01-11', 4, 2, NULL, NULL, 1, 'NONE', '2026-01-11 20:49:17', 0, NULL, NULL, NULL, NULL, '100235367283', '0791374847', NULL, 'Garrison Sayor', '0791955398', '2026-01-11 20:57:03', '2026-02-03 04:45:36', 'ACTIVE', NULL, b'1', 5, b'1', 1, '2026-01-11 20:57:03.000000', 'b7c030e6ad8a8350a68b2e6c955a3ae01d85d6e77e2c0f6f483dbfc691f29ac1', NULL, '2027-01-11', '2026-04-11', NULL);
+(1, 'CRMS20022025003', 'garrisonsayor@gmail.com', '$2a$10$ZgXncgsDbc7.wCKGUCY0Veorgz4xjD2c3/VsxJAYh6IEgH11abPce', 'Dr. Enan', 'Nyesheja', 'Muhire', '+250791955398', 'Kanombe', '2002-02-04', '2025-01-01', 3, 1, NULL, 120000.00, 1, 'NONE', '2026-02-19 16:45:21', 0, NULL, NULL, NULL, NULL, '100235367283', '0791955398', 'http://res.cloudinary.com/dgfeef4ot/image/upload/v1770163325/uq8dsnadkdyzf3qmopzc.png', 'Albertine Tenneh Wilson', '079001274', '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', 'Bank of Kigali', b'1', NULL, b'1', NULL, NULL, NULL, NULL, '2027-01-01', '2024-04-01', NULL),
+(2, 'CRMS20022024001', 'hr.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Garrison', 'Sayor III', 'Nyunti', '+250791955398', 'Barnesville Estate, Area B53', '2002-10-30', '2024-01-15', 1, 10, NULL, 95000.00, 1, 'NONE', '2026-02-04 05:38:58', 0, NULL, NULL, NULL, NULL, NULL, NULL, 'http://res.cloudinary.com/dgfeef4ot/image/upload/v1770176080/vxogpmt0okleow6vzcnq.jpg', 'Floyd Sayor', '+231777512084', '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, b'1', NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
+(3, '', 'finance.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Christopher', 'Leabon', NULL, '+1234567892', NULL, NULL, '2024-01-15', 2, 8, NULL, 98000.00, 1, 'NONE', '2025-12-29 11:59:25', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
+(4, '', 'it.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'George', 'Kona', NULL, '+1234567893', NULL, NULL, '2024-01-15', 3, 12, NULL, 105000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
+(5, '', 'ops.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Thomas', 'Sneh', NULL, '+1234567894', NULL, NULL, '2024-01-15', 4, 6, NULL, 92000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
+(6, '', 'hr.manager@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Jennifer', 'Davis', NULL, '+1234567895', NULL, NULL, '2024-02-01', 1, 11, NULL, 75000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-02-01', '2024-05-01', NULL),
+(7, '', 'finance.manager@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Robert', 'Wilson', NULL, '+1234567896', NULL, NULL, '2024-02-01', 2, 9, NULL, 78000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-02-01', '2024-05-01', NULL),
+(8, '', 'it.manager@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Amanda', 'Brown', NULL, '+1234567897', NULL, NULL, '2024-02-01', 3, 13, NULL, 82000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-02-01', '2024-05-01', NULL),
+(9, '', 'john.doe@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'John', 'Doe', NULL, '+1234567898', NULL, NULL, '2024-03-01', 1, 14, NULL, 55000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-01', '2024-06-01', NULL),
+(10, '', 'jane.smith@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Jane', 'Smith', NULL, '+1234567899', NULL, NULL, '2024-03-01', 2, 14, NULL, 58000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-01', '2024-06-01', NULL),
+(11, '', 'mark.jones@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Mark', 'Jones', NULL, '+1234567800', NULL, NULL, '2024-03-15', 3, 14, NULL, 62000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-15', '2024-06-15', NULL),
+(12, '', 'emily.white@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Emily', 'White', NULL, '+1234567801', NULL, NULL, '2024-03-15', 4, 14, NULL, 54000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-15', '2024-06-15', NULL),
+(13, '', 'alex.green@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Alex', 'Green', NULL, '+1234567802', NULL, NULL, '2024-04-01', 5, 14, NULL, 59000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-04-01', '2024-07-01', NULL),
+(14, '', 'maria.garcia@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Maria', 'Garcia', NULL, '+1234567803', NULL, NULL, '2024-04-01', 6, 14, NULL, 56000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-04-01', '2024-07-01', NULL),
+(15, '', 'chris.taylor@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Chris', 'Taylor', NULL, '+1234567804', NULL, NULL, '2024-04-15', 7, 14, NULL, 57000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-04-15', '2024-07-15', NULL),
+(19, '', 'garrisonsay@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Crafty', 'Dev', NULL, NULL, NULL, NULL, '2024-01-01', 2, 14, NULL, NULL, 1, 'NONE', '2025-12-18 15:43:46', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 18:06:52', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-01', '2024-04-01', NULL),
+(20, '', 'issaadamx@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Issa', 'Adams', NULL, NULL, NULL, NULL, '2024-01-01', 1, 14, NULL, NULL, 1, 'NONE', '2025-10-06 16:17:19', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 17:32:26', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-01', '2024-04-01', NULL),
+(21, 'CRMS20032025003', 'albertinewilson29@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Albertine', 'Wilson', 'Tenneh', '0790001273', 'Kanombe', '2003-01-05', '2025-09-10', 3, 2, NULL, NULL, 1, 'NONE', '2025-11-20 16:08:32', 0, NULL, NULL, NULL, NULL, '4493339187', '0791955398', 'http://res.cloudinary.com/dgfeef4ot/image/upload/v1759757113/kkofine7tqq8wug8jesv.jpg', 'Garrison Nyunti Sayor III', '07919555398', '2025-09-10 23:06:21', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-10', '2025-12-10', NULL),
+(23, 'CRMS20032026004', 'sabbahkarsor@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Crayton', 'Kamara', 'Morientes', '0791374847', 'Sonatube', '2003-05-21', '2026-01-11', 4, 7, NULL, NULL, 1, 'NONE', '2026-01-11 20:49:17', 0, NULL, NULL, NULL, NULL, '100235367283', '0791374847', NULL, 'Garrison Sayor', '0791955398', '2026-01-11 20:57:03', '2026-02-20 02:13:04', 'ACTIVE', NULL, b'1', 5, b'1', 1, '2026-01-11 20:57:03.000000', 'b7c030e6ad8a8350a68b2e6c955a3ae01d85d6e77e2c0f6f483dbfc691f29ac1', NULL, '2027-01-11', '2026-04-11', NULL);
 
 -- --------------------------------------------------------
 
@@ -3702,6 +3925,12 @@ ALTER TABLE `depreciations`
   ADD UNIQUE KEY `name` (`name`);
 
 --
+-- Indexes for table `disposal_records`
+--
+ALTER TABLE `disposal_records`
+  ADD KEY `FK8k3ny1xkx7alutm0ih7lbtp73` (`asset_id`);
+
+--
 -- Indexes for table `employee_offboarding`
 --
 ALTER TABLE `employee_offboarding`
@@ -3725,6 +3954,12 @@ ALTER TABLE `job_postings`
 ALTER TABLE `locations`
   ADD PRIMARY KEY (`id`),
   ADD KEY `parent_id` (`parent_id`);
+
+--
+-- Indexes for table `maintenance_records`
+--
+ALTER TABLE `maintenance_records`
+  ADD KEY `FK124fjg43i0s5luwopsoq78k9h` (`asset_id`);
 
 --
 -- Indexes for table `manufacturers`
@@ -3890,10 +4125,22 @@ ALTER TABLE `asset_models`
   ADD CONSTRAINT `asset_models_ibfk_3` FOREIGN KEY (`depreciation_id`) REFERENCES `depreciations` (`id`) ON DELETE SET NULL;
 
 --
+-- Constraints for table `disposal_records`
+--
+ALTER TABLE `disposal_records`
+  ADD CONSTRAINT `FK8k3ny1xkx7alutm0ih7lbtp73` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`);
+
+--
 -- Constraints for table `locations`
 --
 ALTER TABLE `locations`
   ADD CONSTRAINT `locations_ibfk_1` FOREIGN KEY (`parent_id`) REFERENCES `locations` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `maintenance_records`
+--
+ALTER TABLE `maintenance_records`
+  ADD CONSTRAINT `FK124fjg43i0s5luwopsoq78k9h` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

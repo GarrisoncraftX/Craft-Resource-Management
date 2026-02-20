@@ -15,7 +15,6 @@ import { CloneAssetDialog } from './forms/CloneAssetDialog';
 import { AuditAssetDialog } from './forms/AuditAssetDialog';
 import { BulkCheckoutDialog } from './forms/BulkCheckoutDialog';
 import { toast } from 'sonner';
-import { Row } from 'react-day-picker';
 
 interface FilterOption {
   label: string;
@@ -52,6 +51,11 @@ export const AssetHardware: React.FC = () => {
   const handleAssetCreated = (newAsset: Asset) => {
     setAssets(prev => [newAsset, ...prev]);
     toast.success('Asset created successfully');
+  };
+
+  const handleAssetUpdated = (updatedAsset: Asset) => {
+    setAssets(prev => prev.map(a => a.id === updatedAsset.id ? updatedAsset : a));
+    toast.success('Asset updated successfully');
   };
 
   const handleDelete = async (id: number | string) => {
@@ -146,12 +150,12 @@ export const AssetHardware: React.FC = () => {
       try {
         const list = await assetApiService.getAllAssets();
         if (!cancelled && Array.isArray(list) && list.length > 0) {
+          console.log('API Response:', list[0]);
           setAssets(list);
         }
       } catch (err) {
         console.warn('Failed to fetch assets — using fallback data.', err instanceof Error ? err.message : err);
         setError(err instanceof Error ? err.message : 'Failed to fetch assets');
-        // Fallback already handled by assetApiService
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -161,13 +165,13 @@ export const AssetHardware: React.FC = () => {
 
   const filterOptions: FilterOption[] = [
     { label: 'List All', count: assets.length, filter: () => true, color: 'text-gray-700' },
-    { label: 'Deployed', count: assets.filter(a => a.status === 'Deployed' || a.status === 'In Use').length, filter: (a) => a.status === 'Deployed' || a.status === 'In Use', color: 'text-sky-600' },
-    { label: 'Ready to Deploy', count: assets.filter(a => a.status === 'Ready to Deploy' || a.status === 'Deployable').length, filter: (a) => a.status === 'Ready to Deploy' || a.status === 'Deployable', color: 'text-emerald-600' },
+    { label: 'Deployed', count: assets.filter(a => a.status === 'Deployed').length, filter: (a) => a.status === 'Deployed', color: 'text-sky-600' },
+    { label: 'Ready to Deploy', count: assets.filter(a => a.status === 'Ready to Deploy').length, filter: (a) => a.status === 'Ready to Deploy', color: 'text-emerald-600' },
     { label: 'Pending', count: assets.filter(a => a.status === 'Pending').length, filter: (a) => a.status === 'Pending', color: 'text-amber-600' },
-    { label: 'Un-deployable', count: assets.filter(a => a.status === 'Maintenance').length, filter: (a) => a.status === 'Maintenance', color: 'text-orange-600' },
-    { label: 'BYOD', count: 0, filter: () => false, color: 'text-purple-600' },
-    { label: 'Archived', count: assets.filter(a => a.status === 'Archived' || a.status === 'Disposed').length, filter: (a) => a.status === 'Archived' || a.status === 'Disposed', color: 'text-red-600' },
-    { label: 'Requestable', count: 0, filter: () => false, color: 'text-blue-600' },
+    { label: 'Un-deployable', count: assets.filter(a => a.statusLabel?.statusType === 'undeployable').length, filter: (a) => a.statusLabel?.statusType === 'undeployable', color: 'text-orange-600' },
+    { label: 'BYOD', count: assets.filter(a => a.byod).length, filter: (a) => a.byod === true, color: 'text-purple-600' },
+    { label: 'Archived', count: assets.filter(a => a.status === 'Archived').length, filter: (a) => a.status === 'Archived', color: 'text-red-600' },
+    { label: 'Requestable', count: assets.filter(a => a.requestable).length, filter: (a) => a.requestable === true, color: 'text-blue-600' },
     { label: 'Due for Audit', count: 0, filter: () => false, color: 'text-indigo-600' },
     { label: 'Due for Check-in', count: 0, filter: () => false, color: 'text-pink-600' }
   ];
@@ -319,10 +323,10 @@ export const AssetHardware: React.FC = () => {
       {/* Dialogs */}
       {showAddDialog && (
         <AssetForm
-          onAssetCreated={handleAssetCreated}
+          onAssetCreated={editAsset ? handleAssetUpdated : handleAssetCreated}
           open={showAddDialog}
           onOpenChange={(v) => { setShowAddDialog(v); if (!v) setEditAsset(null); }}
-          initialData={editAsset}
+          initialData={editAsset || undefined}
           title={editAsset ? 'Edit Asset' : 'Create New Asset'}
         />
       )}

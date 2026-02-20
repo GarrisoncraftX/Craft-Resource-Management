@@ -4,11 +4,14 @@ import com.craftresourcemanagement.asset.dto.AssetDTO;
 import com.craftresourcemanagement.asset.entities.*;
 import com.craftresourcemanagement.asset.repositories.*;
 import com.craftresourcemanagement.asset.services.AssetService;
+import com.craftresourcemanagement.hr.services.CloudinaryService;
 import com.craftresourcemanagement.system.repositories.AuditLogRepository;
 import com.craftresourcemanagement.system.entities.AuditLog;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -31,13 +34,14 @@ public class AssetServiceImpl implements AssetService {
     private final DepreciationRepository depreciationRepository;
     private final CompanyRepository companyRepository;
     private final DepartmentRepository departmentRepository;
+    private final CloudinaryService cloudinaryService;
 
     public AssetServiceImpl(AssetRepository assetRepository, AuditLogRepository auditLogRepository,
                            CategoryRepository categoryRepository, ManufacturerRepository manufacturerRepository,
                            SupplierRepository supplierRepository, LocationRepository locationRepository,
                            AssetModelRepository assetModelRepository, StatusLabelRepository statusLabelRepository,
                            DepreciationRepository depreciationRepository, CompanyRepository companyRepository,
-                           DepartmentRepository departmentRepository) {
+                           DepartmentRepository departmentRepository, CloudinaryService cloudinaryService) {
         this.assetRepository = assetRepository;
         this.auditLogRepository = auditLogRepository;
         this.categoryRepository = categoryRepository;
@@ -49,6 +53,7 @@ public class AssetServiceImpl implements AssetService {
         this.depreciationRepository = depreciationRepository;
         this.companyRepository = companyRepository;
         this.departmentRepository = departmentRepository;
+        this.cloudinaryService = cloudinaryService;
     }
 
     @Override
@@ -93,13 +98,30 @@ public class AssetServiceImpl implements AssetService {
         return convertToDTO(updated);
     }
 
-    @Override
+@Override
     @Transactional
     public void deleteAsset(Long id) {
         Asset asset = assetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Asset not found"));
         logAudit(null, "DELETE", "Asset", id, "Asset deleted: " + asset.getAssetTag());
         assetRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public AssetDTO uploadAssetImage(Long id, MultipartFile file) throws IOException {
+        Asset asset = assetRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Asset not found"));
+        
+        try {
+            String imageUrl = cloudinaryService.uploadImage(file);
+            asset.setImage(imageUrl);
+            Asset updated = assetRepository.save(asset);
+            logAudit(null, "UPDATE", "Asset", id, "Asset image updated: " + asset.getAssetTag());
+            return convertToDTO(updated);
+        } catch (IOException e) {
+            throw new IOException("Failed to upload image: " + e.getMessage(), e);
+        }
     }
 
     @Override

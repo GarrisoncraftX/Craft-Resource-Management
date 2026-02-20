@@ -14,7 +14,7 @@ interface BulkEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedCount: number;
-  onSubmit?: (data: any) => void;
+  onSubmit?: (data) => void;
 }
 
 export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChange, selectedCount, onSubmit }) => {

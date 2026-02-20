@@ -5,7 +5,9 @@ import com.craftresourcemanagement.asset.entities.Asset;
 import com.craftresourcemanagement.asset.services.AssetService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +20,30 @@ public class AssetController {
 
     public AssetController(AssetService assetService) {
         this.assetService = assetService;
+    }
+
+    @PostMapping("/{id}/image")
+    public ResponseEntity<AssetDTO> uploadAssetImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        if (file.getSize() > 25 * 1024 * 1024) { // 25MB limit
+            return ResponseEntity.badRequest().build();
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            return ResponseEntity.badRequest().build();
+        }
+        try {
+            AssetDTO result = assetService.uploadAssetImage(id, file);
+            return ResponseEntity.ok(result);
+        } catch (IOException e) {
+            return ResponseEntity.status(500).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 
     @GetMapping

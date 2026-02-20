@@ -65,6 +65,7 @@ export {
   createDisposalRecordItem as createDisposalRecord,
   updateDisposalRecordItem as updateDisposalRecord,
   deleteDisposalRecordItem as deleteDisposalRecord,
+  uploadAssetImage,
 } from '@/services/javabackendapi/assetApi';
 
 

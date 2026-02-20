@@ -308,7 +308,7 @@ export interface Asset {
   description?: string;
   category?: string;
  
-  
+ 
   // Model & Specifications
   model?: string;
   modelNo?: string;
@@ -318,6 +318,7 @@ export interface Asset {
   company?: string;
   location?: string;
   status?: string;
+  statusLabel?: { id: number; name: string; statusType: string; color?: string };
   defaultLocation?: string;
   requestable?: boolean;
   warranty?: string;
@@ -333,13 +334,15 @@ export interface Asset {
   eolDate?: string;
   currency?: string;
  
-  
-  // Metadata
+ 
+// Metadata
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: string;
   imageUrl?: string;
+  image?: string;
+  lastAuditDate?: string;
 }
 
 export interface AssignmentRecord {

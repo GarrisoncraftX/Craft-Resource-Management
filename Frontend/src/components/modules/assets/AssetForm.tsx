@@ -1,7 +1,7 @@
-import { assetApiService } from '@/services/javabackendapi/assetApi';
+import { assetApiService, uploadAssetImage } from '@/services/javabackendapi/assetApi';
 import { toast } from 'sonner';
-import React, { useState } from 'react';
-import { Plus, Check } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Plus, Check, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,7 +16,6 @@ interface AssetFormProps {
   onAssetCreated?: (asset) => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  /** Pre-fill for edit mode */
   initialData?: Asset;
   title?: string;
 }
@@ -50,8 +49,88 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (initialData) {
+      setCompany(initialData.company || '');
+      setAssetTag(initialData.assetTag || `AST-${Date.now().toString().slice(-10)}`);
+      setSerial(initialData.serial || '');
+      setModel(initialData.model || '');
+      setStatus(initialData.status || '');
+      setNotes(initialData.notes || '');
+      setDefaultLocation(initialData.defaultLocation || '');
+      setRequestable(initialData.requestable || false);
+      setImagePreview(initialData.imageUrl || null);
+      setOptionalData({
+        assetName: initialData.assetName || '',
+        warranty: initialData.warranty || '',
+        expectedCheckinDate: initialData.expectedCheckinDate || '',
+        nextAuditDate: initialData.nextAuditDate || '',
+        byod: initialData.byod || false,
+      });
+      setOrderData({
+        orderNumber: initialData.orderNumber || '',
+        purchaseDate: initialData.purchaseDate || '',
+        eolDate: initialData.eolDate || '',
+        supplier: initialData.supplier || '',
+        purchaseCost: initialData.purchaseCost || '',
+        currency: initialData.currency || 'USD',
+      });
+    }
+  }, [initialData]);
 
   if (!open) return null;
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Invalid file type. Please upload jpg, webp, png, gif, svg, or avif.');
+        return;
+      }
+      if (file.size > 25 * 1024 * 1024) {
+        toast.error('File size must be less than 25MB');
+        return;
+      }
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageUpload = async () => {
+    if (!selectedImage || !initialData?.id) {
+      toast.error('Please save the asset first before uploading an image');
+      return;
+    }
+    setIsUploading(true);
+    try {
+      await uploadAssetImage(initialData.id, selectedImage);
+      toast.success('Image uploaded successfully');
+      setSelectedImage(null);
+    } catch (error) {
+      console.error('Failed to upload image:', error);
+      toast.error('Failed to upload image. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,7 +182,6 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center overflow-auto z-50 py-16">
       <div className="max-w-2xl w-full mx-auto">
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
             <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
@@ -111,9 +189,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
             </Button>
           </div>
 
-          {/* Form Fields - Snipe-IT single column label-left */}
           <div className="p-6 space-y-4">
-            {/* Company */}
             <div className="flex items-center gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Company</label>
               <Select value={company} onValueChange={setCompany}>
@@ -124,7 +200,6 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
               </Select>
             </div>
 
-            {/* Asset Tag */}
             <div className="flex items-center gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Asset Tag</label>
               <div className="flex items-center gap-2 flex-1">
@@ -135,13 +210,11 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
               </div>
             </div>
 
-            {/* Serial */}
             <div className="flex items-center gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Serial</label>
               <Input value={serial} onChange={(e) => setSerial(e.target.value)} className="flex-1" />
             </div>
 
-            {/* Model */}
             <div className="flex items-center gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Model</label>
               <div className="flex items-center gap-2 flex-1">
@@ -157,7 +230,6 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
               </div>
             </div>
 
-            {/* Status */}
             <div className="flex items-center gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Status</label>
               <div className="flex items-center gap-2 flex-1">
@@ -173,13 +245,11 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
               </div>
             </div>
 
-            {/* Notes */}
             <div className="flex items-start gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Notes</label>
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="flex-1 min-h-20" />
             </div>
 
-            {/* Default Location */}
             <div className="flex items-start gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Default Location</label>
               <div className="flex-1 space-y-1">
@@ -198,7 +268,6 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
               </div>
             </div>
 
-            {/* Requestable */}
             <div className="flex items-center gap-4">
               <div className="w-40 shrink-0" />
               <div className="flex items-center gap-2">
@@ -207,17 +276,55 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
               </div>
             </div>
 
-            {/* Upload Image */}
+            {/* Upload Image - Now functional */}
             <div className="flex items-start gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Upload Image</label>
-              <div className="space-y-1">
-                <Button type="button" size="sm" className="bg-sky-500 hover:bg-sky-600 text-white">Select File...</Button>
-                <p className="text-xs text-gray-500">Accepted filetypes are jpg, webp, png, gif, svg, and avif. The maximum upload size allowed is 25M.</p>
+              <div className="flex-1 space-y-2">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageChange}
+                  accept="image/jpeg,image/png,image/gif,image/svg+xml,image/webp"
+                  className="hidden"
+                  id="asset-image-upload"
+                />
+                {imagePreview ? (
+                  <div className="relative inline-block">
+                    <img src={imagePreview} alt="Asset preview" className="h-24 w-24 object-cover rounded-md border" />
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label htmlFor="asset-image-upload">
+                    <Button type="button" size="sm" className="bg-sky-500 hover:bg-sky-600 text-white cursor-pointer">
+                      <Upload className="w-4 h-4 mr-1" /> Select File
+                    </Button>
+                  </label>
+                )}
+                {selectedImage && initialData?.id && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleImageUpload}
+                    disabled={isUploading}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white ml-2"
+                  >
+                    {isUploading ? 'Uploading...' : 'Upload'}
+                  </Button>
+                )}
+                {selectedImage && !initialData?.id && (
+                  <p className="text-xs text-amber-600">Save the asset first to upload the image</p>
+                )}
+                <p className="text-xs text-gray-500">Accepted filetypes are jpg, webp, png, gif, svg, and avif. Max upload size is 25M.</p>
               </div>
             </div>
           </div>
 
-          {/* Collapsible Shared Sections */}
           <OptionalInfoSection
             data={optionalData}
             onChange={(f, v) => setOptionalData(prev => ({ ...prev, [f]: v }))}
@@ -231,7 +338,6 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
             onToggle={() => setOrderExpanded(!orderExpanded)}
           />
 
-          {/* Footer */}
           <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
             <button type="button" onClick={() => onOpenChange?.(false)} className="text-sm text-sky-600 hover:underline">
               Cancel

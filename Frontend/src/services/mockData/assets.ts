@@ -398,11 +398,14 @@ export const mockAssets: Asset[] = [
     assetName: 'Dell Laptop OptiPlex 7090',
     description: 'IT Equipment',
     location: 'IT Department',
-    status: 'Active',
+    status: 'Ready to Deploy',
     purchaseDate: '2023-06-15',
-    purchaseC: 1200,
+    purchaseCost: '1200',
     currentValue: 1100,
-    condition: 'Good'
+    model: 'OptiPlex 7090',
+    serial: 'DL001',
+    company: '1',
+    manufacturer: '2'
   },
   {
     id: 2,
@@ -410,11 +413,13 @@ export const mockAssets: Asset[] = [
     assetName: 'Conference Room Table',
     description: 'Furniture',
     location: 'Meeting Room A',
-    status: 'Active',
-    acquisitionDate: '2022-03-20',
-    acquisitionCost: 800,
+    status: 'Deployed',
+    purchaseDate: '2022-03-20',
+    purchaseCost: '800',
     currentValue: 650,
-    condition: 'Good'
+    model: 'Conference Table',
+    serial: 'CT002',
+    company: '1'
   },
   {
     id: 3,
@@ -422,11 +427,14 @@ export const mockAssets: Asset[] = [
     assetName: 'Industrial Printer HP LaserJet',
     description: 'Office Equipment',
     location: 'Admin Office',
-    status: 'Maintenance',
-    acquisitionDate: '2023-01-10',
-    acquisitionCost: 1500,
+    status: 'Pending',
+    purchaseDate: '2023-01-10',
+    purchaseCost: '1500',
     currentValue: 1200,
-    condition: 'Fair'
+    model: 'LaserJet Pro',
+    serial: 'HP003',
+    company: '2',
+    manufacturer: '2'
   },
   {
     id: 4,
@@ -434,11 +442,14 @@ export const mockAssets: Asset[] = [
     assetName: 'Server Rack Dell PowerEdge',
     description: 'IT Infrastructure',
     location: 'Server Room',
-    status: 'Active',
-    acquisitionDate: '2023-08-20',
-    acquisitionCost: 5000,
+    status: 'Deployed',
+    purchaseDate: '2023-08-20',
+    purchaseCost: '5000',
     currentValue: 4200,
-    condition: 'Excellent'
+    model: 'PowerEdge R740',
+    serial: 'SR004',
+    company: '1',
+    manufacturer: '2'
   },
   {
     id: 5,
@@ -446,11 +457,13 @@ export const mockAssets: Asset[] = [
     assetName: 'Vehicle - Toyota Camry',
     description: 'Transportation',
     location: 'Parking Lot A',
-    status: 'Active',
-    acquisitionDate: '2022-11-10',
-    acquisitionCost: 25000,
+    status: 'Archived',
+    purchaseDate: '2022-11-10',
+    purchaseCost: '25000',
     currentValue: 18000,
-    condition: 'Good'
+    model: 'Camry 2022',
+    serial: 'TC005',
+    company: '2'
   }
 ];
 
