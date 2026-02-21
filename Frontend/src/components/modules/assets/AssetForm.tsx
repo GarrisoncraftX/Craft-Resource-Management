@@ -26,7 +26,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
   const [model, setModel] = useState(initialData?.model_id?.toString() || '');
   const [status, setStatus] = useState(initialData?.status_id?.toString() || '');
   const [notes, setNotes] = useState(initialData?.notes || '');
-  const [defaultLocation, setDefaultLocation] = useState(initialData?.location_id?.toString() || '');
+  const [defaultLocation, setDefaultLocation] = useState(initialData?.rtd_location_id?.toString() || '');
   const [requestable, setRequestable] = useState(initialData?.requestable || false);
 
   const [optionalExpanded, setOptionalExpanded] = useState(false);
@@ -58,6 +58,22 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
   const [locations, setLocations] = useState<Location[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
+  // Auto-calculate EOL date when purchase date or model changes
+  useEffect(() => {
+    if (orderData.purchaseDate && model) {
+      const selectedModel = models.find(m => m.id?.toString() === model);
+      if (selectedModel?.eolRate) {
+        const purchaseDate = new Date(orderData.purchaseDate);
+        const eolMonths = parseInt(selectedModel.eolRate);
+        if (!isNaN(eolMonths)) {
+          purchaseDate.setMonth(purchaseDate.getMonth() + eolMonths);
+          const calculatedEol = purchaseDate.toISOString().split('T')[0];
+          setOrderData(prev => ({ ...prev, eolDate: calculatedEol }));
+        }
+      }
+    }
+  }, [orderData.purchaseDate, model, models]);
+
   useEffect(() => {
     const fetchDropdownData = async () => {
       const results = await Promise.allSettled([
@@ -85,7 +101,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
       setModel(initialData.model_id?.toString() || '');
       setStatus(initialData.status_id?.toString() || '');
       setNotes(initialData.notes || '');
-      setDefaultLocation(initialData.location_id?.toString() || '');
+      setDefaultLocation(initialData.rtd_location_id?.toString() || '');
       setRequestable(initialData.requestable || false);
       setImagePreview(initialData.image || null);
       setOptionalData({
@@ -155,25 +171,27 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
     
     try {
       const assetData = {
-        companyId: company ? Number(company) : null,
+        companyId: company && company !== '' ? Number(company) : null,
         assetTag, 
         serial, 
-        modelId: model ? Number(model) : null,
-        statusId: status ? Number(status) : null,
+        modelId: model && model !== '' ? Number(model) : null,
+        statusId: status && status !== '' ? Number(status) : null,
         notes, 
-        locationId: defaultLocation ? Number(defaultLocation) : null,
+        rtdLocationId: defaultLocation && defaultLocation !== '' ? Number(defaultLocation) : null,
         requestable,
-        name: optionalData.assetName,
-        warrantyMonths: optionalData.warranty ? Number(optionalData.warranty) : null,
+        name: optionalData.assetName || null,
+        warrantyMonths: optionalData.warranty && optionalData.warranty !== '' ? Number(optionalData.warranty) : null,
         expectedCheckin: optionalData.expectedCheckinDate || null,
         nextAuditDate: optionalData.nextAuditDate || null,
         byod: optionalData.byod,
-        orderNumber: orderData.orderNumber,
+        orderNumber: orderData.orderNumber || null,
         purchaseDate: orderData.purchaseDate || null,
         eolDate: orderData.eolDate || null,
-        supplierId: orderData.supplier ? Number(orderData.supplier) : null,
-        purchaseCost: orderData.purchaseCost ? String(orderData.purchaseCost) : null,
+        supplierId: orderData.supplier && orderData.supplier !== '' ? Number(orderData.supplier) : null,
+        purchaseCost: orderData.purchaseCost && orderData.purchaseCost !== '' ? Number(orderData.purchaseCost) : null,
       };
+
+      console.log('Submitting asset data:', assetData);
 
       let result;
       if (initialData?.id) {

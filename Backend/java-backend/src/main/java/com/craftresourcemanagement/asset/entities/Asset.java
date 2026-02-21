@@ -1,5 +1,6 @@
 package com.craftresourcemanagement.asset.entities;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,6 +15,7 @@ public class Asset {
     private Long id;
 
     @Column(name = "asset_tag", nullable = false, unique = true)
+    @JsonProperty("assetTag")
     private String assetTag;
 
     @Column(name = "name")
@@ -23,36 +25,47 @@ public class Asset {
     private String serial;
 
     @Column(name = "model_id", nullable = false)
+    @JsonProperty("modelId")
     private Long modelId;
 
     @Column(name = "status_id", nullable = false)
+    @JsonProperty("statusId")
     private Long statusId;
 
     @Column(name = "company_id")
+    @JsonProperty("companyId")
     private Long companyId;
 
     @Column(name = "location_id")
+    @JsonProperty("locationId")
     private Long locationId;
 
     @Column(name = "rtd_location_id")
+    @JsonProperty("rtdLocationId")
     private Long rtdLocationId;
 
     @Column(name = "supplier_id")
+    @JsonProperty("supplierId")
     private Long supplierId;
 
     @Column(name = "order_number")
+    @JsonProperty("orderNumber")
     private String orderNumber;
 
     @Column(name = "purchase_date")
+    @JsonProperty("purchaseDate")
     private LocalDate purchaseDate;
 
     @Column(name = "purchase_cost", precision = 13, scale = 4)
+    @JsonProperty("purchaseCost")
     private BigDecimal purchaseCost;
 
     @Column(name = "warranty_months")
+    @JsonProperty("warrantyMonths")
     private Integer warrantyMonths;
 
     @Column(name = "eol_date")
+    @JsonProperty("eolDate")
     private LocalDate eolDate;
 
     @Column(name = "notes", columnDefinition = "TEXT")
@@ -62,24 +75,30 @@ public class Asset {
     private String image;
 
     @Column(name = "assigned_to")
+    @JsonProperty("assignedTo")
     private Long assignedTo;
 
     @Column(name = "assigned_type")
+    @JsonProperty("assignedType")
     private String assignedType;
 
     @Column(name = "requestable")
     private Boolean requestable = false;
 
     @Column(name = "last_checkout")
+    @JsonProperty("lastCheckout")
     private LocalDateTime lastCheckout;
 
     @Column(name = "expected_checkin")
+    @JsonProperty("expectedCheckin")
     private LocalDate expectedCheckin;
 
     @Column(name = "last_audit_date")
+    @JsonProperty("lastAuditDate")
     private LocalDateTime lastAuditDate;
 
     @Column(name = "next_audit_date")
+    @JsonProperty("nextAuditDate")
     private LocalDate nextAuditDate;
 
     @Column(name = "byod")

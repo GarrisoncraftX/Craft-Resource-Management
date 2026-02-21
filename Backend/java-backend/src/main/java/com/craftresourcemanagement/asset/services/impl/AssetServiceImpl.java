@@ -89,10 +89,23 @@ public class AssetServiceImpl implements AssetService {
         existing.setSerial(asset.getSerial());
         existing.setModelId(asset.getModelId());
         existing.setStatusId(asset.getStatusId());
+        existing.setCompanyId(asset.getCompanyId());
         existing.setLocationId(asset.getLocationId());
+        existing.setRtdLocationId(asset.getRtdLocationId());
+        existing.setSupplierId(asset.getSupplierId());
         existing.setPurchaseDate(asset.getPurchaseDate());
         existing.setPurchaseCost(asset.getPurchaseCost());
+        existing.setWarrantyMonths(asset.getWarrantyMonths());
+        existing.setOrderNumber(asset.getOrderNumber());
         existing.setNotes(asset.getNotes());
+        existing.setExpectedCheckin(asset.getExpectedCheckin());
+        existing.setNextAuditDate(asset.getNextAuditDate());
+        existing.setByod(asset.getByod());
+        existing.setEolDate(asset.getEolDate());
+        existing.setRequestable(asset.getRequestable());
+        if (asset.getImage() != null) {
+            existing.setImage(asset.getImage());
+        }
         
         Asset updated = assetRepository.save(existing);
         logAudit(null, "UPDATE", "Asset", updated.getId(), "Asset updated: " + updated.getAssetTag());
@@ -167,13 +180,24 @@ public class AssetServiceImpl implements AssetService {
     @Override
     public Map<String, Long> getAssetCounts() {
         List<Asset> all = assetRepository.findAll();
+        
+        // Count by status
+        long deployed = all.stream().filter(a -> a.getStatusId() != null && a.getStatusId() == 2).count();
+        long readyToDeploy = all.stream().filter(a -> a.getStatusId() != null && a.getStatusId() == 1 && a.getAssignedTo() == null).count();
+        long byod = all.stream().filter(a -> a.getByod() != null && a.getByod()).count();
+        long requestable = all.stream().filter(a -> a.getRequestable() != null && a.getRequestable()).count();
+        
         return Map.of(
             "list-all", (long) all.size(),
-            "deployed", all.stream().filter(a -> a.getAssignedTo() != null).count(),
-            "ready-to-deploy", all.stream().filter(a -> a.getAssignedTo() == null).count(),
+            "deployed", deployed,
+            "ready-to-deploy", readyToDeploy,
             "pending", 0L,
             "un-deployable", 0L,
-            "archived", 0L
+            "byod", byod,
+            "archived", 0L,
+            "requestable", requestable,
+            "due-for-audit", 0L,
+            "due-for-checkin", 0L
         );
     }
 
@@ -738,6 +762,11 @@ public class AssetServiceImpl implements AssetService {
         dto.setNextAuditDate(asset.getNextAuditDate());
         dto.setImage(asset.getImage());
         dto.setOrderNumber(asset.getOrderNumber());
+        dto.setWarrantyMonths(asset.getWarrantyMonths());
+        dto.setCompanyId(asset.getCompanyId());
+        dto.setLocationId(asset.getLocationId());
+        dto.setRtdLocationId(asset.getRtdLocationId());
+        dto.setSupplierId(asset.getSupplierId());
         
         // Populate related entity names
         if (asset.getStatusId() != null) {
@@ -748,6 +777,7 @@ public class AssetServiceImpl implements AssetService {
         if (asset.getModelId() != null) {
             assetModelRepository.findById(asset.getModelId()).ifPresent(model -> {
                 dto.setModelName(model.getName());
+                dto.setModelNumber(model.getModelNumber());
                 if (model.getCategoryId() != null) {
                     categoryRepository.findById(model.getCategoryId())
                         .ifPresent(category -> dto.setCategoryName(category.getName()));
@@ -755,6 +785,26 @@ public class AssetServiceImpl implements AssetService {
                 if (model.getManufacturerId() != null) {
                     manufacturerRepository.findById(model.getManufacturerId())
                         .ifPresent(manufacturer -> dto.setManufacturerName(manufacturer.getName()));
+                }
+                
+                // Calculate current value with depreciation
+                if (asset.getPurchaseDate() != null && asset.getPurchaseCost() != null && model.getDepreciationId() != null) {
+                    depreciationRepository.findById(model.getDepreciationId()).ifPresent(depreciation -> {
+                        long monthsPassed = ChronoUnit.MONTHS.between(asset.getPurchaseDate(), LocalDate.now());
+                        int totalMonths = depreciation.getMonths();
+                        BigDecimal purchaseCost = asset.getPurchaseCost();
+                        BigDecimal floorValue = depreciation.getDepreciationMin();
+                        
+                        BigDecimal depreciableAmount = purchaseCost.subtract(floorValue);
+                        BigDecimal monthlyDepreciation = depreciableAmount.divide(BigDecimal.valueOf(totalMonths), 2, RoundingMode.HALF_UP);
+                        BigDecimal totalDepreciation = monthlyDepreciation.multiply(BigDecimal.valueOf(Math.min(monthsPassed, totalMonths)));
+                        BigDecimal currentValue = purchaseCost.subtract(totalDepreciation).max(floorValue);
+                        
+                        dto.setCurrentValue(currentValue);
+                    });
+                } else if (asset.getPurchaseCost() != null) {
+                    // If no depreciation, current value equals purchase cost
+                    dto.setCurrentValue(asset.getPurchaseCost());
                 }
             });
         }
@@ -767,6 +817,11 @@ public class AssetServiceImpl implements AssetService {
         if (asset.getLocationId() != null) {
             locationRepository.findById(asset.getLocationId())
                 .ifPresent(location -> dto.setLocationName(location.getName()));
+        }
+        
+        if (asset.getRtdLocationId() != null) {
+            locationRepository.findById(asset.getRtdLocationId())
+                .ifPresent(location -> dto.setRtdLocationName(location.getName()));
         }
         
         if (asset.getSupplierId() != null) {

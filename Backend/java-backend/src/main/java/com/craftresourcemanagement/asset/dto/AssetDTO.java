@@ -45,6 +45,18 @@ public class AssetDTO {
     @JsonProperty("supplier_id")
     private Long supplierId;
 
+    @JsonProperty("model_no")
+    private String modelNumber;
+
+    @JsonProperty("warranty_months")
+    private Integer warrantyMonths;
+
+    @JsonProperty("rtd_location")
+    private String rtdLocationName;
+
+    @JsonProperty("rtd_location_id")
+    private Long rtdLocationId;
+
     @JsonProperty("supplier")
     private String supplierName;
 
@@ -122,4 +134,12 @@ public class AssetDTO {
     public void setNextAuditDate(LocalDate nextAuditDate) { this.nextAuditDate = nextAuditDate; }
     public String getImage() { return image; }
     public void setImage(String image) { this.image = image; }
+    public String getModelNumber() { return modelNumber; }
+    public void setModelNumber(String modelNumber) { this.modelNumber = modelNumber; }
+    public Integer getWarrantyMonths() { return warrantyMonths; }
+    public void setWarrantyMonths(Integer warrantyMonths) { this.warrantyMonths = warrantyMonths; }
+    public String getRtdLocationName() { return rtdLocationName; }
+    public void setRtdLocationName(String rtdLocationName) { this.rtdLocationName = rtdLocationName; }
+    public Long getRtdLocationId() { return rtdLocationId; }
+    public void setRtdLocationId(Long rtdLocationId) { this.rtdLocationId = rtdLocationId; }
 }

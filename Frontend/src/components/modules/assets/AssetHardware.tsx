@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Package, Edit, Trash2, Copy, FileClock } from 'lucide-react';
+import { Edit, Trash2, Copy, FileClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { assetApiService } from '@/services/javabackendapi/assetApi';
@@ -50,12 +50,10 @@ export const AssetHardware: React.FC = () => {
 
   const handleAssetCreated = (newAsset: Asset) => {
     setAssets(prev => [newAsset, ...prev]);
-    toast.success('Asset created successfully');
   };
 
   const handleAssetUpdated = (updatedAsset: Asset) => {
     setAssets(prev => prev.map(a => a.id === updatedAsset.id ? updatedAsset : a));
-    toast.success('Asset updated successfully');
   };
 
   const handleDelete = async (id: number | string) => {
@@ -116,7 +114,17 @@ export const AssetHardware: React.FC = () => {
         }
         break;
       case 'refresh':
-        globalThis.location.reload();
+        (async () => {
+          try {
+            const list = await assetApiService.getAllAssets();
+            if (Array.isArray(list) && list.length > 0) {
+              setAssets(list);
+              toast.success('Assets refreshed successfully');
+            }
+          } catch (err) {
+            toast.error('Failed to refresh assets');
+          }
+        })();
         break;
       case 'maintenance':
         setMaintenancePreselected([]);
@@ -165,15 +173,15 @@ export const AssetHardware: React.FC = () => {
 
   const filterOptions: FilterOption[] = [
     { label: 'List All', count: assets.length, filter: () => true, color: 'text-gray-700' },
-    { label: 'Deployed', count: assets.filter(a => a.status === 'Deployed').length, filter: (a) => a.status === 'Deployed', color: 'text-sky-600' },
-    { label: 'Ready to Deploy', count: assets.filter(a => a.status === 'Ready to Deploy').length, filter: (a) => a.status === 'Ready to Deploy', color: 'text-emerald-600' },
+    { label: 'Deployed', count: assets.filter(a => a.status === 'Deployed' || a.status_id === 2).length, filter: (a) => a.status === 'Deployed' || a.status_id === 2, color: 'text-sky-600' },
+    { label: 'Ready to Deploy', count: assets.filter(a => a.status === 'Ready to Deploy' || (a.status_id === 1 && !a.assigned_to)).length, filter: (a) => a.status === 'Ready to Deploy' || (a.status_id === 1 && !a.assigned_to), color: 'text-emerald-600' },
     { label: 'Pending', count: assets.filter(a => a.status === 'Pending').length, filter: (a) => a.status === 'Pending', color: 'text-amber-600' },
     { label: 'Un-deployable', count: assets.filter(a => a.statusLabel?.statusType === 'undeployable').length, filter: (a) => a.statusLabel?.statusType === 'undeployable', color: 'text-orange-600' },
-    { label: 'BYOD', count: assets.filter(a => a.byod).length, filter: (a) => a.byod === true, color: 'text-purple-600' },
+    { label: 'BYOD', count: assets.filter(a => a.byod === true || a.byod === 1).length, filter: (a) => a.byod === true || a.byod === 1, color: 'text-purple-600' },
     { label: 'Archived', count: assets.filter(a => a.status === 'Archived').length, filter: (a) => a.status === 'Archived', color: 'text-red-600' },
-    { label: 'Requestable', count: assets.filter(a => a.requestable).length, filter: (a) => a.requestable === true, color: 'text-blue-600' },
-    { label: 'Due for Audit', count: 0, filter: () => false, color: 'text-indigo-600' },
-    { label: 'Due for Check-in', count: 0, filter: () => false, color: 'text-pink-600' }
+    { label: 'Requestable', count: assets.filter(a => a.requestable === true || a.requestable === 1).length, filter: (a) => a.requestable === true || a.requestable === 1, color: 'text-blue-600' },
+    { label: 'Due for Audit', count: assets.filter(a => a.next_audit_date && new Date(a.next_audit_date) <= new Date()).length, filter: (a) => a.next_audit_date && new Date(a.next_audit_date) <= new Date(), color: 'text-indigo-600' },
+    { label: 'Due for Check-in', count: assets.filter(a => a.expected_checkin && new Date(a.expected_checkin) <= new Date()).length, filter: (a) => a.expected_checkin && new Date(a.expected_checkin) <= new Date(), color: 'text-pink-600' }
   ];
 
   const getFilteredAssets = () => {
@@ -210,26 +218,35 @@ export const AssetHardware: React.FC = () => {
       ),
     },
     { key: 'id', header: 'ID', accessor: (row) => row.id, defaultVisible: false },
-    { key: 'assetTag', header: 'Asset Tag', accessor: (row) => <span className="font-mono text-xs">{row.assetTag || row.id}</span>, defaultVisible: true },
-    { key: 'assetName', header: 'Asset Name', accessor: (row) => <span className="font-medium">{row.assetName}</span>, defaultVisible: true },
+    { key: 'assetTag', header: 'Asset Tag', accessor: (row) => <span className="font-mono text-xs">{row.assetTag || row.asset_tag || row.id}</span>, defaultVisible: true },
+    { key: 'assetName', header: 'Asset Name', accessor: (row) => <span className="font-medium">{row.assetName || row.asset_name || row.name || 'N/A'}</span>, defaultVisible: true },
     { key: 'company', header: 'Company', accessor: (row) => row.company || '-', defaultVisible: false },
-    { key: 'deviceImage', header: 'Device Image', accessor: () => <div className="w-8 h-8 bg-purple-100 rounded flex items-center justify-center"><Package className="w-4 h-4 text-purple-600" /></div>, defaultVisible: true },
+    { key: 'deviceImage', header: 'Device Image', accessor: (row) => row.image ? <img src={row.image} alt={row.assetName || 'Asset'} className="w-8 h-8 rounded object-cover" /> : <div className="w-8 h-8 bg-purple-100 rounded flex items-center justify-center text-xs text-purple-600">N/A</div>, defaultVisible: true },
     { key: 'serial', header: 'Serial', accessor: (row) => <span className="font-mono text-xs">{row.serial || 'N/A'}</span>, defaultVisible: true },
     { key: 'model', header: 'Model', accessor: (row) => row.model || 'N/A', defaultVisible: true },
-    { key: 'modelNo', header: 'Model No.', accessor: (row) => row.modelNo || '-', defaultVisible: false },
-    { key: 'category', header: 'Category', accessor: (row) => row.description || row.category || 'Laptops', defaultVisible: true },
+    { key: 'modelNo', header: 'Model No.', accessor: (row) => row.modelNo || row.model_no || '-', defaultVisible: false },
+    { key: 'category', header: 'Category', accessor: (row) => row.category || row.description || 'N/A', defaultVisible: true },
     { key: 'status', header: 'Status', accessor: (row) => getStatusBadge(row.status || 'Unknown'), defaultVisible: true },
     { key: 'checkedOutTo', header: 'Checked Out To', accessor: () => '-', defaultVisible: true },
-    { key: 'location', header: 'Location', accessor: (row) => row.location || 'N/A', defaultVisible: true },
-    { key: 'defaultLocation', header: 'Default Location', accessor: (row) => row.defaultLocation || '-', defaultVisible: false },
+    { key: 'location', header: 'Location', accessor: (row) => row.location || 'N/A', defaultVisible: false },
+    { key: 'defaultLocation', header: 'Default Location', accessor: (row) => row.defaultLocation || row.rtd_location || '-', defaultVisible: true },
     { key: 'manufacturer', header: 'Manufacturer', accessor: (row) => row.manufacturer || '-', defaultVisible: false },
     { key: 'supplier', header: 'Supplier', accessor: (row) => row.supplier || '-', defaultVisible: false },
-    { key: 'purchaseDate', header: 'Purchase Date', accessor: (row) => row.purchaseDate || '-', defaultVisible: false },
-    { key: 'purchaseCost', header: 'Purchase Cost', accessor: (row) => row.purchaseCost || '-', defaultVisible: false },
-    { key: 'currentValue', header: 'Current Value', accessor: (row) => row.currentValue || '-', defaultVisible: false },
-    { key: 'orderNumber', header: 'Order Number', accessor: (row) => row.orderNumber || '-', defaultVisible: false },
-    { key: 'warranty', header: 'Warranty', accessor: (row) => row.warranty || '-', defaultVisible: false },
-    { key: 'notes', header: 'Notes', accessor: () => '-', defaultVisible: false },
+    { key: 'purchaseDate', header: 'Purchase Date', accessor: (row) => row.purchaseDate || row.purchase_date || '-', defaultVisible: false },
+    { key: 'purchaseCost', header: 'Purchase Cost', accessor: (row) => {
+      const cost = row.purchaseCost || row.purchase_cost;
+      return cost ? `$${Number(cost).toFixed(2)}` : '-';
+    }, defaultVisible: false },
+    { key: 'currentValue', header: 'Current Value', accessor: (row) => {
+      const value = row.currentValue || row.current_value;
+      return value ? `$${Number(value).toFixed(2)}` : '-';
+    }, defaultVisible: false },
+    { key: 'orderNumber', header: 'Order Number', accessor: (row) => row.orderNumber || row.order_number || '-', defaultVisible: false },
+    { key: 'warranty', header: 'Warranty', accessor: (row) => {
+      const months = row.warrantyMonths || row.warranty_months;
+      return months ? `${months} months` : '-';
+    }, defaultVisible: false },
+    { key: 'notes', header: 'Notes', accessor: (row) => row.notes || '-', defaultVisible: false },
     {
       key: 'checkInOut', header: 'Check In/Out', defaultVisible: true, sticky: 'right',
       accessor: (row) => (
