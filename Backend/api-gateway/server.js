@@ -25,12 +25,12 @@ app.use((req, res, next) => {
 app.use(morgan("combined"));
 
 // Enable CORS for frontend domain
-const allowedOrigins= [process.env.FRONTEND_URL || "http://localhost:5173", "*"]; 
+const allowedOrigins = new Set([process.env.FRONTEND_URL || "http://localhost:5173", "*"]);
 app.use(cors({
   origin: function(origin, callback){
     // allow requests with no origin
     if(!origin) return callback(null, true);
-    if(allowedOrigins.includes(origin) === -1 && allowedOrigins.includes("*") === -1){
+    if(!allowedOrigins.has(origin) && !allowedOrigins.has("*")){
       const msg = "The policy for this site does not allow access from the specified Origin.";
       return callback(new Error(msg), false);
     }
