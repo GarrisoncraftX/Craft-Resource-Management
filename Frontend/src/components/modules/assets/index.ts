@@ -14,3 +14,6 @@ export { SuppliersView } from './AssetSettings/SuppliersView';
 export { LocationsView } from './AssetSettings/LocationsView';
 export { DepartmentsView } from './AssetSettings/DepartmentsView';
 export { PeopleView } from './PeopleView';
+export { AssetsInfo } from './AssetsInfo';
+export { CheckoutForm } from './forms/CheckoutForm';
+export { AuditReport } from './assetreport/AuditReport';

@@ -57,6 +57,9 @@ const DepartmentsView = lazy(() => import("@/components/modules/assets/AssetSett
 const AssetFormPage = lazy(() => import("@/components/modules/assets/AssetForm").then(module => ({ default: module.AssetForm })));
 const MaintenanceReportView = lazy(() => import("@/components/modules/assets/AssetReports/MaintenanceReportView").then(module => ({ default: module.MaintenanceReportView })));
 const DepreciationReportView = lazy(() => import("@/components/modules/assets/AssetReports/DepreciationReportView").then(module => ({ default: module.DepreciationReportView })));
+const AssetsInfo = lazy(() => import("@/components/modules/assets/AssetsInfo").then(module => ({ default: module.AssetsInfo })));
+const CheckoutForm = lazy(() => import("@/components/modules/assets/forms/CheckoutForm").then(module => ({ default: module.CheckoutForm })));
+const AuditReport = lazy(() => import("@/components/modules/assets/assetreport/AuditReport").then(module => ({ default: module.AuditReport })));
 
 //Employee & Visitors Modules
 const EmployeeAccount = lazy(() => import("@/components/EmployeeAccount").then(module => ({ default: module.EmployeeAccount })));
@@ -213,8 +216,9 @@ const AppRoutes = () => {
       <Route path="/assets/settings/locations" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><LocationsView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/assets/settings/companies" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Settings" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><CompaniesView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/assets/create" element={<ProtectedRoute><SuspenseWrapper><AssetFormPage /></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/assets/reports/maintenance" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Reports" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><MaintenanceReportView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/assets/reports/depreciation" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Reports" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><DepreciationReportView /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/tag/:assetTag/info" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Information" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AssetsInfo /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/tag/:assetTag/checkout" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Checkout" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><CheckoutForm /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/assets/audit" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Audit" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AuditReport /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
       {/* Authentication Routes */}
       <Route path="/register" element={<PublicRoute><SuspenseWrapper><AuthForm /></SuspenseWrapper></PublicRoute>} />
