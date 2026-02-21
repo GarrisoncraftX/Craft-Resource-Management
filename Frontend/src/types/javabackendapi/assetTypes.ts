@@ -31,6 +31,25 @@ export interface ValuationRecord {
   notes?: string;
 }
 
+export interface AssetAudit {
+  id: number;
+  assetId: number;
+  auditedBy?: number;
+  auditDate: string;
+  locationId?: number;
+  locationName?: string;
+  updateAssetLocation: boolean;
+  nextAuditDate?: string;
+  notes?: string;
+  status: 'draft' | 'submitted' | 'locked';
+  images?: string;
+  assetTag?: string;
+  assetName?: string;
+  modelName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Person {
   id: number;
   avatar?: string;
@@ -399,6 +418,7 @@ export interface Asset {
   imageUrl?: string;
   image?: string;
   lastAuditDate?: string;
+  last_audit_date?: string;
 }
 
 export interface AssignmentRecord {

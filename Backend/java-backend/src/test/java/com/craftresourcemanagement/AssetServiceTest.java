@@ -50,7 +50,7 @@ class AssetServiceTest {
     void testCreateAsset_Success() {
         when(assetRepository.save(any(Asset.class))).thenReturn(testAsset);
 
-        AssetDTO result = assetService.createAsset(testAsset);
+        AssetDTO result = assetService.createAsset(testAsset, null);
 
         assertNotNull(result);
         assertEquals("ASSET001", result.getAssetTag());
@@ -82,7 +82,7 @@ class AssetServiceTest {
         when(assetRepository.findById(1L)).thenReturn(Optional.of(testAsset));
         when(assetRepository.save(any(Asset.class))).thenReturn(testAsset);
 
-        AssetDTO result = assetService.updateAsset(1L, testAsset);
+        AssetDTO result = assetService.updateAsset(1L, testAsset, null);
 
         assertNotNull(result);
         verify(assetRepository, times(1)).save(any(Asset.class));
@@ -93,7 +93,7 @@ class AssetServiceTest {
         when(assetRepository.findById(1L)).thenReturn(Optional.of(testAsset));
         doNothing().when(assetRepository).deleteById(1L);
 
-        assetService.deleteAsset(1L);
+        assetService.deleteAsset(1L, null);
 
         verify(assetRepository, times(1)).deleteById(1L);
     }

@@ -11,18 +11,18 @@ import org.springframework.web.multipart.MultipartFile;
 public interface AssetService {
 
     // Asset CRUD
-    AssetDTO createAsset(Asset asset);
+    AssetDTO createAsset(Asset asset, Long userId);
     List<AssetDTO> getAllAssets(String status, String category);
     AssetDTO getAssetById(Long id);
-    AssetDTO updateAsset(Long id, Asset asset);
-    void deleteAsset(Long id);
+    AssetDTO updateAsset(Long id, Asset asset, Long userId);
+    void deleteAsset(Long id, Long userId);
 
     // Asset Image Upload
     AssetDTO uploadAssetImage(Long id, MultipartFile file) throws IOException;
 
     // Asset Checkout/Checkin
-    AssetDTO checkoutAsset(Long id, Long assignedTo, String assignedType, String note);
-    AssetDTO checkinAsset(Long id, String note);
+    AssetDTO checkoutAsset(Long id, Long assignedTo, String assignedType, String note, Long userId);
+    AssetDTO checkinAsset(Long id, String note, Long userId);
 
     // Asset Stats
     Map<String, Long> getAssetCounts();
@@ -88,4 +88,10 @@ public interface AssetService {
     // Reports
     List<Map<String, Object>> getDepreciationReport();
     List<Map<String, Object>> getMaintenanceReport();
+
+    // Asset Audits
+    Map<String, Object> createAssetAudit(Map<String, Object> auditData);
+    Map<String, Object> updateAssetAudit(Long id, Map<String, Object> auditData);
+    List<Map<String, Object>> getAllAssetAudits();
+    Map<String, Object> getAssetAuditById(Long id);
 }

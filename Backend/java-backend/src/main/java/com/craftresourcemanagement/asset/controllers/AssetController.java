@@ -149,37 +149,51 @@ public class AssetController {
     }
 
     @PostMapping
-    public ResponseEntity<AssetDTO> createAsset(@RequestBody Asset asset) {
-        return ResponseEntity.ok(assetService.createAsset(asset));
+    public ResponseEntity<AssetDTO> createAsset(
+            @RequestBody Asset asset,
+            @RequestHeader(value = "x-user-id", required = false) String userId) {
+        Long userIdLong = userId != null ? Long.parseLong(userId) : null;
+        return ResponseEntity.ok(assetService.createAsset(asset, userIdLong));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AssetDTO> updateAsset(@PathVariable Long id, @RequestBody Asset asset) {
-        return ResponseEntity.ok(assetService.updateAsset(id, asset));
+    public ResponseEntity<AssetDTO> updateAsset(
+            @PathVariable Long id,
+            @RequestBody Asset asset,
+            @RequestHeader(value = "x-user-id", required = false) String userId) {
+        Long userIdLong = userId != null ? Long.parseLong(userId) : null;
+        return ResponseEntity.ok(assetService.updateAsset(id, asset, userIdLong));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAsset(@PathVariable Long id) {
-        assetService.deleteAsset(id);
+    public ResponseEntity<Void> deleteAsset(
+            @PathVariable Long id,
+            @RequestHeader(value = "x-user-id", required = false) String userId) {
+        Long userIdLong = userId != null ? Long.parseLong(userId) : null;
+        assetService.deleteAsset(id, userIdLong);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/checkout")
     public ResponseEntity<AssetDTO> checkoutAsset(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> checkoutData) {
+            @RequestBody Map<String, Object> checkoutData,
+            @RequestHeader(value = "x-user-id", required = false) String userId) {
         Long assignedTo = Long.valueOf(checkoutData.get("assigned_to").toString());
         String assignedType = (String) checkoutData.get("assigned_type");
         String note = (String) checkoutData.get("note");
-        return ResponseEntity.ok(assetService.checkoutAsset(id, assignedTo, assignedType, note));
+        Long userIdLong = userId != null ? Long.parseLong(userId) : null;
+        return ResponseEntity.ok(assetService.checkoutAsset(id, assignedTo, assignedType, note, userIdLong));
     }
 
     @PostMapping("/{id}/checkin")
     public ResponseEntity<AssetDTO> checkinAsset(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> checkinData) {
+            @RequestBody Map<String, Object> checkinData,
+            @RequestHeader(value = "x-user-id", required = false) String userId) {
         String note = (String) checkinData.get("note");
-        return ResponseEntity.ok(assetService.checkinAsset(id, note));
+        Long userIdLong = userId != null ? Long.parseLong(userId) : null;
+        return ResponseEntity.ok(assetService.checkinAsset(id, note, userIdLong));
     }
 
     @PostMapping("/maintenance-records")
@@ -217,5 +231,35 @@ public class AssetController {
     public ResponseEntity<Void> deleteDepreciation(@PathVariable Long id) {
         assetService.deleteDepreciation(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // Asset Audits
+    @PostMapping("/audits")
+    public ResponseEntity<Map<String, Object>> createAssetAudit(
+            @RequestBody Map<String, Object> auditData,
+            @RequestHeader(value = "x-user-id", required = false) String userId) {
+        if (userId != null) {
+            auditData.put("auditedBy", Long.parseLong(userId));
+        }
+        return ResponseEntity.ok(assetService.createAssetAudit(auditData));
+    }
+
+    @PutMapping("/audits/{id}")
+    public ResponseEntity<Map<String, Object>> updateAssetAudit(@PathVariable Long id, @RequestBody Map<String, Object> auditData) {
+        try {
+            return ResponseEntity.ok(assetService.updateAssetAudit(id, auditData));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/audits")
+    public ResponseEntity<List<Map<String, Object>>> getAllAssetAudits() {
+        return ResponseEntity.ok(assetService.getAllAssetAudits());
+    }
+
+    @GetMapping("/audits/{id}")
+    public ResponseEntity<Map<String, Object>> getAssetAuditById(@PathVariable Long id) {
+        return ResponseEntity.ok(assetService.getAssetAuditById(id));
     }
 }

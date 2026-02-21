@@ -11,7 +11,7 @@ import {
   mockSuppliers,
   mockDepartments,
 } from '@/services/mockData/assets';
-import type { Asset, MaintenanceRecord, DisposalRecord, MaintenanceCost, Category, Manufacturer, Supplier, Location, AssetModel, StatusLabel, Depreciation, Company, Department, DepreciationReport, MaintenanceReport } from '@/types/javabackendapi/assetTypes';
+import type { Asset, MaintenanceRecord, DisposalRecord, MaintenanceCost, Category, Manufacturer, Supplier, Location, AssetModel, StatusLabel, Depreciation, Company, Department, DepreciationReport, MaintenanceReport, AssetAudit } from '@/types/javabackendapi/assetTypes';
 
 const API_BASE = '/api/assets';
 
@@ -287,6 +287,35 @@ class AssetApiService {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/reports/maintenance`),
       []
+    );
+  }
+
+  // Asset Audits
+  async createAssetAudit(auditData: Record<string, unknown>): Promise<AssetAudit> {
+    return this.handleApiCall(
+      () => apiClient.post(`${API_BASE}/audits`, auditData),
+      {} as AssetAudit
+    );
+  }
+
+  async updateAssetAudit(id: number, auditData: Record<string, unknown>): Promise<AssetAudit> {
+    return this.handleApiCall(
+      () => apiClient.put(`${API_BASE}/audits/${id}`, auditData),
+      {} as AssetAudit
+    );
+  }
+
+  async getAllAssetAudits(): Promise<AssetAudit[]> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/audits`),
+      []
+    );
+  }
+
+  async getAssetAuditById(id: number): Promise<AssetAudit> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/audits/${id}`),
+      {} as AssetAudit
     );
   }
 }

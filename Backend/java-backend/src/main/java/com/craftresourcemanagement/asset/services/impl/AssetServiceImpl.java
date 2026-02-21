@@ -26,6 +26,7 @@ public class AssetServiceImpl implements AssetService {
 
     private final AssetRepository assetRepository;
     private final AuditLogRepository auditLogRepository;
+    private final AssetAuditRepository assetAuditRepository;
     private final CategoryRepository categoryRepository;
     private final ManufacturerRepository manufacturerRepository;
     private final SupplierRepository supplierRepository;
@@ -38,6 +39,7 @@ public class AssetServiceImpl implements AssetService {
     private final CloudinaryService cloudinaryService;
 
     public AssetServiceImpl(AssetRepository assetRepository, AuditLogRepository auditLogRepository,
+                           AssetAuditRepository assetAuditRepository,
                            CategoryRepository categoryRepository, ManufacturerRepository manufacturerRepository,
                            SupplierRepository supplierRepository, LocationRepository locationRepository,
                            AssetModelRepository assetModelRepository, StatusLabelRepository statusLabelRepository,
@@ -45,6 +47,7 @@ public class AssetServiceImpl implements AssetService {
                            DepartmentRepository departmentRepository, CloudinaryService cloudinaryService) {
         this.assetRepository = assetRepository;
         this.auditLogRepository = auditLogRepository;
+        this.assetAuditRepository = assetAuditRepository;
         this.categoryRepository = categoryRepository;
         this.manufacturerRepository = manufacturerRepository;
         this.supplierRepository = supplierRepository;
@@ -59,9 +62,9 @@ public class AssetServiceImpl implements AssetService {
 
     @Override
     @Transactional
-    public AssetDTO createAsset(Asset asset) {
+    public AssetDTO createAsset(Asset asset, Long userId) {
         Asset saved = assetRepository.save(asset);
-        logAudit(null, "CREATE", "Asset", saved.getId(), "Asset created: " + saved.getAssetTag());
+        logAudit(userId, "CREATE", "Asset", saved.getId(), "Asset created: " + saved.getAssetTag());
         return convertToDTO(saved);
     }
 
@@ -80,7 +83,7 @@ public class AssetServiceImpl implements AssetService {
 
     @Override
     @Transactional
-    public AssetDTO updateAsset(Long id, Asset asset) {
+    public AssetDTO updateAsset(Long id, Asset asset, Long userId) {
         Asset existing = assetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Asset not found"));
         
@@ -108,16 +111,16 @@ public class AssetServiceImpl implements AssetService {
         }
         
         Asset updated = assetRepository.save(existing);
-        logAudit(null, "UPDATE", "Asset", updated.getId(), "Asset updated: " + updated.getAssetTag());
+        logAudit(userId, "UPDATE", "Asset", updated.getId(), "Asset updated: " + updated.getAssetTag());
         return convertToDTO(updated);
     }
 
 @Override
     @Transactional
-    public void deleteAsset(Long id) {
+    public void deleteAsset(Long id, Long userId) {
         Asset asset = assetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Asset not found"));
-        logAudit(null, "DELETE", "Asset", id, "Asset deleted: " + asset.getAssetTag());
+        logAudit(userId, "DELETE", "Asset", id, "Asset deleted: " + asset.getAssetTag());
         assetRepository.deleteById(id);
     }
 
@@ -140,7 +143,7 @@ public class AssetServiceImpl implements AssetService {
 
     @Override
     @Transactional
-    public AssetDTO checkoutAsset(Long id, Long assignedTo, String assignedType, String note) {
+    public AssetDTO checkoutAsset(Long id, Long assignedTo, String assignedType, String note, Long userId) {
         Asset asset = assetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Asset not found"));
         
@@ -151,7 +154,7 @@ public class AssetServiceImpl implements AssetService {
         Asset updated = assetRepository.save(asset);
         
         // Log to audit_logs with polymorphic tracking
-        logAudit(null, "CHECKOUT", "Asset", id, 
+        logAudit(userId, "CHECKOUT", "Asset", id, 
                 String.format("Asset checked out to %s (ID: %d). Note: %s", assignedType, assignedTo, note));
         
         return convertToDTO(updated);
@@ -159,7 +162,7 @@ public class AssetServiceImpl implements AssetService {
 
     @Override
     @Transactional
-    public AssetDTO checkinAsset(Long id, String note) {
+    public AssetDTO checkinAsset(Long id, String note, Long userId) {
         Asset asset = assetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Asset not found"));
         
@@ -171,7 +174,7 @@ public class AssetServiceImpl implements AssetService {
         Asset updated = assetRepository.save(asset);
         
         // Log to audit_logs
-        logAudit(null, "CHECKIN", "Asset", id, 
+        logAudit(userId, "CHECKIN", "Asset", id, 
                 String.format("Asset checked in from user ID: %d. Note: %s", previousAssignee, note));
         
         return convertToDTO(updated);
@@ -809,6 +812,136 @@ public class AssetServiceImpl implements AssetService {
     @Override
     public List<Map<String, Object>> getMaintenanceReport() {
         return new ArrayList<>();
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> createAssetAudit(Map<String, Object> auditData) {
+        AssetAudit audit = new AssetAudit();
+        audit.setAssetId(((Number) auditData.get("assetId")).longValue());
+        audit.setAuditedBy(auditData.containsKey("auditedBy") ? ((Number) auditData.get("auditedBy")).longValue() : null);
+        audit.setLocationId(auditData.containsKey("locationId") ? ((Number) auditData.get("locationId")).longValue() : null);
+        audit.setUpdateAssetLocation((Boolean) auditData.getOrDefault("updateAssetLocation", false));
+        audit.setNextAuditDate(auditData.containsKey("nextAuditDate") ? LocalDate.parse(auditData.get("nextAuditDate").toString()) : null);
+        audit.setNotes((String) auditData.get("notes"));
+        audit.setStatus((String) auditData.getOrDefault("status", "draft"));
+        audit.setImages(auditData.containsKey("images") ? auditData.get("images").toString() : null);
+        
+        AssetAudit saved = assetAuditRepository.save(audit);
+        
+        // Update asset if requested
+        if (Boolean.TRUE.equals(audit.getUpdateAssetLocation()) && audit.getLocationId() != null) {
+            assetRepository.findById(audit.getAssetId()).ifPresent(asset -> {
+                asset.setLocationId(audit.getLocationId());
+                assetRepository.save(asset);
+            });
+        }
+        
+        // Update last audit date on asset
+        assetRepository.findById(audit.getAssetId()).ifPresent(asset -> {
+            asset.setLastAuditDate(saved.getAuditDate());
+            if (saved.getNextAuditDate() != null) {
+                asset.setNextAuditDate(saved.getNextAuditDate());
+            }
+            assetRepository.save(asset);
+        });
+        
+        logAudit(audit.getAuditedBy(), "CREATE_ASSET_AUDIT", "AssetAudit", saved.getId(), "Asset audit created for asset ID: " + audit.getAssetId());
+        return convertAuditToMap(saved);
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> updateAssetAudit(Long id, Map<String, Object> auditData) {
+        AssetAudit audit = assetAuditRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Asset audit not found"));
+        
+        // Check if audit can be edited (only draft status or admin)
+        if (!"draft".equals(audit.getStatus())) {
+            throw new RuntimeException("Cannot edit audit with status: " + audit.getStatus());
+        }
+        
+        if (auditData.containsKey("locationId")) {
+            audit.setLocationId(((Number) auditData.get("locationId")).longValue());
+        }
+        if (auditData.containsKey("updateAssetLocation")) {
+            audit.setUpdateAssetLocation((Boolean) auditData.get("updateAssetLocation"));
+        }
+        if (auditData.containsKey("nextAuditDate")) {
+            audit.setNextAuditDate(LocalDate.parse(auditData.get("nextAuditDate").toString()));
+        }
+        if (auditData.containsKey("notes")) {
+            audit.setNotes((String) auditData.get("notes"));
+        }
+        if (auditData.containsKey("status")) {
+            audit.setStatus((String) auditData.get("status"));
+        }
+        if (auditData.containsKey("images")) {
+            audit.setImages(auditData.get("images").toString());
+        }
+        
+        AssetAudit updated = assetAuditRepository.save(audit);
+        
+        // Update asset if requested
+        if (Boolean.TRUE.equals(updated.getUpdateAssetLocation()) && updated.getLocationId() != null) {
+            assetRepository.findById(updated.getAssetId()).ifPresent(asset -> {
+                asset.setLocationId(updated.getLocationId());
+                assetRepository.save(asset);
+            });
+        }
+        
+        logAudit(audit.getAuditedBy(), "UPDATE_ASSET_AUDIT", "AssetAudit", id, "Asset audit updated for asset ID: " + audit.getAssetId());
+        return convertAuditToMap(updated);
+    }
+
+    @Override
+    public List<Map<String, Object>> getAllAssetAudits() {
+        return assetAuditRepository.findAll().stream()
+            .map(this::convertAuditToMap)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public Map<String, Object> getAssetAuditById(Long id) {
+        AssetAudit audit = assetAuditRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Asset audit not found"));
+        return convertAuditToMap(audit);
+    }
+
+    private Map<String, Object> convertAuditToMap(AssetAudit audit) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", audit.getId());
+        map.put("assetId", audit.getAssetId());
+        map.put("auditedBy", audit.getAuditedBy());
+        map.put("auditDate", audit.getAuditDate());
+        map.put("locationId", audit.getLocationId());
+        map.put("updateAssetLocation", audit.getUpdateAssetLocation());
+        map.put("nextAuditDate", audit.getNextAuditDate());
+        map.put("notes", audit.getNotes());
+        map.put("status", audit.getStatus());
+        map.put("images", audit.getImages());
+        map.put("createdAt", audit.getCreatedAt());
+        map.put("updatedAt", audit.getUpdatedAt());
+        
+        // Add asset details
+        assetRepository.findById(audit.getAssetId()).ifPresent(asset -> {
+            map.put("assetTag", asset.getAssetTag());
+            map.put("assetName", asset.getName());
+            if (asset.getModelId() != null) {
+                assetModelRepository.findById(asset.getModelId()).ifPresent(model -> {
+                    map.put("modelName", model.getName());
+                });
+            }
+        });
+        
+        // Add location name
+        if (audit.getLocationId() != null) {
+            locationRepository.findById(audit.getLocationId()).ifPresent(location -> {
+                map.put("locationName", location.getName());
+            });
+        }
+        
+        return map;
     }
 
     private AssetDTO convertToDTO(Asset asset) {

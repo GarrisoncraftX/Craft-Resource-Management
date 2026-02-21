@@ -250,7 +250,15 @@ export const AssetHardware: React.FC = () => {
     {
       key: 'checkInOut', header: 'Check In/Out', defaultVisible: true, sticky: 'right',
       accessor: (row) => (
-        <Button size="sm" variant="outline" className="h-7 bg-rose-500 hover:bg-rose-600 text-white text-xs px-3 rounded">
+        <Button 
+          size="sm" 
+          variant="outline" 
+          className={`h-7 text-white text-xs px-3 rounded ${
+            row.status === 'Deployed' 
+              ? 'bg-emerald-500 hover:bg-emerald-600' 
+              : 'bg-rose-500 hover:bg-rose-600'
+          }`}
+        >
           {row.status === 'Deployed' ? 'Check In' : 'Check Out'}
         </Button>
       ),
