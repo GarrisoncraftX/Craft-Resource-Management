@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Package, KeyRound, Keyboard, Droplets, Cpu, Users, X, RefreshCw, Download, Printer, Maximize2, Minus, Pencil, RotateCcw, ClipboardCheck, ShieldCheck } from 'lucide-react';
 import { assetApiService } from '@/services/javabackendapi/assetApi';
-import type { AssetStats, AssetCategory } from '@/types/javabackendapi/assetTypes';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { mockActivities, mockDashboardLocations } from '@/services/mockData/assets';
+import { hrApiService } from '@/services/api';
 
 // Big button card component matching Snipe-IT style
 const StatusCard: React.FC<{
@@ -15,15 +17,15 @@ const StatusCard: React.FC<{
   bgClass: string;
   onClick?: () => void;
 }> = ({ icon, count, label, bgClass, onClick }) => (
-  <button
+   <button
     onClick={onClick}
-    className={`${bgClass} rounded-lg p-4 text-white flex flex-col items-start justify-between min-h-[110px] w-full transition-all hover:opacity-90 hover:shadow-lg relative overflow-hidden`}
+    className={`${bgClass} rounded-lg p-3 sm:p-4 text-white flex flex-col items-start justify-between min-h-[90px] sm:min-h-[110px] w-full transition-all hover:opacity-90 hover:shadow-lg relative overflow-hidden`}
   >
-    <div className="absolute right-2 top-2 opacity-20">{icon}</div>
-    <span className="text-4xl font-bold leading-none">{count.toLocaleString()}</span>
-    <div className="flex items-center justify-between w-full mt-2">
-      <span className="text-sm font-medium">{label}</span>
-      <span className="text-xs opacity-80 hover:opacity-100 cursor-pointer">view all ➕</span>
+    <div className="absolute right-2 top-2 opacity-20">{React.cloneElement(icon as React.ReactElement, { className: "h-8 w-8 sm:h-12 sm:w-12" })}</div>
+    <span className="text-2xl sm:text-4xl font-bold leading-none">{count.toLocaleString()}</span>
+    <div className="flex items-center justify-between w-full mt-1 sm:mt-2">
+      <span className="text-xs sm:text-sm font-medium">{label}</span>
+      <span className="text-[10px] sm:text-xs opacity-80 hover:opacity-100 cursor-pointer hidden sm:inline">view all ➕</span>
     </div>
   </button>
 );
@@ -71,7 +73,8 @@ const DashboardTable: React.FC<{
 
 // Activity icon map
 const getActivityIcon = (action: string) => {
-  switch (action) {
+  const actionLower = action.toLowerCase();
+  switch (actionLower) {
     case 'update': return <Pencil className="h-3.5 w-3.5 text-muted-foreground" />;
     case 'checkout': return <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />;
     case 'audit': return <ClipboardCheck className="h-3.5 w-3.5 text-muted-foreground" />;
@@ -79,40 +82,26 @@ const getActivityIcon = (action: string) => {
   }
 };
 
-// Mock activity data
-const mockActivities = [
-  { id: 1, date: 'Tue Feb 17, 2026 6:37AM', createdBy: 'Admin User', action: 'update', item: 'GSMR Handy #GSMR - GSMR', target: '' },
-  { id: 2, date: 'Tue Feb 17, 2026 6:37AM', createdBy: 'Admin User', action: 'checkout', item: '#205390976 - Macbook Pro 13"', target: '📍 Gerlachbury' },
-  { id: 3, date: 'Tue Feb 17, 2026 6:37AM', createdBy: 'Admin User', action: 'checkout', item: '#1460542631 - Macbook Pro 13"', target: '📍 Gerlachbury' },
-  { id: 4, date: 'Tue Feb 17, 2026 6:37AM', createdBy: 'Admin User', action: 'checkout', item: '#247822320 - Macbook Pro 13"', target: '📍 Gerlachbury' },
-  { id: 5, date: 'Tue Feb 17, 2026 6:35AM', createdBy: 'Admin User', action: 'audit', item: '#444620233 - iPhone 12', target: '' },
-];
-
-// Mock location data
-const mockLocations = [
-  { name: 'NL Leipzig', count: 2, assigned: 0 },
-  { name: 'Damarisstad', count: 251, assigned: 0 },
-  { name: 'Huelsborough', count: 236, assigned: 12 },
-  { name: 'New Nils', count: 262, assigned: 12 },
-  { name: 'North Derickfort', count: 231, assigned: 9 },
-  { name: 'Gerlachbury', count: 289, assigned: 15 },
-  { name: 'Port Elsie', count: 266, assigned: 11 },
-  { name: 'Allanport', count: 261, assigned: 12 },
-];
 
 export const AssetDashboard: React.FC = () => {
-  const [assetStats, setAssetStats] = useState<AssetStats | null>(null);
-  const [assetsByCategory, setAssetsByCategory] = useState<AssetCategory[]>([]);
+  const [assetCounts, setAssetCounts] = useState<Record<string, number>>({});
+  const [assetStats, setAssetStats] = useState<Record<string, number>>({});
+  const [assetsByCategory, setAssetsByCategory] = useState<Array<{ category: string; count: number }>>([]);
+  const [totalEmployees, setTotalEmployees] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [stats, categories] = await Promise.all([
+        const [counts, stats, categories, employees] = await Promise.all([
+          assetApiService.getAssetCounts(),
           assetApiService.getAssetStats(),
           assetApiService.getAssetsByCategory(),
+          hrApiService.listEmployees()
         ]);
+        setAssetCounts(counts);
         setAssetStats(stats);
         setAssetsByCategory(categories);
+        setTotalEmployees(Array.isArray(employees) ? employees.length : 0);
       } catch (error) {
         console.error('Failed to fetch asset data:', error);
       }
@@ -120,59 +109,65 @@ export const AssetDashboard: React.FC = () => {
     fetchData();
   }, []);
 
-  if (!assetStats) return null;
+  const statusData = [
+    { name: 'Ready to Deploy', value: assetCounts['ready-to-deploy'] || 0, color: '#10b981' },
+    { name: 'Deployed', value: assetCounts['deployed'] || 0, color: '#3b82f6' },
+    { name: 'Pending', value: assetCounts['pending'] || 0, color: '#f59e0b' },
+    { name: 'Un-deployable', value: assetCounts['un-deployable'] || 0, color: '#ef4444' },
+    { name: 'Archived', value: assetCounts['archived'] || 0, color: '#6b7280' },
+  ].filter(item => item.value > 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <h1 className="text-xl font-bold text-gray-800">Dashboard</h1>
+        <div className="max-w-full mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-2 sm:py-3">
+          <h1 className="text-lg sm:text-xl font-bold text-gray-800">Dashboard</h1>
         </div>
       </header>
 
-      <main className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="max-w-full mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-6 space-y-4 sm:space-y-6">
         {/* Big Button Status Cards - Snipe-IT style */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
           <StatusCard
             icon={<Package className="h-12 w-12" />}
-            count={2599}
+            count={assetCounts['list-all'] || 0}
             label="Assets"
             bgClass="bg-sky-500"
           />
           <StatusCard
             icon={<KeyRound className="h-12 w-12" />}
-            count={50}
+            count={0}
             label="Licenses"
             bgClass="bg-emerald-500"
           />
           <StatusCard
             icon={<Keyboard className="h-12 w-12" />}
-            count={4}
+            count={0}
             label="Accessories"
             bgClass="bg-teal-500"
           />
           <StatusCard
             icon={<Droplets className="h-12 w-12" />}
-            count={3}
+            count={0}
             label="Consumables"
             bgClass="bg-amber-500"
           />
           <StatusCard
             icon={<Cpu className="h-12 w-12" />}
-            count={4}
+            count={0}
             label="Components"
             bgClass="bg-sky-600"
           />
           <StatusCard
             icon={<Users className="h-12 w-12" />}
-            count={2009}
+            count={totalEmployees}
             label="People"
             bgClass="bg-rose-400"
           />
         </div>
 
         {/* Recent Activity + Assets by Status */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
           <div className="lg:col-span-3">
             <DashboardTable title="Recent Activity">
               <Table>
@@ -187,7 +182,7 @@ export const AssetDashboard: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockActivities.map(a => (
+                  {mockActivities.slice(0, 5).map(a => (
                     <TableRow key={a.id} className="border-b border-gray-50">
                       <TableCell className="py-2 px-3">{getActivityIcon(a.action)}</TableCell>
                       <TableCell className="py-2 px-3 text-xs text-gray-600">{a.date}</TableCell>
@@ -204,28 +199,38 @@ export const AssetDashboard: React.FC = () => {
 
           <div className="lg:col-span-2">
             <DashboardTable title="Assets by Status">
-              <div className="p-4 text-sm text-muted-foreground text-center">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between px-2">
-                    <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" /> Ready to Deploy</span>
-                    <span className="font-semibold text-foreground">2,499</span>
-                  </div>
-                  <div className="flex items-center justify-between px-2">
-                    <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-amber-500 inline-block" /> Pending</span>
-                    <span className="font-semibold text-foreground">50</span>
-                  </div>
-                  <div className="flex items-center justify-between px-2">
-                    <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500 inline-block" /> Archived</span>
-                    <span className="font-semibold text-foreground">50</span>
-                  </div>
-                </div>
+              <div className="p-4">
+                {statusData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={statusData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={60}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {statusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-center text-sm text-muted-foreground py-8">No asset data available</div>
+                )}
               </div>
             </DashboardTable>
           </div>
         </div>
 
         {/* Locations + Asset Categories */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <DashboardTable title="Locations">
             <Table>
               <TableHeader>
@@ -236,7 +241,7 @@ export const AssetDashboard: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockLocations.map(loc => (
+                {mockDashboardLocations.slice(0, 8).map(loc => (
                   <TableRow key={loc.name} className="border-b border-gray-50">
                     <TableCell className="py-2 px-3 text-xs text-sky-600 cursor-pointer hover:underline">
                       <span className="flex items-center gap-1.5">

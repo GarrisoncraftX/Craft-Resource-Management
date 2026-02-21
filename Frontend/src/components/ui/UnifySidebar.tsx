@@ -237,11 +237,26 @@ export function UnifySidebar() {
 
   const currentHoveredOrActive = hoveredModule ? modules.find((m) => m.title === hoveredModule) : null
 
+  // Listen for mobile sidebar toggle from navbar
+  React.useEffect(() => {
+    const handler = () => setIsMobileSidebarOpen(prev => !prev)
+    window.addEventListener('toggle-mobile-sidebar', handler)
+    return () => window.removeEventListener('toggle-mobile-sidebar', handler)
+  }, [])
+
   return (
+    <>
+      {/* Mobile backdrop */}
+      {isMobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-30 sm:hidden"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
       <div
         className={cn(
           "fixed left-0 top-14 sm:top-16 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] z-40 flex transition-all duration-300",
-          !isMobileSidebarOpen && "-translate-x-full sm:translate-x-0"
+          isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"
         )}
         onMouseLeave={() => {
           if (!isExpanded) {
@@ -459,7 +474,7 @@ export function UnifySidebar() {
 
         {/* COLLAPSED MODE FLYOUT PANEL */}
         {!isExpanded && currentHoveredOrActive && (
-          <div className="w-48 bg-card border-r border-border shadow-xl overflow-y-auto">
+          <div className="w-48 bg-card border-r border-border shadow-xl overflow-y-auto hidden sm:block">
             <div className="p-4">
               <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
                 <currentHoveredOrActive.icon className="w-4 h-4" />
@@ -630,5 +645,6 @@ export function UnifySidebar() {
           </div>
         )}
       </div>
+    </>
   )
 }

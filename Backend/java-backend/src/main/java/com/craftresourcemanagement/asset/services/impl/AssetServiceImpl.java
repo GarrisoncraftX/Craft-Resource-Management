@@ -180,38 +180,102 @@ public class AssetServiceImpl implements AssetService {
     @Override
     public Map<String, Long> getAssetCounts() {
         List<Asset> all = assetRepository.findAll();
+        List<StatusLabel> statuses = statusLabelRepository.findAll();
         
-        // Count by status
-        long deployed = all.stream().filter(a -> a.getStatusId() != null && a.getStatusId() == 2).count();
-        long readyToDeploy = all.stream().filter(a -> a.getStatusId() != null && a.getStatusId() == 1 && a.getAssignedTo() == null).count();
-        long byod = all.stream().filter(a -> a.getByod() != null && a.getByod()).count();
-        long requestable = all.stream().filter(a -> a.getRequestable() != null && a.getRequestable()).count();
+        Map<String, Long> statusCounts = statuses.stream()
+            .collect(Collectors.toMap(
+                s -> s.getStatusType().toLowerCase(),
+                s -> all.stream().filter(a -> s.getId().equals(a.getStatusId())).count(),
+                Long::sum
+            ));
+        
+        long deployed = all.stream().filter(a -> a.getAssignedTo() != null).count();
+        long readyToDeploy = all.stream().filter(a -> a.getAssignedTo() == null && 
+            statusLabelRepository.findById(a.getStatusId())
+                .map(s -> "deployable".equalsIgnoreCase(s.getStatusType()))
+                .orElse(false)).count();
+        long byod = all.stream().filter(a -> Boolean.TRUE.equals(a.getByod())).count();
+        long requestable = all.stream().filter(a -> Boolean.TRUE.equals(a.getRequestable())).count();
+        long dueForAudit = all.stream().filter(a -> a.getNextAuditDate() != null && 
+            !a.getNextAuditDate().isAfter(LocalDate.now())).count();
+        long dueForCheckin = all.stream().filter(a -> a.getExpectedCheckin() != null && 
+            !a.getExpectedCheckin().isAfter(LocalDate.now())).count();
         
         return Map.of(
             "list-all", (long) all.size(),
             "deployed", deployed,
             "ready-to-deploy", readyToDeploy,
-            "pending", 0L,
-            "un-deployable", 0L,
+            "pending", statusCounts.getOrDefault("pending", 0L),
+            "un-deployable", statusCounts.getOrDefault("undeployable", 0L),
             "byod", byod,
-            "archived", 0L,
+            "archived", statusCounts.getOrDefault("archived", 0L),
             "requestable", requestable,
-            "due-for-audit", 0L,
-            "due-for-checkin", 0L
+            "due-for-audit", dueForAudit,
+            "due-for-checkin", dueForCheckin
         );
     }
 
     @Override
     public Map<String, Object> getAssetStats() {
         List<Asset> all = assetRepository.findAll();
+        List<StatusLabel> statuses = statusLabelRepository.findAll();
+        
+        long maintenanceAssets = statuses.stream()
+            .filter(s -> "maintenance".equalsIgnoreCase(s.getStatusType()))
+            .mapToLong(s -> all.stream().filter(a -> s.getId().equals(a.getStatusId())).count())
+            .sum();
+        
+        long disposedAssets = statuses.stream()
+            .filter(s -> "archived".equalsIgnoreCase(s.getStatusType()))
+            .mapToLong(s -> all.stream().filter(a -> s.getId().equals(a.getStatusId())).count())
+            .sum();
+        
+        BigDecimal totalValue = all.stream()
+            .filter(a -> a.getPurchaseCost() != null)
+            .map(Asset::getPurchaseCost)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        BigDecimal totalCurrentValue = all.stream()
+            .map(this::calculateCurrentValue)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        double depreciationRate = totalValue.compareTo(BigDecimal.ZERO) > 0 
+            ? totalValue.subtract(totalCurrentValue).divide(totalValue, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100)).doubleValue()
+            : 0.0;
+        
         return Map.of(
             "totalAssets", all.size(),
             "activeAssets", all.stream().filter(a -> a.getAssignedTo() != null).count(),
-            "maintenanceAssets", 0,
-            "disposedAssets", 0,
-            "totalValue", 0,
-            "depreciationRate", 0
+            "maintenanceAssets", maintenanceAssets,
+            "disposedAssets", disposedAssets,
+            "totalValue", totalValue,
+            "depreciationRate", depreciationRate
         );
+    }
+    
+    private BigDecimal calculateCurrentValue(Asset asset) {
+        if (asset.getPurchaseDate() == null || asset.getPurchaseCost() == null || asset.getModelId() == null) {
+            return asset.getPurchaseCost() != null ? asset.getPurchaseCost() : BigDecimal.ZERO;
+        }
+        
+        return assetModelRepository.findById(asset.getModelId())
+            .flatMap(model -> model.getDepreciationId() != null 
+                ? depreciationRepository.findById(model.getDepreciationId()) 
+                : Optional.empty())
+            .map(depreciation -> {
+                long monthsPassed = ChronoUnit.MONTHS.between(asset.getPurchaseDate(), LocalDate.now());
+                int totalMonths = depreciation.getMonths();
+                BigDecimal purchaseCost = asset.getPurchaseCost();
+                BigDecimal floorValue = depreciation.getDepreciationMin();
+                
+                BigDecimal depreciableAmount = purchaseCost.subtract(floorValue);
+                BigDecimal monthlyDepreciation = depreciableAmount.divide(BigDecimal.valueOf(totalMonths), 2, RoundingMode.HALF_UP);
+                BigDecimal totalDepreciation = monthlyDepreciation.multiply(BigDecimal.valueOf(Math.min(monthsPassed, totalMonths)));
+                
+                return purchaseCost.subtract(totalDepreciation).max(floorValue);
+            })
+            .orElse(asset.getPurchaseCost());
     }
 
     @Override

@@ -79,14 +79,14 @@ export default function AssetsToolbar({
   }
 
   return (
-    <div className="w-full bg-white p-4">
+    <div className="w-full bg-white p-2 sm:p-4">
       <div className="border-t border-slate-200">
         {/* TOP ROW */}
-        <div className="p-2 flex flex-col sm:flex-row items-start sm:items-center justify-end gap-28 border-b border-gray-100">
+        <div className="p-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-4 lg:gap-28 border-b border-gray-100">
           {/* Bulk Edit + Go */}
           {(viewType === 'assets' || viewType === 'people') && (
-            <div className="flex items-center gap-2">
-              <div className="relative w-full max-w-[300px]">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative w-full sm:max-w-[300px]">
                 <select
                   value={bulkAction}
                   onChange={(e) => setBulkAction(e.target.value)}
@@ -131,8 +131,8 @@ export default function AssetsToolbar({
           )}
 
           {/* Search + clear */}
-          <div className="flex">
-            <div className="flex h-8 w-full max-w-[520px] overflow-hidden rounded-md border border-slate-300 bg-white">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <div className="flex h-8 w-full sm:max-w-[520px] overflow-hidden rounded-md border border-slate-300 bg-white">
               <input
                 value={query}
                 onChange={(e) => {
@@ -153,7 +153,7 @@ export default function AssetsToolbar({
             </div>
 
           {/* Action buttons */}
-          <div>
+          <div className="overflow-x-auto">
             <div className="inline-flex overflow-hidden rounded-md border border-sky-800">
               {/* view dropdown */}
               <ColumnDropdown
@@ -271,7 +271,7 @@ export default function AssetsToolbar({
 
 
         {/* BOTTOM ROW */}
-        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mt-3 sm:mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {/* Showing + rows-per-page */}
           <div className="flex flex-wrap items-center gap-4 text-xs text-slate-800">
             <span>

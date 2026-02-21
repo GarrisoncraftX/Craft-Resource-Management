@@ -260,11 +260,11 @@ export const AssetHardware: React.FC = () => {
   if (loading) return <div className="p-6">Loading assets…</div>;
 
   return (
-    <div className="min-h-screen flex-1 flex flex-col p-6 bg-background">
-      <div className="space-y-6">
+    <div className="min-h-screen flex-1 flex flex-col p-2 sm:p-4 md:p-6 bg-background">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex justify-between items-start">
-          <h1 className="text-3xl lg:text-2xl sm:text-sm font-bold tracking-tight">Assets</h1>
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight">Assets</h1>
         </div>
 
         {/* Active Filter Badge */}

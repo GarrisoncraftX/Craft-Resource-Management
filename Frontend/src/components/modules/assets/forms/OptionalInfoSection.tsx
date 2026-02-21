@@ -31,10 +31,10 @@ export const OptionalInfoSection: React.FC<OptionalInfoSectionProps> = ({ data, 
       </button>
 
       {expanded && (
-        <div className="px-6 py-4 space-y-4">
+        <div className="px-3 sm:px-6 py-4 space-y-4">
           {/* Asset Name */}
-          <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Asset Name</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">Asset Name</label>
             <Input
               value={data.assetName}
               onChange={(e) => onChange('assetName', e.target.value)}
@@ -43,8 +43,8 @@ export const OptionalInfoSection: React.FC<OptionalInfoSectionProps> = ({ data, 
           </div>
 
           {/* Warranty */}
-          <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Warranty</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">Warranty</label>
             <div className="flex items-center gap-2">
               <Input
                 type="number"
@@ -58,26 +58,26 @@ export const OptionalInfoSection: React.FC<OptionalInfoSectionProps> = ({ data, 
           </div>
 
           {/* Expected Checkin Date */}
-          <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Expected Checkin Date</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">Expected Checkin Date</label>
             <Input
               type="date"
               value={data.expectedCheckinDate}
               onChange={(e) => onChange('expectedCheckinDate', e.target.value)}
-              className="w-56"
+              className="w-full sm:w-56"
               placeholder="Select Date (YYYY-MM-DD)"
             />
           </div>
 
           {/* Next Audit Date */}
-          <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Next Audit Date</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">Next Audit Date</label>
             <div className="space-y-1">
               <Input
                 type="date"
                 value={data.nextAuditDate}
                 onChange={(e) => onChange('nextAuditDate', e.target.value)}
-                className="w-56"
+                className="w-full sm:w-56"
                 placeholder="Select Date (YYYY-MM-DD)"
               />
               <p className="text-xs text-sky-600">
@@ -88,7 +88,7 @@ export const OptionalInfoSection: React.FC<OptionalInfoSectionProps> = ({ data, 
 
           {/* BYOD */}
           <div className="flex items-start gap-4">
-            <div className="w-40 shrink-0" />
+            <div className="hidden sm:block w-40 shrink-0" />
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Checkbox

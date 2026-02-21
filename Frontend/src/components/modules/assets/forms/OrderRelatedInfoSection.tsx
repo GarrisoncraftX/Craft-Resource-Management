@@ -34,10 +34,10 @@ export const OrderRelatedInfoSection: React.FC<OrderRelatedInfoSectionProps> = (
       </button>
 
       {expanded && (
-        <div className="px-6 py-4 space-y-4">
+        <div className="px-3 sm:px-6 py-4 space-y-4">
           {/* Order Number */}
-          <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Order Number</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">Order Number</label>
             <Input
               value={data.orderNumber}
               onChange={(e) => onChange('orderNumber', e.target.value)}
@@ -46,30 +46,30 @@ export const OrderRelatedInfoSection: React.FC<OrderRelatedInfoSectionProps> = (
           </div>
 
           {/* Purchase Date */}
-          <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Purchase Date</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">Purchase Date</label>
             <Input
               type="date"
               value={data.purchaseDate}
               onChange={(e) => onChange('purchaseDate', e.target.value)}
-              className="w-56"
+              className="w-full sm:w-56"
             />
           </div>
 
           {/* EOL Date */}
-          <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">EOL Date</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">EOL Date</label>
             <Input
               type="date"
               value={data.eolDate}
               onChange={(e) => onChange('eolDate', e.target.value)}
-              className="w-56"
+              className="w-full sm:w-56"
             />
           </div>
 
           {/* Supplier */}
-          <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Supplier</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">Supplier</label>
             <div className="flex items-center gap-2 flex-1">
               <Select value={data.supplier} onValueChange={(value) => onChange('supplier', value)}>
                 <SelectTrigger className="flex-1">
@@ -88,8 +88,8 @@ export const OrderRelatedInfoSection: React.FC<OrderRelatedInfoSectionProps> = (
           </div>
 
           {/* Purchase Cost */}
-          <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Purchase Cost</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">Purchase Cost</label>
             <div className="flex items-center gap-0">
               <span className="text-sm text-gray-600 px-3 py-2 bg-gray-100 rounded-l border border-r-0 border-gray-200">
                 {data.currency || 'USD'}

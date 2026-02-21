@@ -102,8 +102,20 @@ export interface License {
 
 export interface BaseInventoryItem {
   id: number;
-  name: string;
+  name?: string;
   category_id?: number;
+  category?: string;
+  modelNo?: string;
+  location?: string;
+  itemNo?: string;
+  minQty?: number;
+  total?: number;
+  avail?: number;
+  checkedOut?: number;
+  unitCost?: number;
+  manufacturer?: string;
+  supplier?: string;
+  remaining?: number;  
   manufacturer_id?: number;
   supplier_id?: number;
   company_id?: number;
@@ -111,9 +123,9 @@ export interface BaseInventoryItem {
   item_no?: string;
   model_no?: string;
   serial?: string;
-  min_qty: number;
-  qty_total: number;
-  qty_remaining: number;
+  min_qty?: number;
+  qty_total?: number;
+  qty_remaining?: number;
   unit_cost?: number;
   notes?: string;
   created_at?: string;

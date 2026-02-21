@@ -150,14 +150,14 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
 
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
           {/* Name */}
-          <div className="flex items-center gap-4">
-            <label className="w-44 text-sm font-bold text-gray-700 text-right shrink-0">Name</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-44 text-sm font-bold text-gray-700 sm:text-right shrink-0">Name</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} className="flex-1 border-l-4 border-l-amber-400" />
           </div>
 
           {/* Assets - multi-select with tags */}
-          <div className="flex items-start gap-4">
-            <label className="w-44 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Assets</label>
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+            <label className="sm:w-44 text-sm font-bold text-gray-700 sm:text-right shrink-0 sm:mt-2">Assets</label>
             <div className="flex-1 space-y-2">
               {selectedAssets.length > 0 && (
                 <div className="flex flex-wrap gap-1 p-2 border border-amber-400 border-l-4 rounded bg-white">
@@ -200,8 +200,8 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
           </div>
 
           {/* Type */}
-          <div className="flex items-center gap-4">
-            <label className="w-44 text-sm font-bold text-gray-700 text-right shrink-0">Asset Maintenance Type</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-44 text-sm font-bold text-gray-700 sm:text-right shrink-0">Asset Maintenance Type</label>
             <Select value={maintenanceType} onValueChange={setMaintenanceType}>
               <SelectTrigger className="flex-1 border-l-4 border-l-amber-400">
                 <SelectValue placeholder="Select Maintenance Type" />
@@ -217,20 +217,20 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
           </div>
 
           {/* Start Date */}
-          <div className="flex items-center gap-4">
-            <label className="w-44 text-sm font-bold text-gray-700 text-right shrink-0">Start Date</label>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-56" />
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-44 text-sm font-bold text-gray-700 sm:text-right shrink-0">Start Date</label>
+            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full sm:w-56" />
           </div>
 
           {/* Completion Date */}
-          <div className="flex items-center gap-4">
-            <label className="w-44 text-sm font-bold text-gray-700 text-right shrink-0">Completion Date</label>
-            <Input type="date" value={completionDate} onChange={(e) => setCompletionDate(e.target.value)} className="w-56" />
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-44 text-sm font-bold text-gray-700 sm:text-right shrink-0">Completion Date</label>
+            <Input type="date" value={completionDate} onChange={(e) => setCompletionDate(e.target.value)} className="w-full sm:w-56" />
           </div>
 
           {/* Supplier */}
-          <div className="flex items-center gap-4">
-            <label className="w-44 text-sm font-bold text-gray-700 text-right shrink-0">Supplier</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-44 text-sm font-bold text-gray-700 sm:text-right shrink-0">Supplier</label>
             <div className="flex items-center gap-2 flex-1">
               <Select value={String(supplier)} onValueChange={setSupplier}>
                 <SelectTrigger className="flex-1">
@@ -250,7 +250,7 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
 
           {/* Warranty Improvement */}
           <div className="flex items-center gap-4">
-            <div className="w-44 shrink-0" />
+            <div className="hidden sm:block w-44 shrink-0" />
             <div className="flex items-center gap-2">
               <Checkbox checked={warrantyImprovement} onCheckedChange={(v) => setWarrantyImprovement(v as boolean)} />
               <span className="text-sm text-gray-700">Warranty Improvement</span>
@@ -258,8 +258,8 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
           </div>
 
           {/* Cost */}
-          <div className="flex items-center gap-4">
-            <label className="w-44 text-sm font-bold text-gray-700 text-right shrink-0">Cost</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-44 text-sm font-bold text-gray-700 sm:text-right shrink-0">Cost</label>
             <div className="flex items-center gap-0">
               <span className="text-sm text-gray-600 px-3 py-2 bg-gray-100 rounded-l border border-r-0 border-gray-200">USD</span>
               <Input type="number" value={cost} onChange={(e) => setCost(e.target.value)} className="w-40 rounded-l-none" />
@@ -267,14 +267,14 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
           </div>
 
           {/* URL */}
-          <div className="flex items-center gap-4">
-            <label className="w-44 text-sm font-bold text-gray-700 text-right shrink-0">URL</label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+            <label className="sm:w-44 text-sm font-bold text-gray-700 sm:text-right shrink-0">URL</label>
             <Input value={url} onChange={(e) => setUrl(e.target.value)} className="flex-1" placeholder="https://example.com" />
           </div>
 
           {/* Upload Image */}
-          <div className="flex items-start gap-4">
-            <label className="w-44 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Upload Image</label>
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+            <label className="sm:w-44 text-sm font-bold text-gray-700 sm:text-right shrink-0 sm:mt-2">Upload Image</label>
             <div className="space-y-2">
               <input
                 type="file"
@@ -303,8 +303,8 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
           </div>
 
           {/* Notes */}
-          <div className="flex items-start gap-4">
-            <label className="w-44 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Notes</label>
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+            <label className="sm:w-44 text-sm font-bold text-gray-700 sm:text-right shrink-0 sm:mt-2">Notes</label>
             <div className="flex-1 space-y-1">
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-20" />
               <p className="text-xs text-sky-600">This field allows Github flavored markdown.</p>

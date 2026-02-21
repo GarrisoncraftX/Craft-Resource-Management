@@ -1,4 +1,4 @@
-import type { Asset, Category, RequestableItem, MaintenanceRecord, DisposalRecord, AcquisitionRequest, Manufacturer, ValuationRecord, MaintenanceCost, AssetStats, AssetTrend, AssetCategory, Person, License, BaseInventoryItem, PredefinedKit, Supplier, StatusLabel, AssetModel, Location, Depreciation, Department, CustomField, Company, MaintenanceReport, DepreciationReport } from '@/types/javabackendapi/assetTypes';
+import type { Asset, Category, RequestableItem, MaintenanceRecord, DisposalRecord, AcquisitionRequest, Manufacturer, ValuationRecord, MaintenanceCost, AssetStats, AssetTrend, AssetCategory,  BaseInventoryItem, PredefinedKit, Supplier, StatusLabel, AssetModel, Location, Depreciation, Department, CustomField, Company, MaintenanceReport, DepreciationReport } from '@/types/javabackendapi/assetTypes';
 
 
 export const mockRequestableItems: RequestableItem[] = [
@@ -667,4 +667,23 @@ export const mockDepreciationReports: DepreciationReport[] = [
   { id: 1, company: 'Bogan-Lesch', category: 'Laptops', assetTag: 'AST001', model: 'OptiPlex 7090', modelNo: 'OPT7090', serial: 'SN123456', depreciation: 'Computer Depreciation', numberOfMonths: 36, status: 'Active', checkedOut: 'John Doe', location: 'IT Department', manufacturer: 'Dell', supplier: 'Bernhard LLC', purchaseDate: '2023-06-15', currency: 'USD', purchaseCost: 1200, orderNumber: 'PO-2023-001', eol: '2026-06-15', currentValue: 1100, monthlyDepreciation: 33.33, diff: 100, warrantyExpires: '2025-06-15' },
   { id: 2, company: 'Gleichner, Runolfsson and Howell', category: 'Displays', assetTag: 'AST006', model: 'Ultrasharp U2415', modelNo: 'U2415', serial: 'SN789012', depreciation: 'Display Depreciation', numberOfMonths: 12, status: 'Active', checkedOut: 'Jane Smith', location: 'Marketing', manufacturer: 'Dell', supplier: 'Rode, Orn and Keeling', purchaseDate: '2023-08-10', currency: 'USD', purchaseCost: 450, orderNumber: 'PO-2023-045', eol: '2025-08-10', currentValue: 380, monthlyDepreciation: 37.5, diff: 70, warrantyExpires: '2024-08-10' },
   { id: 3, company: 'Bogan-Lesch', category: 'Mobile Phone', assetTag: 'AST007', model: 'iPhone 12', modelNo: 'A2172', serial: 'SN345678', depreciation: 'Computer Depreciation', numberOfMonths: 36, status: 'Active', checkedOut: 'Mike Johnson', location: 'Sales', manufacturer: 'Apple', supplier: 'Bernhard LLC', purchaseDate: '2023-03-20', currency: 'USD', purchaseCost: 999, orderNumber: 'PO-2023-012', eol: '2026-03-20', currentValue: 750, monthlyDepreciation: 27.75, diff: 249, warrantyExpires: '2024-03-20' },
+];
+
+export const mockActivities = [
+  { id: 1, date: 'Tue Feb 17, 2026 6:37AM', createdBy: 'Admin User', action: 'UPDATE', item: 'GSMR Handy #GSMR - GSMR', target: '' },
+  { id: 2, date: 'Tue Feb 17, 2026 6:37AM', createdBy: 'Admin User', action: 'CHECKOUT', item: '#205390976 - Macbook Pro 13"', target: '📍 Gerlachbury' },
+  { id: 3, date: 'Tue Feb 17, 2026 6:37AM', createdBy: 'Admin User', action: 'CHECKOUT', item: '#1460542631 - Macbook Pro 13"', target: '📍 Gerlachbury' },
+  { id: 4, date: 'Tue Feb 17, 2026 6:37AM', createdBy: 'Admin User', action: 'CHECKOUT', item: '#247822320 - Macbook Pro 13"', target: '📍 Gerlachbury' },
+  { id: 5, date: 'Tue Feb 17, 2026 6:35AM', createdBy: 'Admin User', action: 'AUDIT', item: '#444620233 - iPhone 12', target: '' },
+];
+
+export const mockDashboardLocations = [
+  { name: 'NL Leipzig', count: 2, assigned: 0 },
+  { name: 'Damarisstad', count: 251, assigned: 0 },
+  { name: 'Huelsborough', count: 236, assigned: 12 },
+  { name: 'New Nils', count: 262, assigned: 12 },
+  { name: 'North Derickfort', count: 231, assigned: 9 },
+  { name: 'Gerlachbury', count: 289, assigned: 15 },
+  { name: 'Port Elsie', count: 266, assigned: 11 },
+  { name: 'Allanport', count: 261, assigned: 12 },
 ];

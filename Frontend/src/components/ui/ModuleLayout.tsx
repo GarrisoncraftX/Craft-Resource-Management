@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './button';
-import { Eye, Home, LogOut, Bell, Clock, User, CheckCircle, XCircle } from 'lucide-react';
+import { Eye, Home, LogOut, Bell, Clock, User, CheckCircle, XCircle, Menu } from 'lucide-react';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -175,6 +175,17 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
         <div className="h-full px-2 sm:px-4 flex items-center justify-between gap-1 sm:gap-2">
           {/* Left Section - Logo & Title */}
           <div className="flex items-center gap-1 sm:gap-4 min-w-0 flex-shrink">
+            {/* Mobile sidebar toggle - always visible on small screens */}
+            <button
+              onClick={() => {
+                // Dispatch custom event to toggle sidebar
+                window.dispatchEvent(new CustomEvent('toggle-mobile-sidebar'));
+              }}
+              className="sm:hidden flex items-center justify-center h-8 w-8 rounded-lg text-muted-foreground hover:bg-accent transition-colors flex-shrink-0"
+              aria-label="Toggle sidebar menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
             {/* Logo */}
             <div className="flex items-center gap-1 sm:gap-3 min-w-0">
               <img 
@@ -355,7 +366,7 @@ const ModuleLayout: React.FC<ModuleLayoutProps> = ({
       {showSidebar && <UnifySidebar />}
 
       {/* Main Content */}
-      <main className={`relative z-10 pt-14 sm:pt-16 min-h-screen transition-all duration-300 ease-in-out sm:ml-16`}>
+      <main className="relative z-10 pt-14 sm:pt-16 min-h-screen transition-all duration-300 ease-in-out ml-0 sm:ml-16">
         <div className="p-2 sm:p-4 md:p-6">
           {children}
         </div>

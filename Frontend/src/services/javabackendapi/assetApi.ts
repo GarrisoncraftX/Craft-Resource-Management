@@ -190,6 +190,27 @@ class AssetApiService {
     );
   }
 
+  async getAssetStats(): Promise<Record<string, number>> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/stats`),
+      { totalAssets: 0, activeAssets: 0, maintenanceAssets: 0, disposedAssets: 0, totalValue: 0, depreciationRate: 0 }
+    );
+  }
+
+  async getAssetsByCategory(): Promise<Array<{ category: string; count: number }>> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/by-category`),
+      []
+    );
+  }
+
+  async getAssetTrends(): Promise<Array<{ month: string; total: number }>> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/trends`),
+      []
+    );
+  }
+
   // Settings
   async getAllCategories(): Promise<Category[]> {
     return this.handleApiCall(

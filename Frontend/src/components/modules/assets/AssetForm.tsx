@@ -215,7 +215,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center overflow-auto z-50 py-16">
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center overflow-auto z-50 py-4 sm:py-16 px-2 sm:px-4">
       <div className="max-w-2xl w-full mx-auto">
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
@@ -225,9 +225,9 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
             </Button>
           </div>
 
-          <div className="p-6 space-y-4">
-            <div className="flex items-center gap-4">
-              <label htmlFor="company-select" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Company</label>
+          <div className="p-3 sm:p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+              <label htmlFor="company-select" className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">Company</label>
               <Select value={String(company)} onValueChange={setCompany}>
                 <SelectTrigger id="company-select" className="flex-1"><SelectValue placeholder="Select Company" /></SelectTrigger>
                 <SelectContent>
@@ -236,8 +236,8 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
               </Select>
             </div>
 
-            <div className="flex items-center gap-4">
-              <label htmlFor="asset-tag-input" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Asset Tag</label>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+              <label htmlFor="asset-tag-input" className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">Asset Tag</label>
               <div className="flex items-center gap-2 flex-1">
                 <Input id="asset-tag-input" value={assetTag} onChange={(e) => setAssetTag(e.target.value)} className="flex-1 border-l-4 border-l-amber-400" />
                 <Button type="button" size="icon" className="bg-sky-500 hover:bg-sky-600 text-white h-9 w-9">
@@ -246,13 +246,13 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <label htmlFor="serial-input" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Serial</label>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+              <label htmlFor="serial-input" className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">Serial</label>
               <Input id="serial-input" value={serial} onChange={(e) => setSerial(e.target.value)} className="flex-1" />
             </div>
 
-            <div className="flex items-center gap-4">
-              <label htmlFor="model-select" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Model</label>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+              <label htmlFor="model-select" className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">Model</label>
               <div className="flex items-center gap-2 flex-1">
                 <Select value={String(model)} onValueChange={setModel}>
                   <SelectTrigger id="model-select" className="flex-1"><SelectValue placeholder="Select a Model" /></SelectTrigger>
@@ -266,8 +266,8 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <label htmlFor="status-select" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Status</label>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+              <label htmlFor="status-select" className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">Status</label>
               <div className="flex items-center gap-2 flex-1">
                 <Select value={String(status)} onValueChange={setStatus}>
                   <SelectTrigger id="status-select" className="flex-1 border-l-4 border-l-amber-400"><SelectValue placeholder="Select Status" /></SelectTrigger>
@@ -281,13 +281,13 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
               </div>
             </div>
 
-            <div className="flex items-start gap-4">
-              <label htmlFor="notes-textarea" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Notes</label>
+            <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+              <label htmlFor="notes-textarea" className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0 sm:mt-2">Notes</label>
               <Textarea id="notes-textarea" value={notes} onChange={(e) => setNotes(e.target.value)} className="flex-1 min-h-20" />
             </div>
 
-            <div className="flex items-start gap-4">
-              <label htmlFor="location-select" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Default Location</label>
+            <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+              <label htmlFor="location-select" className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0 sm:mt-2">Default Location</label>
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <Select value={String(defaultLocation)} onValueChange={setDefaultLocation}>
@@ -305,7 +305,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="w-40 shrink-0" />
+              <div className="hidden sm:block w-40 shrink-0" />
               <div className="flex items-center gap-2">
                 <Checkbox id="requestable-checkbox" checked={requestable} onCheckedChange={(v) => setRequestable(!!v)} />
                 <label htmlFor="requestable-checkbox" className="text-sm text-gray-700">Requestable</label>
@@ -313,8 +313,8 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
             </div>
 
             {/* Upload Image - Now functional */}
-            <div className="flex items-start gap-4">
-              <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Upload Image</label>
+            <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+              <label className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0 sm:mt-2">Upload Image</label>
               <div className="flex-1 space-y-2">
                 <input
                   type="file"
