@@ -8,7 +8,7 @@ interface OptionalInfoData {
   warranty: string;
   expectedCheckinDate: string;
   nextAuditDate: string;
-  byod: boolean;
+  byod: boolean | number;
 }
 
 interface OptionalInfoSectionProps {
