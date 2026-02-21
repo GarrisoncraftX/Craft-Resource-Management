@@ -326,35 +326,49 @@ export interface Asset {
   id: number;
   assetCode?: string;
   assetTag?: string;
+  asset_tag?: string;
   name?: string;
   assetName?: string;
+  asset_name?: string;
   description?: string;
   category?: string;
  
  
   // Model & Specifications
   model?: string;
+  model_id?: number;
   modelNo?: string;
   serial?: string;
   manufacturer?: string;
   supplier?: string;
+  supplier_id?: number;
   company?: string;
+  company_id?: number;
   location?: string;
+  location_id?: number;
   status?: string;
+  status_id?: number;
   statusLabel?: { id: number; name: string; statusType: string; color?: string };
   defaultLocation?: string;
   requestable?: boolean;
   warranty?: string;
+  warrantyMonths?: number;
   currentValue?: number;
 
   //Audit
   expectedCheckinDate?: string;
+  expected_checkin?: string;
   nextAuditDate?: string;
+  next_audit_date?: string;
   byod?: boolean;
   orderNumber?: string;
+  order_number?: string;
   purchaseDate?: string;
+  purchase_date?: string;
   purchaseCost?: string;
+  purchase_cost?: number;
   eolDate?: string;
+  eol_date?: string;
   currency?: string;
  
  

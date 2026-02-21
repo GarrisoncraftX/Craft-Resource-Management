@@ -30,11 +30,20 @@ public class AssetDTO {
     @JsonProperty("status_id")
     private Long statusId;
 
+    @JsonProperty("company_id")
+    private Long companyId;
+
     @JsonProperty("company")
     private String companyName;
 
+    @JsonProperty("location_id")
+    private Long locationId;
+
     @JsonProperty("location")
     private String locationName;
+
+    @JsonProperty("supplier_id")
+    private Long supplierId;
 
     @JsonProperty("supplier")
     private String supplierName;
@@ -62,6 +71,8 @@ public class AssetDTO {
     @JsonProperty("next_audit_date")
     private LocalDate nextAuditDate;
 
+    private String image;
+
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -81,10 +92,16 @@ public class AssetDTO {
     public void setStatusName(String statusName) { this.statusName = statusName; }
     public Long getStatusId() { return statusId; }
     public void setStatusId(Long statusId) { this.statusId = statusId; }
+    public Long getCompanyId() { return companyId; }
+    public void setCompanyId(Long companyId) { this.companyId = companyId; }
     public String getCompanyName() { return companyName; }
     public void setCompanyName(String companyName) { this.companyName = companyName; }
+    public Long getLocationId() { return locationId; }
+    public void setLocationId(Long locationId) { this.locationId = locationId; }
     public String getLocationName() { return locationName; }
     public void setLocationName(String locationName) { this.locationName = locationName; }
+    public Long getSupplierId() { return supplierId; }
+    public void setSupplierId(Long supplierId) { this.supplierId = supplierId; }
     public String getSupplierName() { return supplierName; }
     public void setSupplierName(String supplierName) { this.supplierName = supplierName; }
     public String getManufacturerName() { return manufacturerName; }
@@ -103,4 +120,6 @@ public class AssetDTO {
     public void setExpectedCheckin(LocalDate expectedCheckin) { this.expectedCheckin = expectedCheckin; }
     public LocalDate getNextAuditDate() { return nextAuditDate; }
     public void setNextAuditDate(LocalDate nextAuditDate) { this.nextAuditDate = nextAuditDate; }
+    public String getImage() { return image; }
+    public void setImage(String image) { this.image = image; }
 }

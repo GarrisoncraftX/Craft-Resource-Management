@@ -22,6 +22,9 @@ public class AuditLog {
     @Column(name = "user_name")
     private String userName;
 
+    @Column(name = "performed_by", nullable = false)
+    private String performedBy;
+
     @Column(nullable = false)
     private String action;
 
@@ -156,5 +159,13 @@ public class AuditLog {
 
     public void setResult(String result) {
         this.result = result;
+    }
+
+    public String getPerformedBy() {
+        return performedBy;
+    }
+
+    public void setPerformedBy(String performedBy) {
+        this.performedBy = performedBy;
     }
 }

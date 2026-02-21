@@ -7,6 +7,8 @@ import com.craftresourcemanagement.hr.repositories.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -89,36 +91,53 @@ public class SystemServiceImpl implements SystemService {
 
     // AuditLog - Enhanced Implementation
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public AuditLog createAuditLog(AuditLog auditLog) {
-        if (auditLog.getTimestamp() == null) {
-            auditLog.setTimestamp(LocalDateTime.now());
+        try {
+            if (auditLog.getTimestamp() == null) {
+                auditLog.setTimestamp(LocalDateTime.now());
+            }
+            if (auditLog.getPerformedBy() == null) {
+                auditLog.setPerformedBy(auditLog.getUserId() != null ? auditLog.getUserId().toString() : "system");
+            }
+            return auditLogRepository.save(auditLog);
+        } catch (Exception e) {
+            // Silently fail - audits should never break operations
+            return null;
         }
-        return auditLogRepository.save(auditLog);
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public AuditLog createAuditLogWithDescriptiveAction(AuditLog auditLog) {
-        // Don't override timestamp if it's already set (from Node.js/Python backends)
-        // Only set it if null (from Java backend)
-        if (auditLog.getTimestamp() == null) {
-            auditLog.setTimestamp(LocalDateTime.now(ZoneId.of("Africa/Kigali")));
+        try {
+            if (auditLog.getTimestamp() == null) {
+                auditLog.setTimestamp(LocalDateTime.now(ZoneId.of("Africa/Kigali")));
+            }
+            
+            if (auditLog.getUserId() != null) {
+                userRepository.findById(auditLog.getUserId()).ifPresent(user -> {
+                    String userName = user.getFirstName() + " " + user.getLastName();
+                    auditLog.setUserName(userName);
+                    String action = auditLog.getAction();
+                    
+                    if (action.startsWith("has ")) {
+                        auditLog.setAction(userName + " " + action);
+                    } else if (!action.toLowerCase().contains("user") && !action.toLowerCase().contains(userName.toLowerCase())) {
+                        auditLog.setAction("User " + userName + " " + action);
+                    }
+                });
+            }
+            
+            if (auditLog.getPerformedBy() == null) {
+                auditLog.setPerformedBy(auditLog.getUserId() != null ? auditLog.getUserId().toString() : "system");
+            }
+            
+            return auditLogRepository.save(auditLog);
+        } catch (Exception e) {
+            // Silently fail - audits should never break operations
+            return null;
         }
-        
-        if (auditLog.getUserId() != null) {
-            userRepository.findById(auditLog.getUserId()).ifPresent(user -> {
-                String userName = user.getFirstName() + " " + user.getLastName();
-                auditLog.setUserName(userName);
-                String action = auditLog.getAction();
-                
-                if (action.startsWith("has ")) {
-                    auditLog.setAction(userName + " " + action);
-                } else if (!action.toLowerCase().contains("user") && !action.toLowerCase().contains(userName.toLowerCase())) {
-                    auditLog.setAction("User " + userName + " " + action);
-                }
-            });
-        }
-        
-        return auditLogRepository.save(auditLog);
     }
 
     @Override
@@ -242,17 +261,26 @@ public class SystemServiceImpl implements SystemService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public AuditLog updateAuditLog(Long id, AuditLog auditLog) {
-        Optional<AuditLog> existing = auditLogRepository.findById(id);
-        if (existing.isPresent()) {
-            AuditLog toUpdate = existing.get();
-            toUpdate.setAction(auditLog.getAction());
-            toUpdate.setUserId(auditLog.getUserId());
-            toUpdate.setTimestamp(auditLog.getTimestamp());
-            toUpdate.setDetails(auditLog.getDetails());
-            return auditLogRepository.save(toUpdate);
+        try {
+            Optional<AuditLog> existing = auditLogRepository.findById(id);
+            if (existing.isPresent()) {
+                AuditLog toUpdate = existing.get();
+                toUpdate.setAction(auditLog.getAction());
+                toUpdate.setUserId(auditLog.getUserId());
+                toUpdate.setTimestamp(auditLog.getTimestamp());
+                toUpdate.setDetails(auditLog.getDetails());
+                if (auditLog.getPerformedBy() != null) {
+                    toUpdate.setPerformedBy(auditLog.getPerformedBy());
+                }
+                return auditLogRepository.save(toUpdate);
+            }
+            return null;
+        } catch (Exception e) {
+            // Silently fail - audits should never break operations
+            return null;
         }
-        return null;
     }
 
     @Override

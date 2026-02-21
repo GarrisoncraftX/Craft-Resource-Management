@@ -8,8 +8,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -87,26 +87,12 @@ public class AuditClient {
         }
     }
 
-    @Retryable(
-        maxAttemptsExpression = "${audit.retry.max-attempts:3}",
-        backoff = @Backoff(
-            delayExpression = "${audit.retry.backoff.delay:1000}",
-            multiplierExpression = "${audit.retry.backoff.multiplier:2}",
-            maxDelayExpression = "${audit.retry.backoff.max-delay:5000}"
-        )
-    )
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logAction(Long userId, String action, String details) {
         logAction(userId, action, details, null, null, null);
     }
 
-    @Retryable(
-        maxAttemptsExpression = "${audit.retry.max-attempts:3}",
-        backoff = @Backoff(
-            delayExpression = "${audit.retry.backoff.delay:1000}",
-            multiplierExpression = "${audit.retry.backoff.multiplier:2}",
-            maxDelayExpression = "${audit.retry.backoff.max-delay:5000}"
-        )
-    )
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logAction(Long userId, String action, String details, 
                          String serviceName, String entityType, String entityId) {
         try {
@@ -114,14 +100,8 @@ public class AuditClient {
             auditLogRepository.save(log);
             logger.debug("Audit log saved: action={}, user={}", action, userId);
         } catch (Exception e) {
-            logger.error("Failed to save audit log after retries: {}", e.getMessage(), e);
-            try {
-                AuditLog log = createAuditLog(userId, action, details, serviceName, entityType, entityId);
-                auditQueue.offer(log);
-                logger.info("Audit log queued for retry");
-            } catch (Exception queueError) {
-                logger.error("Failed to queue audit log: {}", queueError.getMessage());
-            }
+            // Silently fail - audits should never break operations
+            logger.error("Failed to save audit log: {}", e.getMessage());
         }
     }
 
@@ -160,6 +140,7 @@ public class AuditClient {
         log.setEntityType(entityType);
         log.setEntityId(entityId);
         log.setResult("success");
+        log.setPerformedBy(userId != null ? userId.toString() : "system");
         
         if (userId != null) {
             userRepository.findById(userId).ifPresent(user -> {

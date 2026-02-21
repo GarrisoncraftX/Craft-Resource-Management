@@ -3,7 +3,6 @@ import { ChevronRight, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockSuppliers } from '@/services/mockData/assets';
 
 interface OrderRelatedData {
   orderNumber: string;
@@ -19,9 +18,10 @@ interface OrderRelatedInfoSectionProps {
   onChange: (field: string, value: string) => void;
   expanded: boolean;
   onToggle: () => void;
+  suppliers?: any[];
 }
 
-export const OrderRelatedInfoSection: React.FC<OrderRelatedInfoSectionProps> = ({ data, onChange, expanded, onToggle }) => {
+export const OrderRelatedInfoSection: React.FC<OrderRelatedInfoSectionProps> = ({ data, onChange, expanded, onToggle, suppliers = [] }) => {
   return (
     <div className="border-t border-gray-200">
       <button
@@ -76,8 +76,8 @@ export const OrderRelatedInfoSection: React.FC<OrderRelatedInfoSectionProps> = (
                   <SelectValue placeholder="Select a Supplier" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockSuppliers.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  {suppliers.map(s => (
+                    <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

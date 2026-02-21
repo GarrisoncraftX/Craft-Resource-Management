@@ -8,6 +8,7 @@ import com.craftresourcemanagement.hr.services.CloudinaryService;
 import com.craftresourcemanagement.system.repositories.AuditLogRepository;
 import com.craftresourcemanagement.system.entities.AuditLog;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -735,21 +736,63 @@ public class AssetServiceImpl implements AssetService {
         dto.setNotes(asset.getNotes());
         dto.setExpectedCheckin(asset.getExpectedCheckin());
         dto.setNextAuditDate(asset.getNextAuditDate());
+        dto.setImage(asset.getImage());
+        dto.setOrderNumber(asset.getOrderNumber());
+        
+        // Populate related entity names
+        if (asset.getStatusId() != null) {
+            statusLabelRepository.findById(asset.getStatusId())
+                .ifPresent(status -> dto.setStatusName(status.getName()));
+        }
+        
+        if (asset.getModelId() != null) {
+            assetModelRepository.findById(asset.getModelId()).ifPresent(model -> {
+                dto.setModelName(model.getName());
+                if (model.getCategoryId() != null) {
+                    categoryRepository.findById(model.getCategoryId())
+                        .ifPresent(category -> dto.setCategoryName(category.getName()));
+                }
+                if (model.getManufacturerId() != null) {
+                    manufacturerRepository.findById(model.getManufacturerId())
+                        .ifPresent(manufacturer -> dto.setManufacturerName(manufacturer.getName()));
+                }
+            });
+        }
+        
+        if (asset.getCompanyId() != null) {
+            companyRepository.findById(asset.getCompanyId())
+                .ifPresent(company -> dto.setCompanyName(company.getName()));
+        }
+        
+        if (asset.getLocationId() != null) {
+            locationRepository.findById(asset.getLocationId())
+                .ifPresent(location -> dto.setLocationName(location.getName()));
+        }
+        
+        if (asset.getSupplierId() != null) {
+            supplierRepository.findById(asset.getSupplierId())
+                .ifPresent(supplier -> dto.setSupplierName(supplier.getName()));
+        }
+        
         return dto;
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     private void logAudit(Long userId, String action, String itemType, Long itemId, String details) {
         try {
             AuditLog log = new AuditLog();
             log.setUserId(userId);
             log.setAction(action);
-            log.setServiceName(itemType);
+            log.setEntityType(itemType);
+            log.setEntityId(itemId != null ? itemId.toString() : null);
             log.setDetails(details);
             log.setTimestamp(LocalDateTime.now());
+            log.setServiceName("java-backend");
+            log.setResult("success");
+            log.setPerformedBy(userId != null ? userId.toString() : "system");
             auditLogRepository.save(log);
         } catch (Exception e) {
-            // Log error but don't fail the operation
-            System.err.println("Failed to log audit: " + e.getMessage());
+            // Silently fail - audits should never break operations
         }
     }
 }

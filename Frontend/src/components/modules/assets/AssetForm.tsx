@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { OptionalInfoSection } from './forms/OptionalInfoSection';
 import { OrderRelatedInfoSection } from './forms/OrderRelatedInfoSection';
-import { Asset, Company, AssetModel, StatusLabel, Location } from '@/types/javabackendapi/assetTypes';
+import { Asset, Company, AssetModel, StatusLabel, Location, Supplier } from '@/types/javabackendapi/assetTypes';
 
 interface AssetFormProps {
   onAssetCreated?: (asset) => void;
@@ -20,88 +20,87 @@ interface AssetFormProps {
 }
 
 export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOpenChange, initialData, title = 'Create New Asset' }) => {
-  const [company, setCompany] = useState(initialData?.company || '');
-  const [assetTag, setAssetTag] = useState(initialData?.assetTag || `AST-${Date.now().toString().slice(-10)}`);
+  const [company, setCompany] = useState(initialData?.company_id?.toString() || '');
+  const [assetTag, setAssetTag] = useState(initialData?.asset_tag || `AST-${Date.now().toString().slice(-10)}`);
   const [serial, setSerial] = useState(initialData?.serial || '');
-  const [model, setModel] = useState(initialData?.model || '');
-  const [status, setStatus] = useState(initialData?.status || '');
+  const [model, setModel] = useState(initialData?.model_id?.toString() || '');
+  const [status, setStatus] = useState(initialData?.status_id?.toString() || '');
   const [notes, setNotes] = useState(initialData?.notes || '');
-  const [defaultLocation, setDefaultLocation] = useState(initialData?.defaultLocation || '');
+  const [defaultLocation, setDefaultLocation] = useState(initialData?.location_id?.toString() || '');
   const [requestable, setRequestable] = useState(initialData?.requestable || false);
 
   const [optionalExpanded, setOptionalExpanded] = useState(false);
   const [orderExpanded, setOrderExpanded] = useState(false);
   const [optionalData, setOptionalData] = useState({
-    assetName: initialData?.assetName || '',
+    assetName: initialData?.asset_name || initialData?.name || '',
     warranty: initialData?.warranty || '',
-    expectedCheckinDate: initialData?.expectedCheckinDate || '',
-    nextAuditDate: initialData?.nextAuditDate || '',
+    expectedCheckinDate: initialData?.expected_checkin || '',
+    nextAuditDate: initialData?.next_audit_date || '',
     byod: initialData?.byod || false,
   });
   const [orderData, setOrderData] = useState({
-    orderNumber: initialData?.orderNumber || '',
-    purchaseDate: initialData?.purchaseDate || '',
-    eolDate: initialData?.eolDate || '',
-    supplier: initialData?.supplier || '',
-    purchaseCost: initialData?.purchaseCost || '',
+    orderNumber: initialData?.order_number || '',
+    purchaseDate: initialData?.purchase_date || '',
+    eolDate: initialData?.eol_date || '',
+    supplier: initialData?.supplier_id?.toString() || '',
+    purchaseCost: initialData?.purchase_cost?.toString() || '',
     currency: initialData?.currency || 'USD',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [models, setModels] = useState<AssetModel[]>([]);
   const [statusLabels, setStatusLabels] = useState<StatusLabel[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   useEffect(() => {
     const fetchDropdownData = async () => {
-      try {
-        const [companiesData, modelsData, statusData, locationsData] = await Promise.all([
-          assetApiService.getAllCompanies(),
-          assetApiService.getAllModels(),
-          assetApiService.getAllStatusLabels(),
-          assetApiService.getAllLocations()
-        ]);
-        setCompanies(companiesData);
-        setModels(modelsData);
-        setStatusLabels(statusData);
-        setLocations(locationsData);
-      } catch (error) {
-        console.error('Failed to fetch dropdown data:', error);
-      }
+      const results = await Promise.allSettled([
+        assetApiService.getAllCompanies(),
+        assetApiService.getAllModels(),
+        assetApiService.getAllStatusLabels(),
+        assetApiService.getAllLocations(),
+        assetApiService.getAllSuppliers()
+      ]);
+      
+      if (results[0].status === 'fulfilled') setCompanies(results[0].value);
+      if (results[1].status === 'fulfilled') setModels(results[1].value);
+      if (results[2].status === 'fulfilled') setStatusLabels(results[2].value);
+      if (results[3].status === 'fulfilled') setLocations(results[3].value);
+      if (results[4].status === 'fulfilled') setSuppliers(results[4].value);
     };
     if (open) fetchDropdownData();
   }, [open]);
 
   React.useEffect(() => {
     if (initialData) {
-      setCompany(initialData.company || '');
-      setAssetTag(initialData.assetTag || `AST-${Date.now().toString().slice(-10)}`);
+      setCompany(initialData.company_id?.toString() || '');
+      setAssetTag(initialData.asset_tag || `AST-${Date.now().toString().slice(-10)}`);
       setSerial(initialData.serial || '');
-      setModel(initialData.model || '');
-      setStatus(initialData.status || '');
+      setModel(initialData.model_id?.toString() || '');
+      setStatus(initialData.status_id?.toString() || '');
       setNotes(initialData.notes || '');
-      setDefaultLocation(initialData.defaultLocation || '');
+      setDefaultLocation(initialData.location_id?.toString() || '');
       setRequestable(initialData.requestable || false);
-      setImagePreview(initialData.imageUrl || null);
+      setImagePreview(initialData.image || null);
       setOptionalData({
-        assetName: initialData.assetName || '',
+        assetName: initialData.asset_name || initialData.name || '',
         warranty: initialData.warranty || '',
-        expectedCheckinDate: initialData.expectedCheckinDate || '',
-        nextAuditDate: initialData.nextAuditDate || '',
+        expectedCheckinDate: initialData.expected_checkin || '',
+        nextAuditDate: initialData.next_audit_date || '',
         byod: initialData.byod || false,
       });
       setOrderData({
-        orderNumber: initialData.orderNumber || '',
-        purchaseDate: initialData.purchaseDate || '',
-        eolDate: initialData.eolDate || '',
-        supplier: initialData.supplier || '',
-        purchaseCost: initialData.purchaseCost || '',
+        orderNumber: initialData.order_number || '',
+        purchaseDate: initialData.purchase_date || '',
+        eolDate: initialData.eol_date || '',
+        supplier: initialData.supplier_id?.toString() || '',
+        purchaseCost: initialData.purchase_cost?.toString() || '',
         currency: initialData.currency || 'USD',
       });
     }
@@ -132,7 +131,6 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
 
   const handleImageUpload = async (assetId: number) => {
     if (!selectedImage) return;
-    setIsUploading(true);
     try {
       await uploadAssetImage(assetId, selectedImage);
       toast.success('Image uploaded successfully');
@@ -140,8 +138,6 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
     } catch (error) {
       console.error('Failed to upload image:', error);
       toast.error('Failed to upload image.');
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -159,25 +155,24 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
     
     try {
       const assetData = {
-        company, 
-        asset_tag: assetTag, 
+        companyId: company ? Number(company) : null,
+        assetTag, 
         serial, 
-        model, 
-        status, 
+        modelId: model ? Number(model) : null,
+        statusId: status ? Number(status) : null,
         notes, 
-        defaultLocation, 
+        locationId: defaultLocation ? Number(defaultLocation) : null,
         requestable,
-        asset_name: optionalData.assetName,
-        warranty: optionalData.warranty,
-        expected_checkin_date: optionalData.expectedCheckinDate,
-        next_audit_date: optionalData.nextAuditDate,
+        name: optionalData.assetName,
+        warrantyMonths: optionalData.warranty ? Number(optionalData.warranty) : null,
+        expectedCheckin: optionalData.expectedCheckinDate || null,
+        nextAuditDate: optionalData.nextAuditDate || null,
         byod: optionalData.byod,
-        order_number: orderData.orderNumber,
-        purchase_date: orderData.purchaseDate,
-        eol_date: orderData.eolDate,
-        supplier: orderData.supplier,
-        purchase_cost: orderData.purchaseCost,
-        currency: orderData.currency,
+        orderNumber: orderData.orderNumber,
+        purchaseDate: orderData.purchaseDate || null,
+        eolDate: orderData.eolDate || null,
+        supplierId: orderData.supplier ? Number(orderData.supplier) : null,
+        purchaseCost: orderData.purchaseCost ? String(orderData.purchaseCost) : null,
       };
 
       let result;
@@ -214,9 +209,9 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
 
           <div className="p-6 space-y-4">
             <div className="flex items-center gap-4">
-              <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Company</label>
+              <label htmlFor="company-select" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Company</label>
               <Select value={String(company)} onValueChange={setCompany}>
-                <SelectTrigger className="flex-1"><SelectValue placeholder="Select Company" /></SelectTrigger>
+                <SelectTrigger id="company-select" className="flex-1"><SelectValue placeholder="Select Company" /></SelectTrigger>
                 <SelectContent>
                   {companies.map(c => (<SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>))}
                 </SelectContent>
@@ -224,9 +219,9 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
             </div>
 
             <div className="flex items-center gap-4">
-              <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Asset Tag</label>
+              <label htmlFor="asset-tag-input" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Asset Tag</label>
               <div className="flex items-center gap-2 flex-1">
-                <Input value={assetTag} onChange={(e) => setAssetTag(e.target.value)} className="flex-1 border-l-4 border-l-amber-400" />
+                <Input id="asset-tag-input" value={assetTag} onChange={(e) => setAssetTag(e.target.value)} className="flex-1 border-l-4 border-l-amber-400" />
                 <Button type="button" size="icon" className="bg-sky-500 hover:bg-sky-600 text-white h-9 w-9">
                   <Plus className="w-4 h-4" />
                 </Button>
@@ -234,15 +229,15 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
             </div>
 
             <div className="flex items-center gap-4">
-              <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Serial</label>
-              <Input value={serial} onChange={(e) => setSerial(e.target.value)} className="flex-1" />
+              <label htmlFor="serial-input" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Serial</label>
+              <Input id="serial-input" value={serial} onChange={(e) => setSerial(e.target.value)} className="flex-1" />
             </div>
 
             <div className="flex items-center gap-4">
-              <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Model</label>
+              <label htmlFor="model-select" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Model</label>
               <div className="flex items-center gap-2 flex-1">
                 <Select value={String(model)} onValueChange={setModel}>
-                  <SelectTrigger className="flex-1"><SelectValue placeholder="Select a Model" /></SelectTrigger>
+                  <SelectTrigger id="model-select" className="flex-1"><SelectValue placeholder="Select a Model" /></SelectTrigger>
                   <SelectContent>
                     {models.map(m => (<SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>))}
                   </SelectContent>
@@ -254,10 +249,10 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
             </div>
 
             <div className="flex items-center gap-4">
-              <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Status</label>
+              <label htmlFor="status-select" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Status</label>
               <div className="flex items-center gap-2 flex-1">
                 <Select value={String(status)} onValueChange={setStatus}>
-                  <SelectTrigger className="flex-1 border-l-4 border-l-amber-400"><SelectValue placeholder="Select Status" /></SelectTrigger>
+                  <SelectTrigger id="status-select" className="flex-1 border-l-4 border-l-amber-400"><SelectValue placeholder="Select Status" /></SelectTrigger>
                   <SelectContent>
                     {statusLabels.map(s => (<SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>))}
                   </SelectContent>
@@ -269,16 +264,16 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
             </div>
 
             <div className="flex items-start gap-4">
-              <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Notes</label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="flex-1 min-h-20" />
+              <label htmlFor="notes-textarea" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Notes</label>
+              <Textarea id="notes-textarea" value={notes} onChange={(e) => setNotes(e.target.value)} className="flex-1 min-h-20" />
             </div>
 
             <div className="flex items-start gap-4">
-              <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Default Location</label>
+              <label htmlFor="location-select" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Default Location</label>
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <Select value={String(defaultLocation)} onValueChange={setDefaultLocation}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="Select a Location" /></SelectTrigger>
+                    <SelectTrigger id="location-select" className="flex-1"><SelectValue placeholder="Select a Location" /></SelectTrigger>
                     <SelectContent>
                       {locations.map(l => (<SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>))}
                     </SelectContent>
@@ -294,8 +289,8 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
             <div className="flex items-center gap-4">
               <div className="w-40 shrink-0" />
               <div className="flex items-center gap-2">
-                <Checkbox checked={requestable} onCheckedChange={(v) => setRequestable(v as boolean)} />
-                <span className="text-sm text-gray-700">Requestable</span>
+                <Checkbox id="requestable-checkbox" checked={requestable} onCheckedChange={(v) => setRequestable(!!v)} />
+                <label htmlFor="requestable-checkbox" className="text-sm text-gray-700">Requestable</label>
               </div>
             </div>
 
@@ -345,6 +340,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
             onChange={(f, v) => setOrderData(prev => ({ ...prev, [f]: v as string }))}
             expanded={orderExpanded}
             onToggle={() => setOrderExpanded(!orderExpanded)}
+            suppliers={suppliers}
           />
 
           <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">

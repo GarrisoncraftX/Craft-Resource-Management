@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 20, 2026 at 07:09 PM
+-- Generation Time: Feb 21, 2026 at 12:46 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -25,6 +25,18 @@ DELIMITER $$
 --
 -- Procedures
 --
+CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `add_index_if_missing` (IN `tbl` VARCHAR(128), IN `idx` VARCHAR(128), IN `ddl` TEXT)   BEGIN
+  DECLARE c INT DEFAULT 0;
+  SELECT COUNT(*) INTO c
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = tbl AND INDEX_NAME = idx;
+
+  IF c = 0 THEN
+    SET @sql = CONCAT('ALTER TABLE `', tbl, '` ', ddl, ';');
+    PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+  END IF;
+END$$
+
 CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `archive_old_audit_logs` (IN `days_to_keep` INT)   BEGIN
     DECLARE archive_date DATETIME;
     SET archive_date = DATE_SUB(NOW(), INTERVAL days_to_keep DAY);
@@ -66,6 +78,18 @@ CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `check_department_capacity`
     
     SET p_available_slots = max_count - current_count;
     SET p_at_capacity = (current_count >= max_count);
+END$$
+
+CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `ensure_auto_increment` (IN `tbl` VARCHAR(128), IN `col` VARCHAR(128))   BEGIN
+  DECLARE extra_txt VARCHAR(50);
+  SELECT EXTRA INTO extra_txt
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = tbl AND COLUMN_NAME = col;
+
+  IF extra_txt NOT LIKE '%auto_increment%' THEN
+    SET @sql = CONCAT('ALTER TABLE `', tbl, '` MODIFY `', col, '` INT(11) NOT NULL AUTO_INCREMENT;');
+    PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+  END IF;
 END$$
 
 CREATE DEFINER=`garrisonsayor`@`localhost` PROCEDURE `hr_create_employee` (IN `p_first_name` VARCHAR(50), IN `p_last_name` VARCHAR(50), IN `p_email` VARCHAR(100), IN `p_dob` DATE, IN `p_department_id` INT, IN `p_job_grade_id` INT, IN `p_role_id` INT, IN `p_hr_user_id` INT, OUT `p_employee_id` VARCHAR(20), OUT `p_success` BOOLEAN, OUT `p_message` VARCHAR(255))   BEGIN
@@ -205,20 +229,6 @@ CREATE DEFINER=`garrisonsayor`@`localhost` FUNCTION `generate_employee_id` (`p_d
 END$$
 
 DELIMITER ;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `access_rules`
---
-
-CREATE TABLE `access_rules` (
-  `id` bigint(20) NOT NULL,
-  `door` varchar(255) NOT NULL,
-  `role` varchar(255) NOT NULL,
-  `schedule` varchar(255) NOT NULL,
-  `status` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -563,7 +573,7 @@ CREATE TABLE `audit_logs` (
   `action` varchar(255) NOT NULL,
   `ip_address` varchar(45) DEFAULT NULL,
   `timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
-  `details` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`details`)),
+  `details` longtext DEFAULT NULL,
   `entity_id` varchar(100) DEFAULT NULL,
   `entity_type` varchar(50) DEFAULT NULL,
   `request_id` varchar(100) DEFAULT NULL,
@@ -580,49 +590,49 @@ CREATE TABLE `audit_logs` (
 
 INSERT INTO `audit_logs` (`id`, `user_id`, `action`, `ip_address`, `timestamp`, `details`, `entity_id`, `entity_type`, `request_id`, `result`, `service_name`, `session_id`, `user_name`, `performed_by`) VALUES
 (1, 1, 'Crafty Developer has signed in using password authentication', NULL, '2026-02-04 00:58:50', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Crafty Developer', ''),
-(2, 1, 'Dr. Enan Nyesheja has updated their profile information', NULL, '2026-02-04 03:01:20', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP001\",\"email\":\"garrisonsayor@gmail.com\"}', '1', 'USER', NULL, 'success', 'java-backend', NULL, 'Dr. Enan Nyesheja', ''),
+(2, 1, 'Crafty Developer has signed in using password authentication', NULL, '2026-02-04 00:58:50', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Crafty Developer', ''),
 (3, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:01:59', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
-(4, 2, 'Garrison Sayor has signed in using password authentication', NULL, '2026-02-04 01:03:05', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor', ''),
-(5, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:05:58', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
-(6, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:12:27', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
-(7, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:17:57', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(8, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:21:12', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(9, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:25:16', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(10, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:28:40', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
-(11, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:28:51', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
-(12, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:33:22', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
-(13, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:34:42', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
-(14, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:35:17', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(15, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:36:25', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
-(16, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:36:55', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
-(17, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:38:05', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
-(18, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 03:42:13', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(19, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 03:45:11', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(20, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 05:35:49', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(21, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 05:37:21', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(22, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 05:38:58', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(1, 1, 'Crafty Developer has signed in using password authentication', NULL, '2026-02-04 00:58:50', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Crafty Developer', ''),
-(2, 1, 'Dr. Enan Nyesheja has updated their profile information', NULL, '2026-02-04 03:01:20', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP001\",\"email\":\"garrisonsayor@gmail.com\"}', '1', 'USER', NULL, 'success', 'java-backend', NULL, 'Dr. Enan Nyesheja', ''),
-(3, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:01:59', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
-(4, 2, 'Garrison Sayor has signed in using password authentication', NULL, '2026-02-04 01:03:05', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor', ''),
-(5, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:05:58', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
-(6, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:12:27', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
-(7, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:17:57', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(8, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:21:12', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(9, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:25:16', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(10, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:28:40', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
-(11, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:28:51', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
-(12, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:33:22', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
-(13, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:34:42', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
-(14, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:35:17', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(15, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:36:25', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
-(16, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:36:55', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
-(17, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:38:05', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
-(18, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 03:42:13', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(19, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 03:45:11', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(20, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 05:35:49', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(21, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 05:37:21', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
-(22, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 05:38:58', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', '');
+(4, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:01:59', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
+(5, 2, 'Garrison Sayor has signed in using password authentication', NULL, '2026-02-04 01:03:05', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor', ''),
+(6, 2, 'Garrison Sayor has signed in using password authentication', NULL, '2026-02-04 01:03:05', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor', ''),
+(7, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:12:27', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
+(8, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:12:27', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
+(9, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:17:57', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(10, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:17:57', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(11, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:21:12', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(12, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:21:12', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(13, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:25:16', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(14, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:25:16', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(15, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:35:17', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(16, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 01:35:17', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(17, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:36:25', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
+(18, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:36:25', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
+(19, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:36:55', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
+(20, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:36:55', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
+(21, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:38:05', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
+(22, 1, 'Dr. Enan Nyesheja has signed in using password authentication', NULL, '2026-02-04 01:38:05', '{\"employeeId\":\"EMP001\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Dr. Enan Nyesheja', ''),
+(23, 1, 'Dr. Enan Nyesheja has updated their profile information', NULL, '2026-02-04 03:01:20', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP001\",\"email\":\"garrisonsayor@gmail.com\"}', '1', 'USER', NULL, 'success', 'java-backend', NULL, 'Dr. Enan Nyesheja', ''),
+(24, 1, 'Dr. Enan Nyesheja has updated their profile information', NULL, '2026-02-04 03:01:20', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP001\",\"email\":\"garrisonsayor@gmail.com\"}', '1', 'USER', NULL, 'success', 'java-backend', NULL, 'Dr. Enan Nyesheja', ''),
+(25, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:05:58', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
+(26, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:05:58', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
+(27, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:28:40', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
+(28, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:28:40', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
+(29, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:28:51', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
+(30, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:28:51', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
+(31, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:33:22', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
+(32, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:33:22', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
+(33, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:34:42', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
+(34, 2, 'Garrison Sayor III has updated their profile information', NULL, '2026-02-04 03:34:42', '{\"module\":\"user_management\",\"operation\":\"UPDATE\",\"employeeId\":\"EMP002\",\"email\":\"hr.head@craftresource.gov\"}', '2', 'USER', NULL, 'success', 'java-backend', NULL, 'Garrison Sayor III', ''),
+(35, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 03:42:13', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(36, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 03:42:13', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(37, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 03:45:11', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(38, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 03:45:11', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(39, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 05:35:49', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(40, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 05:35:49', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(41, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 05:37:21', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(42, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 05:37:21', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(43, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 05:38:58', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', ''),
+(44, 2, 'Garrison Sayor III has signed in using password authentication', NULL, '2026-02-04 05:38:58', '{\"employeeId\":\"EMP002\",\"method\":\"password\"}', NULL, NULL, NULL, 'success', 'nodejs-backend', NULL, 'Garrison Sayor III', '');
 
 -- --------------------------------------------------------
 
@@ -1989,49 +1999,31 @@ DELIMITER ;
 
 CREATE TABLE `departments` (
   `id` int(11) NOT NULL,
-  `name` varchar(100) NOT NULL,
+  `name` varchar(255) NOT NULL,
   `description` text DEFAULT NULL,
   `head_of_department` int(11) DEFAULT NULL,
-  `budget_allocation` decimal(15,2) DEFAULT 0.00,
+  `budget_allocation` decimal(15,2) DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `max_headcount` int(11) DEFAULT 50,
+  `max_headcount` int(11) DEFAULT NULL,
   `current_headcount` int(11) DEFAULT 0,
-  `company_id` bigint(20) DEFAULT NULL,
-  `location_id` bigint(20) DEFAULT NULL,
-  `manager_id` bigint(20) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `company_id` int(11) DEFAULT NULL,
+  `location_id` int(11) DEFAULT NULL,
+  `manager_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `departments`
 --
 
 INSERT INTO `departments` (`id`, `name`, `description`, `head_of_department`, `budget_allocation`, `is_active`, `created_at`, `updated_at`, `max_headcount`, `current_headcount`, `company_id`, `location_id`, `manager_id`) VALUES
-(1, 'Administration / Governance', 'Manages employee relations, recruitment, and HR policies', 2, 500000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 4, NULL, NULL, NULL),
-(2, 'Security (includes Reception)', 'Handles financial planning, accounting, and budget management', 3, 750000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 4, NULL, NULL, NULL),
-(3, 'Procurement', 'Manages IT infrastructure, software development, and technical support', 4, 1000000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 5, NULL, NULL, NULL),
-(4, 'Finance', 'Oversees daily operations and process management', 5, 800000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 3, NULL, NULL, NULL),
-(5, 'Human Resources', 'Handles legal matters, contracts, and compliance', NULL, 400000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 1, NULL, NULL, NULL),
-(6, 'ICT / Facilities', 'Manages purchasing, vendor relations, and supply chain', NULL, 600000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 1, NULL, NULL, NULL),
-(7, 'Asset Management', 'Tracks and maintains organizational assets', NULL, 300000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 1, NULL, NULL, NULL),
-(8, 'Public Relations', 'Manages public communications and media relations', NULL, 250000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(9, 'Planning & Development', 'Strategic planning and organizational development', NULL, 450000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(10, 'Transportation', 'Manages fleet and transportation services', NULL, 350000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(11, 'Health & Safety', 'Ensures workplace safety and health compliance', NULL, 200000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(12, 'Revenue & Tax', 'Handles revenue collection and tax management', NULL, 550000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(1, 'Administration / Governance', 'Manages employee relations, recruitment, and HR policies', 2, 500000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 4, NULL, NULL, NULL),
-(2, 'Security (includes Reception)', 'Handles financial planning, accounting, and budget management', 3, 750000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 4, NULL, NULL, NULL),
-(3, 'Procurement', 'Manages IT infrastructure, software development, and technical support', 4, 1000000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 5, NULL, NULL, NULL),
-(4, 'Finance', 'Oversees daily operations and process management', 5, 800000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 3, NULL, NULL, NULL),
-(5, 'Human Resources', 'Handles legal matters, contracts, and compliance', NULL, 400000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 1, NULL, NULL, NULL),
-(6, 'ICT / Facilities', 'Manages purchasing, vendor relations, and supply chain', NULL, 600000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 1, NULL, NULL, NULL),
-(7, 'Asset Management', 'Tracks and maintains organizational assets', NULL, 300000.00, 1, '2025-07-07 13:16:00', '2026-02-20 00:13:04', 50, 1, NULL, NULL, NULL),
-(8, 'Public Relations', 'Manages public communications and media relations', NULL, 250000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(9, 'Planning & Development', 'Strategic planning and organizational development', NULL, 450000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(10, 'Transportation', 'Manages fleet and transportation services', NULL, 350000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(11, 'Health & Safety', 'Ensures workplace safety and health compliance', NULL, 200000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL),
-(12, 'Revenue & Tax', 'Handles revenue collection and tax management', NULL, 550000.00, 1, '2025-07-07 13:16:00', '2025-07-07 13:16:00', 50, 0, NULL, NULL, NULL);
+(1, 'Administration', 'Admin functions', 2, 500000.00, 1, '2025-07-07 13:16:00', '2026-02-20 21:35:56', 50, 4, NULL, NULL, NULL),
+(2, 'Security', 'Security operations including reception and visitor management', 3, 750000.00, 1, '2025-07-07 13:16:00', '2026-02-20 21:35:56', 50, 4, NULL, NULL, NULL),
+(3, 'Procurement', 'Procurement and vendor management', 4, 1000000.00, 1, '2025-07-07 13:16:00', '2026-02-20 21:35:56', 50, 5, NULL, NULL, NULL),
+(4, 'Finance', 'Financial management and accounting', 5, 800000.00, 1, '2025-07-07 13:16:00', '2026-02-20 21:35:56', 50, 3, NULL, NULL, NULL),
+(5, 'Human Resources', 'Employee management and HR operations', NULL, 400000.00, 1, '2025-07-07 13:16:00', '2026-02-20 21:35:56', 50, 1, NULL, NULL, NULL),
+(6, 'Assets Management', 'IT infrastructure and asset management', NULL, 600000.00, 1, '2025-07-07 13:16:00', '2026-02-20 21:35:56', 50, 1, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -3225,7 +3217,7 @@ CREATE TABLE `performance_reviews` (
 --
 
 CREATE TABLE `permissions` (
-  `id` int(11) NOT NULL,
+  `id` bigint(20) NOT NULL,
   `name` varchar(255) NOT NULL,
   `description` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -3235,88 +3227,103 @@ CREATE TABLE `permissions` (
 --
 
 INSERT INTO `permissions` (`id`, `name`, `description`) VALUES
-(1, 'user.create', 'Create new users'),
-(2, 'user.read', 'View user information'),
-(3, 'user.update', 'Update user information'),
-(4, 'user.delete', 'Delete users'),
-(5, 'user.manage_roles', 'Assign roles to users'),
-(6, 'attendance.view_own', 'View own attendance records'),
-(7, 'attendance.view_department', 'View department attendance records'),
-(8, 'attendance.view_all', 'View all attendance records'),
-(9, 'attendance.manage', 'Manage attendance records'),
-(10, 'attendance.approve', 'Approve attendance modifications'),
-(11, 'leave.request', 'Submit leave requests'),
-(12, 'leave.view_own', 'View own leave requests'),
-(13, 'leave.view_department', 'View department leave requests'),
-(14, 'leave.approve', 'Approve leave requests'),
-(15, 'leave.view_statistics', 'View leave statistics'),
-(16, 'finance.view_dashboard', 'View finance dashboard'),
-(17, 'finance.manage_accounts', 'Manage chart of accounts'),
-(18, 'finance.manage_budgets', 'Manage budgets'),
-(19, 'finance.approve_budgets', 'Approve budgets'),
-(20, 'finance.manage_journal', 'Manage journal entries'),
-(21, 'finance.view_reports', 'View financial reports'),
-(22, 'procurement.request', 'Submit procurement requests'),
-(23, 'procurement.view', 'View procurement requests'),
-(24, 'procurement.approve', 'Approve procurement requests'),
-(25, 'procurement.manage', 'Manage procurement system'),
-(26, 'procurement.view_statistics', 'View procurement statistics'),
-(27, 'asset.view', 'View assets'),
-(28, 'asset.create', 'Create new assets'),
-(29, 'asset.update', 'Update asset information'),
-(30, 'asset.delete', 'Delete assets'),
-(31, 'asset.assign', 'Assign assets to users'),
-(35, 'reports.view', 'View reports'),
-(36, 'reports.generate', 'Generate reports'),
-(37, 'reports.manage', 'Manage report templates'),
-(38, 'analytics.view', 'View analytics dashboard'),
-(39, 'system.settings', 'Manage system settings'),
-(40, 'system.audit', 'View audit logs'),
-(41, 'system.backup', 'Perform system backups'),
-(0, 'admin.all', 'Full admin access'),
-(0, 'admin.users.create', 'Create users'),
-(0, 'admin.users.read', 'View users'),
-(0, 'admin.users.update', 'Update users'),
-(0, 'admin.users.delete', 'Delete users'),
-(0, 'security.incidents.create', 'Create security incidents'),
-(0, 'security.incidents.read', 'View security incidents'),
-(0, 'security.incidents.update', 'Update security incidents'),
-(0, 'security.incidents.approve', 'Approve security incidents'),
-(0, 'security.sop.read', 'View SOPs'),
-(0, 'security.logs.create', 'Create entry logs'),
-(0, 'security.logs.read', 'View entry logs'),
-(0, 'security.visitors.create', 'Register visitors'),
-(0, 'security.visitors.read', 'View visitors'),
-(0, 'security.visitors.update', 'Update visitor records'),
-(0, 'procurement.requisitions.create', 'Create requisitions'),
-(0, 'procurement.requisitions.read', 'View requisitions'),
-(0, 'procurement.requisitions.update', 'Update requisitions'),
-(0, 'procurement.vendors.create', 'Create vendors'),
-(0, 'procurement.vendors.read', 'View vendors'),
-(0, 'procurement.vendors.update', 'Update vendors'),
-(0, 'procurement.tenders.read', 'View tenders'),
-(0, 'procurement.contracts.read', 'View contracts'),
-(0, 'assets.create', 'Create assets'),
-(0, 'assets.read', 'View assets'),
-(0, 'assets.update', 'Update assets'),
-(0, 'assets.assign', 'Assign assets'),
-(0, 'assets.own.read', 'View own assigned assets'),
-(0, 'hr.employees.create', 'Create employee records'),
-(0, 'hr.employees.read', 'View employee records'),
-(0, 'hr.employees.update', 'Update employee records'),
-(0, 'hr.leave.create', 'Create leave requests'),
-(0, 'hr.leave.read', 'View leave requests'),
-(0, 'hr.leave.update', 'Update leave requests'),
-(0, 'hr.leave.approve', 'Approve leave requests'),
-(0, 'hr.policies.read', 'View HR policies'),
-(0, 'hr.self.read', 'View own profile'),
-(0, 'hr.self.update', 'Update own profile'),
-(0, 'finance.expenses.create', 'Create expenses'),
-(0, 'finance.expenses.read', 'View expenses'),
-(0, 'finance.expenses.update', 'Update expenses'),
-(0, 'finance.transactions.create', 'Create transactions'),
-(0, 'finance.transactions.read', 'View transactions'),
-(0, 'finance.reports.read', 'View financial reports');
+(1, 'admin.all', 'Full admin access'),
+(2, 'admin.users.create', 'Create users'),
+(3, 'admin.users.delete', 'Delete users'),
+(4, 'admin.users.read', 'View users'),
+(5, 'admin.users.update', 'Update users'),
+(6, 'analytics.view', 'View analytics dashboard'),
+(7, 'asset.assign', 'Assign assets to users'),
+(8, 'asset.create', 'Create new assets'),
+(9, 'asset.delete', 'Delete assets'),
+(10, 'asset.update', 'Update asset information'),
+(11, 'asset.view', 'View assets'),
+(12, 'assets.approve', 'Approve asset actions'),
+(13, 'assets.assign', 'Assign assets'),
+(14, 'assets.checkin', 'Check-in assets'),
+(15, 'assets.checkout', 'Check-out / assign assets'),
+(16, 'assets.create', 'Create assets/items'),
+(17, 'assets.dispose', 'Dispose / retire assets'),
+(18, 'assets.maintain', 'Manage maintenance'),
+(19, 'assets.own.read', 'View own assigned assets'),
+(20, 'assets.read', 'View assets'),
+(21, 'assets.update', 'Update assets/items'),
+(22, 'assets.view', 'View assets and inventory'),
+(23, 'attendance.approve', 'Approve attendance modifications'),
+(24, 'attendance.manage', 'Manage attendance records'),
+(25, 'attendance.view_all', 'View all attendance records'),
+(26, 'attendance.view_department', 'View department attendance records'),
+(27, 'attendance.view_own', 'View own attendance records'),
+(28, 'audit.export', 'Export audit trails'),
+(29, 'audit.view', 'View audit dashboard'),
+(30, 'audit.view_all', 'View all module activity logs'),
+(31, 'finance.approve_budgets', 'Approve budgets'),
+(32, 'finance.expenses.create', 'Create expenses'),
+(33, 'finance.expenses.read', 'View expenses'),
+(34, 'finance.expenses.update', 'Update expenses'),
+(35, 'finance.manage_accounts', 'Manage chart of accounts'),
+(36, 'finance.manage_budgets', 'Manage budgets'),
+(37, 'finance.manage_journal', 'Manage journal entries'),
+(38, 'finance.reports.read', 'View financial reports'),
+(39, 'finance.transactions.create', 'Create transactions'),
+(40, 'finance.transactions.read', 'View transactions'),
+(41, 'finance.view_dashboard', 'View finance dashboard'),
+(42, 'finance.view_reports', 'View financial reports'),
+(43, 'hr.employees.create', 'Create employee records'),
+(44, 'hr.employees.read', 'View employee records'),
+(45, 'hr.employees.update', 'Update employee records'),
+(46, 'hr.leave.approve', 'Approve leave requests'),
+(47, 'hr.leave.create', 'Create leave requests'),
+(48, 'hr.leave.read', 'View leave requests'),
+(49, 'hr.leave.update', 'Update leave requests'),
+(50, 'hr.policies.read', 'View HR policies'),
+(51, 'hr.self.read', 'View own profile'),
+(52, 'hr.self.update', 'Update own profile'),
+(53, 'leave.approve', 'Approve leave requests'),
+(54, 'leave.request', 'Submit leave requests'),
+(55, 'leave.view_department', 'View department leave requests'),
+(56, 'leave.view_own', 'View own leave requests'),
+(57, 'leave.view_statistics', 'View leave statistics'),
+(58, 'procurement.approve', 'Approve procurement requests'),
+(59, 'procurement.contracts.read', 'View contracts'),
+(60, 'procurement.manage', 'Manage procurement system'),
+(61, 'procurement.request', 'Submit procurement requests'),
+(62, 'procurement.requisitions.create', 'Create requisitions'),
+(63, 'procurement.requisitions.read', 'View requisitions'),
+(64, 'procurement.requisitions.update', 'Update requisitions'),
+(65, 'procurement.tenders.read', 'View tenders'),
+(66, 'procurement.vendors.create', 'Create vendors'),
+(67, 'procurement.vendors.read', 'View vendors'),
+(68, 'procurement.vendors.update', 'Update vendors'),
+(69, 'procurement.view', 'View procurement requests'),
+(70, 'procurement.view_statistics', 'View procurement statistics'),
+(71, 'reports.generate', 'Generate reports'),
+(72, 'reports.manage', 'Manage report templates'),
+(73, 'reports.view', 'View reports'),
+(74, 'security.entry.log', 'Log gate/entry scans'),
+(75, 'security.incident.create', 'Create incidents'),
+(76, 'security.incident.manage', 'Manage incidents'),
+(77, 'security.incidents.approve', 'Approve security incidents'),
+(78, 'security.incidents.create', 'Create security incidents'),
+(79, 'security.incidents.read', 'View security incidents'),
+(80, 'security.incidents.update', 'Update security incidents'),
+(81, 'security.logs.create', 'Create entry logs'),
+(82, 'security.logs.read', 'View entry logs'),
+(83, 'security.sop.manage', 'Manage SOP documents'),
+(84, 'security.sop.read', 'View SOPs'),
+(85, 'security.visit.approve', 'Approve visitor access'),
+(86, 'security.visit.register', 'Register visitors'),
+(87, 'security.visitors.create', 'Register visitors'),
+(88, 'security.visitors.read', 'View visitors'),
+(89, 'security.visitors.update', 'Update visitor records'),
+(90, 'system.audit', 'View audit logs'),
+(91, 'system.backup', 'Perform system backups'),
+(92, 'system.settings', 'Manage system settings'),
+(93, 'user.create', 'Create new users'),
+(94, 'user.delete', 'Delete users'),
+(95, 'user.manage_roles', 'Assign roles to users'),
+(96, 'user.read', 'View user information'),
+(97, 'user.update', 'Update user information');
 
 -- --------------------------------------------------------
 
@@ -3472,7 +3479,8 @@ INSERT INTO `roles` (`id`, `name`, `description`) VALUES
 (9, 'Finance Officer', 'Finance officer with transaction processing'),
 (10, 'HR Manager', 'HR manager with employee approval authority'),
 (11, 'HR Officer', 'HR officer with employee record management'),
-(12, 'Asset Manager', 'Asset manager with disposal approval authority');
+(12, 'Asset Manager', 'Asset manager with disposal approval authority'),
+(13, 'Employee', 'Standard employee access (self-service and limited module actions)');
 
 -- --------------------------------------------------------
 
@@ -3493,340 +3501,85 @@ CREATE TABLE `role_permissions` (
 --
 
 INSERT INTO `role_permissions` (`id`, `role_id`, `permission_id`, `granted_at`, `granted_by`) VALUES
-(1, 1, 1, '2025-07-07 13:16:00', NULL),
-(2, 1, 2, '2025-07-07 13:16:00', NULL),
-(3, 1, 3, '2025-07-07 13:16:00', NULL),
-(4, 1, 4, '2025-07-07 13:16:00', NULL),
-(5, 1, 5, '2025-07-07 13:16:00', NULL),
-(6, 1, 6, '2025-07-07 13:16:00', NULL),
-(7, 1, 7, '2025-07-07 13:16:00', NULL),
-(8, 1, 8, '2025-07-07 13:16:00', NULL),
-(9, 1, 9, '2025-07-07 13:16:00', NULL),
-(10, 1, 10, '2025-07-07 13:16:00', NULL),
-(11, 1, 11, '2025-07-07 13:16:00', NULL),
-(12, 1, 12, '2025-07-07 13:16:00', NULL),
-(13, 1, 13, '2025-07-07 13:16:00', NULL),
-(14, 1, 14, '2025-07-07 13:16:00', NULL),
-(15, 1, 15, '2025-07-07 13:16:00', NULL),
-(16, 1, 16, '2025-07-07 13:16:00', NULL),
-(17, 1, 17, '2025-07-07 13:16:00', NULL),
-(18, 1, 18, '2025-07-07 13:16:00', NULL),
-(19, 1, 19, '2025-07-07 13:16:00', NULL),
-(20, 1, 20, '2025-07-07 13:16:00', NULL),
-(21, 1, 21, '2025-07-07 13:16:00', NULL),
-(22, 1, 22, '2025-07-07 13:16:00', NULL),
-(23, 1, 23, '2025-07-07 13:16:00', NULL),
-(24, 1, 24, '2025-07-07 13:16:00', NULL),
-(25, 13, 17, '2025-07-07 13:16:00', NULL),
-(26, 1, 26, '2025-07-07 13:16:00', NULL),
-(27, 1, 27, '2025-07-07 13:16:00', NULL),
-(28, 1, 28, '2025-07-07 13:16:00', NULL),
-(29, 1, 29, '2025-07-07 13:16:00', NULL),
-(30, 1, 30, '2025-07-07 13:16:00', NULL),
-(31, 1, 31, '2025-07-07 13:16:00', NULL),
-(35, 1, 35, '2025-07-07 13:16:00', NULL),
-(36, 1, 36, '2025-07-07 13:16:00', NULL),
-(37, 1, 37, '2025-07-07 13:16:00', NULL),
-(38, 1, 38, '2025-07-07 13:16:00', NULL),
-(39, 1, 39, '2025-07-07 13:16:00', NULL),
-(40, 1, 40, '2025-07-07 13:16:00', NULL),
-(41, 1, 41, '2025-07-07 13:16:00', NULL),
-(42, 2, 2, '2025-07-07 13:16:00', NULL),
-(43, 2, 3, '2025-07-07 13:16:00', NULL),
-(44, 2, 7, '2025-07-07 13:16:00', NULL),
-(45, 2, 9, '2025-07-07 13:16:00', NULL),
-(46, 2, 10, '2025-07-07 13:16:00', NULL),
-(47, 2, 13, '2025-07-07 13:16:00', NULL),
-(48, 2, 14, '2025-07-07 13:16:00', NULL),
-(49, 2, 16, '2025-07-07 13:16:00', NULL),
-(50, 2, 21, '2025-07-07 13:16:00', NULL),
-(51, 2, 23, '2025-07-07 13:16:00', NULL),
-(52, 2, 24, '2025-07-07 13:16:00', NULL),
-(53, 2, 27, '2025-07-07 13:16:00', NULL),
-(54, 2, 29, '2025-07-07 13:16:00', NULL),
-(55, 2, 31, '2025-07-07 13:16:00', NULL),
-(56, 2, 35, '2025-07-07 13:16:00', NULL),
-(57, 2, 36, '2025-07-07 13:16:00', NULL),
-(58, 2, 38, '2025-07-07 13:16:00', NULL),
-(59, 3, 2, '2025-07-07 13:16:00', NULL),
-(60, 3, 7, '2025-07-07 13:16:00', NULL),
-(61, 3, 9, '2025-07-07 13:16:00', NULL),
-(62, 3, 13, '2025-07-07 13:16:00', NULL),
-(63, 3, 14, '2025-07-07 13:16:00', NULL),
-(64, 3, 16, '2025-07-07 13:16:00', NULL),
-(65, 3, 23, '2025-07-07 13:16:00', NULL),
-(66, 3, 24, '2025-07-07 13:16:00', NULL),
-(67, 3, 27, '2025-07-07 13:16:00', NULL),
-(68, 3, 29, '2025-07-07 13:16:00', NULL),
-(69, 3, 35, '2025-07-07 13:16:00', NULL),
-(70, 3, 36, '2025-07-07 13:16:00', NULL),
-(71, 5, 6, '2025-07-07 13:16:00', NULL),
-(72, 5, 11, '2025-07-07 13:16:00', NULL),
-(73, 5, 12, '2025-07-07 13:16:00', NULL),
-(74, 5, 22, '2025-07-07 13:16:00', NULL),
-(75, 5, 27, '2025-07-07 13:16:00', NULL),
-(78, 14, 1, '2025-07-15 15:32:26', NULL),
-(79, 14, 2, '2025-07-15 15:32:26', NULL),
-(80, 14, 3, '2025-07-15 15:32:26', NULL),
-(81, 14, 4, '2025-07-15 15:32:26', NULL),
-(82, 14, 5, '2025-07-15 15:32:26', NULL),
-(83, 14, 6, '2025-07-15 15:32:26', NULL),
-(84, 14, 7, '2025-07-15 15:32:26', NULL),
-(85, 14, 8, '2025-07-15 15:32:26', NULL),
-(86, 14, 9, '2025-07-15 15:32:26', NULL),
-(87, 14, 10, '2025-07-15 15:32:26', NULL),
-(88, 14, 11, '2025-07-15 15:32:26', NULL),
-(89, 14, 12, '2025-07-15 15:32:26', NULL),
-(90, 14, 13, '2025-07-15 15:32:26', NULL),
-(91, 14, 14, '2025-07-15 15:32:26', NULL),
-(92, 14, 15, '2025-07-15 15:32:26', NULL),
-(93, 14, 16, '2025-07-15 15:32:26', NULL),
-(94, 14, 17, '2025-07-15 15:32:26', NULL),
-(95, 14, 18, '2025-07-15 15:32:26', NULL),
-(96, 14, 19, '2025-07-15 15:32:26', NULL),
-(97, 14, 20, '2025-07-15 15:32:26', NULL),
-(98, 14, 21, '2025-07-15 15:32:26', NULL),
-(99, 14, 22, '2025-07-15 15:32:26', NULL),
-(100, 14, 23, '2025-07-15 15:32:26', NULL),
-(101, 14, 24, '2025-07-15 15:32:26', NULL),
-(102, 14, 25, '2025-07-15 15:32:26', NULL),
-(103, 14, 26, '2025-07-15 15:32:26', NULL),
-(104, 14, 27, '2025-07-15 15:32:26', NULL),
-(105, 14, 28, '2025-07-15 15:32:26', NULL),
-(106, 14, 29, '2025-07-15 15:32:26', NULL),
-(107, 14, 30, '2025-07-15 15:32:26', NULL),
-(108, 14, 31, '2025-07-15 15:32:26', NULL),
-(112, 14, 35, '2025-07-15 15:32:26', NULL),
-(113, 14, 36, '2025-07-15 15:32:26', NULL),
-(114, 14, 37, '2025-07-15 15:32:26', NULL),
-(115, 14, 38, '2025-07-15 15:32:26', NULL),
-(116, 14, 39, '2025-07-15 15:32:26', NULL),
-(117, 14, 40, '2025-07-15 15:32:26', NULL),
-(118, 14, 41, '2025-07-15 15:32:26', NULL),
-(119, 5, 17, '2025-07-16 11:23:28', NULL),
-(120, 5, 16, '2025-07-16 11:23:28', NULL),
-(121, 15, 1, '2025-09-10 15:27:17', NULL),
-(122, 15, 2, '2025-09-10 15:27:17', NULL),
-(123, 15, 3, '2025-09-10 15:27:17', NULL),
-(124, 15, 4, '2025-09-10 15:27:17', NULL),
-(125, 15, 5, '2025-09-10 15:27:17', NULL),
-(126, 15, 6, '2025-09-10 15:27:17', NULL),
-(127, 15, 7, '2025-09-10 15:27:17', NULL),
-(128, 15, 8, '2025-09-10 15:27:17', NULL),
-(129, 15, 9, '2025-09-10 15:27:17', NULL),
-(130, 15, 10, '2025-09-10 15:27:17', NULL),
-(131, 15, 11, '2025-09-10 15:27:17', NULL),
-(132, 15, 12, '2025-09-10 15:27:17', NULL),
-(133, 15, 13, '2025-09-10 15:27:17', NULL),
-(134, 15, 14, '2025-09-10 15:27:17', NULL),
-(135, 15, 15, '2025-09-10 15:27:17', NULL),
-(136, 15, 16, '2025-09-10 15:27:17', NULL),
-(137, 15, 17, '2025-09-10 15:27:17', NULL),
-(138, 15, 18, '2025-09-10 15:27:17', NULL),
-(139, 15, 19, '2025-09-10 15:27:17', NULL),
-(140, 15, 20, '2025-09-10 15:27:17', NULL),
-(141, 15, 21, '2025-09-10 15:27:17', NULL),
-(142, 15, 22, '2025-09-10 15:27:17', NULL),
-(143, 15, 23, '2025-09-10 15:27:17', NULL),
-(144, 15, 24, '2025-09-10 15:27:17', NULL),
-(145, 15, 25, '2025-09-10 15:27:17', NULL),
-(146, 15, 26, '2025-09-10 15:27:17', NULL),
-(147, 15, 27, '2025-09-10 15:27:17', NULL),
-(148, 15, 28, '2025-09-10 15:27:17', NULL),
-(149, 15, 29, '2025-09-10 15:27:17', NULL),
-(150, 15, 30, '2025-09-10 15:27:17', NULL),
-(151, 15, 31, '2025-09-10 15:27:17', NULL),
-(155, 15, 35, '2025-09-10 15:27:17', NULL),
-(156, 15, 36, '2025-09-10 15:27:17', NULL),
-(157, 15, 37, '2025-09-10 15:27:17', NULL),
-(158, 15, 38, '2025-09-10 15:27:17', NULL),
-(159, 15, 39, '2025-09-10 15:27:17', NULL),
-(160, 15, 40, '2025-09-10 15:27:17', NULL),
-(161, 15, 41, '2025-09-10 15:27:17', NULL),
-(0, 1, 1, '2026-02-20 00:13:03', NULL),
-(0, 1, 2, '2026-02-20 00:13:03', NULL),
-(0, 1, 3, '2026-02-20 00:13:03', NULL),
-(0, 1, 4, '2026-02-20 00:13:03', NULL),
-(0, 1, 5, '2026-02-20 00:13:03', NULL),
-(0, 1, 6, '2026-02-20 00:13:03', NULL),
-(0, 1, 7, '2026-02-20 00:13:03', NULL),
-(0, 1, 8, '2026-02-20 00:13:03', NULL),
-(0, 1, 9, '2026-02-20 00:13:03', NULL),
-(0, 1, 10, '2026-02-20 00:13:03', NULL),
-(0, 1, 11, '2026-02-20 00:13:03', NULL),
-(0, 1, 12, '2026-02-20 00:13:03', NULL),
-(0, 1, 13, '2026-02-20 00:13:03', NULL),
-(0, 1, 14, '2026-02-20 00:13:03', NULL),
-(0, 1, 15, '2026-02-20 00:13:03', NULL),
-(0, 1, 16, '2026-02-20 00:13:03', NULL),
-(0, 1, 17, '2026-02-20 00:13:03', NULL),
-(0, 1, 18, '2026-02-20 00:13:03', NULL),
-(0, 1, 19, '2026-02-20 00:13:03', NULL),
-(0, 1, 20, '2026-02-20 00:13:03', NULL),
-(0, 1, 21, '2026-02-20 00:13:03', NULL),
-(0, 1, 22, '2026-02-20 00:13:03', NULL),
-(0, 1, 23, '2026-02-20 00:13:03', NULL),
-(0, 1, 24, '2026-02-20 00:13:03', NULL),
-(0, 1, 25, '2026-02-20 00:13:03', NULL),
-(0, 1, 26, '2026-02-20 00:13:03', NULL),
-(0, 1, 27, '2026-02-20 00:13:03', NULL),
-(0, 1, 28, '2026-02-20 00:13:03', NULL),
-(0, 1, 29, '2026-02-20 00:13:03', NULL),
-(0, 1, 30, '2026-02-20 00:13:03', NULL),
-(0, 1, 31, '2026-02-20 00:13:03', NULL),
-(0, 1, 35, '2026-02-20 00:13:03', NULL),
-(0, 1, 36, '2026-02-20 00:13:03', NULL),
-(0, 1, 37, '2026-02-20 00:13:03', NULL),
-(0, 1, 38, '2026-02-20 00:13:03', NULL),
-(0, 1, 39, '2026-02-20 00:13:03', NULL),
-(0, 1, 40, '2026-02-20 00:13:03', NULL),
-(0, 1, 41, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 1, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 2, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 2, 0, '2026-02-20 00:13:03', NULL),
-(0, 3, 0, '2026-02-20 00:13:03', NULL),
-(0, 3, 0, '2026-02-20 00:13:03', NULL),
-(0, 3, 0, '2026-02-20 00:13:03', NULL),
-(0, 3, 0, '2026-02-20 00:13:03', NULL),
-(0, 3, 0, '2026-02-20 00:13:03', NULL),
-(0, 3, 0, '2026-02-20 00:13:03', NULL),
-(0, 3, 0, '2026-02-20 00:13:03', NULL),
-(0, 4, 0, '2026-02-20 00:13:04', NULL),
-(0, 4, 0, '2026-02-20 00:13:04', NULL),
-(0, 4, 0, '2026-02-20 00:13:04', NULL),
-(0, 4, 0, '2026-02-20 00:13:04', NULL),
-(0, 5, 0, '2026-02-20 00:13:04', NULL),
-(0, 5, 0, '2026-02-20 00:13:04', NULL),
-(0, 5, 0, '2026-02-20 00:13:04', NULL),
-(0, 6, 22, '2026-02-20 00:13:04', NULL),
-(0, 6, 23, '2026-02-20 00:13:04', NULL),
-(0, 6, 24, '2026-02-20 00:13:04', NULL),
-(0, 6, 25, '2026-02-20 00:13:04', NULL),
-(0, 6, 26, '2026-02-20 00:13:04', NULL),
-(0, 6, 0, '2026-02-20 00:13:04', NULL),
-(0, 6, 0, '2026-02-20 00:13:04', NULL),
-(0, 6, 0, '2026-02-20 00:13:04', NULL),
-(0, 6, 0, '2026-02-20 00:13:04', NULL),
-(0, 6, 0, '2026-02-20 00:13:04', NULL),
-(0, 6, 0, '2026-02-20 00:13:04', NULL),
-(0, 6, 0, '2026-02-20 00:13:04', NULL),
-(0, 6, 0, '2026-02-20 00:13:04', NULL),
-(0, 7, 0, '2026-02-20 00:13:04', NULL),
-(0, 7, 0, '2026-02-20 00:13:04', NULL),
-(0, 7, 0, '2026-02-20 00:13:04', NULL),
-(0, 7, 0, '2026-02-20 00:13:04', NULL),
-(0, 7, 0, '2026-02-20 00:13:04', NULL),
-(0, 7, 0, '2026-02-20 00:13:04', NULL),
-(0, 7, 0, '2026-02-20 00:13:04', NULL),
-(0, 8, 16, '2026-02-20 00:13:04', NULL),
-(0, 8, 17, '2026-02-20 00:13:04', NULL),
-(0, 8, 18, '2026-02-20 00:13:04', NULL),
-(0, 8, 19, '2026-02-20 00:13:04', NULL),
-(0, 8, 20, '2026-02-20 00:13:04', NULL),
-(0, 8, 21, '2026-02-20 00:13:04', NULL),
-(0, 8, 0, '2026-02-20 00:13:04', NULL),
-(0, 8, 0, '2026-02-20 00:13:04', NULL),
-(0, 8, 0, '2026-02-20 00:13:04', NULL),
-(0, 8, 0, '2026-02-20 00:13:04', NULL),
-(0, 8, 0, '2026-02-20 00:13:04', NULL),
-(0, 8, 0, '2026-02-20 00:13:04', NULL),
-(0, 8, 0, '2026-02-20 00:13:04', NULL),
-(0, 9, 0, '2026-02-20 00:13:04', NULL),
-(0, 9, 0, '2026-02-20 00:13:04', NULL),
-(0, 9, 0, '2026-02-20 00:13:04', NULL),
-(0, 9, 0, '2026-02-20 00:13:04', NULL),
-(0, 9, 0, '2026-02-20 00:13:04', NULL),
-(0, 9, 0, '2026-02-20 00:13:04', NULL),
-(0, 10, 0, '2026-02-20 00:13:04', NULL),
-(0, 10, 0, '2026-02-20 00:13:04', NULL),
-(0, 10, 0, '2026-02-20 00:13:04', NULL),
-(0, 10, 0, '2026-02-20 00:13:04', NULL),
-(0, 10, 0, '2026-02-20 00:13:04', NULL),
-(0, 10, 0, '2026-02-20 00:13:04', NULL),
-(0, 10, 0, '2026-02-20 00:13:04', NULL),
-(0, 10, 0, '2026-02-20 00:13:04', NULL),
-(0, 10, 0, '2026-02-20 00:13:04', NULL),
-(0, 10, 0, '2026-02-20 00:13:04', NULL),
-(0, 10, 0, '2026-02-20 00:13:04', NULL),
-(0, 11, 0, '2026-02-20 00:13:04', NULL),
-(0, 11, 0, '2026-02-20 00:13:04', NULL),
-(0, 11, 0, '2026-02-20 00:13:04', NULL),
-(0, 11, 0, '2026-02-20 00:13:04', NULL),
-(0, 11, 0, '2026-02-20 00:13:04', NULL),
-(0, 11, 0, '2026-02-20 00:13:04', NULL),
-(0, 12, 0, '2026-02-20 00:13:04', NULL),
-(0, 12, 0, '2026-02-20 00:13:04', NULL),
-(0, 12, 0, '2026-02-20 00:13:04', NULL),
-(0, 12, 0, '2026-02-20 00:13:04', NULL),
-(0, 12, 0, '2026-02-20 00:13:04', NULL),
-(0, 13, 0, '2026-02-20 00:13:04', NULL),
-(0, 13, 0, '2026-02-20 00:13:04', NULL),
-(0, 13, 0, '2026-02-20 00:13:04', NULL),
-(0, 13, 0, '2026-02-20 00:13:04', NULL),
-(0, 14, 0, '2026-02-20 00:13:04', NULL),
-(0, 14, 0, '2026-02-20 00:13:04', NULL),
-(0, 14, 0, '2026-02-20 00:13:04', NULL),
-(0, 14, 0, '2026-02-20 00:13:04', NULL);
+(0, 1, 0, '2026-02-20 21:17:34', NULL),
+(0, 1, 1, '2026-02-20 21:17:34', NULL),
+(0, 1, 2, '2026-02-20 21:17:34', NULL),
+(0, 1, 3, '2026-02-20 21:17:34', NULL),
+(0, 1, 4, '2026-02-20 21:17:34', NULL),
+(0, 1, 5, '2026-02-20 21:17:34', NULL),
+(0, 1, 6, '2026-02-20 21:17:34', NULL),
+(0, 1, 7, '2026-02-20 21:17:34', NULL),
+(0, 1, 8, '2026-02-20 21:17:34', NULL),
+(0, 1, 9, '2026-02-20 21:17:34', NULL),
+(0, 1, 10, '2026-02-20 21:17:34', NULL),
+(0, 1, 11, '2026-02-20 21:17:34', NULL),
+(0, 1, 12, '2026-02-20 21:17:34', NULL),
+(0, 1, 13, '2026-02-20 21:17:34', NULL),
+(0, 1, 14, '2026-02-20 21:17:34', NULL),
+(0, 1, 15, '2026-02-20 21:17:34', NULL),
+(0, 1, 16, '2026-02-20 21:17:34', NULL),
+(0, 1, 17, '2026-02-20 21:17:34', NULL),
+(0, 1, 18, '2026-02-20 21:17:34', NULL),
+(0, 1, 19, '2026-02-20 21:17:34', NULL),
+(0, 1, 20, '2026-02-20 21:17:34', NULL),
+(0, 1, 21, '2026-02-20 21:17:34', NULL),
+(0, 1, 22, '2026-02-20 21:17:34', NULL),
+(0, 1, 23, '2026-02-20 21:17:34', NULL),
+(0, 1, 24, '2026-02-20 21:17:34', NULL),
+(0, 1, 25, '2026-02-20 21:17:34', NULL),
+(0, 1, 26, '2026-02-20 21:17:34', NULL),
+(0, 2, 0, '2026-02-20 21:17:34', NULL),
+(0, 2, 8, '2026-02-20 21:17:34', NULL),
+(0, 2, 15, '2026-02-20 21:17:34', NULL),
+(0, 2, 16, '2026-02-20 21:17:34', NULL),
+(0, 2, 21, '2026-02-20 21:17:34', NULL),
+(0, 2, 23, '2026-02-20 21:17:34', NULL),
+(0, 3, 0, '2026-02-20 21:17:34', NULL),
+(0, 3, 8, '2026-02-20 21:17:34', NULL),
+(0, 3, 9, '2026-02-20 21:17:34', NULL),
+(0, 3, 10, '2026-02-20 21:17:34', NULL),
+(0, 4, 0, '2026-02-20 21:17:34', NULL),
+(0, 4, 7, '2026-02-20 21:17:34', NULL),
+(0, 4, 9, '2026-02-20 21:17:34', NULL),
+(0, 5, 0, '2026-02-20 21:17:34', NULL),
+(0, 5, 23, '2026-02-20 21:17:34', NULL),
+(0, 6, 22, '2026-02-20 21:17:34', NULL),
+(0, 6, 23, '2026-02-20 21:17:34', NULL),
+(0, 6, 24, '2026-02-20 21:17:34', NULL),
+(0, 6, 25, '2026-02-20 21:17:34', NULL),
+(0, 7, 22, '2026-02-20 21:17:34', NULL),
+(0, 7, 23, '2026-02-20 21:17:34', NULL),
+(0, 7, 25, '2026-02-20 21:17:34', NULL),
+(0, 8, 16, '2026-02-20 21:17:34', NULL),
+(0, 8, 17, '2026-02-20 21:17:34', NULL),
+(0, 8, 18, '2026-02-20 21:17:34', NULL),
+(0, 8, 19, '2026-02-20 21:17:34', NULL),
+(0, 8, 20, '2026-02-20 21:17:34', NULL),
+(0, 8, 21, '2026-02-20 21:17:34', NULL),
+(0, 9, 16, '2026-02-20 21:17:34', NULL),
+(0, 9, 17, '2026-02-20 21:17:34', NULL),
+(0, 9, 20, '2026-02-20 21:17:34', NULL),
+(0, 9, 21, '2026-02-20 21:17:34', NULL),
+(0, 10, 1, '2026-02-20 21:17:34', NULL),
+(0, 10, 2, '2026-02-20 21:17:34', NULL),
+(0, 10, 3, '2026-02-20 21:17:34', NULL),
+(0, 10, 4, '2026-02-20 21:17:34', NULL),
+(0, 10, 5, '2026-02-20 21:17:34', NULL),
+(0, 10, 13, '2026-02-20 21:17:34', NULL),
+(0, 10, 14, '2026-02-20 21:17:34', NULL),
+(0, 10, 15, '2026-02-20 21:17:34', NULL),
+(0, 11, 2, '2026-02-20 21:17:34', NULL),
+(0, 11, 3, '2026-02-20 21:17:34', NULL),
+(0, 11, 13, '2026-02-20 21:17:34', NULL),
+(0, 11, 14, '2026-02-20 21:17:34', NULL),
+(0, 11, 15, '2026-02-20 21:17:34', NULL),
+(0, 12, 0, '2026-02-20 21:17:34', NULL),
+(0, 13, 0, '2026-02-20 21:17:34', NULL),
+(0, 13, 6, '2026-02-20 21:17:34', NULL),
+(0, 13, 11, '2026-02-20 21:17:34', NULL),
+(0, 13, 12, '2026-02-20 21:17:34', NULL),
+(0, 13, 22, '2026-02-20 21:17:34', NULL),
+(0, 13, 23, '2026-02-20 21:17:34', NULL);
 
 -- --------------------------------------------------------
 
@@ -4070,25 +3823,25 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `employee_id`, `email`, `password`, `first_name`, `last_name`, `middle_name`, `phone`, `address`, `date_of_birth`, `hire_date`, `department_id`, `role_id`, `manager_id`, `salary`, `is_active`, `biometric_enrollment_status`, `last_login`, `failed_login_attempts`, `account_locked_until`, `password_reset_token`, `password_reset_expires`, `date_of_joining`, `account_number`, `momo_number`, `profile_picture_url`, `emergency_contact_name`, `emergency_contact_phone`, `created_at`, `updated_at`, `account_status`, `bank_name`, `default_password_changed`, `job_grade_id`, `profile_completed`, `provisioned_by`, `provisioned_date`, `temporary_password`, `personal_contact`, `contract_end_date`, `probation_end_date`, `tenant_id`) VALUES
-(1, 'CRMS20022025003', 'garrisonsayor@gmail.com', '$2a$10$ZgXncgsDbc7.wCKGUCY0Veorgz4xjD2c3/VsxJAYh6IEgH11abPce', 'Dr. Enan', 'Nyesheja', 'Muhire', '+250791955398', 'Kanombe', '2002-02-04', '2025-01-01', 3, 1, NULL, 120000.00, 1, 'NONE', '2026-02-19 16:45:21', 0, NULL, NULL, NULL, NULL, '100235367283', '0791955398', 'http://res.cloudinary.com/dgfeef4ot/image/upload/v1770163325/uq8dsnadkdyzf3qmopzc.png', 'Albertine Tenneh Wilson', '079001274', '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', 'Bank of Kigali', b'1', NULL, b'1', NULL, NULL, NULL, NULL, '2027-01-01', '2024-04-01', NULL),
-(2, 'CRMS20022024001', 'hr.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Garrison', 'Sayor III', 'Nyunti', '+250791955398', 'Barnesville Estate, Area B53', '2002-10-30', '2024-01-15', 1, 10, NULL, 95000.00, 1, 'NONE', '2026-02-04 05:38:58', 0, NULL, NULL, NULL, NULL, NULL, NULL, 'http://res.cloudinary.com/dgfeef4ot/image/upload/v1770176080/vxogpmt0okleow6vzcnq.jpg', 'Floyd Sayor', '+231777512084', '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, b'1', NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
-(3, '', 'finance.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Christopher', 'Leabon', NULL, '+1234567892', NULL, NULL, '2024-01-15', 2, 8, NULL, 98000.00, 1, 'NONE', '2025-12-29 11:59:25', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
-(4, '', 'it.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'George', 'Kona', NULL, '+1234567893', NULL, NULL, '2024-01-15', 3, 12, NULL, 105000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
-(5, '', 'ops.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Thomas', 'Sneh', NULL, '+1234567894', NULL, NULL, '2024-01-15', 4, 6, NULL, 92000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
-(6, '', 'hr.manager@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Jennifer', 'Davis', NULL, '+1234567895', NULL, NULL, '2024-02-01', 1, 11, NULL, 75000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-02-01', '2024-05-01', NULL),
-(7, '', 'finance.manager@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Robert', 'Wilson', NULL, '+1234567896', NULL, NULL, '2024-02-01', 2, 9, NULL, 78000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-02-01', '2024-05-01', NULL),
-(8, '', 'it.manager@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Amanda', 'Brown', NULL, '+1234567897', NULL, NULL, '2024-02-01', 3, 13, NULL, 82000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-02-01', '2024-05-01', NULL),
-(9, '', 'john.doe@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'John', 'Doe', NULL, '+1234567898', NULL, NULL, '2024-03-01', 1, 14, NULL, 55000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-01', '2024-06-01', NULL),
-(10, '', 'jane.smith@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Jane', 'Smith', NULL, '+1234567899', NULL, NULL, '2024-03-01', 2, 14, NULL, 58000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-01', '2024-06-01', NULL),
-(11, '', 'mark.jones@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Mark', 'Jones', NULL, '+1234567800', NULL, NULL, '2024-03-15', 3, 14, NULL, 62000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-15', '2024-06-15', NULL),
-(12, '', 'emily.white@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Emily', 'White', NULL, '+1234567801', NULL, NULL, '2024-03-15', 4, 14, NULL, 54000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-15', '2024-06-15', NULL),
-(13, '', 'alex.green@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Alex', 'Green', NULL, '+1234567802', NULL, NULL, '2024-04-01', 5, 14, NULL, 59000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-04-01', '2024-07-01', NULL),
-(14, '', 'maria.garcia@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Maria', 'Garcia', NULL, '+1234567803', NULL, NULL, '2024-04-01', 6, 14, NULL, 56000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-04-01', '2024-07-01', NULL),
-(15, '', 'chris.taylor@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Chris', 'Taylor', NULL, '+1234567804', NULL, NULL, '2024-04-15', 7, 14, NULL, 57000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-04-15', '2024-07-15', NULL),
-(19, '', 'garrisonsay@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Crafty', 'Dev', NULL, NULL, NULL, NULL, '2024-01-01', 2, 14, NULL, NULL, 1, 'NONE', '2025-12-18 15:43:46', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 18:06:52', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-01', '2024-04-01', NULL),
-(20, '', 'issaadamx@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Issa', 'Adams', NULL, NULL, NULL, NULL, '2024-01-01', 1, 14, NULL, NULL, 1, 'NONE', '2025-10-06 16:17:19', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 17:32:26', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-01', '2024-04-01', NULL),
-(21, 'CRMS20032025003', 'albertinewilson29@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Albertine', 'Wilson', 'Tenneh', '0790001273', 'Kanombe', '2003-01-05', '2025-09-10', 3, 2, NULL, NULL, 1, 'NONE', '2025-11-20 16:08:32', 0, NULL, NULL, NULL, NULL, '4493339187', '0791955398', 'http://res.cloudinary.com/dgfeef4ot/image/upload/v1759757113/kkofine7tqq8wug8jesv.jpg', 'Garrison Nyunti Sayor III', '07919555398', '2025-09-10 23:06:21', '2026-02-20 02:13:04', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-10', '2025-12-10', NULL),
-(23, 'CRMS20032026004', 'sabbahkarsor@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Crayton', 'Kamara', 'Morientes', '0791374847', 'Sonatube', '2003-05-21', '2026-01-11', 4, 7, NULL, NULL, 1, 'NONE', '2026-01-11 20:49:17', 0, NULL, NULL, NULL, NULL, '100235367283', '0791374847', NULL, 'Garrison Sayor', '0791955398', '2026-01-11 20:57:03', '2026-02-20 02:13:04', 'ACTIVE', NULL, b'1', 5, b'1', 1, '2026-01-11 20:57:03.000000', 'b7c030e6ad8a8350a68b2e6c955a3ae01d85d6e77e2c0f6f483dbfc691f29ac1', NULL, '2027-01-11', '2026-04-11', NULL);
+(1, 'CRMS20022025003', 'garrisonsayor@gmail.com', '$2a$10$ZgXncgsDbc7.wCKGUCY0Veorgz4xjD2c3/VsxJAYh6IEgH11abPce', 'Dr. Enan', 'Nyesheja', 'Muhire', '+250791955398', 'Kanombe', '2002-02-04', '2025-01-01', 1, 2, NULL, 120000.00, 1, 'NONE', '2026-02-20 19:42:30', 0, NULL, NULL, NULL, NULL, '100235367283', '0791955398', 'http://res.cloudinary.com/dgfeef4ot/image/upload/v1770163325/uq8dsnadkdyzf3qmopzc.png', 'Albertine Tenneh Wilson', '079001274', '2025-07-07 15:16:00', '2026-02-21 00:02:31', 'ACTIVE', 'Bank of Kigali', b'1', NULL, b'1', NULL, NULL, NULL, NULL, '2027-01-01', '2024-04-01', NULL),
+(2, 'CRMS20022024001', 'hr.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Garrison', 'Sayor III', 'Nyunti', '+250791955398', 'Barnesville Estate, Area B53', '2002-10-30', '2024-01-15', 1, 1, NULL, 95000.00, 1, 'NONE', '2026-02-04 05:38:58', 0, NULL, NULL, NULL, NULL, NULL, NULL, 'http://res.cloudinary.com/dgfeef4ot/image/upload/v1770176080/vxogpmt0okleow6vzcnq.jpg', 'Floyd Sayor', '+231777512084', '2025-07-07 15:16:00', '2026-02-21 00:00:50', 'ACTIVE', NULL, NULL, NULL, b'1', NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
+(3, '', 'finance.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Christopher', 'Leabon', NULL, '+1234567892', NULL, NULL, '2024-01-15', 2, 3, NULL, 98000.00, 1, 'NONE', '2025-12-29 11:59:25', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-21 00:02:58', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
+(4, '', 'it.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'George', 'Kona', NULL, '+1234567893', NULL, NULL, '2024-01-15', 2, 4, NULL, 105000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-21 00:03:18', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
+(5, '', 'ops.head@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Thomas', 'Sneh', NULL, '+1234567894', NULL, NULL, '2024-01-15', 2, 5, NULL, 92000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-21 00:03:29', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-15', '2024-04-15', NULL),
+(6, '', 'hr.manager@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Jennifer', 'Davis', NULL, '+1234567895', NULL, NULL, '2024-02-01', 3, 6, NULL, 75000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-21 00:04:14', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-02-01', '2024-05-01', NULL),
+(7, '', 'finance.manager@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Robert', 'Wilson', NULL, '+1234567896', NULL, NULL, '2024-02-01', 3, 7, NULL, 78000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-21 00:04:19', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-02-01', '2024-05-01', NULL),
+(8, '', 'it.manager@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Amanda', 'Brown', NULL, '+1234567897', NULL, NULL, '2024-02-01', 4, 8, NULL, 82000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-21 00:07:06', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-02-01', '2024-05-01', NULL),
+(9, '', 'john.doe@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'John', 'Doe', NULL, '+1234567898', NULL, NULL, '2024-03-01', 4, 9, NULL, 55000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-21 00:07:17', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-01', '2024-06-01', NULL),
+(10, '', 'jane.smith@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Jane', 'Smith', NULL, '+1234567899', NULL, NULL, '2024-03-01', 2, 13, NULL, 58000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 22:57:48', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-01', '2024-06-01', NULL),
+(11, '', 'mark.jones@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Mark', 'Jones', NULL, '+1234567800', NULL, NULL, '2024-03-15', 3, 13, NULL, 62000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 22:57:48', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-15', '2024-06-15', NULL),
+(12, '', 'emily.white@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Emily', 'White', NULL, '+1234567801', NULL, NULL, '2024-03-15', 4, 13, NULL, 54000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 22:57:48', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-03-15', '2024-06-15', NULL),
+(13, '', 'alex.green@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Alex', 'Green', NULL, '+1234567802', NULL, NULL, '2024-04-01', 5, 13, NULL, 59000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 22:57:48', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-04-01', '2024-07-01', NULL),
+(14, '', 'maria.garcia@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Maria', 'Garcia', NULL, '+1234567803', NULL, NULL, '2024-04-01', 6, 13, NULL, 56000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 22:57:48', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-04-01', '2024-07-01', NULL),
+(15, '', 'chris.taylor@craftresource.gov', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Chris', 'Taylor', NULL, '+1234567804', NULL, NULL, '2024-04-15', 6, 13, NULL, 57000.00, 1, 'NONE', NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 15:16:00', '2026-02-20 23:39:39', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-04-15', '2024-07-15', NULL),
+(19, '', 'garrisonsay@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Crafty', 'Dev', NULL, NULL, NULL, NULL, '2024-01-01', 2, 13, NULL, NULL, 1, 'NONE', '2025-12-18 15:43:46', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-07 18:06:52', '2026-02-20 22:57:48', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-01', '2024-04-01', NULL),
+(20, '', 'issaadamx@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Issa', 'Adams', NULL, NULL, NULL, NULL, '2024-01-01', 1, 13, NULL, NULL, 1, 'NONE', '2025-10-06 16:17:19', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-07-15 17:32:26', '2026-02-20 22:57:48', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-01-01', '2024-04-01', NULL),
+(21, 'CRMS20032025003', 'albertinewilson29@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Albertine', 'Wilson', 'Tenneh', '0790001273', 'Kanombe', '2003-01-05', '2025-09-10', 4, 8, NULL, NULL, 1, 'NONE', '2025-11-20 16:08:32', 0, NULL, NULL, NULL, NULL, '4493339187', '0791955398', 'http://res.cloudinary.com/dgfeef4ot/image/upload/v1759757113/kkofine7tqq8wug8jesv.jpg', 'Garrison Nyunti Sayor III', '07919555398', '2025-09-10 23:06:21', '2026-02-21 00:05:29', 'ACTIVE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-10', '2025-12-10', NULL),
+(23, 'CRMS20032026004', 'sabbahkarsor@gmail.com', '$2b$10$o/Y0kcYZqyZdhujd8S4uOuwftIaEfRNEdwKOCFDhSUT4bAGwpNDz2', 'Crayton', 'Kamara', 'Morientes', '0791374847', 'Sonatube', '2003-05-21', '2026-01-11', 5, 10, NULL, NULL, 1, 'NONE', '2026-01-11 20:49:17', 0, NULL, NULL, NULL, NULL, '100235367283', '0791374847', NULL, 'Garrison Sayor', '0791955398', '2026-01-11 20:57:03', '2026-02-21 00:06:04', 'ACTIVE', NULL, b'1', 5, b'1', 1, '2026-01-11 20:57:03.000000', 'b7c030e6ad8a8350a68b2e6c955a3ae01d85d6e77e2c0f6f483dbfc691f29ac1', NULL, '2027-01-11', '2026-04-11', NULL);
 
 -- --------------------------------------------------------
 
@@ -4217,12 +3970,6 @@ INSERT INTO `visitor_logs` (`id`, `visitor_id`, `purpose`, `employee_to_visit_id
 --
 
 --
--- Indexes for table `access_rules`
---
-ALTER TABLE `access_rules`
-  ADD PRIMARY KEY (`id`);
-
---
 -- Indexes for table `assets`
 --
 ALTER TABLE `assets`
@@ -4271,6 +4018,7 @@ ALTER TABLE `attendance`
 -- Indexes for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
+  ADD PRIMARY KEY (`id`),
   ADD KEY `idx_user_id` (`user_id`),
   ADD KEY `idx_timestamp` (`timestamp`),
   ADD KEY `idx_action` (`action`),
@@ -4315,6 +4063,7 @@ ALTER TABLE `component_checkouts`
 ALTER TABLE `consumables`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_consumable_name_company` (`name`,`company_id`),
+  ADD UNIQUE KEY `UKgnmwdkvovfi9gednbxi3mq5nu` (`name`,`company_id`),
   ADD KEY `idx_cons_company` (`company_id`),
   ADD KEY `idx_cons_supplier` (`supplier_id`),
   ADD KEY `idx_cons_mfg` (`manufacturer_id`),
@@ -4330,6 +4079,12 @@ ALTER TABLE `consumable_transactions`
   ADD KEY `idx_ct_user` (`issued_to_user_id`);
 
 --
+-- Indexes for table `departments`
+--
+ALTER TABLE `departments`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `depreciations`
 --
 ALTER TABLE `depreciations`
@@ -4343,10 +4098,22 @@ ALTER TABLE `disposal_records`
   ADD KEY `FK8k3ny1xkx7alutm0ih7lbtp73` (`asset_id`);
 
 --
+-- Indexes for table `employee_benefits`
+--
+ALTER TABLE `employee_benefits`
+  ADD KEY `FK6yjufq2q1qp0n97fjcws3dr3c` (`user_id`);
+
+--
 -- Indexes for table `employee_offboarding`
 --
 ALTER TABLE `employee_offboarding`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `employee_trainings`
+--
+ALTER TABLE `employee_trainings`
+  ADD KEY `FK1ok1mvhecjvgalp5hxj8dc199` (`user_id`);
 
 --
 -- Indexes for table `guard_posts`
@@ -4406,6 +4173,33 @@ ALTER TABLE `onboarding_checklists`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `payslips`
+--
+ALTER TABLE `payslips`
+  ADD KEY `FKc3j0otrqdsqy6qmu526pv4rl6` (`user_id`);
+
+--
+-- Indexes for table `permissions`
+--
+ALTER TABLE `permissions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_permissions_name` (`name`);
+
+--
+-- Indexes for table `roles`
+--
+ALTER TABLE `roles`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `role_permissions`
+--
+ALTER TABLE `role_permissions`
+  ADD UNIQUE KEY `uq_role_permission` (`role_id`,`permission_id`),
+  ADD KEY `idx_rp_role` (`role_id`),
+  ADD KEY `idx_rp_permission` (`permission_id`);
+
+--
 -- Indexes for table `status_labels`
 --
 ALTER TABLE `status_labels`
@@ -4428,12 +4222,6 @@ ALTER TABLE `users`
 --
 -- AUTO_INCREMENT for dumped tables
 --
-
---
--- AUTO_INCREMENT for table `access_rules`
---
-ALTER TABLE `access_rules`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `assets`
@@ -4464,6 +4252,12 @@ ALTER TABLE `asset_models`
 --
 ALTER TABLE `attendance`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `audit_logs`
+--
+ALTER TABLE `audit_logs`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
 
 --
 -- AUTO_INCREMENT for table `categories`
@@ -4500,6 +4294,12 @@ ALTER TABLE `consumables`
 --
 ALTER TABLE `consumable_transactions`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `departments`
+--
+ALTER TABLE `departments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `depreciations`
@@ -4554,6 +4354,18 @@ ALTER TABLE `manufacturers`
 --
 ALTER TABLE `onboarding_checklists`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `permissions`
+--
+ALTER TABLE `permissions`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=98;
+
+--
+-- AUTO_INCREMENT for table `roles`
+--
+ALTER TABLE `roles`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `status_labels`
@@ -4645,6 +4457,18 @@ ALTER TABLE `disposal_records`
   ADD CONSTRAINT `FK8k3ny1xkx7alutm0ih7lbtp73` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`);
 
 --
+-- Constraints for table `employee_benefits`
+--
+ALTER TABLE `employee_benefits`
+  ADD CONSTRAINT `FK6yjufq2q1qp0n97fjcws3dr3c` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `employee_trainings`
+--
+ALTER TABLE `employee_trainings`
+  ADD CONSTRAINT `FK1ok1mvhecjvgalp5hxj8dc199` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+
+--
 -- Constraints for table `licenses`
 --
 ALTER TABLE `licenses`
@@ -4672,6 +4496,12 @@ ALTER TABLE `locations`
 --
 ALTER TABLE `maintenance_records`
   ADD CONSTRAINT `FK124fjg43i0s5luwopsoq78k9h` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`);
+
+--
+-- Constraints for table `payslips`
+--
+ALTER TABLE `payslips`
+  ADD CONSTRAINT `FKc3j0otrqdsqy6qmu526pv4rl6` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
