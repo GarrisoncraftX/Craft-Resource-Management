@@ -22,6 +22,108 @@ public class AssetController {
         this.assetService = assetService;
     }
 
+    @GetMapping
+    public ResponseEntity<List<AssetDTO>> getAllAssets(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String category) {
+        return ResponseEntity.ok(assetService.getAllAssets(status, category));
+    }
+
+    @GetMapping("/counts")
+    public ResponseEntity<Map<String, Long>> getAssetCounts() {
+        return ResponseEntity.ok(assetService.getAssetCounts());
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getAssetStats() {
+        return ResponseEntity.ok(assetService.getAssetStats());
+    }
+
+    @GetMapping("/by-category")
+    public ResponseEntity<List<Map<String, Object>>> getAssetsByCategory() {
+        return ResponseEntity.ok(assetService.getAssetsByCategory());
+    }
+
+    @GetMapping("/trends")
+    public ResponseEntity<List<Map<String, Object>>> getAssetTrends() {
+        return ResponseEntity.ok(assetService.getAssetTrends());
+    }
+
+    @GetMapping("/companies")
+    public ResponseEntity<List<Map<String, Object>>> getAllCompanies() {
+        return ResponseEntity.ok(assetService.getAllCompanies());
+    }
+
+    @GetMapping("/models")
+    public ResponseEntity<List<Map<String, Object>>> getAllModels() {
+        return ResponseEntity.ok(assetService.getAllModels());
+    }
+
+    @GetMapping("/status-labels")
+    public ResponseEntity<List<Map<String, Object>>> getAllStatusLabels() {
+        return ResponseEntity.ok(assetService.getAllStatusLabels());
+    }
+
+    @GetMapping("/locations")
+    public ResponseEntity<List<Map<String, Object>>> getAllLocations() {
+        return ResponseEntity.ok(assetService.getAllLocations());
+    }
+
+    @GetMapping("/manufacturers")
+    public ResponseEntity<List<Map<String, Object>>> getAllManufacturers() {
+        return ResponseEntity.ok(assetService.getAllManufacturers());
+    }
+
+    @GetMapping("/suppliers")
+    public ResponseEntity<List<Map<String, Object>>> getAllSuppliers() {
+        return ResponseEntity.ok(assetService.getAllSuppliers());
+    }
+
+    @GetMapping("/departments")
+    public ResponseEntity<List<Map<String, Object>>> getAllDepartments() {
+        return ResponseEntity.ok(assetService.getAllDepartments());
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<List<Map<String, Object>>> getAllCategories() {
+        return ResponseEntity.ok(assetService.getAllCategories());
+    }
+
+    @GetMapping("/depreciations")
+    public ResponseEntity<List<Map<String, Object>>> getAllDepreciations() {
+        return ResponseEntity.ok(assetService.getAllDepreciations());
+    }
+
+    @GetMapping("/maintenance-records")
+    public ResponseEntity<List<Map<String, Object>>> getAllMaintenanceRecords() {
+        return ResponseEntity.ok(assetService.getAllMaintenanceRecords());
+    }
+
+    @GetMapping("/maintenance/costs")
+    public ResponseEntity<List<Map<String, Object>>> getMaintenanceCosts() {
+        return ResponseEntity.ok(assetService.getMaintenanceCosts());
+    }
+
+    @GetMapping("/disposal-records")
+    public ResponseEntity<List<Map<String, Object>>> getAllDisposalRecords() {
+        return ResponseEntity.ok(assetService.getAllDisposalRecords());
+    }
+
+    @GetMapping("/reports/depreciation")
+    public ResponseEntity<List<Map<String, Object>>> getDepreciationReport() {
+        return ResponseEntity.ok(assetService.getDepreciationReport());
+    }
+
+    @GetMapping("/reports/maintenance")
+    public ResponseEntity<List<Map<String, Object>>> getMaintenanceReport() {
+        return ResponseEntity.ok(assetService.getMaintenanceReport());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<AssetDTO> getAssetById(@PathVariable Long id) {
+        return ResponseEntity.ok(assetService.getAssetById(id));
+    }
+
     @PostMapping("/{id}/image")
     public ResponseEntity<AssetDTO> uploadAssetImage(
             @PathVariable Long id,
@@ -44,18 +146,6 @@ public class AssetController {
         } catch (Exception e) {
             return ResponseEntity.status(500).build();
         }
-    }
-
-    @GetMapping
-    public ResponseEntity<List<AssetDTO>> getAllAssets(
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String category) {
-        return ResponseEntity.ok(assetService.getAllAssets(status, category));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<AssetDTO> getAssetById(@PathVariable Long id) {
-        return ResponseEntity.ok(assetService.getAssetById(id));
     }
 
     @PostMapping
@@ -92,57 +182,14 @@ public class AssetController {
         return ResponseEntity.ok(assetService.checkinAsset(id, note));
     }
 
-    @GetMapping("/counts")
-    public ResponseEntity<Map<String, Long>> getAssetCounts() {
-        return ResponseEntity.ok(assetService.getAssetCounts());
-    }
-
-    @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getAssetStats() {
-        return ResponseEntity.ok(assetService.getAssetStats());
-    }
-
-    @GetMapping("/by-category")
-    public ResponseEntity<List<Map<String, Object>>> getAssetsByCategory() {
-        return ResponseEntity.ok(assetService.getAssetsByCategory());
-    }
-
-    @GetMapping("/trends")
-    public ResponseEntity<List<Map<String, Object>>> getAssetTrends() {
-        return ResponseEntity.ok(assetService.getAssetTrends());
-    }
-
-    // Maintenance endpoints
-    @GetMapping("/maintenance-records")
-    public ResponseEntity<List<Map<String, Object>>> getAllMaintenanceRecords() {
-        return ResponseEntity.ok(assetService.getAllMaintenanceRecords());
-    }
-
     @PostMapping("/maintenance-records")
     public ResponseEntity<Map<String, Object>> createMaintenanceRecord(@RequestBody Map<String, Object> record) {
         return ResponseEntity.ok(assetService.createMaintenanceRecord(record));
     }
 
-    @GetMapping("/maintenance/costs")
-    public ResponseEntity<List<Map<String, Object>>> getMaintenanceCosts() {
-        return ResponseEntity.ok(assetService.getMaintenanceCosts());
-    }
-
-    // Disposal endpoints
-    @GetMapping("/disposal-records")
-    public ResponseEntity<List<Map<String, Object>>> getAllDisposalRecords() {
-        return ResponseEntity.ok(assetService.getAllDisposalRecords());
-    }
-
     @PostMapping("/disposal-records")
     public ResponseEntity<Map<String, Object>> createDisposalRecord(@RequestBody Map<String, Object> record) {
         return ResponseEntity.ok(assetService.createDisposalRecord(record));
-    }
-
-    // Settings endpoints
-    @GetMapping("/categories")
-    public ResponseEntity<List<Map<String, Object>>> getAllCategories() {
-        return ResponseEntity.ok(assetService.getAllCategories());
     }
     @PostMapping("/categories")
     public ResponseEntity<Map<String, Object>> createCategory(@RequestBody Map<String, Object> data) {
@@ -158,10 +205,6 @@ public class AssetController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/depreciations")
-    public ResponseEntity<List<Map<String, Object>>> getAllDepreciations() {
-        return ResponseEntity.ok(assetService.getAllDepreciations());
-    }
     @PostMapping("/depreciations")
     public ResponseEntity<Map<String, Object>> createDepreciation(@RequestBody Map<String, Object> data) {
         return ResponseEntity.ok(assetService.createDepreciation(data));
@@ -174,15 +217,5 @@ public class AssetController {
     public ResponseEntity<Void> deleteDepreciation(@PathVariable Long id) {
         assetService.deleteDepreciation(id);
         return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/reports/depreciation")
-    public ResponseEntity<List<Map<String, Object>>> getDepreciationReport() {
-        return ResponseEntity.ok(assetService.getDepreciationReport());
-    }
-
-    @GetMapping("/reports/maintenance")
-    public ResponseEntity<List<Map<String, Object>>> getMaintenanceReport() {
-        return ResponseEntity.ok(assetService.getMaintenanceReport());
     }
 }

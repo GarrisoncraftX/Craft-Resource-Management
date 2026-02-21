@@ -16,6 +16,9 @@ public class StatusLabel {
     @Column(name = "status_type", nullable = false)
     private String statusType = "deployable";
 
+    @Column(name = "status_meta", nullable = false)
+    private String statusMeta = "deployable";
+
     @Column(length = 10)
     private String color;
 
@@ -24,6 +27,9 @@ public class StatusLabel {
 
     @Column(name = "default_label")
     private Boolean defaultLabel = false;
+
+    @Column(columnDefinition = "TEXT")
+    private String notes;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -49,12 +55,16 @@ public class StatusLabel {
     public void setName(String name) { this.name = name; }
     public String getStatusType() { return statusType; }
     public void setStatusType(String statusType) { this.statusType = statusType; }
+    public String getStatusMeta() { return statusMeta; }
+    public void setStatusMeta(String statusMeta) { this.statusMeta = statusMeta; }
     public String getColor() { return color; }
     public void setColor(String color) { this.color = color; }
     public Boolean getShowInNav() { return showInNav; }
     public void setShowInNav(Boolean showInNav) { this.showInNav = showInNav; }
     public Boolean getDefaultLabel() { return defaultLabel; }
     public void setDefaultLabel(Boolean defaultLabel) { this.defaultLabel = defaultLabel; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

@@ -4,13 +4,8 @@ import { AssetDataTable } from './AssetDataTable';
 import { Copy, Pencil, Trash2, ShoppingCart } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { createInventoryColumns } from './inventoryColumns';
-import type { BaseInventoryItem } from '@/types/javabackendapi/assetTypes';
+import type { Consumable } from '@/types/javabackendapi/assetTypes';
 import { mockConsumables } from '@/services/mockData/assets';
-
-interface Consumable extends BaseInventoryItem {
-  itemNo: string;
-  remaining: number;
-}
 
 export const ConsumablesView: React.FC = () => {
   const columns = createInventoryColumns<Consumable>('consumables');

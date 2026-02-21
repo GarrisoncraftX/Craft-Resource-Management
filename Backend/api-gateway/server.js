@@ -184,7 +184,7 @@ app.use((req, res, next) => {
       path.startsWith("/hr/payroll") || 
       path.startsWith("/hr/recruitment") ||
       path.startsWith("/finance") || 
-      path.startsWith("/assets") || 
+      path.startsWith("/api/assets") || 
       path.startsWith("/system") ||
       path.startsWith("/admin")) {
     return proxyRequest(req, res, javaBackend);

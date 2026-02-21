@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -7,8 +7,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Plus, AlertTriangle } from 'lucide-react';
-import { mockSuppliers, mockCompanies, mockStatusLabels, mockModels, mockLocations, mockCustomFields } from '@/services/mockData/assets';
 import { toast } from 'sonner';
+import { assetApiService } from '@/services/javabackendapi/assetApi';
+import type { Company, AssetModel, StatusLabel, Location, Supplier, CustomField } from '@/types/javabackendapi/assetTypes';
 
 interface BulkEditDialogProps {
   open: boolean;
@@ -34,9 +35,38 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
   const [nextAuditDate, setNextAuditDate] = useState('');
   const [requestable, setRequestable] = useState('do-not-change');
   const [notes, setNotes] = useState('');
-
-  // Delete checkboxes
   const [deleteFlags, setDeleteFlags] = useState<Record<string, boolean>>({});
+
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [models, setModels] = useState<AssetModel[]>([]);
+  const [statusLabels, setStatusLabels] = useState<StatusLabel[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [companiesData, modelsData, statusData, locationsData, suppliersData] = await Promise.all([
+          assetApiService.getAllCompanies(),
+          assetApiService.getAllModels(),
+          assetApiService.getAllStatusLabels(),
+          assetApiService.getAllLocations(),
+          assetApiService.getAllSuppliers()
+        ]);
+        setCompanies(companiesData);
+        setModels(modelsData);
+        setStatusLabels(statusData);
+        setLocations(locationsData);
+        setSuppliers(suppliersData);
+        // Custom fields would be fetched here when API is ready
+        setCustomFields([]);
+      } catch (error) {
+        console.error('Failed to fetch dropdown data:', error);
+      }
+    };
+    if (open) fetchData();
+  }, [open]);
 
   const toggleDelete = (field: string) => {
     setDeleteFlags(prev => ({ ...prev, [field]: !prev[field] }));
@@ -108,11 +138,11 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
           <div className="flex items-start gap-4">
             <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Status</label>
             <div className="flex-1 space-y-1">
-              <Select value={status} onValueChange={setStatus}>
+              <Select value={String(status)} onValueChange={setStatus}>
                 <SelectTrigger><SelectValue placeholder="Select Status" /></SelectTrigger>
                 <SelectContent>
-                  {mockStatusLabels.map(s => (
-                    <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                  {statusLabels.map(s => (
+                    <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -123,11 +153,11 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
           {/* Model */}
           <div className="flex items-center gap-4">
             <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Model</label>
-            <Select value={model} onValueChange={setModel}>
+            <Select value={String(model)} onValueChange={setModel}>
               <SelectTrigger className="flex-1"><SelectValue placeholder="Select a Model" /></SelectTrigger>
               <SelectContent>
-                {mockModels.map(m => (
-                  <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                {models.map(m => (
+                  <SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -139,11 +169,11 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
             <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Default Location</label>
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
-                <Select value={defaultLocation} onValueChange={setDefaultLocation}>
+                <Select value={String(defaultLocation)} onValueChange={setDefaultLocation}>
                   <SelectTrigger className="flex-1"><SelectValue placeholder="Select a Location" /></SelectTrigger>
                   <SelectContent>
-                    {mockLocations.map(l => (
-                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                    {locations.map(l => (
+                      <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -179,11 +209,11 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
           <div className="flex items-center gap-4">
             <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Supplier</label>
             <div className="flex items-center gap-2 flex-1">
-              <Select value={supplier} onValueChange={setSupplier}>
+              <Select value={String(supplier)} onValueChange={setSupplier}>
                 <SelectTrigger className="flex-1"><SelectValue placeholder="Select a Supplier" /></SelectTrigger>
                 <SelectContent>
-                  {mockSuppliers.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  {suppliers.map(s => (
+                    <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -194,11 +224,11 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
           {/* Company */}
           <div className="flex items-center gap-4">
             <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Company</label>
-            <Select value={company} onValueChange={setCompany}>
+            <Select value={String(company)} onValueChange={setCompany}>
               <SelectTrigger className="flex-1"><SelectValue placeholder="Select Company" /></SelectTrigger>
               <SelectContent>
-                {mockCompanies.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                {companies.map(c => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -252,42 +282,44 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
           </div>
 
           {/* Custom Fields Section */}
-          <div className="border-t pt-4">
-            <h3 className="text-base font-semibold text-gray-900 mb-4">Custom Fields</h3>
-            {mockCustomFields.map(field => (
-              <div key={field.id} className="flex items-start gap-4 mb-3">
-                <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">{field.name}</label>
-                <div className="flex-1 space-y-1">
-                  {field.element === 'text' && (
-                    <Input placeholder={`Enter ${field.format === 'ANY' ? 'any text' : field.format}`} />
-                  )}
-                  {field.element === 'checkbox' && (
-                    <div className="space-y-1">
-                      {['One', 'Two', 'Three'].map(opt => (
-                        <div key={opt} className="flex items-center gap-2">
-                          <Checkbox /><span className="text-sm">{opt}</span>
-                        </div>
-                      ))}
+          {customFields.length > 0 && (
+            <div className="border-t pt-4">
+              <h3 className="text-base font-semibold text-gray-900 mb-4">Custom Fields</h3>
+              {customFields.map(field => (
+                <div key={field.id} className="flex items-start gap-4 mb-3">
+                  <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">{field.name}</label>
+                  <div className="flex-1 space-y-1">
+                    {field.element === 'text' && (
+                      <Input placeholder={`Enter ${field.format === 'ANY' ? 'any text' : field.format}`} />
+                    )}
+                    {field.element === 'checkbox' && (
+                      <div className="space-y-1">
+                        {['One', 'Two', 'Three'].map(opt => (
+                          <div key={opt} className="flex items-center gap-2">
+                            <Checkbox /><span className="text-sm">{opt}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {field.element === 'radio' && (
+                      <RadioGroup className="space-y-1">
+                        {['One', 'Two', 'Three'].map(opt => (
+                          <div key={opt} className="flex items-center gap-2">
+                            <RadioGroupItem value={opt.toLowerCase()} id={`${field.id}-${opt}`} />
+                            <label htmlFor={`${field.id}-${opt}`} className="text-sm">{opt}</label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    )}
+                    <p className="text-xs text-gray-500">{field.helpText}</p>
+                    <div className="flex items-center gap-1">
+                      <Checkbox /><span className="text-xs text-gray-500">Delete values for all {selectedCount} selections</span>
                     </div>
-                  )}
-                  {field.element === 'radio' && (
-                    <RadioGroup className="space-y-1">
-                      {['One', 'Two', 'Three'].map(opt => (
-                        <div key={opt} className="flex items-center gap-2">
-                          <RadioGroupItem value={opt.toLowerCase()} id={`${field.id}-${opt}`} />
-                          <label htmlFor={`${field.id}-${opt}`} className="text-sm">{opt}</label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  )}
-                  <p className="text-xs text-gray-500">{field.helpText}</p>
-                  <div className="flex items-center gap-1">
-                    <Checkbox /><span className="text-xs text-gray-500">Delete values for all {selectedCount} selections</span>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Footer */}
           <div className="flex justify-end pt-4 border-t">

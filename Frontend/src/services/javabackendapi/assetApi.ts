@@ -2,7 +2,14 @@ import { apiClient } from '@/utils/apiClient';
 import { 
   mockAssets, 
   mockMaintenanceRecords, 
-  mockDisposalRecords, 
+  mockDisposalRecords,
+  mockCompanies,
+  mockModels,
+  mockStatusLabels,
+  mockLocations,
+  mockManufacturers,
+  mockSuppliers,
+  mockDepartments,
 } from '@/services/mockData/assets';
 import type { Asset, MaintenanceRecord, DisposalRecord, MaintenanceCost, Category, Manufacturer, Supplier, Location, AssetModel, StatusLabel, Depreciation, Company, Department, DepreciationReport, MaintenanceReport } from '@/types/javabackendapi/assetTypes';
 
@@ -194,35 +201,35 @@ class AssetApiService {
   async getAllManufacturers(): Promise<Manufacturer[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/manufacturers`),
-      []
+      mockManufacturers
     );
   }
 
   async getAllSuppliers(): Promise<Supplier[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/suppliers`),
-      []
+      mockSuppliers
     );
   }
 
   async getAllLocations(): Promise<Location[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/locations`),
-      []
+      mockLocations
     );
   }
 
   async getAllModels(): Promise<AssetModel[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/models`),
-      []
+      mockModels
     );
   }
 
   async getAllStatusLabels(): Promise<StatusLabel[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/status-labels`),
-      []
+      mockStatusLabels
     );
   }
 
@@ -236,14 +243,14 @@ class AssetApiService {
   async getAllCompanies(): Promise<Company[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/companies`),
-      []
+      mockCompanies
     );
   }
 
   async getAllDepartments(): Promise<Department[]> {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/departments`),
-      []
+      mockDepartments
     );
   }
 

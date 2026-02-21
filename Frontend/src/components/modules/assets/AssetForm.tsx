@@ -1,16 +1,15 @@
 import { assetApiService, uploadAssetImage } from '@/services/javabackendapi/assetApi';
 import { toast } from 'sonner';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Check, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockCompanies, mockModels, mockStatusLabels, mockLocations } from '@/services/mockData/assets';
 import { OptionalInfoSection } from './forms/OptionalInfoSection';
 import { OrderRelatedInfoSection } from './forms/OrderRelatedInfoSection';
-import { Asset } from '@/types/javabackendapi/assetTypes';
+import { Asset, Company, AssetModel, StatusLabel, Location } from '@/types/javabackendapi/assetTypes';
 
 interface AssetFormProps {
   onAssetCreated?: (asset) => void;
@@ -50,9 +49,34 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [models, setModels] = useState<AssetModel[]>([]);
+  const [statusLabels, setStatusLabels] = useState<StatusLabel[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+
+  useEffect(() => {
+    const fetchDropdownData = async () => {
+      try {
+        const [companiesData, modelsData, statusData, locationsData] = await Promise.all([
+          assetApiService.getAllCompanies(),
+          assetApiService.getAllModels(),
+          assetApiService.getAllStatusLabels(),
+          assetApiService.getAllLocations()
+        ]);
+        setCompanies(companiesData);
+        setModels(modelsData);
+        setStatusLabels(statusData);
+        setLocations(locationsData);
+      } catch (error) {
+        console.error('Failed to fetch dropdown data:', error);
+      }
+    };
+    if (open) fetchDropdownData();
+  }, [open]);
 
   React.useEffect(() => {
     if (initialData) {
@@ -106,19 +130,16 @@ const [imagePreview, setImagePreview] = useState<string | null>(initialData?.ima
     }
   };
 
-  const handleImageUpload = async () => {
-    if (!selectedImage || !initialData?.id) {
-      toast.error('Please save the asset first before uploading an image');
-      return;
-    }
+  const handleImageUpload = async (assetId: number) => {
+    if (!selectedImage) return;
     setIsUploading(true);
     try {
-      await uploadAssetImage(initialData.id, selectedImage);
+      await uploadAssetImage(assetId, selectedImage);
       toast.success('Image uploaded successfully');
       setSelectedImage(null);
     } catch (error) {
       console.error('Failed to upload image:', error);
-      toast.error('Failed to upload image. Please try again.');
+      toast.error('Failed to upload image.');
     } finally {
       setIsUploading(false);
     }
@@ -162,9 +183,11 @@ const [imagePreview, setImagePreview] = useState<string | null>(initialData?.ima
       let result;
       if (initialData?.id) {
         result = await assetApiService.updateAsset(initialData.id, assetData);
+        if (selectedImage) await handleImageUpload(initialData.id);
         toast.success('Asset updated successfully');
       } else {
         result = await assetApiService.createAsset(assetData);
+        if (selectedImage && result?.id) await handleImageUpload(result.id);
         toast.success('Asset created successfully');
       }
       
@@ -192,10 +215,10 @@ const [imagePreview, setImagePreview] = useState<string | null>(initialData?.ima
           <div className="p-6 space-y-4">
             <div className="flex items-center gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Company</label>
-              <Select value={company} onValueChange={setCompany}>
+              <Select value={String(company)} onValueChange={setCompany}>
                 <SelectTrigger className="flex-1"><SelectValue placeholder="Select Company" /></SelectTrigger>
                 <SelectContent>
-                  {mockCompanies.map(c => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                  {companies.map(c => (<SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -218,10 +241,10 @@ const [imagePreview, setImagePreview] = useState<string | null>(initialData?.ima
             <div className="flex items-center gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Model</label>
               <div className="flex items-center gap-2 flex-1">
-                <Select value={model} onValueChange={setModel}>
+                <Select value={String(model)} onValueChange={setModel}>
                   <SelectTrigger className="flex-1"><SelectValue placeholder="Select a Model" /></SelectTrigger>
                   <SelectContent>
-                    {mockModels.map(m => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
+                    {models.map(m => (<SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Button type="button" size="sm" className="bg-sky-500 hover:bg-sky-600 text-white">
@@ -233,10 +256,10 @@ const [imagePreview, setImagePreview] = useState<string | null>(initialData?.ima
             <div className="flex items-center gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Status</label>
               <div className="flex items-center gap-2 flex-1">
-                <Select value={status} onValueChange={setStatus}>
+                <Select value={String(status)} onValueChange={setStatus}>
                   <SelectTrigger className="flex-1 border-l-4 border-l-amber-400"><SelectValue placeholder="Select Status" /></SelectTrigger>
                   <SelectContent>
-                    {mockStatusLabels.map(s => (<SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>))}
+                    {statusLabels.map(s => (<SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Button type="button" size="sm" className="bg-sky-500 hover:bg-sky-600 text-white">
@@ -254,10 +277,10 @@ const [imagePreview, setImagePreview] = useState<string | null>(initialData?.ima
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Default Location</label>
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <Select value={defaultLocation} onValueChange={setDefaultLocation}>
+                  <Select value={String(defaultLocation)} onValueChange={setDefaultLocation}>
                     <SelectTrigger className="flex-1"><SelectValue placeholder="Select a Location" /></SelectTrigger>
                     <SelectContent>
-                      {mockLocations.map(l => (<SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>))}
+                      {locations.map(l => (<SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>))}
                     </SelectContent>
                   </Select>
                   <Button type="button" size="sm" className="bg-sky-500 hover:bg-sky-600 text-white">
@@ -300,27 +323,13 @@ const [imagePreview, setImagePreview] = useState<string | null>(initialData?.ima
                     </button>
                   </div>
                 ) : (
-                  <label htmlFor="asset-image-upload">
-                    <Button type="button" size="sm" className="bg-sky-500 hover:bg-sky-600 text-white cursor-pointer">
+                  <label htmlFor="asset-image-upload" className="cursor-pointer">
+                    <Button type="button" size="sm" className="bg-sky-500 hover:bg-sky-600 text-white pointer-events-none">
                       <Upload className="w-4 h-4 mr-1" /> Select File
                     </Button>
                   </label>
                 )}
-                {selectedImage && initialData?.id && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleImageUpload}
-                    disabled={isUploading}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white ml-2"
-                  >
-                    {isUploading ? 'Uploading...' : 'Upload'}
-                  </Button>
-                )}
-                {selectedImage && !initialData?.id && (
-                  <p className="text-xs text-amber-600">Save the asset first to upload the image</p>
-                )}
-                <p className="text-xs text-gray-500">Accepted filetypes are jpg, webp, png, gif, svg, and avif. Max upload size is 25M.</p>
+                <p className="text-xs text-gray-500">Image will be uploaded when you save. Accepted filetypes are jpg, webp, png, gif, svg, and avif. Max upload size is 25M.</p>
               </div>
             </div>
           </div>

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 20, 2026 at 01:26 AM
+-- Generation Time: Feb 20, 2026 at 07:09 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -209,6 +209,20 @@ DELIMITER ;
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `access_rules`
+--
+
+CREATE TABLE `access_rules` (
+  `id` bigint(20) NOT NULL,
+  `door` varchar(255) NOT NULL,
+  `role` varchar(255) NOT NULL,
+  `schedule` varchar(255) NOT NULL,
+  `status` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `account_payables`
 --
 
@@ -342,7 +356,13 @@ INSERT INTO `assets` (`id`, `asset_tag`, `name`, `serial`, `model_id`, `status_i
 (7, '1654990322', 'iPhone-mobile-d5efd89b-34ca-8ec3-4888809901c74', 'cfe93abdf-0777-34ca-8ec3-4888809015c74', 3, 2, NULL, 1, 1, NULL, NULL, '2023-03-15', 899.0000, NULL, NULL, '4GB RAM', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
 (8, '1011481556', 'iPhone-mobile-dbc819dd-1498-360c-b27c-171be0236689', 'dbc819dd-1498-360c-b27c-1b6b26d0236689', 3, 2, NULL, 1, 1, NULL, NULL, '2023-04-20', 999.0000, NULL, NULL, '6GB RAM', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
 (9, 'MAC001', 'Macbook Air', 'MBA-SN-001', 4, 2, NULL, 2, 2, NULL, NULL, '2023-07-01', 1299.0000, NULL, NULL, 'Developer laptop', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
-(10, 'MAC002', 'Macbook Air', 'MBA-SN-002', 4, 2, NULL, 2, 2, NULL, NULL, '2023-07-01', 1299.0000, NULL, NULL, 'Designer laptop', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL);
+(10, 'MAC002', 'Macbook Air', 'MBA-SN-002', 4, 2, NULL, 2, 2, NULL, NULL, '2023-07-01', 1299.0000, NULL, NULL, 'Designer laptop', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(11, 'UNILAK-KGL-LAP-0001', 'Staff Laptop – ICT', 'DL-5440-0001', 8, 1, 1, 13, 13, 1, 'PO-UNILAK-ICT-001', '2025-10-15', 1250000.0000, 12, '2028-10-15', 'Stored at Kigali ICT Store', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(12, 'UNILAK-KGL-LAP-0002', 'Staff Laptop – HR', 'TP-E14-0002', 10, 2, 1, 13, 13, 1, 'PO-UNILAK-HR-002', '2025-10-20', 1180000.0000, 12, '2028-10-20', 'Deployed to HR staff', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(13, 'UNILAK-KGL-DES-0001', 'Desktop – Reception', 'HP-400G9-0101', 9, 2, 1, 12, 12, 1, 'PO-UNILAK-ADM-003', '2025-11-01', 980000.0000, 12, '2028-11-01', 'Reception desktop', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(14, 'UNILAK-KGL-DSP-0001', 'Display – Finance', 'DS-U2415-0201', 13, 1, 1, 14, 14, 2, 'PO-UNILAK-FIN-004', '2025-11-18', 320000.0000, 12, '2026-11-18', 'Finance office display', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(15, 'UNILAK-KGL-MOB-0001', 'Mobile – Security Supervisor', 'IP12-0301', 11, 2, 1, 13, 13, 1, 'PO-UNILAK-SEC-005', '2025-12-02', 650000.0000, 12, '2027-12-02', 'Issued for security operations', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(16, 'UNILAK-KGL-TAB-0001', 'Tablet – Reception', 'SFGO-0401', 12, 3, 1, 12, 12, 1, 'PO-UNILAK-REC-006', '2025-12-10', 520000.0000, 12, '2027-12-10', 'Pending setup for visitor registration', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, 0, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL);
 
 -- --------------------------------------------------------
 
@@ -421,7 +441,13 @@ INSERT INTO `asset_models` (`id`, `name`, `model_number`, `category_id`, `manufa
 (4, 'Macbook Air', '5575783075815347', 1, 2, 1, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
 (5, 'HP LaserJet', 'LJ-PRO', 2, 3, 1, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
 (6, 'PowerEdge Server', 'PE-R740', 2, 1, 1, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
-(7, 'Toyota Camry', 'CAMRY-2024', 1, 6, 3, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL);
+(7, 'Toyota Camry', 'CAMRY-2024', 1, 6, 3, NULL, NULL, NULL, NULL, 0, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(8, 'Dell Latitude 5440', '5440', 1, 1, 1, 36, 1, NULL, 'UNILAK staff laptop', 0, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(9, 'HP ProDesk 400 G9', '400G9', 2, 3, 1, 36, 1, NULL, 'Admin/finance desktop', 0, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(10, 'Lenovo ThinkPad E14', 'E14', 1, 4, 1, 36, 1, NULL, 'Lecturer laptop', 0, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(11, 'iPhone 12', 'A2172', 3, 2, 4, 24, 1, NULL, 'Security/admin phone', 0, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(12, 'Microsoft Surface Go', 'SurfaceGo', 4, 7, 4, 24, 1, NULL, 'Reception/registry tablet', 0, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(13, 'Dell UltraSharp U2415', 'U2415', 5, 1, 2, 12, 1, NULL, 'Office display', 0, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL);
 
 -- --------------------------------------------------------
 
@@ -1716,9 +1742,19 @@ INSERT INTO `chart_of_accounts` (`id`, `account_code`, `account_name`, `account_
 CREATE TABLE `companies` (
   `id` bigint(20) NOT NULL,
   `name` varchar(100) NOT NULL,
+  `address` text DEFAULT NULL,
+  `address2` text DEFAULT NULL,
+  `province` varchar(100) DEFAULT NULL,
+  `district` varchar(100) DEFAULT NULL,
+  `sector` varchar(100) DEFAULT NULL,
+  `cell` varchar(100) DEFAULT NULL,
+  `village` varchar(100) DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `country` varchar(100) DEFAULT NULL,
+  `po_box` varchar(50) DEFAULT NULL,
   `email` varchar(100) DEFAULT NULL,
   `phone` varchar(50) DEFAULT NULL,
-  `fax` varchar(50) DEFAULT NULL,
+  `url` varchar(255) DEFAULT NULL,
   `image` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -1729,9 +1765,10 @@ CREATE TABLE `companies` (
 -- Dumping data for table `companies`
 --
 
-INSERT INTO `companies` (`id`, `name`, `email`, `phone`, `fax`, `image`, `created_at`, `updated_at`, `deleted_at`) VALUES
-(1, 'Main Office', 'info@company.com', NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
-(2, 'Branch Office', 'branch@company.com', NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL);
+INSERT INTO `companies` (`id`, `name`, `address`, `address2`, `province`, `district`, `sector`, `cell`, `village`, `city`, `country`, `po_box`, `email`, `phone`, `url`, `image`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'UNILAK – Kigali Main Campus', 'Kicukiro, KG 552 St', 'Near Sonatubes', 'Kigali City', 'Kicukiro', 'Gahanga', 'Gahanga', 'Nyarurama', 'Kigali', 'Rwanda', 'P.O. Box Kigali', 'info@unilak.rw', '+250 788 000 111', 'https://www.unilak.rw', NULL, '2026-02-19 22:49:14', '2026-02-20 17:48:14', NULL),
+(2, 'UNILAK – Rwamagana Branch', 'RN3, Rwamagana Town', 'Education Complex', 'Eastern Province', 'Rwamagana', 'Kigabiro', 'Kigabiro', 'Kigarama', 'Rwamagana', 'Rwanda', 'P.O. Box Rwamagana', 'rwamagana@unilak.rw', '+250 788 000 222', 'https://www.unilak.rw', NULL, '2026-02-19 22:49:14', '2026-02-20 17:48:14', NULL),
+(3, 'UNILAK – Musanze Branch', 'NR 18 Ave, Musanze', 'Campus Annex', 'Northern Province', 'Musanze', 'Muhoza', 'Muhoza', 'Kaguhu', 'Musanze', 'Rwanda', 'P.O. Box Musanze', 'musanze@unilak.rw', '+250 788 000 333', 'https://www.unilak.rw', NULL, '2026-02-20 15:15:00', '2026-02-20 17:48:14', NULL);
 
 -- --------------------------------------------------------
 
@@ -1746,6 +1783,203 @@ CREATE TABLE `compliance_records` (
   `description` varchar(255) DEFAULT NULL,
   `responsible_person` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `components`
+--
+
+CREATE TABLE `components` (
+  `id` bigint(20) NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `category_id` bigint(20) DEFAULT NULL,
+  `manufacturer_id` bigint(20) DEFAULT NULL,
+  `supplier_id` bigint(20) DEFAULT NULL,
+  `company_id` bigint(20) DEFAULT NULL,
+  `location_id` bigint(20) DEFAULT NULL,
+  `model_no` varchar(100) DEFAULT NULL,
+  `serial` varchar(120) DEFAULT NULL,
+  `min_qty` int(11) NOT NULL DEFAULT 0,
+  `qty_total` int(11) NOT NULL DEFAULT 0,
+  `qty_remaining` int(11) NOT NULL DEFAULT 0,
+  `unit_cost` decimal(13,4) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `component_checkouts`
+--
+
+CREATE TABLE `component_checkouts` (
+  `id` bigint(20) NOT NULL,
+  `component_id` bigint(20) NOT NULL,
+  `asset_id` bigint(20) DEFAULT NULL,
+  `checked_out_to_user_id` int(11) DEFAULT NULL,
+  `qty` int(11) NOT NULL DEFAULT 1,
+  `checked_out_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `checked_in_at` timestamp NULL DEFAULT NULL,
+  `notes` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Triggers `component_checkouts`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_cc_after_delete` AFTER DELETE ON `component_checkouts` FOR EACH ROW BEGIN
+  IF OLD.checked_in_at IS NULL THEN
+    UPDATE components SET qty_remaining = qty_remaining + OLD.qty WHERE id = OLD.component_id;
+  END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_cc_after_insert` AFTER INSERT ON `component_checkouts` FOR EACH ROW BEGIN
+  IF NEW.checked_in_at IS NULL THEN
+    UPDATE components
+      SET qty_remaining = qty_remaining - NEW.qty
+    WHERE id = NEW.component_id;
+  END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_cc_after_update` AFTER UPDATE ON `component_checkouts` FOR EACH ROW BEGIN
+  IF OLD.checked_in_at IS NULL AND NEW.checked_in_at IS NOT NULL THEN
+    UPDATE components SET qty_remaining = qty_remaining + OLD.qty WHERE id = NEW.component_id;
+  END IF;
+
+  IF OLD.checked_in_at IS NOT NULL AND NEW.checked_in_at IS NULL THEN
+    IF (SELECT qty_remaining FROM components WHERE id = NEW.component_id) < NEW.qty THEN
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'component_checkouts: insufficient stock to un-checkin';
+    END IF;
+    UPDATE components SET qty_remaining = qty_remaining - NEW.qty WHERE id = NEW.component_id;
+  END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_cc_before_insert` BEFORE INSERT ON `component_checkouts` FOR EACH ROW BEGIN
+  DECLARE rem INT;
+
+  IF NEW.qty <= 0 THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'component_checkouts: qty must be > 0';
+  END IF;
+
+  SELECT qty_remaining INTO rem
+  FROM components WHERE id = NEW.component_id FOR UPDATE;
+
+  IF rem < NEW.qty THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'component_checkouts: insufficient component stock';
+  END IF;
+END
+$$
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `consumables`
+--
+
+CREATE TABLE `consumables` (
+  `id` bigint(20) NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `category_id` bigint(20) DEFAULT NULL,
+  `manufacturer_id` bigint(20) DEFAULT NULL,
+  `supplier_id` bigint(20) DEFAULT NULL,
+  `company_id` bigint(20) DEFAULT NULL,
+  `location_id` bigint(20) DEFAULT NULL,
+  `item_no` varchar(100) DEFAULT NULL,
+  `model_no` varchar(100) DEFAULT NULL,
+  `min_qty` int(11) NOT NULL DEFAULT 0,
+  `qty_total` int(11) NOT NULL DEFAULT 0,
+  `qty_remaining` int(11) NOT NULL DEFAULT 0,
+  `unit_cost` decimal(13,4) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `consumables`
+--
+
+INSERT INTO `consumables` (`id`, `name`, `category_id`, `manufacturer_id`, `supplier_id`, `company_id`, `location_id`, `item_no`, `model_no`, `min_qty`, `qty_total`, `qty_remaining`, `unit_cost`, `notes`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'Toner Cartridge – HP (Black)', 11, 3, 2, 1, 14, 'CONS-INK-001', 'M404-TONER-BK', 5, 15, 15, 85000.0000, 'Track with transactions (initial stock via txn)', '2026-02-20 17:48:14', '2026-02-20 18:06:50', NULL),
+(2, 'A4 Paper (500 sheets)', 11, NULL, 2, 1, 14, 'CONS-PAPER-001', 'A4-REAM', 30, 120, 120, 4500.0000, 'Using Printer Ink category until Paper category added', '2026-02-20 17:48:14', '2026-02-20 18:06:50', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `consumable_transactions`
+--
+
+CREATE TABLE `consumable_transactions` (
+  `id` bigint(20) NOT NULL,
+  `consumable_id` bigint(20) NOT NULL,
+  `txn_type` enum('in','out','adjust') NOT NULL,
+  `qty` int(11) NOT NULL,
+  `reference` varchar(120) DEFAULT NULL,
+  `issued_to_user_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `consumable_transactions`
+--
+
+INSERT INTO `consumable_transactions` (`id`, `consumable_id`, `txn_type`, `qty`, `reference`, `issued_to_user_id`, `created_at`) VALUES
+(3, 1, 'in', 15, 'OPENING-STOCK-2026', NULL, '2026-02-20 18:06:50'),
+(4, 2, 'in', 120, 'OPENING-STOCK-2026', NULL, '2026-02-20 18:06:50');
+
+--
+-- Triggers `consumable_transactions`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_ct_after_insert` AFTER INSERT ON `consumable_transactions` FOR EACH ROW BEGIN
+  IF NEW.txn_type = 'in' THEN
+    UPDATE consumables
+      SET qty_total = qty_total + NEW.qty,
+          qty_remaining = qty_remaining + NEW.qty
+    WHERE id = NEW.consumable_id;
+  ELSEIF NEW.txn_type = 'out' THEN
+    UPDATE consumables
+      SET qty_remaining = qty_remaining - NEW.qty
+    WHERE id = NEW.consumable_id;
+  ELSEIF NEW.txn_type = 'adjust' THEN
+    UPDATE consumables
+      SET qty_remaining = NEW.qty
+    WHERE id = NEW.consumable_id;
+  END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_ct_before_insert` BEFORE INSERT ON `consumable_transactions` FOR EACH ROW BEGIN
+  DECLARE rem INT;
+
+  IF NEW.qty <= 0 THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'consumable_transactions: qty must be > 0';
+  END IF;
+
+  IF NEW.txn_type = 'out' THEN
+    SELECT qty_remaining INTO rem
+    FROM consumables WHERE id = NEW.consumable_id FOR UPDATE;
+
+    IF rem < NEW.qty THEN
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'consumable_transactions: insufficient stock';
+    END IF;
+  END IF;
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -2614,6 +2848,108 @@ INSERT INTO `leave_types` (`id`, `name`, `description`, `max_days_per_year`, `ca
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `licenses`
+--
+
+CREATE TABLE `licenses` (
+  `id` bigint(20) NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `category_id` bigint(20) DEFAULT NULL,
+  `manufacturer_id` bigint(20) DEFAULT NULL,
+  `supplier_id` bigint(20) DEFAULT NULL,
+  `company_id` bigint(20) DEFAULT NULL,
+  `product_key` varchar(255) DEFAULT NULL,
+  `seats_total` int(11) NOT NULL DEFAULT 1,
+  `seats_used` int(11) NOT NULL DEFAULT 0,
+  `purchase_date` date DEFAULT NULL,
+  `expiration_date` date DEFAULT NULL,
+  `purchase_cost` decimal(13,4) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `licenses`
+--
+
+INSERT INTO `licenses` (`id`, `name`, `category_id`, `manufacturer_id`, `supplier_id`, `company_id`, `product_key`, `seats_total`, `seats_used`, `purchase_date`, `expiration_date`, `purchase_cost`, `notes`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'Microsoft 365 (Education)', 10, 7, 1, 1, NULL, 300, 0, '2025-09-01', '2026-09-01', 0.0000, 'UNILAK staff/students subscription', '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(2, 'Windows 11 Pro (Volume)', 10, 7, 1, 1, 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXX', 50, 0, '2025-10-15', NULL, 0.0000, 'For staff machines imaging', '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `license_assignments`
+--
+
+CREATE TABLE `license_assignments` (
+  `id` bigint(20) NOT NULL,
+  `license_id` bigint(20) NOT NULL,
+  `assigned_to_user_id` int(11) DEFAULT NULL,
+  `assigned_to_asset_id` bigint(20) DEFAULT NULL,
+  `assigned_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `revoked_at` timestamp NULL DEFAULT NULL,
+  `notes` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Triggers `license_assignments`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_la_after_delete` AFTER DELETE ON `license_assignments` FOR EACH ROW BEGIN
+  IF OLD.revoked_at IS NULL THEN
+    UPDATE licenses SET seats_used = GREATEST(seats_used - 1, 0) WHERE id = OLD.license_id;
+  END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_la_after_insert` AFTER INSERT ON `license_assignments` FOR EACH ROW BEGIN
+  IF NEW.revoked_at IS NULL THEN
+    UPDATE licenses SET seats_used = seats_used + 1 WHERE id = NEW.license_id;
+  END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_la_after_update` AFTER UPDATE ON `license_assignments` FOR EACH ROW BEGIN
+  IF OLD.revoked_at IS NULL AND NEW.revoked_at IS NOT NULL THEN
+    UPDATE licenses SET seats_used = GREATEST(seats_used - 1, 0) WHERE id = NEW.license_id;
+  END IF;
+
+  IF OLD.revoked_at IS NOT NULL AND NEW.revoked_at IS NULL THEN
+    IF (SELECT seats_used FROM licenses WHERE id = NEW.license_id) >= (SELECT seats_total FROM licenses WHERE id = NEW.license_id) THEN
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'license_assignments: no available seats to un-revoke';
+    END IF;
+    UPDATE licenses SET seats_used = seats_used + 1 WHERE id = NEW.license_id;
+  END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_la_before_insert` BEFORE INSERT ON `license_assignments` FOR EACH ROW BEGIN
+  DECLARE usedSeats INT;
+  DECLARE totalSeats INT;
+
+  IF NEW.assigned_to_user_id IS NULL AND NEW.assigned_to_asset_id IS NULL THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'license_assignments: must assign to user or asset';
+  END IF;
+
+  SELECT seats_used, seats_total INTO usedSeats, totalSeats
+  FROM licenses WHERE id = NEW.license_id FOR UPDATE;
+
+  IF usedSeats >= totalSeats THEN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'license_assignments: no available license seats';
+  END IF;
+END
+$$
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `locations`
 --
 
@@ -2624,8 +2960,13 @@ CREATE TABLE `locations` (
   `address2` text DEFAULT NULL,
   `city` varchar(100) DEFAULT NULL,
   `state` varchar(100) DEFAULT NULL,
+  `province` varchar(100) DEFAULT NULL,
+  `district` varchar(100) DEFAULT NULL,
+  `sector` varchar(100) DEFAULT NULL,
+  `cell` varchar(100) DEFAULT NULL,
+  `village` varchar(100) DEFAULT NULL,
   `country` varchar(100) DEFAULT NULL,
-  `zip` varchar(20) DEFAULT NULL,
+  `po_box` varchar(50) DEFAULT NULL,
   `parent_id` bigint(20) DEFAULT NULL,
   `currency` varchar(10) DEFAULT NULL,
   `image` varchar(255) DEFAULT NULL,
@@ -2638,13 +2979,25 @@ CREATE TABLE `locations` (
 -- Dumping data for table `locations`
 --
 
-INSERT INTO `locations` (`id`, `name`, `address`, `address2`, `city`, `state`, `country`, `zip`, `parent_id`, `currency`, `image`, `created_at`, `updated_at`, `deleted_at`) VALUES
-(1, 'Headquarters', '123 Main St', NULL, 'New York', 'NY', 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
-(2, 'IT Department', '123 Main St, Floor 3', NULL, 'New York', 'NY', 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
-(3, 'Warehouse', '456 Storage Ave', NULL, 'New York', 'NY', 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
-(4, 'HR Office', '123 Main St, Floor 2', NULL, 'New York', 'NY', 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
-(5, 'Finance Department', '123 Main St, Floor 4', NULL, 'New York', 'NY', 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
-(6, 'Parking Lot A', '123 Main St, Parking', NULL, 'New York', 'NY', 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL);
+INSERT INTO `locations` (`id`, `name`, `address`, `address2`, `city`, `state`, `province`, `district`, `sector`, `cell`, `village`, `country`, `po_box`, `parent_id`, `currency`, `image`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'Headquarters', 'Sonatube', 'PO BOX 6392', 'Kigali', 'Kigali', NULL, NULL, NULL, NULL, NULL, 'Rwanda', NULL, NULL, 'RWF', NULL, '2026-02-19 22:49:14', '2026-02-20 00:33:33', NULL),
+(2, 'IT Department', '123 Main St, Floor 3', NULL, 'New York', 'NY', NULL, NULL, NULL, NULL, NULL, 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(3, 'Warehouse', '456 Storage Ave', NULL, 'New York', 'NY', NULL, NULL, NULL, NULL, NULL, 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(4, 'HR Office', '123 Main St, Floor 2', NULL, 'New York', 'NY', NULL, NULL, NULL, NULL, NULL, 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(5, 'Finance Department', '123 Main St, Floor 4', NULL, 'New York', 'NY', NULL, NULL, NULL, NULL, NULL, 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(6, 'Parking Lot A', '123 Main St, Parking', NULL, 'New York', 'NY', NULL, NULL, NULL, NULL, NULL, 'USA', NULL, NULL, NULL, NULL, '2026-02-19 22:49:14', '2026-02-19 22:49:14', NULL),
+(7, 'UNILAK Kigali Main Campus', 'Kicukiro, KG 552 St', 'Main Campus', 'Kigali', 'Kigali City', 'Kigali City', 'Kicukiro', 'Gahanga', 'Gahanga', 'Nyarurama', 'Rwanda', 'P.O. Box Kigali', NULL, 'RWF', NULL, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(8, 'UNILAK Rwamagana Branch', 'RN3, Rwamagana Town', 'Branch Campus', 'Rwamagana', 'Eastern Province', 'Eastern Province', 'Rwamagana', 'Kigabiro', 'Kigabiro', 'Kigarama', 'Rwanda', 'P.O. Box Rwamagana', NULL, 'RWF', NULL, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(9, 'UNILAK Musanze Branch', 'NR 18 Ave, Musanze', 'Branch Campus', 'Musanze', 'Northern Province', 'Northern Province', 'Musanze', 'Muhoza', 'Muhoza', 'Kaguhu', 'Rwanda', 'P.O. Box Musanze', NULL, 'RWF', NULL, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(10, 'Kigali – Main Gate', 'Main Gate Lane', 'Entry Control', 'Kigali', 'Kigali City', 'Kigali City', 'Kicukiro', 'Gahanga', 'Gahanga', 'Nyarurama', 'Rwanda', NULL, 7, 'RWF', NULL, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(11, 'Kigali – Guard Post', 'Main Gate Lane', 'Security Post', 'Kigali', 'Kigali City', 'Kigali City', 'Kicukiro', 'Gahanga', 'Gahanga', 'Nyarurama', 'Rwanda', NULL, 7, 'RWF', NULL, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(12, 'Kigali – Reception', 'Admin Block', 'Front Desk', 'Kigali', 'Kigali City', 'Kigali City', 'Kicukiro', 'Gahanga', 'Gahanga', 'Nyarurama', 'Rwanda', NULL, 7, 'RWF', NULL, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(13, 'Kigali – ICT Store', 'ICT Building', 'Store Room', 'Kigali', 'Kigali City', 'Kigali City', 'Kicukiro', 'Gahanga', 'Gahanga', 'Nyarurama', 'Rwanda', NULL, 7, 'RWF', NULL, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(14, 'Kigali – Finance Office', 'Admin Block', 'Finance', 'Kigali', 'Kigali City', 'Kigali City', 'Kicukiro', 'Gahanga', 'Gahanga', 'Nyarurama', 'Rwanda', NULL, 7, 'RWF', NULL, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(15, 'Rwamagana – Main Gate', 'RN3 Entrance', 'Entry Control', 'Rwamagana', 'Eastern Province', 'Eastern Province', 'Rwamagana', 'Kigabiro', 'Kigabiro', 'Kigarama', 'Rwanda', NULL, 8, 'RWF', NULL, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(16, 'Rwamagana – ICT Store', 'Branch Campus', 'Store', 'Rwamagana', 'Eastern Province', 'Eastern Province', 'Rwamagana', 'Kigabiro', 'Kigabiro', 'Kigarama', 'Rwanda', NULL, 8, 'RWF', NULL, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(17, 'Musanze – Main Gate', 'NR 18 Entrance', 'Entry Control', 'Musanze', 'Northern Province', 'Northern Province', 'Musanze', 'Muhoza', 'Muhoza', 'Kaguhu', 'Rwanda', NULL, 9, 'RWF', NULL, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(18, 'Musanze – ICT Store', 'Branch Campus', 'Store', 'Musanze', 'Northern Province', 'Northern Province', 'Musanze', 'Muhoza', 'Muhoza', 'Kaguhu', 'Rwanda', NULL, 9, 'RWF', NULL, '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL);
 
 -- --------------------------------------------------------
 
@@ -3551,10 +3904,14 @@ CREATE TABLE `suppliers` (
   `address` text DEFAULT NULL,
   `city` varchar(100) DEFAULT NULL,
   `state` varchar(100) DEFAULT NULL,
+  `province` varchar(100) DEFAULT NULL,
+  `district` varchar(100) DEFAULT NULL,
+  `sector` varchar(100) DEFAULT NULL,
+  `cell` varchar(100) DEFAULT NULL,
+  `village` varchar(100) DEFAULT NULL,
   `country` varchar(100) DEFAULT NULL,
-  `zip` varchar(20) DEFAULT NULL,
+  `po_box` varchar(50) DEFAULT NULL,
   `phone` varchar(50) DEFAULT NULL,
-  `fax` varchar(50) DEFAULT NULL,
   `email` varchar(100) DEFAULT NULL,
   `contact` varchar(100) DEFAULT NULL,
   `url` varchar(255) DEFAULT NULL,
@@ -3564,6 +3921,15 @@ CREATE TABLE `suppliers` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `deleted_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `suppliers`
+--
+
+INSERT INTO `suppliers` (`id`, `name`, `address`, `city`, `state`, `province`, `district`, `sector`, `cell`, `village`, `country`, `po_box`, `phone`, `email`, `contact`, `url`, `image`, `notes`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'Rwanda ICT Supplies Ltd', 'KN 5 Rd, Kacyiru', 'Kigali', 'Kigali City', 'Kigali City', 'Gasabo', 'Kacyiru', 'Kacyiru', 'Kamatamu', 'Rwanda', 'P.O. Box 100 Kigali', '+250 788 111 000', 'sales@rwandaictsupplies.rw', 'Sales Desk', 'https://example.rw', NULL, 'Laptops, desktops, accessories.', '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(2, 'Kigali Office Solutions', 'KK 15 Ave, Remera', 'Kigali', 'Kigali City', 'Kigali City', 'Gasabo', 'Remera', 'Remera', 'Rukiri I', 'Rwanda', 'P.O. Box 200 Kigali', '+250 788 222 000', 'orders@kigos.rw', 'Procurement', 'https://example.rw', NULL, 'Printers, toner, paper, office items.', '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL),
+(3, 'Africa Network Distributors', 'KG 9 Ave, Kimihurura', 'Kigali', 'Kigali City', 'Kigali City', 'Gasabo', 'Kimihurura', 'Kimihurura', 'Rugando', 'Rwanda', 'P.O. Box 300 Kigali', '+250 788 333 000', 'support@and.rw', 'Network Team', 'https://example.rw', NULL, 'Networking equipment.', '2026-02-20 17:48:14', '2026-02-20 17:48:14', NULL);
 
 -- --------------------------------------------------------
 
@@ -3851,6 +4217,12 @@ INSERT INTO `visitor_logs` (`id`, `visitor_id`, `purpose`, `employee_to_visit_id
 --
 
 --
+-- Indexes for table `access_rules`
+--
+ALTER TABLE `access_rules`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `assets`
 --
 ALTER TABLE `assets`
@@ -3918,6 +4290,46 @@ ALTER TABLE `companies`
   ADD UNIQUE KEY `name` (`name`);
 
 --
+-- Indexes for table `components`
+--
+ALTER TABLE `components`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_cmp_company` (`company_id`),
+  ADD KEY `idx_cmp_supplier` (`supplier_id`),
+  ADD KEY `idx_cmp_mfg` (`manufacturer_id`),
+  ADD KEY `idx_cmp_cat` (`category_id`),
+  ADD KEY `idx_cmp_loc` (`location_id`);
+
+--
+-- Indexes for table `component_checkouts`
+--
+ALTER TABLE `component_checkouts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_cc_component` (`component_id`),
+  ADD KEY `idx_cc_asset` (`asset_id`),
+  ADD KEY `idx_cc_user` (`checked_out_to_user_id`);
+
+--
+-- Indexes for table `consumables`
+--
+ALTER TABLE `consumables`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_consumable_name_company` (`name`,`company_id`),
+  ADD KEY `idx_cons_company` (`company_id`),
+  ADD KEY `idx_cons_supplier` (`supplier_id`),
+  ADD KEY `idx_cons_mfg` (`manufacturer_id`),
+  ADD KEY `idx_cons_cat` (`category_id`),
+  ADD KEY `idx_cons_loc` (`location_id`);
+
+--
+-- Indexes for table `consumable_transactions`
+--
+ALTER TABLE `consumable_transactions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_ct_consumable` (`consumable_id`),
+  ADD KEY `idx_ct_user` (`issued_to_user_id`);
+
+--
 -- Indexes for table `depreciations`
 --
 ALTER TABLE `depreciations`
@@ -3947,6 +4359,25 @@ ALTER TABLE `guard_posts`
 --
 ALTER TABLE `job_postings`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `licenses`
+--
+ALTER TABLE `licenses`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_lic_company` (`company_id`),
+  ADD KEY `idx_lic_supplier` (`supplier_id`),
+  ADD KEY `idx_lic_mfg` (`manufacturer_id`),
+  ADD KEY `idx_lic_cat` (`category_id`);
+
+--
+-- Indexes for table `license_assignments`
+--
+ALTER TABLE `license_assignments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_la_license` (`license_id`),
+  ADD KEY `idx_la_user` (`assigned_to_user_id`),
+  ADD KEY `idx_la_asset` (`assigned_to_asset_id`);
 
 --
 -- Indexes for table `locations`
@@ -3989,14 +4420,26 @@ ALTER TABLE `suppliers`
   ADD UNIQUE KEY `name` (`name`);
 
 --
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
+
+--
+-- AUTO_INCREMENT for table `access_rules`
+--
+ALTER TABLE `access_rules`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `assets`
 --
 ALTER TABLE `assets`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `asset_disposals`
@@ -4014,7 +4457,7 @@ ALTER TABLE `asset_maintenances`
 -- AUTO_INCREMENT for table `asset_models`
 --
 ALTER TABLE `asset_models`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `attendance`
@@ -4032,7 +4475,31 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `companies`
 --
 ALTER TABLE `companies`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `components`
+--
+ALTER TABLE `components`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `component_checkouts`
+--
+ALTER TABLE `component_checkouts`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `consumables`
+--
+ALTER TABLE `consumables`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `consumable_transactions`
+--
+ALTER TABLE `consumable_transactions`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `depreciations`
@@ -4059,10 +4526,22 @@ ALTER TABLE `job_postings`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `licenses`
+--
+ALTER TABLE `licenses`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `license_assignments`
+--
+ALTER TABLE `license_assignments`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `locations`
 --
 ALTER TABLE `locations`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `manufacturers`
@@ -4086,7 +4565,7 @@ ALTER TABLE `status_labels`
 -- AUTO_INCREMENT for table `suppliers`
 --
 ALTER TABLE `suppliers`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- Constraints for dumped tables
@@ -4125,10 +4604,62 @@ ALTER TABLE `asset_models`
   ADD CONSTRAINT `asset_models_ibfk_3` FOREIGN KEY (`depreciation_id`) REFERENCES `depreciations` (`id`) ON DELETE SET NULL;
 
 --
+-- Constraints for table `components`
+--
+ALTER TABLE `components`
+  ADD CONSTRAINT `cmp_ibfk_cat` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `cmp_ibfk_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `cmp_ibfk_loc` FOREIGN KEY (`location_id`) REFERENCES `locations` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `cmp_ibfk_mfg` FOREIGN KEY (`manufacturer_id`) REFERENCES `manufacturers` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `cmp_ibfk_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `component_checkouts`
+--
+ALTER TABLE `component_checkouts`
+  ADD CONSTRAINT `cc_ibfk_asset` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `cc_ibfk_component` FOREIGN KEY (`component_id`) REFERENCES `components` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `cc_ibfk_user` FOREIGN KEY (`checked_out_to_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `consumables`
+--
+ALTER TABLE `consumables`
+  ADD CONSTRAINT `cons_ibfk_cat` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `cons_ibfk_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `cons_ibfk_loc` FOREIGN KEY (`location_id`) REFERENCES `locations` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `cons_ibfk_mfg` FOREIGN KEY (`manufacturer_id`) REFERENCES `manufacturers` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `cons_ibfk_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `consumable_transactions`
+--
+ALTER TABLE `consumable_transactions`
+  ADD CONSTRAINT `ct_ibfk_consumable` FOREIGN KEY (`consumable_id`) REFERENCES `consumables` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `ct_ibfk_user` FOREIGN KEY (`issued_to_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
 -- Constraints for table `disposal_records`
 --
 ALTER TABLE `disposal_records`
   ADD CONSTRAINT `FK8k3ny1xkx7alutm0ih7lbtp73` FOREIGN KEY (`asset_id`) REFERENCES `assets` (`id`);
+
+--
+-- Constraints for table `licenses`
+--
+ALTER TABLE `licenses`
+  ADD CONSTRAINT `licenses_ibfk_cat` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `licenses_ibfk_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `licenses_ibfk_mfg` FOREIGN KEY (`manufacturer_id`) REFERENCES `manufacturers` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `licenses_ibfk_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `license_assignments`
+--
+ALTER TABLE `license_assignments`
+  ADD CONSTRAINT `la_ibfk_asset` FOREIGN KEY (`assigned_to_asset_id`) REFERENCES `assets` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `la_ibfk_license` FOREIGN KEY (`license_id`) REFERENCES `licenses` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `la_ibfk_user` FOREIGN KEY (`assigned_to_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `locations`

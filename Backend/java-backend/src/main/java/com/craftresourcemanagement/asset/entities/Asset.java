@@ -34,6 +34,9 @@ public class Asset {
     @Column(name = "location_id")
     private Long locationId;
 
+    @Column(name = "rtd_location_id")
+    private Long rtdLocationId;
+
     @Column(name = "supplier_id")
     private Long supplierId;
 
@@ -72,6 +75,9 @@ public class Asset {
 
     @Column(name = "expected_checkin")
     private LocalDate expectedCheckin;
+
+    @Column(name = "last_audit_date")
+    private LocalDateTime lastAuditDate;
 
     @Column(name = "next_audit_date")
     private LocalDate nextAuditDate;
@@ -121,6 +127,9 @@ public class Asset {
     public Long getLocationId() { return locationId; }
     public void setLocationId(Long locationId) { this.locationId = locationId; }
 
+    public Long getRtdLocationId() { return rtdLocationId; }
+    public void setRtdLocationId(Long rtdLocationId) { this.rtdLocationId = rtdLocationId; }
+
     public Long getSupplierId() { return supplierId; }
     public void setSupplierId(Long supplierId) { this.supplierId = supplierId; }
 
@@ -159,6 +168,9 @@ public class Asset {
 
     public LocalDate getExpectedCheckin() { return expectedCheckin; }
     public void setExpectedCheckin(LocalDate expectedCheckin) { this.expectedCheckin = expectedCheckin; }
+
+    public LocalDateTime getLastAuditDate() { return lastAuditDate; }
+    public void setLastAuditDate(LocalDateTime lastAuditDate) { this.lastAuditDate = lastAuditDate; }
 
     public LocalDate getNextAuditDate() { return nextAuditDate; }
     public void setNextAuditDate(LocalDate nextAuditDate) { this.nextAuditDate = nextAuditDate; }

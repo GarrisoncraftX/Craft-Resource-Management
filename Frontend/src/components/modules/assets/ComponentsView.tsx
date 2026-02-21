@@ -4,14 +4,8 @@ import { AssetDataTable } from './AssetDataTable';
 import { Copy, Pencil, Trash2, Cpu } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { createInventoryColumns } from './inventoryColumns';
-import type { BaseInventoryItem } from '@/types/javabackendapi/assetTypes';
+import type { Component } from '@/types/javabackendapi/assetTypes';
 import { mockComponents } from '@/services/mockData/assets';
-
-interface Component extends BaseInventoryItem {
-  name: string;
-  serial: string;
-  remaining: number;
-}
 
 export const ComponentsView: React.FC = () => {
   const columns = createInventoryColumns<Component>('components');

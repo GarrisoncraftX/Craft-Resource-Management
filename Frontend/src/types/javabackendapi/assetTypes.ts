@@ -84,55 +84,78 @@ export interface Person {
 export interface License {
   id: number;
   name: string;
-  productKey: string;
-  expirationDate: string;
-  terminationDate?: string;
-  licensedToEmail: string;
-  licensedTo: string;
-  category?: string;
-  supplier?: string;
-  manufacturer: string;
-  minQty: number;
-  total: number;
-  avail: number;
-  purchaseDate?: string;
-  depreciation?: string;
-  maintained?: boolean;
-  reassignable?: boolean;
-  purchaseCost?: string;
-  purchaseOrderNumber?: string;
-  orderNumber?: string;
-  createdBy?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  category_id?: number;
+  manufacturer_id?: number;
+  supplier_id?: number;
+  company_id?: number;
+  product_key?: string;
+  seats_total: number;
+  seats_used: number;
+  available_seats?: number;
+  purchase_date?: string;
+  expiration_date?: string;
+  purchase_cost?: number;
   notes?: string;
-  company?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface BaseInventoryItem {
   id: number;
-  name?: string;
-  category: string;
-  modelNo: string;
-  location: string;
-  minQty: number;
-  total: number;
-  remaining?: number;
-  avail?: number;
-  checkedOut?: number;
-  unitCost: number;
-  totalCost?: number;
-  company?: string;
-  manufacturer?: string;
-  supplier?: string;
-  purchaseDate?: string;
-  orderNumber?: string;
-  itemNo?: string;
+  name: string;
+  category_id?: number;
+  manufacturer_id?: number;
+  supplier_id?: number;
+  company_id?: number;
+  location_id?: number;
+  item_no?: string;
+  model_no?: string;
   serial?: string;
+  min_qty: number;
+  qty_total: number;
+  qty_remaining: number;
+  unit_cost?: number;
   notes?: string;
-  createdBy?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Consumable {
+  id: number;
+  name: string;
+  category_id?: number;
+  manufacturer_id?: number;
+  supplier_id?: number;
+  company_id?: number;
+  location_id?: number;
+  item_no?: string;
+  model_no?: string;
+  min_qty: number;
+  qty_total: number;
+  qty_remaining: number;
+  unit_cost?: number;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Component {
+  id: number;
+  name: string;
+  category_id?: number;
+  manufacturer_id?: number;
+  supplier_id?: number;
+  company_id?: number;
+  location_id?: number;
+  model_no?: string;
+  serial?: string;
+  min_qty: number;
+  qty_total: number;
+  qty_remaining: number;
+  unit_cost?: number;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Category {

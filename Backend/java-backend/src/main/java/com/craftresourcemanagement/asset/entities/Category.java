@@ -16,8 +16,17 @@ public class Category {
     @Column(name = "category_type", nullable = false)
     private String categoryType = "asset";
 
+    @Column(name = "eula_text", columnDefinition = "TEXT")
+    private String eulaText;
+
+    @Column(name = "use_default_eula")
+    private Boolean useDefaultEula = false;
+
     @Column(name = "require_acceptance")
     private Boolean requireAcceptance = false;
+
+    @Column(name = "checkin_email")
+    private Boolean checkinEmail = false;
 
     @Column(length = 255)
     private String image;
@@ -46,8 +55,14 @@ public class Category {
     public void setName(String name) { this.name = name; }
     public String getCategoryType() { return categoryType; }
     public void setCategoryType(String categoryType) { this.categoryType = categoryType; }
+    public String getEulaText() { return eulaText; }
+    public void setEulaText(String eulaText) { this.eulaText = eulaText; }
+    public Boolean getUseDefaultEula() { return useDefaultEula; }
+    public void setUseDefaultEula(Boolean useDefaultEula) { this.useDefaultEula = useDefaultEula; }
     public Boolean getRequireAcceptance() { return requireAcceptance; }
     public void setRequireAcceptance(Boolean requireAcceptance) { this.requireAcceptance = requireAcceptance; }
+    public Boolean getCheckinEmail() { return checkinEmail; }
+    public void setCheckinEmail(Boolean checkinEmail) { this.checkinEmail = checkinEmail; }
     public String getImage() { return image; }
     public void setImage(String image) { this.image = image; }
     public LocalDateTime getCreatedAt() { return createdAt; }

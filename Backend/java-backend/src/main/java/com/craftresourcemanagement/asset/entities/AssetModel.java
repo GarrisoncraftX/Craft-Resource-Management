@@ -34,6 +34,9 @@ public class AssetModel {
     @Column(length = 255)
     private String image;
 
+    @Column(columnDefinition = "TEXT")
+    private String notes;
+
     @Column(name = "requestable")
     private Boolean requestable = false;
 
@@ -73,6 +76,8 @@ public class AssetModel {
     public void setMinAmt(Integer minAmt) { this.minAmt = minAmt; }
     public String getImage() { return image; }
     public void setImage(String image) { this.image = image; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
     public Boolean getRequestable() { return requestable; }
     public void setRequestable(Boolean requestable) { this.requestable = requestable; }
     public LocalDateTime getCreatedAt() { return createdAt; }

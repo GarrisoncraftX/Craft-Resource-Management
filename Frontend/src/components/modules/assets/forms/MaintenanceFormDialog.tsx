@@ -1,15 +1,15 @@
-import { assetApiService } from '@/services/javabackendapi/assetApi';
-import React, { useState } from 'react';
+import { assetApiService, uploadAssetImage } from '@/services/javabackendapi/assetApi';
+import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, X } from 'lucide-react';
-import { mockSuppliers, mockAssets } from '@/services/mockData/assets';
+import { Plus, X, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { Asset, Supplier } from '@/types/javabackendapi/assetTypes';
 
 interface MaintenanceFormDialogProps {
   open: boolean;
@@ -33,14 +33,60 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
   const [url, setUrl] = useState('');
   const [notes, setNotes] = useState('');
   const [assetSearch, setAssetSearch] = useState('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
 
-  const filteredAssets = mockAssets.filter(a => 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [suppliersData, assetsData] = await Promise.all([
+          assetApiService.getAllSuppliers(),
+          assetApiService.getAllAssets()
+        ]);
+        setSuppliers(suppliersData);
+        setAssets(assetsData);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+      }
+    };
+    if (open) fetchData();
+  }, [open]);
+
+  const filteredAssets = assets.filter(a => 
     !selectedAssets.includes(String(a.id)) &&
     (a.assetName?.toLowerCase().includes(assetSearch.toLowerCase()) || 
      a.assetTag?.toLowerCase().includes(assetSearch.toLowerCase()))
   );
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Invalid file type. Please upload jpg, webp, png, gif, svg, or avif.');
+        return;
+      }
+      if (file.size > 25 * 1024 * 1024) {
+        toast.error('File size must be less than 25MB');
+        return;
+      }
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const addAsset = (id: string) => {
     setSelectedAssets(prev => [...prev, id]);
@@ -74,6 +120,13 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
       };
       
       const result = await assetApiService.createMaintenanceRecord(maintenanceData);
+      if (selectedImage && result?.id) {
+        try {
+          await uploadAssetImage(result.id, selectedImage);
+        } catch (err) {
+          console.error('Image upload failed:', err);
+        }
+      }
       onSubmit?.(result);
       toast.success('Maintenance record created successfully');
       onOpenChange(false);
@@ -109,7 +162,7 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
               {selectedAssets.length > 0 && (
                 <div className="flex flex-wrap gap-1 p-2 border border-amber-400 border-l-4 rounded bg-white">
                   {selectedAssets.map(id => {
-                    const asset = mockAssets.find(a => String(a.id) === id);
+                    const asset = assets.find(a => String(a.id) === id);
                     return (
                       <Badge key={id} className="bg-sky-600 text-white gap-1 px-2 py-1">
                         <button type="button" onClick={() => removeAsset(id)} className="hover:text-red-200">
@@ -179,13 +232,13 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
           <div className="flex items-center gap-4">
             <label className="w-44 text-sm font-bold text-gray-700 text-right shrink-0">Supplier</label>
             <div className="flex items-center gap-2 flex-1">
-              <Select value={supplier} onValueChange={setSupplier}>
+              <Select value={String(supplier)} onValueChange={setSupplier}>
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Select a Supplier" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockSuppliers.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  {suppliers.map(s => (
+                    <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -222,9 +275,30 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
           {/* Upload Image */}
           <div className="flex items-start gap-4">
             <label className="w-44 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Upload Image</label>
-            <div className="space-y-1">
-              <Button type="button" size="sm" className="bg-sky-500 hover:bg-sky-600 text-white">Select File...</Button>
-              <p className="text-xs text-gray-500">Accepted filetypes are jpg, webp, png, gif, svg, and avif. The maximum upload size allowed is 25M.</p>
+            <div className="space-y-2">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageChange}
+                accept="image/jpeg,image/png,image/gif,image/svg+xml,image/webp"
+                className="hidden"
+                id="maintenance-image-upload"
+              />
+              {imagePreview ? (
+                <div className="relative inline-block">
+                  <img src={imagePreview} alt="Preview" className="h-24 w-24 object-cover rounded-md border" />
+                  <button type="button" onClick={removeImage} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <label htmlFor="maintenance-image-upload" className="cursor-pointer">
+                  <Button type="button" size="sm" className="bg-sky-500 hover:bg-sky-600 text-white pointer-events-none">
+                    <Upload className="w-4 h-4 mr-1" /> Select File
+                  </Button>
+                </label>
+              )}
+              <p className="text-xs text-gray-500">Image will be uploaded when you save. Accepted filetypes are jpg, webp, png, gif, svg, and avif. Max upload size is 25M.</p>
             </div>
           </div>
 
