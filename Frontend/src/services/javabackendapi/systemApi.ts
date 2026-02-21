@@ -11,6 +11,8 @@ export interface SystemConfig {
 export interface AuditLog {
   id?: number;
   userId?: number;
+  userName?: string;
+  performedBy?: string;
   action: string;
   timestamp: string;
   details?: string;
@@ -69,6 +71,13 @@ class SystemApiService {
   async getRecentAuditLogsForUser(userId: string | number): Promise<AuditLog[]> {
     return apiClient.get(`/system/audit-logs/user/${userId}/recent`);
   }
+
+  async getAssetAuditLogs(limit: number = 10): Promise<AuditLog[]> {
+    const response = await apiClient.get('/system/audit-logs/search', {
+      params: { entityType: 'ASSET', size: limit }
+    });
+    return response.content || [];
+  }
 }
 
 export const systemApiService = new SystemApiService();
@@ -118,7 +127,7 @@ export async function deleteNotification(id: number | string): Promise<void> {
 }
 
 export async function getUnreadNotificationCount(userId: number | string): Promise<number> {
-  const response = await apiClient.get<{ count: number }>(`/system/notifications/user/${userId}/unread-count`);
+  const response = await apiClient.get(`/system/notifications/user/${userId}/unread-count`);
   return response.count;
 }
 

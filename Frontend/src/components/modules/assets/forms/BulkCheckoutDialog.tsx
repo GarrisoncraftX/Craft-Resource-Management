@@ -14,7 +14,7 @@ interface BulkCheckoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   assets: Asset[];
-  onCheckout?: (data: any) => void;
+  onCheckout?: (data) => void;
 }
 
 export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, onOpenChange, assets, onCheckout }) => {

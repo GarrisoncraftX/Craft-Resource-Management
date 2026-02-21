@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Package, KeyRound, Keyboard, Droplets, Cpu, Users, X, RefreshCw, Download, Printer, Maximize2, Minus, Pencil, RotateCcw, ClipboardCheck, ShieldCheck } from 'lucide-react';
 import { assetApiService } from '@/services/javabackendapi/assetApi';
+import { systemApiService, type AuditLog } from '@/services/javabackendapi/systemApi';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { mockActivities, mockDashboardLocations } from '@/services/mockData/assets';
+import { mockDashboardLocations } from '@/services/mockData/assets';
 import { hrApiService } from '@/services/api';
 
 // Big button card component matching Snipe-IT style
@@ -82,26 +83,43 @@ const getActivityIcon = (action: string) => {
   }
 };
 
+const getAssetDisplayName = (activity: AuditLog): string => {
+  try {
+    if (activity.details) {
+      const details = JSON.parse(activity.details);
+      if (details.assetName || details.asset_name) {
+        return details.assetName || details.asset_name;
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return activity.entityId ? `Asset #${activity.entityId}` : 'Asset';
+};
+
 
 export const AssetDashboard: React.FC = () => {
   const [assetCounts, setAssetCounts] = useState<Record<string, number>>({});
   const [assetStats, setAssetStats] = useState<Record<string, number>>({});
   const [assetsByCategory, setAssetsByCategory] = useState<Array<{ category: string; count: number }>>([]);
   const [totalEmployees, setTotalEmployees] = useState(0);
+  const [recentActivities, setRecentActivities] = useState<AuditLog[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [counts, stats, categories, employees] = await Promise.all([
+        const [counts, stats, categories, employees, activities] = await Promise.all([
           assetApiService.getAssetCounts(),
           assetApiService.getAssetStats(),
           assetApiService.getAssetsByCategory(),
-          hrApiService.listEmployees()
+          hrApiService.listEmployees(),
+          systemApiService.getAssetAuditLogs(5)
         ]);
         setAssetCounts(counts);
         setAssetStats(stats);
         setAssetsByCategory(categories);
         setTotalEmployees(Array.isArray(employees) ? employees.length : 0);
+        setRecentActivities(activities);
       } catch (error) {
         console.error('Failed to fetch asset data:', error);
       }
@@ -182,16 +200,32 @@ export const AssetDashboard: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockActivities.slice(0, 5).map(a => (
-                    <TableRow key={a.id} className="border-b border-gray-50">
-                      <TableCell className="py-2 px-3">{getActivityIcon(a.action)}</TableCell>
-                      <TableCell className="py-2 px-3 text-xs text-gray-600">{a.date}</TableCell>
-                      <TableCell className="py-2 px-3 text-xs text-sky-600 cursor-pointer hover:underline">{a.createdBy}</TableCell>
-                      <TableCell className="py-2 px-3 text-xs">{a.action}</TableCell>
-                      <TableCell className="py-2 px-3 text-xs text-sky-600 cursor-pointer hover:underline">║ {a.item}</TableCell>
-                      <TableCell className="py-2 px-3 text-xs text-sky-600">{a.target}</TableCell>
+                  {recentActivities.length > 0 ? (
+                    recentActivities.map(activity => (
+                      <TableRow key={activity.id} className="border-b border-gray-50">
+                        <TableCell className="py-2 px-3">{getActivityIcon(activity.action)}</TableCell>
+                        <TableCell className="py-2 px-3 text-xs text-gray-600">
+                          {new Date(activity.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </TableCell>
+                        <TableCell className="py-2 px-3 text-xs text-sky-600 cursor-pointer hover:underline">
+                          {activity.userName || activity.performedBy || 'System'}
+                        </TableCell>
+                        <TableCell className="py-2 px-3 text-xs">{activity.action}</TableCell>
+                        <TableCell className="py-2 px-3 text-xs text-sky-600 cursor-pointer hover:underline">
+                          ║ {getAssetDisplayName(activity)}
+                        </TableCell>
+                        <TableCell className="py-2 px-3 text-xs text-sky-600">
+                          {activity.result || 'success'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-4 text-center text-xs text-gray-500">
+                        No recent asset activities
+                      </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </DashboardTable>
