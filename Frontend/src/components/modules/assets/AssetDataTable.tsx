@@ -14,16 +14,16 @@ export interface ColumnDef<T> {
 }
 
 interface AssetDataTableProps<T> {
-  data: T[];
-  columns: ColumnDef<T>[];
-  rowsPerPageOptions?: number[];
-  actions?: (row: T) => React.ReactNode;
-  showCheckboxHeader?: boolean;
-  checkboxHeaderContent?: React.ReactNode;
-  viewType?: 'assets' | 'licenses' | 'accessories' | 'components' | 'consumables' | 'kits' | 'people' | 'settings';
-  onBulkGo?: (action: string) => void;
-  onAction?: (action: string) => void;
-  selectedCount?: number;
+  readonly data: T[];
+  readonly columns: ColumnDef<T>[];
+  readonly rowsPerPageOptions?: number[];
+  readonly actions?: (row: T) => React.ReactNode;
+  readonly showCheckboxHeader?: boolean;
+  readonly checkboxHeaderContent?: React.ReactNode;
+  readonly viewType?: 'assets' | 'licenses' | 'accessories' | 'components' | 'consumables' | 'kits' | 'people' | 'settings';
+  readonly onBulkGo?: (action: string) => void;
+  readonly onAction?: (action: string) => void;
+  readonly selectedCount?: number;
 }
 
 export function getStatusBadge(status: string) {
@@ -72,7 +72,6 @@ export function AssetDataTable<T extends { id?: number | string }>({
   const [rowsPerPage, setRowsPerPage] = useState(rowsPerPageOptions[0]);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const filteredData = useMemo(() => {
     if (!search.trim()) return data;
@@ -80,7 +79,9 @@ export function AssetDataTable<T extends { id?: number | string }>({
     return data.filter(row =>
       columns.some(col => {
         const val = col.accessor(row);
-        return val !== null && val !== undefined && String(val).toLowerCase().includes(term);
+        if (val === null || val === undefined) return false;
+        if (typeof val === 'object') return false;
+        return String(val).toLowerCase().includes(term);
       })
     );
   }, [data, search, columns]);
@@ -118,10 +119,9 @@ export function AssetDataTable<T extends { id?: number | string }>({
 
   const handleSort = (columnKey: string) => {
     if (sortColumn === columnKey) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+      setSortColumn(null);
     } else {
       setSortColumn(columnKey);
-      setSortDirection('asc');
     }
   };
 

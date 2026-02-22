@@ -9,16 +9,17 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { assetApiService } from '@/services/javabackendapi/assetApi';
-import type { Company, AssetModel, StatusLabel, Location, Supplier, CustomField } from '@/types/javabackendapi/assetTypes';
+import type { Asset, Company, AssetModel, StatusLabel, Location, Supplier, CustomField } from '@/types/javabackendapi/assetTypes';
 
 interface BulkEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedCount: number;
-  onSubmit?: (data) => void;
+  assets: Asset[];
+  onSubmit?: (data: Record<string, unknown>) => void;
 }
 
-export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChange, selectedCount, onSubmit }) => {
+export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChange, selectedCount, assets, onSubmit }) => {
   const [assetName, setAssetName] = useState('');
   const [purchaseDate, setPurchaseDate] = useState('');
   const [expectedCheckinDate, setExpectedCheckinDate] = useState('');
@@ -35,9 +36,8 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
   const [nextAuditDate, setNextAuditDate] = useState('');
   const [requestable, setRequestable] = useState('do-not-change');
   const [notes, setNotes] = useState('');
-  const [deleteFlags, setDeleteFlags] = useState<Record<string, boolean>>({});
-
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [deleteFlags, setDeleteFlags] = useState<Record<string, boolean>>({});
   const [models, setModels] = useState<AssetModel[]>([]);
   const [statusLabels, setStatusLabels] = useState<StatusLabel[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -74,9 +74,29 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit?.({ assetName, purchaseDate, expectedCheckinDate, eolDate, status, model, defaultLocation, locationUpdateType, purchaseCost, supplier, company, orderNumber, warranty, nextAuditDate, requestable, notes, deleteFlags });
-    toast.success(`${selectedCount} assets updated`);
-    onOpenChange(false);
+    if (selectedCount === 0) {
+      toast.error('No assets selected');
+      return;
+    }
+    onSubmit?.({
+      assetName,
+      purchaseDate,
+      expectedCheckinDate,
+      eolDate,
+      status,
+      model,
+      defaultLocation,
+      locationUpdateType,
+      purchaseCost,
+      supplier,
+      company,
+      orderNumber,
+      warranty,
+      nextAuditDate,
+      requestable,
+      notes,
+      deleteFlags,
+    });
   };
 
   return (
@@ -96,8 +116,8 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
           {/* Asset Name */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Asset Name</label>
-            <Input value={assetName} onChange={(e) => setAssetName(e.target.value)} className="flex-1" />
+            <label htmlFor="bulk-asset-name" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Asset Name</label>
+            <Input id="bulk-asset-name" value={assetName} onChange={(e) => setAssetName(e.target.value)} className="flex-1" />
             <div className="flex items-center gap-1">
               <Checkbox checked={deleteFlags.assetName} onCheckedChange={() => toggleDelete('assetName')} />
               <span className="text-xs text-gray-500">Delete values for all {selectedCount} selections</span>
@@ -106,8 +126,8 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
 
           {/* Purchase Date */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Purchase Date</label>
-            <Input type="date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} className="w-52" />
+            <label htmlFor="bulk-purchase-date" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Purchase Date</label>
+            <Input id="bulk-purchase-date" type="date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} className="w-52" />
             <div className="flex items-center gap-1">
               <Checkbox checked={deleteFlags.purchaseDate} onCheckedChange={() => toggleDelete('purchaseDate')} />
               <span className="text-xs text-gray-500">Delete values for all {selectedCount} selections</span>
@@ -116,8 +136,8 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
 
           {/* Expected Checkin Date */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Expected Checkin Date</label>
-            <Input type="date" value={expectedCheckinDate} onChange={(e) => setExpectedCheckinDate(e.target.value)} className="w-52" />
+            <label htmlFor="bulk-checkin-date" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Expected Checkin Date</label>
+            <Input id="bulk-checkin-date" type="date" value={expectedCheckinDate} onChange={(e) => setExpectedCheckinDate(e.target.value)} className="w-52" />
             <div className="flex items-center gap-1">
               <Checkbox checked={deleteFlags.expectedCheckinDate} onCheckedChange={() => toggleDelete('expectedCheckinDate')} />
               <span className="text-xs text-gray-500">Delete values for all {selectedCount} selections</span>
@@ -126,8 +146,8 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
 
           {/* EOL Date */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">EOL Date</label>
-            <Input type="date" value={eolDate} onChange={(e) => setEolDate(e.target.value)} className="w-52" />
+            <label htmlFor="bulk-eol-date" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">EOL Date</label>
+            <Input id="bulk-eol-date" type="date" value={eolDate} onChange={(e) => setEolDate(e.target.value)} className="w-52" />
             <div className="flex items-center gap-1">
               <Checkbox checked={deleteFlags.eolDate} onCheckedChange={() => toggleDelete('eolDate')} />
               <span className="text-xs text-gray-500">Delete values for all {selectedCount} selections</span>
@@ -136,10 +156,10 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
 
           {/* Status */}
           <div className="flex items-start gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Status</label>
+            <label htmlFor="bulk-status" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Status</label>
             <div className="flex-1 space-y-1">
               <Select value={String(status)} onValueChange={setStatus}>
-                <SelectTrigger><SelectValue placeholder="Select Status" /></SelectTrigger>
+                <SelectTrigger id="bulk-status"><SelectValue placeholder="Select Status" /></SelectTrigger>
                 <SelectContent>
                   {statusLabels.map(s => (
                     <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
@@ -152,9 +172,9 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
 
           {/* Model */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Model</label>
+            <label htmlFor="bulk-model" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Model</label>
             <Select value={String(model)} onValueChange={setModel}>
-              <SelectTrigger className="flex-1"><SelectValue placeholder="Select a Model" /></SelectTrigger>
+              <SelectTrigger id="bulk-model" className="flex-1"><SelectValue placeholder="Select a Model" /></SelectTrigger>
               <SelectContent>
                 {models.map(m => (
                   <SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>
@@ -166,11 +186,11 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
 
           {/* Default Location */}
           <div className="flex items-start gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Default Location</label>
+            <label htmlFor="bulk-location" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Default Location</label>
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
                 <Select value={String(defaultLocation)} onValueChange={setDefaultLocation}>
-                  <SelectTrigger className="flex-1"><SelectValue placeholder="Select a Location" /></SelectTrigger>
+                  <SelectTrigger id="bulk-location" className="flex-1"><SelectValue placeholder="Select a Location" /></SelectTrigger>
                   <SelectContent>
                     {locations.map(l => (
                       <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>
@@ -198,19 +218,19 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
 
           {/* Purchase Cost */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Purchase Cost</label>
+            <label htmlFor="bulk-purchase-cost" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Purchase Cost</label>
             <div className="flex items-center gap-0">
               <span className="text-sm text-gray-600 px-3 py-2 bg-gray-100 rounded-l border border-r-0 border-gray-200">USD</span>
-              <Input type="number" value={purchaseCost} onChange={(e) => setPurchaseCost(e.target.value)} className="w-40 rounded-l-none" placeholder="Purchase Cost" />
+              <Input id="bulk-purchase-cost" type="number" value={purchaseCost} onChange={(e) => setPurchaseCost(e.target.value)} className="w-40 rounded-l-none" placeholder="Purchase Cost" />
             </div>
           </div>
 
           {/* Supplier */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Supplier</label>
+            <label htmlFor="bulk-supplier" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Supplier</label>
             <div className="flex items-center gap-2 flex-1">
               <Select value={String(supplier)} onValueChange={setSupplier}>
-                <SelectTrigger className="flex-1"><SelectValue placeholder="Select a Supplier" /></SelectTrigger>
+                <SelectTrigger id="bulk-supplier" className="flex-1"><SelectValue placeholder="Select a Supplier" /></SelectTrigger>
                 <SelectContent>
                   {suppliers.map(s => (
                     <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
@@ -223,9 +243,9 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
 
           {/* Company */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Company</label>
+            <label htmlFor="bulk-company" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Company</label>
             <Select value={String(company)} onValueChange={setCompany}>
-              <SelectTrigger className="flex-1"><SelectValue placeholder="Select Company" /></SelectTrigger>
+              <SelectTrigger id="bulk-company" className="flex-1"><SelectValue placeholder="Select Company" /></SelectTrigger>
               <SelectContent>
                 {companies.map(c => (
                   <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
@@ -236,23 +256,23 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
 
           {/* Order Number */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Order Number</label>
-            <Input value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} className="flex-1" />
+            <label htmlFor="bulk-order-number" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Order Number</label>
+            <Input id="bulk-order-number" value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} className="flex-1" />
           </div>
 
           {/* Warranty */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Warranty</label>
+            <label htmlFor="bulk-warranty" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Warranty</label>
             <div className="flex items-center gap-2">
-              <Input type="number" value={warranty} onChange={(e) => setWarranty(e.target.value)} className="w-24" />
+              <Input id="bulk-warranty" type="number" value={warranty} onChange={(e) => setWarranty(e.target.value)} className="w-24" />
               <span className="text-sm text-gray-500 px-3 py-2 bg-gray-100 rounded border border-gray-200">months</span>
             </div>
           </div>
 
           {/* Next Audit Date */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Next Audit Date</label>
-            <Input type="date" value={nextAuditDate} onChange={(e) => setNextAuditDate(e.target.value)} className="w-52" />
+            <label htmlFor="bulk-audit-date" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Next Audit Date</label>
+            <Input id="bulk-audit-date" type="date" value={nextAuditDate} onChange={(e) => setNextAuditDate(e.target.value)} className="w-52" />
             <div className="flex items-center gap-1">
               <Checkbox checked={deleteFlags.nextAuditDate} onCheckedChange={() => toggleDelete('nextAuditDate')} />
               <span className="text-xs text-gray-500">Delete values for all {selectedCount} selections</span>
@@ -261,7 +281,7 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
 
           {/* Requestable */}
           <div className="flex items-start gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Users may request this asset</label>
+            <label htmlFor="bulk-requestable" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Users may request this asset</label>
             <RadioGroup value={requestable} onValueChange={setRequestable} className="space-y-1">
               <div className="flex items-center gap-2"><RadioGroupItem value="yes" id="req-yes" /><label htmlFor="req-yes" className="text-sm">Yes</label></div>
               <div className="flex items-center gap-2"><RadioGroupItem value="no" id="req-no" /><label htmlFor="req-no" className="text-sm">No</label></div>
@@ -271,9 +291,9 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
 
           {/* Notes */}
           <div className="flex items-start gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Notes</label>
+            <label htmlFor="bulk-notes" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Notes</label>
             <div className="flex-1 space-y-1">
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-16" />
+              <Textarea id="bulk-notes" value={notes} onChange={(e) => setNotes(e.target.value)} className="min-h-16" />
               <div className="flex items-center gap-1">
                 <Checkbox checked={deleteFlags.notes} onCheckedChange={() => toggleDelete('notes')} />
                 <span className="text-xs text-gray-500">Delete values for all {selectedCount} selections</span>
@@ -323,7 +343,9 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
 
           {/* Footer */}
           <div className="flex justify-end pt-4 border-t">
-            <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white">✓ Save</Button>
+            <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              ✓ Save
+            </Button>
           </div>
         </form>
       </DialogContent>

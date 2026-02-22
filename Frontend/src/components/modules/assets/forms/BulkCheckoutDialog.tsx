@@ -14,23 +14,53 @@ interface BulkCheckoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   assets: Asset[];
-  onCheckout?: (data) => void;
+  onCheckout?: (data: { updatedAssets: Asset[] }) => void;
 }
 
 export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, onOpenChange, assets, onCheckout }) => {
-  const alreadyCheckedOut = assets.filter(a => a.status === 'Deployed' || a.status === 'In Use');
-  const availableAssets = assets.filter(a => a.status !== 'Deployed' && a.status !== 'In Use');
+  const normalizeStatus = (s?: string | null) => (s || '').trim().toLowerCase();
+  const isAssetCheckedOut = (a: Asset) => {
+    const s = normalizeStatus(a.status);
+    return (
+      s === 'deployed' ||
+      s === 'in use' ||
+      s === 'checked out' ||
+      a.status_id === 2 ||
+      !!(a.assigned_to ?? a.assignedTo)
+    );
+  };
 
-  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<number | string>>(
-    new Set(availableAssets.map(a => a.id))
-  );
+  const alreadyCheckedOut = assets.filter(isAssetCheckedOut);
+  const eligible = assets.filter((a) => !isAssetCheckedOut(a));
+
+  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<number | string>>(new Set());
+  const [assignedTo, setAssignedTo] = useState('');
   const [status, setStatus] = useState('');
   const [checkoutType, setCheckoutType] = useState<'user' | 'asset' | 'location'>('user');
   const [checkoutDate, setCheckoutDate] = useState('');
   const [expectedCheckinDate, setExpectedCheckinDate] = useState('');
   const [notes, setNotes] = useState('');
-
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [users, setUsers] = useState<Array<{ id: number; name: string }>>([]);
+  const [locations, setLocations] = useState<Array<{ id: string; name: string }>>([]);
+  const [assetsForCheckout, setAssetsForCheckout] = useState<Array<{ id: number; assetTag: string; assetName: string }>>([]);
+
+  React.useEffect(() => {
+    if (open) {
+      setSelectedAssetIds(new Set(eligible.map((a) => a.id)));
+      (async () => {
+        try {
+          const locData = await assetApiService.getAllLocations();
+          setLocations(locData);
+          setUsers([{ id: 1, name: 'User 1' }, { id: 2, name: 'User 2' }]);
+          setAssetsForCheckout(assets.map(a => ({ id: Number(a.id), assetTag: a.assetTag || '', assetName: a.assetName || '' })));
+        } catch (err) {
+          console.error('Failed to fetch dropdown data:', err);
+        }
+      })();
+    }
+  }, [open, assets, eligible]);
 
   const removeAsset = (id: number | string) => {
     setSelectedAssetIds(prev => {
@@ -43,29 +73,38 @@ export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, on
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedAssetIds.size === 0) {
-      toast.error('No assets selected');
+      toast.error('No eligible assets selected');
       return;
     }
-    
+    if (!assignedTo) {
+      toast.error('Please select a user/location/asset to checkout to');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // Checkout each asset individually
-      const checkoutPromises = Array.from(selectedAssetIds).map(assetId => 
-        assetApiService.checkoutAsset(
-          Number(assetId),
-          1, // assignedTo - should be dynamic based on checkoutType
-          checkoutType,
-          notes
-        )
+      const checkoutPromises = Array.from(selectedAssetIds).map((assetId) =>
+        assetApiService.checkoutAsset(Number(assetId), Number(assignedTo), checkoutType, notes)
       );
-      
-      await Promise.all(checkoutPromises);
-      onCheckout?.({ assetIds: Array.from(selectedAssetIds), status, checkoutType, checkoutDate, expectedCheckinDate, notes });
-      toast.success(`${selectedAssetIds.size} assets checked out successfully`);
-      onOpenChange(false);
+
+      const results = await Promise.all(checkoutPromises);
+      const updatedAssets = results.map((result, idx) => {
+        const assetId = Array.from(selectedAssetIds)[idx];
+        const originalAsset = assets.find((a) => a.id === assetId);
+        return {
+          ...originalAsset,
+          ...result,
+          status: status || 'Deployed',
+          assigned_to: Number(assignedTo),
+          assigned_type: checkoutType,
+          expected_checkin: expectedCheckinDate || undefined,
+        } as Asset;
+      });
+
+      onCheckout?.({ updatedAssets });
     } catch (error) {
       console.error('Failed to checkout assets:', error);
-      toast.error('Failed to checkout some assets. Please try again.');
+      toast.error('Failed to checkout some assets');
     } finally {
       setIsSubmitting(false);
     }
@@ -87,10 +126,12 @@ export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, on
                 <span className="text-sm font-bold">Warning</span>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm text-gray-700">
-                <p>The following were removed from the selected assets because they are already checked out</p>
+                <p className="font-semibold mb-1">The following assets are already checked out and will not be processed:</p>
                 <ul className="list-disc list-inside mt-1">
-                  {alreadyCheckedOut.map(a => (
-                    <li key={a.id}>#{a.assetTag} - {a.assetName}</li>
+                  {alreadyCheckedOut.map((a) => (
+                    <li key={a.id}>
+                      #{a.assetTag || a.asset_tag} - {a.assetName || a.asset_name || a.name}
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -99,7 +140,7 @@ export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, on
 
           {/* Assets tags display */}
           <div className="flex items-start gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Assets</label>
+            <label htmlFor="bulk-checkout-assets" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Assets</label>
             <div className="flex-1">
               <div className="flex flex-wrap gap-1 p-2 border border-amber-400 border-l-4 rounded bg-white max-h-48 overflow-y-auto">
                 {Array.from(selectedAssetIds).map(id => {
@@ -119,9 +160,9 @@ export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, on
 
           {/* Status */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Status</label>
+            <label htmlFor="bulk-checkout-status" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Status</label>
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="flex-1"><SelectValue placeholder="Do not change" /></SelectTrigger>
+              <SelectTrigger id="bulk-checkout-status" className="flex-1"><SelectValue placeholder="Do not change" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Do not change</SelectItem>
                 <SelectItem value="Deployed">Deployed</SelectItem>
@@ -132,7 +173,7 @@ export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, on
 
           {/* Checkout to type */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Checkout to</label>
+            <label htmlFor="bulk-checkout-type" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Checkout to</label>
             <div className="flex rounded overflow-hidden border border-sky-600">
               {(['user', 'asset', 'location'] as const).map(type => (
                 <button key={type} type="button"
@@ -144,28 +185,51 @@ export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, on
             </div>
           </div>
 
+          {/* Assigned To */}
+          <div className="flex items-center gap-4">
+            <label htmlFor="bulk-checkout-assigned" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">
+              {checkoutType === 'user' ? 'User' : checkoutType === 'asset' ? 'Asset' : 'Location'}
+            </label>
+            <Select value={assignedTo} onValueChange={setAssignedTo}>
+              <SelectTrigger id="bulk-checkout-assigned" className="flex-1 border-l-4 border-l-amber-400">
+                <SelectValue placeholder={`Select ${checkoutType}`} />
+              </SelectTrigger>
+              <SelectContent>
+                {checkoutType === 'user' && users.map(u => (
+                  <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
+                ))}
+                {checkoutType === 'location' && locations.map(l => (
+                  <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>
+                ))}
+                {checkoutType === 'asset' && assetsForCheckout.map(a => (
+                  <SelectItem key={a.id} value={String(a.id)}>#{a.assetTag} - {a.assetName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Checkout Date */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Checkout Date</label>
-            <Input type="date" value={checkoutDate} onChange={(e) => setCheckoutDate(e.target.value)} className="w-52" />
+            <label htmlFor="bulk-checkout-date" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Checkout Date</label>
+            <Input id="bulk-checkout-date" type="date" value={checkoutDate} onChange={(e) => setCheckoutDate(e.target.value)} className="w-52" />
           </div>
 
           {/* Expected Checkin Date */}
           <div className="flex items-center gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Expected Checkin Date</label>
-            <Input type="date" value={expectedCheckinDate} onChange={(e) => setExpectedCheckinDate(e.target.value)} className="w-52" />
+            <label htmlFor="bulk-expected-checkin" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Expected Checkin Date</label>
+            <Input id="bulk-expected-checkin" type="date" value={expectedCheckinDate} onChange={(e) => setExpectedCheckinDate(e.target.value)} className="w-52" />
           </div>
 
           {/* Notes */}
           <div className="flex items-start gap-4">
-            <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Notes</label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="flex-1 min-h-20" />
+            <label htmlFor="bulk-checkout-notes" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Notes</label>
+            <Textarea id="bulk-checkout-notes" value={notes} onChange={(e) => setNotes(e.target.value)} className="flex-1 min-h-20" />
           </div>
 
           {/* Footer */}
           <div className="flex justify-between items-center pt-4 border-t">
             <button type="button" onClick={() => onOpenChange(false)} className="text-sm text-sky-600 hover:underline">Cancel</button>
-            <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Button type="submit" disabled={isSubmitting || selectedAssetIds.size === 0} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               <Check className="w-4 h-4 mr-1" /> {isSubmitting ? 'Checking out...' : 'Checkout'}
             </Button>
           </div>

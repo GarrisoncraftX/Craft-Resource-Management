@@ -64,8 +64,8 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
       const selectedModel = models.find(m => m.id?.toString() === model);
       if (selectedModel?.eolRate) {
         const purchaseDate = new Date(orderData.purchaseDate);
-        const eolMonths = parseInt(selectedModel.eolRate);
-        if (!isNaN(eolMonths)) {
+        const eolMonths = Number.parseInt(selectedModel.eolRate, 10);
+        if (!Number.isNaN(eolMonths)) {
           purchaseDate.setMonth(purchaseDate.getMonth() + eolMonths);
           const calculatedEol = purchaseDate.toISOString().split('T')[0];
           setOrderData(prev => ({ ...prev, eolDate: calculatedEol }));
@@ -282,8 +282,8 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-              <label htmlFor="notes-textarea" className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0 sm:mt-2">Notes</label>
-              <Textarea id="notes-textarea" value={notes} onChange={(e) => setNotes(e.target.value)} className="flex-1 min-h-20" />
+              <label htmlFor="asset-notes" className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0 sm:mt-2">Notes</label>
+              <Textarea id="asset-notes" value={notes} onChange={(e) => setNotes(e.target.value)} className="flex-1 min-h-20" />
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
@@ -314,7 +314,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
 
             {/* Upload Image - Now functional */}
             <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-              <label className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0 sm:mt-2">Upload Image</label>
+              <label htmlFor='upload-function' className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0 sm:mt-2">Upload Image</label>
               <div className="flex-1 space-y-2">
                 <input
                   type="file"

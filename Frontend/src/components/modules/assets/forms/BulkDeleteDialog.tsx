@@ -14,7 +14,14 @@ interface BulkDeleteDialogProps {
 }
 
 export const BulkDeleteDialog: React.FC<BulkDeleteDialogProps> = ({ open, onOpenChange, assets, onConfirmDelete }) => {
-  const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set(assets.map(a => a.id)));
+  const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  React.useEffect(() => {
+    if (open) {
+      setSelectedIds(new Set(assets.map((a) => a.id)));
+    }
+  }, [open, assets]);
 
   const toggleId = (id: number | string) => {
     setSelectedIds(prev => {
@@ -25,13 +32,17 @@ export const BulkDeleteDialog: React.FC<BulkDeleteDialogProps> = ({ open, onOpen
     });
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (selectedIds.size === 0) {
       toast.error('No assets selected for deletion');
       return;
     }
-    onConfirmDelete(Array.from(selectedIds));
-    onOpenChange(false);
+    setIsDeleting(true);
+    try {
+      onConfirmDelete(Array.from(selectedIds));
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -91,8 +102,8 @@ export const BulkDeleteDialog: React.FC<BulkDeleteDialogProps> = ({ open, onOpen
           >
             Cancel
           </button>
-          <Button onClick={handleDelete} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-            ✓ Delete
+          <Button onClick={handleDelete} disabled={isDeleting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            ✓ {isDeleting ? 'Deleting...' : 'Delete'}
           </Button>
         </div>
       </DialogContent>

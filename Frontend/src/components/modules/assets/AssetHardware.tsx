@@ -157,11 +157,90 @@ export const AssetHardware: React.FC = () => {
       await Promise.all(ids.map((id) => assetApiService.deleteAsset(Number(id))));
       setAssets((prev) => prev.filter((a) => !ids.includes(a.id)));
       setSelectedRows(new Set());
+      setShowBulkDelete(false);
       toast.success(`${ids.length} asset(s) deleted successfully`);
     } catch (err) {
       toast.error('Failed to delete some assets');
       console.error(err);
     }
+  };
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleBulkEditSubmit = async (data: Record<string, unknown>) => {
+    const selectedAssets = getSelectedAssets();
+    const deleteFlags = data.deleteFlags as Record<string, boolean> | undefined;
+    setIsSubmitting(true);
+    try {
+      const updates = await Promise.all(
+        selectedAssets.map((asset) => {
+          const updatePayload: Partial<Asset> = {};
+          if (data.assetName && !deleteFlags?.assetName) updatePayload.assetName = data.assetName as string;
+          if (data.purchaseDate && !deleteFlags?.purchaseDate) updatePayload.purchaseDate = data.purchaseDate as string;
+          if (data.expectedCheckinDate && !deleteFlags?.expectedCheckinDate) updatePayload.expected_checkin = data.expectedCheckinDate as string;
+          if (data.eolDate && !deleteFlags?.eolDate) updatePayload.eol_date = data.eolDate as string;
+          if (data.status) updatePayload.status_id = Number(data.status);
+          if (data.model) updatePayload.model_id = Number(data.model);
+          if (data.defaultLocation) {
+            if (data.locationUpdateType === 'both' || data.locationUpdateType === 'default-only') {
+              updatePayload.rtd_location_id = Number(data.defaultLocation);
+            }
+            if (data.locationUpdateType === 'both' || data.locationUpdateType === 'actual-only') {
+              updatePayload.location_id = Number(data.defaultLocation);
+            }
+          }
+          if (data.purchaseCost) updatePayload.purchase_cost = Number(data.purchaseCost);
+          if (data.supplier) updatePayload.supplier_id = Number(data.supplier);
+          if (data.company) updatePayload.company_id = Number(data.company);
+          if (data.orderNumber) updatePayload.order_number = data.orderNumber as string;
+          if (data.warranty) updatePayload.warranty_months = Number(data.warranty);
+          if (data.nextAuditDate && !deleteFlags?.nextAuditDate) updatePayload.next_audit_date = data.nextAuditDate as string;
+          if (data.requestable === 'yes') updatePayload.requestable = true;
+          else if (data.requestable === 'no') updatePayload.requestable = false;
+          if (data.notes && !deleteFlags?.notes) updatePayload.notes = data.notes as string;
+          
+          if (deleteFlags?.assetName) updatePayload.assetName = '';
+          if (deleteFlags?.purchaseDate) updatePayload.purchaseDate = '';
+          if (deleteFlags?.expectedCheckinDate) updatePayload.expected_checkin = '';
+          if (deleteFlags?.eolDate) updatePayload.eol_date = '';
+          if (deleteFlags?.nextAuditDate) updatePayload.next_audit_date = '';
+          if (deleteFlags?.notes) updatePayload.notes = '';
+
+          return assetApiService.updateAsset(Number(asset.id), updatePayload);
+        })
+      );
+      setAssets((prev) =>
+        prev.map((a) => {
+          const updated = updates.find((u) => u.id === a.id);
+          return updated || a;
+        })
+      );
+      setSelectedRows(new Set());
+      setShowBulkEdit(false);
+      toast.success(`${selectedAssets.length} asset(s) updated successfully`);
+    } catch (err) {
+      toast.error('Failed to update some assets');
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleMaintenanceSubmit = (result: unknown) => {
+    setMaintenancePreselected([]);
+    setShowMaintenance(false);
+    toast.success('Maintenance record created successfully');
+  };
+
+  const handleBulkCheckoutSubmit = async (data: { updatedAssets: Asset[] }) => {
+    setAssets((prev) =>
+      prev.map((a) => {
+        const updated = data.updatedAssets.find((u) => u.id === a.id);
+        return updated || a;
+      })
+    );
+    setSelectedRows(new Set());
+    setShowBulkCheckout(false);
+    toast.success(`${data.updatedAssets.length} asset(s) checked out successfully`);
   };
 
   useEffect(() => {
@@ -389,7 +468,7 @@ export const AssetHardware: React.FC = () => {
         },
       },
     ],
-    [selectedRows, filteredAssets.length]
+    [selectedRows]
   );
 
   if (loading) return <div className="p-6">Loading assets…</div>;
@@ -559,13 +638,18 @@ export const AssetHardware: React.FC = () => {
         open={showMaintenance} 
         onOpenChange={setShowMaintenance} 
         preSelectedAssetIds={maintenancePreselected}
-        onSubmit={() => {
-          toast.success('Maintenance record created');
-          setMaintenancePreselected([]);
-        }}
+        onSubmit={handleMaintenanceSubmit}
       />
 
-      {showBulkEdit && <BulkEditDialog open={showBulkEdit} onOpenChange={setShowBulkEdit} selectedCount={selectedRows.size} />}
+      {showBulkEdit && (
+        <BulkEditDialog
+          open={showBulkEdit}
+          onOpenChange={setShowBulkEdit}
+          selectedCount={selectedRows.size}
+          assets={getSelectedAssets()}
+          onSubmit={handleBulkEditSubmit}
+        />
+      )}
 
       {showBulkDelete && (
         <BulkDeleteDialog
@@ -576,7 +660,14 @@ export const AssetHardware: React.FC = () => {
         />
       )}
 
-      {showBulkCheckout && <BulkCheckoutDialog open={showBulkCheckout} onOpenChange={setShowBulkCheckout} assets={getSelectedAssets()} />}
+      {showBulkCheckout && (
+        <BulkCheckoutDialog
+          open={showBulkCheckout}
+          onOpenChange={setShowBulkCheckout}
+          assets={getSelectedAssets()}
+          onCheckout={handleBulkCheckoutSubmit}
+        />
+      )}
 
       {cloneAsset && (
         <CloneAssetDialog
