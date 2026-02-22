@@ -58,8 +58,7 @@ type AssetApiLike = {
 
   checkoutAsset?: (assetId: number, assignedToId: number, assignedType: string, notes?: string) => Promise<Asset>;
 
-  checkinAssetById?: (assetId: number, payload: unknown) => Promise<Asset>;
-  checkinAsset?: ((assetId: number, payload: unknown) => Promise<Asset>) | ((assetTag: string, payload: unknown) => Promise<Asset>);
+  checkinAsset?: (assetId: number, payload: Record<string, unknown>) => Promise<Asset>;
 
   updateAsset?: (assetId: number, payload: unknown) => Promise<Asset>;
   updateAssetStatus?: (assetId: number, statusId: number) => Promise<Asset>;
@@ -273,28 +272,17 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, onOpenChan
 
       // CHECKIN
       const checkinPayload = {
-        name: formData.assetName || undefined,
         statusId: statusIdNum || undefined,
         locationId: parsePositiveInt(formData.locationId) || undefined,
-        checkinDate: formData.checkinDate,
-        notes: formData.notes || undefined,
         updateDefaultLocation: formData.updateDefaultLocation,
+        notes: formData.notes || undefined,
       };
 
-      let updatedAsset: Asset | null = null;
-
-      if (api.checkinAssetById) {
-        updatedAsset = await api.checkinAssetById(assetId, checkinPayload);
-      } else if (api.checkinAsset) {
-        // try by id first; if it fails, try by tag
-        try {
-          updatedAsset = await (api.checkinAsset as (id: number, payload: unknown) => Promise<Asset>)(assetId, checkinPayload);
-        } catch {
-          updatedAsset = await (api.checkinAsset as (tag: string, payload: unknown) => Promise<Asset>)(String(asset.assetTag), checkinPayload);
-        }
-      } else {
+      if (!api.checkinAsset) {
         throw new Error('checkin API not available');
       }
+
+      const updatedAsset = await api.checkinAsset(assetId, checkinPayload);
 
       toast.success(`Asset ${asset.assetTag || asset.asset_tag} checked in successfully`);
       onSuccess?.(updatedAsset);
@@ -439,7 +427,7 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, onOpenChan
                           <option value="">Select a user</option>
                           {users.map((u) => (
                             <option key={u.id} value={u.id}>
-                              {u.firstName} {u.lastName} ({u.email})
+                              {u.firstName} {u.lastName}
                             </option>
                           ))}
                         </select>

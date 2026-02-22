@@ -191,9 +191,8 @@ public class AssetController {
             @PathVariable Long id,
             @RequestBody Map<String, Object> checkinData,
             @RequestHeader(value = "x-user-id", required = false) String userId) {
-        String note = (String) checkinData.get("note");
         Long userIdLong = userId != null ? Long.parseLong(userId) : null;
-        return ResponseEntity.ok(assetService.checkinAsset(id, note, userIdLong));
+        return ResponseEntity.ok(assetService.checkinAsset(id, checkinData, userIdLong));
     }
 
     @PostMapping("/maintenance-records")

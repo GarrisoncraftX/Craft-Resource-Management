@@ -86,9 +86,9 @@ class AssetApiService {
     );
   }
 
-  async checkinAsset(id: number, note?: string): Promise<Asset> {
+  async checkinAsset(id: number, checkinData: Record<string, unknown>): Promise<Asset> {
     return this.handleApiCall(
-      () => apiClient.post(`${API_BASE}/${id}/checkin`, { note }),
+      () => apiClient.post(`${API_BASE}/${id}/checkin`, checkinData),
       mockAssets[0]
     );
   }

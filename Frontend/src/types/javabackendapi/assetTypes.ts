@@ -408,6 +408,8 @@ export interface Asset {
   assignedTo?: number;
   assigned_type?: string;
   assignedType?: string;
+  assigned_to_name?:string;
+  assignedToName?: string;
 
   //Audit
   expectedCheckinDate?: string;

@@ -178,7 +178,7 @@ public class AssetServiceImpl implements AssetService {
 
     @Override
     @Transactional
-    public AssetDTO checkinAsset(Long id, String note, Long userId) {
+    public AssetDTO checkinAsset(Long id, Map<String, Object> checkinData, Long userId) {
         Asset asset = assetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Asset not found"));
         
@@ -187,7 +187,32 @@ public class AssetServiceImpl implements AssetService {
         asset.setAssignedType(null);
         asset.setExpectedCheckin(null);
         
+        // Update status if provided
+        if (checkinData.containsKey("statusId")) {
+            Object statusIdObj = checkinData.get("statusId");
+            if (statusIdObj != null) {
+                asset.setStatusId(((Number) statusIdObj).longValue());
+            }
+        }
+        
+        // Update location if provided
+        if (checkinData.containsKey("locationId")) {
+            Object locationIdObj = checkinData.get("locationId");
+            if (locationIdObj != null) {
+                Long locationId = ((Number) locationIdObj).longValue();
+                asset.setLocationId(locationId);
+                
+                // Update default location if requested
+                if (Boolean.TRUE.equals(checkinData.get("updateDefaultLocation"))) {
+                    asset.setRtdLocationId(locationId);
+                }
+            }
+        }
+        
         Asset updated = assetRepository.save(asset);
+        
+        // Extract note for audit log
+        String note = checkinData.containsKey("notes") ? (String) checkinData.get("notes") : "";
         
         // Log to audit_logs
         logAudit(userId, "CHECKIN", "Asset", id, 

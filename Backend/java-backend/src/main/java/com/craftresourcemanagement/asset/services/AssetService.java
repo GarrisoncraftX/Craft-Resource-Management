@@ -22,7 +22,7 @@ public interface AssetService {
 
     // Asset Checkout/Checkin
     AssetDTO checkoutAsset(Long id, Long assignedTo, String assignedType, String note, Long userId);
-    AssetDTO checkinAsset(Long id, String note, Long userId);
+    AssetDTO checkinAsset(Long id, Map<String, Object> checkinData, Long userId);
 
     // Asset Stats
     Map<String, Long> getAssetCounts();

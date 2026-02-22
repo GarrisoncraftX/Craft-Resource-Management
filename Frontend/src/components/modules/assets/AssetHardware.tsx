@@ -354,7 +354,8 @@ export const AssetHardware: React.FC = () => {
       });
     }
     
-    return filtered;
+    // Sort by ID in descending order (newest first)
+    return filtered.sort((a, b) => (b.id || 0) - (a.id || 0));
   };
 
   const filteredAssets = getFilteredAssets();
