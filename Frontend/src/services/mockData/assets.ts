@@ -1,4 +1,4 @@
-import type { Asset, Category, RequestableItem, MaintenanceRecord, DisposalRecord, AcquisitionRequest, Manufacturer, ValuationRecord, MaintenanceCost, AssetStats, AssetTrend, AssetCategory,  BaseInventoryItem, PredefinedKit, Supplier, StatusLabel, AssetModel, Location, Depreciation, Department, CustomField, Company, MaintenanceReport, DepreciationReport } from '@/types/javabackendapi/assetTypes';
+import type { Asset, Category, RequestableItem, MaintenanceRecord, DisposalRecord, AcquisitionRequest, Manufacturer, ValuationRecord, MaintenanceCost, AssetStats, AssetTrend, AssetCategory,  BaseInventoryItem, PredefinedKit, Supplier, StatusLabel, AssetModel, Location, Depreciation, Department, CustomField, Company, MaintenanceReport, DepreciationReport, AssetAudit } from '@/types/javabackendapi/assetTypes';
 
 
 export const mockRequestableItems: RequestableItem[] = [
@@ -686,4 +686,25 @@ export const mockDashboardLocations = [
   { name: 'Gerlachbury', count: 289, assigned: 15 },
   { name: 'Port Elsie', count: 266, assigned: 11 },
   { name: 'Allanport', count: 261, assigned: 12 },
+];
+
+export const mockAssetAudits: AssetAudit[] = [
+  {
+    id: 1,
+    assetId: 1,
+    auditedBy: 1,
+    auditDate: new Date().toISOString(),
+    locationId: 7,
+    updateAssetLocation: true,
+    nextAuditDate: '2027-02-23',
+    notes: 'Sample audit record',
+    status: 'submitted',
+    images: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    assetTag: 'AST001',
+    assetName: 'Dell Laptop OptiPlex 7090',
+    modelName: 'OptiPlex 7090',
+    locationName: 'UNILAK Kigali Main Campus'
+  }
 ];

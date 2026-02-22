@@ -16,9 +16,6 @@ export interface ColumnDef<T> {
 interface AssetDataTableProps<T> {
   data: T[];
   columns: ColumnDef<T>[];
-  title?: string;
-  onAdd?: () => void;
-  addLabel?: string;
   rowsPerPageOptions?: number[];
   actions?: (row: T) => React.ReactNode;
   showCheckboxHeader?: boolean;
@@ -59,9 +56,6 @@ export function getStatusBadge(status: string) {
 export function AssetDataTable<T extends { id?: number | string }>({
   data,
   columns,
-  title,
-  onAdd,
-  addLabel = 'Create New',
   rowsPerPageOptions = [20, 50, 100],
   actions,
   showCheckboxHeader = false,

@@ -6,36 +6,40 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Check, Upload, X } from 'lucide-react';
-import type { Asset, Company, AssetModel, StatusLabel, Location } from '@/types/javabackendapi/assetTypes';
+import { useNavigate } from 'react-router-dom';
+import type { Asset, Company, AssetModel, StatusLabel, Location, Supplier } from '@/types/javabackendapi/assetTypes';
+import type { User } from '@/types/javabackendapi/hrTypes';
 import { OptionalInfoSection } from './OptionalInfoSection';
 import { OrderRelatedInfoSection } from './OrderRelatedInfoSection';
 import { toast } from 'sonner';
 import { assetApiService, uploadAssetImage } from '@/services/javabackendapi/assetApi';
+import { hrApiService } from '@/services/javabackendapi/hrApi';
 
 interface CloneAssetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   asset: Asset;
-  onClone?: (data) => void;
+  onClone?: (data: Asset) => void;
 }
 
 export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpenChange, asset, onClone }) => {
-  const [company, setCompany] = useState(asset.company || '');
-  const [assetTag, setAssetTag] = useState(`AST-${Date.now().toString().slice(-10)}`);
+  const navigate = useNavigate();
+  
+  const [company, setCompany] = useState('');
+  const [assetTag, setAssetTag] = useState('');
   const [serial, setSerial] = useState('');
   const [model, setModel] = useState('');
-  const [status, setStatus] = useState('Ready to Deploy');
+  const [status, setStatus] = useState('');
   const [checkoutType, setCheckoutType] = useState<'user' | 'asset' | 'location'>('user');
   const [checkoutTo, setCheckoutTo] = useState('');
-  const [notes, setNotes] = useState(asset.notes || '');
+  const [notes, setNotes] = useState('');
   const [defaultLocation, setDefaultLocation] = useState('');
-  const [requestable, setRequestable] = useState(asset.requestable || false);
+  const [requestable, setRequestable] = useState(false);
 
-  // Shared sections state
   const [optionalExpanded, setOptionalExpanded] = useState(false);
   const [orderExpanded, setOrderExpanded] = useState(false);
-  const [optionalData, setOptionalData] = useState({ assetName: asset.assetName || '', warranty: '', expectedCheckinDate: '', nextAuditDate: '', byod: false });
-  const [orderData, setOrderData] = useState({ orderNumber: '', purchaseDate: asset.purchaseDate || '', eolDate: asset.eolDate || '', supplier: '', purchaseCost: '', currency: 'USD' });
+  const [optionalData, setOptionalData] = useState({ assetName: '', warranty: '', expectedCheckinDate: '', nextAuditDate: '', byod: false });
+  const [orderData, setOrderData] = useState({ orderNumber: '', purchaseDate: '', eolDate: '', supplier: '', purchaseCost: '', currency: 'USD' });
 
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -45,25 +49,105 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
   const [models, setModels] = useState<AssetModel[]>([]);
   const [statusLabels, setStatusLabels] = useState<StatusLabel[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [checkoutAssets, setCheckoutAssets] = useState<Asset[]>([]);
+  const [checkoutLocations, setCheckoutLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
+  // Fetch all data (dropdown options + source asset) when dialog opens
   useEffect(() => {
-    const fetchDropdownData = async () => {
+    const fetchAllData = async () => {
+      if (!open || !asset?.id) return;
+      
+      setLoading(true);
+      setDataLoaded(false);
+      
       try {
-        const [companiesData, modelsData, statusData, locationsData] = await Promise.all([
+        // First, fetch all dropdown options
+        const [companiesData, modelsData, statusData, locationsData, suppliersData, usersData, assetsData] = await Promise.all([
           assetApiService.getAllCompanies(),
           assetApiService.getAllModels(),
           assetApiService.getAllStatusLabels(),
-          assetApiService.getAllLocations()
+          assetApiService.getAllLocations(),
+          assetApiService.getAllSuppliers(),
+          hrApiService.listEmployees(),
+          assetApiService.getAllAssets()
         ]);
+        
         setCompanies(companiesData);
         setModels(modelsData);
         setStatusLabels(statusData);
         setLocations(locationsData);
+        setSuppliers(suppliersData);
+        setUsers(usersData);
+        setCheckoutAssets(assetsData);
+        setCheckoutLocations(locationsData);
+
+        // Then, fetch source asset data
+        let sourceAsset = null;
+        try {
+          sourceAsset = await assetApiService.getAssetById(Number(asset.id));
+        } catch (error) {
+          console.warn('Failed to fetch source asset from API, using prop data:', error);
+          sourceAsset = asset;
+        }
+
+        if (sourceAsset) {
+          // Now set all form values - dropdown options are guaranteed to be loaded
+          setCompany(String(sourceAsset.company_id || sourceAsset.company || ''));
+          setAssetTag('');
+          setSerial('');
+          setModel(String(sourceAsset.model_id || sourceAsset.model || ''));
+          setStatus(String(sourceAsset.status_id || sourceAsset.status || ''));
+          setNotes(sourceAsset.notes || '');
+          setDefaultLocation(String(sourceAsset.rtd_location_id || sourceAsset.location_id || ''));
+          setRequestable(Boolean(sourceAsset.requestable));
+          
+          setOptionalData({
+            assetName: sourceAsset.assetName || sourceAsset.asset_name || sourceAsset.name || '',
+            warranty: String(sourceAsset.warrantyMonths || sourceAsset.warranty_months || ''),
+            expectedCheckinDate: sourceAsset.expectedCheckinDate || sourceAsset.expected_checkin || '',
+            nextAuditDate: sourceAsset.nextAuditDate || sourceAsset.next_audit_date || '',
+            byod: Boolean(sourceAsset.byod)
+          });
+          
+          setOrderData({
+            orderNumber: sourceAsset.orderNumber || sourceAsset.order_number || '',
+            purchaseDate: sourceAsset.purchaseDate || sourceAsset.purchase_date || '',
+            eolDate: sourceAsset.eolDate || sourceAsset.eol_date || '',
+            supplier: String(sourceAsset.supplier_id || ''),
+            purchaseCost: String(sourceAsset.purchaseCost || sourceAsset.purchase_cost || ''),
+            currency: sourceAsset.currency || 'USD'
+          });
+          
+          // Handle existing image preview
+          if (sourceAsset.imageUrl || sourceAsset.image) {
+            setImagePreview(sourceAsset.imageUrl || sourceAsset.image || null);
+          }
+        }
+        
+        setDataLoaded(true);
       } catch (error) {
-        console.error('Failed to fetch dropdown data:', error);
+        console.error('Failed to fetch data:', error);
+        toast.error('Failed to load asset data');
+      } finally {
+        setLoading(false);
       }
     };
-    if (open) fetchDropdownData();
+
+    fetchAllData();
+  }, [open, asset?.id]);
+
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setSelectedImage(null);
+      setImagePreview(null);
+      setDataLoaded(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   }, [open]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,22 +177,71 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!assetTag?.trim()) {
+      toast.error('Asset Tag is required');
+      return;
+    }
+    if (!model) {
+      toast.error('Model is required');
+      return;
+    }
+    if (!status) {
+      toast.error('Status is required');
+      return;
+    }
+
     try {
-      const clonedData = { company, assetTag, serial, model, status, checkoutType, checkoutTo, notes, defaultLocation, requestable, ...optionalData, ...orderData };
-      const result = await assetApiService.createAsset(clonedData);
+      setLoading(true);
+      
+      const payload: Partial<Asset> = {
+        company_id: company ? Number(company) : undefined,
+        asset_tag: assetTag,
+        serial: serial || undefined,
+        model_id: Number(model),
+        status_id: Number(status),
+        notes: notes || undefined,
+        rtd_location_id: defaultLocation ? Number(defaultLocation) : undefined,
+        requestable: requestable ? 1 : 0,
+        name: optionalData.assetName || undefined,
+        warranty_months: optionalData.warranty ? Number(optionalData.warranty) : undefined,
+        expected_checkin: optionalData.expectedCheckinDate || undefined,
+        next_audit_date: optionalData.nextAuditDate || undefined,
+        byod: optionalData.byod ? 1 : 0,
+        order_number: orderData.orderNumber || undefined,
+        purchase_date: orderData.purchaseDate || undefined,
+        eol_date: orderData.eolDate || undefined,
+        supplier_id: orderData.supplier ? Number(orderData.supplier) : undefined,
+        purchase_cost: orderData.purchaseCost ? Number(orderData.purchaseCost) : undefined,
+        currency: orderData.currency || 'USD'
+      };
+
+      const result = await assetApiService.createAsset(payload);
+      
       if (selectedImage && result?.id) {
         try {
           await uploadAssetImage(result.id, selectedImage);
         } catch (err) {
           console.error('Image upload failed:', err);
+          toast.warning('Asset created but image upload failed');
         }
       }
+      
       onClone?.(result);
       toast.success('Asset cloned successfully');
+      
+      // Navigate to the newly created asset
+      if (result?.id) {
+        navigate(`/assets/hardware?highlight=${result.id}`);
+      }
+      
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to clone asset:', error);
-      toast.error('Failed to clone asset');
+      const errorMsg = error?.response?.data?.message || error?.message || 'Failed to clone asset';
+      toast.error(errorMsg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -122,15 +255,17 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
         <form onSubmit={handleSubmit}>
           {/* Save button top */}
           <div className="px-6 py-2 flex justify-end">
-            <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white"><Check className="w-4 h-4 mr-1" /> Save</Button>
+            <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={loading}>
+              <Check className="w-4 h-4 mr-1" /> Save
+            </Button>
           </div>
 
           <div className="px-6 pb-4 space-y-4">
             {/* Company */}
             <div className="flex items-center gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Company</label>
-              <Select value={String(company)} onValueChange={setCompany}>
-                <SelectTrigger className="flex-1"><SelectValue placeholder="Select Company" /></SelectTrigger>
+              <Select value={company} onValueChange={setCompany} disabled={loading}>
+                <SelectTrigger className="flex-1"><SelectValue placeholder={loading ? 'Loading...' : 'Select Company'} /></SelectTrigger>
                 <SelectContent>
                   {companies.map(c => (<SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>))}
                 </SelectContent>
@@ -141,7 +276,7 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
             <div className="flex items-center gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Asset Tag</label>
               <div className="flex items-center gap-2 flex-1">
-                <Input value={assetTag} onChange={(e) => setAssetTag(e.target.value)} className="flex-1 border-l-4 border-l-amber-400" />
+                <Input value={assetTag} onChange={(e) => setAssetTag(e.target.value)} className="flex-1 border-l-4 border-l-amber-400" placeholder="Enter new asset tag" />
                 <Button type="button" size="icon" className="bg-sky-500 hover:bg-sky-600 text-white h-9 w-9"><Plus className="w-4 h-4" /></Button>
               </div>
             </div>
@@ -149,15 +284,15 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
             {/* Serial */}
             <div className="flex items-center gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Serial</label>
-              <Input value={serial} onChange={(e) => setSerial(e.target.value)} className="flex-1" />
+              <Input value={serial} onChange={(e) => setSerial(e.target.value)} className="flex-1" placeholder="Enter serial number" />
             </div>
 
             {/* Model */}
             <div className="flex items-center gap-4">
-              <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Model</label>
+              <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Model <span className="text-red-500">*</span></label>
               <div className="flex items-center gap-2 flex-1">
-                <Select value={String(model)} onValueChange={setModel}>
-                  <SelectTrigger className="flex-1"><SelectValue placeholder="Select a Model" /></SelectTrigger>
+                <Select value={model} onValueChange={setModel} disabled={loading}>
+                  <SelectTrigger className="flex-1 border-l-4 border-l-amber-400"><SelectValue placeholder={loading ? 'Loading...' : 'Select a Model'} /></SelectTrigger>
                   <SelectContent>
                     {models.map(m => (<SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>))}
                   </SelectContent>
@@ -168,10 +303,10 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
 
             {/* Status */}
             <div className="flex items-center gap-4">
-              <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Status</label>
+              <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Status <span className="text-red-500">*</span></label>
               <div className="flex items-center gap-2 flex-1">
-                <Select value={String(status)} onValueChange={setStatus}>
-                  <SelectTrigger className="flex-1"><SelectValue placeholder="Select Status" /></SelectTrigger>
+                <Select value={status} onValueChange={setStatus} disabled={loading}>
+                  <SelectTrigger className="flex-1 border-l-4 border-l-amber-400"><SelectValue placeholder={loading ? 'Loading...' : 'Select Status'} /></SelectTrigger>
                   <SelectContent>
                     {statusLabels.map(s => (<SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>))}
                   </SelectContent>
@@ -179,7 +314,7 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
                 <Button type="button" size="sm" className="bg-sky-500 hover:bg-sky-600 text-white"><Plus className="w-3 h-3 mr-1" /> New</Button>
               </div>
             </div>
-            {status === 'Ready to Deploy' && (
+            {statusLabels.find(s => s.id === Number(status))?.statusType === 'deployable' && (
               <div className="flex items-center gap-4">
                 <div className="w-40 shrink-0" />
                 <span className="text-sm text-emerald-600"><Check className="w-4 h-4 inline mr-1" />This asset can be checked out.</span>
@@ -204,11 +339,12 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
             <div className="flex items-center gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Checkout to</label>
               <div className="flex items-center gap-2 flex-1">
-                <Select value={checkoutTo} onValueChange={setCheckoutTo}>
-                  <SelectTrigger className="flex-1"><SelectValue placeholder={`Select a ${checkoutType}`} /></SelectTrigger>
+                <Select value={checkoutTo} onValueChange={setCheckoutTo} disabled={loading}>
+                  <SelectTrigger className="flex-1"><SelectValue placeholder={loading ? 'Loading...' : `Select a ${checkoutType}`} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Option 1</SelectItem>
-                    <SelectItem value="2">Option 2</SelectItem>
+                    {checkoutType === 'user' && users.map(u => (<SelectItem key={u.id} value={String(u.id)}>{u.firstName} {u.lastName}</SelectItem>))}
+                    {checkoutType === 'asset' && checkoutAssets.map(a => (<SelectItem key={a.id} value={String(a.id)}>{a.assetTag || a.asset_tag} - {a.assetName || a.name}</SelectItem>))}
+                    {checkoutType === 'location' && checkoutLocations.map(l => (<SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 <Button type="button" size="sm" className="bg-sky-500 hover:bg-sky-600 text-white"><Plus className="w-3 h-3 mr-1" /> New</Button>
@@ -217,8 +353,8 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
 
             {/* Notes */}
             <div className="flex items-start gap-4">
-              <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Notes</label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="flex-1 min-h-16" />
+              <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Notes</label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="flex-1 min-h-16" placeholder="Enter notes" />
             </div>
 
             {/* Default Location */}
@@ -226,8 +362,8 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Default Location</label>
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <Select value={String(defaultLocation)} onValueChange={setDefaultLocation}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="Select a Location" /></SelectTrigger>
+                  <Select value={defaultLocation} onValueChange={setDefaultLocation} disabled={loading}>
+                    <SelectTrigger className="flex-1"><SelectValue placeholder={loading ? 'Loading...' : 'Select a Location'} /></SelectTrigger>
                     <SelectContent>
                       {locations.map(l => (<SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>))}
                     </SelectContent>
@@ -290,6 +426,7 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
             onChange={(f, v) => setOrderData(prev => ({ ...prev, [f]: v as string }))}
             expanded={orderExpanded}
             onToggle={() => setOrderExpanded(!orderExpanded)}
+            suppliers={suppliers}
           />
 
           {/* Footer */}
@@ -300,7 +437,7 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
                 <SelectTrigger className="w-44"><SelectValue placeholder="Go to Previous Page" /></SelectTrigger>
                 <SelectContent><SelectItem value="previous">Go to Previous Page</SelectItem></SelectContent>
               </Select>
-              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white"><Check className="w-4 h-4 mr-1" /> Save</Button>
+              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={loading}><Check className="w-4 h-4 mr-1" /> Save</Button>
             </div>
           </div>
         </form>

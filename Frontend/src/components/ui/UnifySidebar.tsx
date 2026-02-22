@@ -1,6 +1,6 @@
 import React, { useState } from "react"
 import { NavLink, useLocation } from "react-router-dom"
-import {Calculator,Users,Package,ShoppingCart,Shield,ChevronRight,Lock,ListFilter,Tag,FolderTree,TrendingDown,Boxes,Factory,Store,Building2,MapPin,Menu,Circle,X,Check,AlertCircle,Clock,Crown,Briefcase,FileText,} from "lucide-react"
+import {Calculator,Users,Package,ShoppingCart,Shield,ChevronRight,Lock,ListFilter,Tag,FolderTree,TrendingDown,Boxes,Factory,Store,Building2,MapPin,Menu,Circle,X,Check,AlertCircle,Clock,Crown,Briefcase,FileText,ClipboardCheck,} from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/AuthContext"
 import { assetApiService, hrApiService } from "@/services/api"
@@ -8,6 +8,7 @@ import { assetApiService, hrApiService } from "@/services/api"
 const assetReportFlyoutItems = [
   { title: "Maintenance Report", url: "/assets/reports/maintenance", icon: FileText },
   { title: "Depreciation Report", url: "/assets/reports/depreciation", icon: TrendingDown },
+  { title: "Audit Report", url: "/assets/reports/audit", icon: ClipboardCheck },
 ]
 
 const assetSettingsItems = [
@@ -106,7 +107,7 @@ const modules = [
       { title: "Components", url: "/assets/components" },
       { title: "Predefined Kits", url: "/assets/kits" },
       { title: "People", url: "/assets/people", hasSubFlyout: true },
-      { title: "Reports", url: "/assets/reports" },
+      { title: "Reports", url: "/assets/reports", hasSubFlyout: true },
       { title: "Requestable Items", url: "/assets/requestable" },
       { title: "Settings", url: "/assets/settings", hasSubFlyout: true },
     ],

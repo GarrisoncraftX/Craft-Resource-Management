@@ -16,4 +16,4 @@ export { DepartmentsView } from './AssetSettings/DepartmentsView';
 export { PeopleView } from './PeopleView';
 export { AssetsInfo } from './AssetsInfo';
 export { CheckoutForm } from './forms/CheckoutForm';
-export { AuditReport } from './assetreport/AuditReport';
+export { AuditReport } from './AssetReports/AuditReport';
