@@ -72,7 +72,9 @@ public class AssetServiceImpl implements AssetService {
             asset.setAssetTag(generateUniqueAssetTag());
         }
         Asset saved = assetRepository.save(asset);
-        logAudit(userId, "CREATE", "Asset", saved.getId(), "Asset created: " + saved.getAssetTag());
+        String userName = getUserName(userId);
+        logAudit(userId, "Asset Created by " + userName, "Asset", saved.getId(), 
+                String.format("%s created new asset '%s' with tag %s", userName, saved.getName(), saved.getAssetTag()));
         return convertToDTO(saved);
     }
     
@@ -127,7 +129,9 @@ public class AssetServiceImpl implements AssetService {
         if (asset.getImage() != null) existing.setImage(asset.getImage());
         
         Asset updated = assetRepository.save(existing);
-        logAudit(userId, "UPDATE", "Asset", updated.getId(), "Asset updated: " + updated.getAssetTag());
+        String userName = getUserName(userId);
+        logAudit(userId, "Asset Updated by " + userName, "Asset", updated.getId(), 
+                String.format("%s updated asset '%s' (%s)", userName, updated.getName(), updated.getAssetTag()));
         return convertToDTO(updated);
     }
 
@@ -136,7 +140,9 @@ public class AssetServiceImpl implements AssetService {
     public void deleteAsset(Long id, Long userId) {
         Asset asset = assetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Asset not found"));
-        logAudit(userId, "DELETE", "Asset", id, "Asset deleted: " + asset.getAssetTag());
+        String userName = getUserName(userId);
+        logAudit(userId, "Asset Deleted by " + userName, "Asset", id, 
+                String.format("%s permanently deleted asset '%s' (%s)", userName, asset.getName(), asset.getAssetTag()));
         assetRepository.deleteById(id);
     }
 
@@ -150,7 +156,8 @@ public class AssetServiceImpl implements AssetService {
             String imageUrl = cloudinaryService.uploadImage(file);
             asset.setImage(imageUrl);
             Asset updated = assetRepository.save(asset);
-            logAudit(null, "UPDATE", "Asset", id, "Asset image updated: " + asset.getAssetTag());
+            logAudit(null, "Asset Image Updated", "Asset", id, 
+                    String.format("Uploaded new image for asset '%s' (%s)", asset.getName(), asset.getAssetTag()));
             return convertToDTO(updated);
         } catch (IOException e) {
             throw new IOException("Failed to upload image: " + e.getMessage(), e);
@@ -169,9 +176,12 @@ public class AssetServiceImpl implements AssetService {
         
         Asset updated = assetRepository.save(asset);
         
-        // Log to audit_logs with polymorphic tracking
-        logAudit(userId, "CHECKOUT", "Asset", id, 
-                String.format("Asset checked out to %s (ID: %d). Note: %s", assignedType, assignedTo, note));
+        String userName = getUserName(userId);
+        String assigneeName = getAssigneeName(assignedTo, assignedType);
+        logAudit(userId, "Asset Checked Out by " + userName, "Asset", id, 
+                String.format("%s checked out asset '%s' (%s) to %s%s", 
+                        userName, asset.getName(), asset.getAssetTag(), assigneeName, 
+                        note != null && !note.isEmpty() ? ". Note: " + note : ""));
         
         return convertToDTO(updated);
     }
@@ -214,9 +224,12 @@ public class AssetServiceImpl implements AssetService {
         // Extract note for audit log
         String note = checkinData.containsKey("notes") ? (String) checkinData.get("notes") : "";
         
-        // Log to audit_logs
-        logAudit(userId, "CHECKIN", "Asset", id, 
-                String.format("Asset checked in from user ID: %d. Note: %s", previousAssignee, note));
+        String userName = getUserName(userId);
+        String previousAssigneeName = previousAssignee != null ? getUserName(previousAssignee) : "Unknown";
+        logAudit(userId, "Asset Checked In by " + userName, "Asset", id, 
+                String.format("%s checked in asset '%s' (%s) from %s%s", 
+                        userName, asset.getName(), asset.getAssetTag(), previousAssigneeName,
+                        note != null && !note.isEmpty() ? ". Note: " + note : ""));
         
         return convertToDTO(updated);
     }
@@ -887,7 +900,11 @@ public class AssetServiceImpl implements AssetService {
             assetRepository.save(asset);
         });
         
-        logAudit(audit.getAuditedBy(), "CREATE_ASSET_AUDIT", "AssetAudit", saved.getId(), "Asset audit created for asset ID: " + audit.getAssetId());
+        String userName = getUserName(audit.getAuditedBy());
+        assetRepository.findById(audit.getAssetId()).ifPresent(asset -> {
+            logAudit(audit.getAuditedBy(), "Asset Audit Created by " + userName, "AssetAudit", saved.getId(), 
+                    String.format("%s created audit record for asset '%s' (%s)", userName, asset.getName(), asset.getAssetTag()));
+        });
         return convertAuditToMap(saved);
     }
 
@@ -931,7 +948,11 @@ public class AssetServiceImpl implements AssetService {
             });
         }
         
-        logAudit(audit.getAuditedBy(), "UPDATE_ASSET_AUDIT", "AssetAudit", id, "Asset audit updated for asset ID: " + audit.getAssetId());
+        String userName = getUserName(audit.getAuditedBy());
+        assetRepository.findById(audit.getAssetId()).ifPresent(asset -> {
+            logAudit(audit.getAuditedBy(), "Asset Audit Updated by " + userName, "AssetAudit", id, 
+                    String.format("%s updated audit record for asset '%s' (%s)", userName, asset.getName(), asset.getAssetTag()));
+        });
         return convertAuditToMap(updated);
     }
 
@@ -1081,6 +1102,34 @@ public class AssetServiceImpl implements AssetService {
         }
         
         return dto;
+    }
+
+    private String getUserName(Long userId) {
+        if (userId == null) return "System";
+        return userRepository.findById(userId)
+                .map(user -> {
+                    String firstName = user.getFirstName() != null ? user.getFirstName() : "";
+                    String lastName = user.getLastName() != null ? user.getLastName() : "";
+                    String fullName = (firstName + " " + lastName).trim();
+                    return fullName.isEmpty() ? "User #" + userId : fullName;
+                })
+                .orElse("User #" + userId);
+    }
+    
+    private String getAssigneeName(Long assignedTo, String assignedType) {
+        if (assignedTo == null) return "Unknown";
+        if ("user".equalsIgnoreCase(assignedType)) {
+            return getUserName(assignedTo);
+        } else if ("location".equalsIgnoreCase(assignedType)) {
+            return locationRepository.findById(assignedTo)
+                    .map(loc -> loc.getName() + " (Location)")
+                    .orElse("Location #" + assignedTo);
+        } else if ("asset".equalsIgnoreCase(assignedType)) {
+            return assetRepository.findById(assignedTo)
+                    .map(a -> a.getName() + " (Asset)")
+                    .orElse("Asset #" + assignedTo);
+        }
+        return assignedType + " #" + assignedTo;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

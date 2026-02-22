@@ -58,7 +58,6 @@ const AssetFormPage = lazy(() => import("@/components/modules/assets/AssetForm")
 const MaintenanceReportView = lazy(() => import("@/components/modules/assets/AssetReports/MaintenanceReportView").then(module => ({ default: module.MaintenanceReportView })));
 const DepreciationReportView = lazy(() => import("@/components/modules/assets/AssetReports/DepreciationReportView").then(module => ({ default: module.DepreciationReportView })));
 const AssetsInfo = lazy(() => import("@/components/modules/assets/AssetsInfo").then(module => ({ default: module.AssetsInfo })));
-const CheckoutForm = lazy(() => import("@/components/modules/assets/forms/CheckoutDialog").then(module => ({ default: module.CheckoutForm })));
 const AuditReport = lazy(() => import("@/components/modules/assets/AssetReports/AuditReport").then(module => ({ default: module.AuditReport })));
 
 //Employee & Visitors Modules
@@ -182,9 +181,8 @@ const AppRoutes = () => {
       <Route path="/" element={<Navigate to="/employee-dashboard" replace />} />
 
       {/* Admin Routes */}
-      <Route path="/admin" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AdminDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
+      <Route path="/admin/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AdminDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />   
       <Route path="/admin/audit-logs" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AuditLogs /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/admin/dashboard" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin Dashboard" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AdminDashboard /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/admin/database" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><DatabaseManagement /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/admin/monitoring" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><SystemMonitoring /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/admin/notifications" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Admin" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><Notifications /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
@@ -221,7 +219,6 @@ const AppRoutes = () => {
       <Route path="/assets/reports/audit" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Audit Report" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AuditReport /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/assets/create" element={<ProtectedRoute><SuspenseWrapper><AssetFormPage /></SuspenseWrapper></ProtectedRoute>} />
       <Route path="/assets/tag/:assetTag/info" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Information" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><AssetsInfo /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
-      <Route path="/assets/tag/:assetTag/checkout" element={<ProtectedRoute><SuspenseWrapper><ModuleLayout title="Asset Checkout" onViewDashboard={handleViewDashboard} onLogout={handleLogout}><CheckoutForm /></ModuleLayout></SuspenseWrapper></ProtectedRoute>} />
 
       {/* Authentication Routes */}
       <Route path="/register" element={<PublicRoute><SuspenseWrapper><AuthForm /></SuspenseWrapper></PublicRoute>} />

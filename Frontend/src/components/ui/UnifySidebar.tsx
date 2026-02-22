@@ -47,7 +47,7 @@ const assetPeopleFilters = [
 const modules = [
   {
     title: "Admin",
-    url: "/admin",
+    url: "/admin/dashboard",
     icon: Lock,
     color: "from-red-500 to-red-600",
     subItems: [
@@ -241,8 +241,8 @@ export function UnifySidebar() {
   // Listen for mobile sidebar toggle from navbar
   React.useEffect(() => {
     const handler = () => setIsMobileSidebarOpen(prev => !prev)
-    window.addEventListener('toggle-mobile-sidebar', handler)
-    return () => window.removeEventListener('toggle-mobile-sidebar', handler)
+    globalThis.addEventListener('toggle-mobile-sidebar', handler)
+    return () => globalThis.removeEventListener('toggle-mobile-sidebar', handler)
   }, [])
 
   return (

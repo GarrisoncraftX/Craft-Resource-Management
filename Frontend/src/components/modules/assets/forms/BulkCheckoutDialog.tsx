@@ -1,4 +1,5 @@
 import { assetApiService } from '@/services/javabackendapi/assetApi';
+import { hrApiService } from '@/services/javabackendapi/hrApi';
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { X, Check, AlertTriangle } from 'lucide-react';
-import type { Asset } from '@/types/javabackendapi/assetTypes';
+import type { Asset, StatusLabel, CheckoutPayload, Location } from '@/types/javabackendapi/assetTypes';
 import { toast } from 'sonner';
 
 interface BulkCheckoutDialogProps {
@@ -18,6 +19,15 @@ interface BulkCheckoutDialogProps {
 }
 
 export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, onOpenChange, assets, onCheckout }) => {
+  const api = assetApiService as unknown as {
+    checkoutAsset?: (assetId: number, assignedToId: number, assignedType: string, notes?: string) => Promise<Asset>;
+    updateAssetStatus?: (assetId: number, statusId: number) => Promise<Asset>;
+    updateAsset?: (assetId: number, payload: unknown) => Promise<Asset>;
+    getAllLocations?: () => Promise<Location[]>;
+    getAllStatusLabels?: () => Promise<StatusLabel[]>;
+    getAllAssets?: () => Promise<Asset[]>;
+  };
+  
   const normalizeStatus = (s?: string | null) => (s || '').trim().toLowerCase();
   const isAssetCheckedOut = (a: Asset) => {
     const s = normalizeStatus(a.status);
@@ -45,22 +55,45 @@ export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, on
   const [users, setUsers] = useState<Array<{ id: number; name: string }>>([]);
   const [locations, setLocations] = useState<Array<{ id: string; name: string }>>([]);
   const [assetsForCheckout, setAssetsForCheckout] = useState<Array<{ id: number; assetTag: string; assetName: string }>>([]);
+  const [statuses, setStatuses] = useState<StatusLabel[]>([]);
 
   React.useEffect(() => {
-    if (open) {
-      setSelectedAssetIds(new Set(eligible.map((a) => a.id)));
-      (async () => {
-        try {
-          const locData = await assetApiService.getAllLocations();
-          setLocations(locData);
-          setUsers([{ id: 1, name: 'User 1' }, { id: 2, name: 'User 2' }]);
-          setAssetsForCheckout(assets.map(a => ({ id: Number(a.id), assetTag: a.assetTag || '', assetName: a.assetName || '' })));
-        } catch (err) {
-          console.error('Failed to fetch dropdown data:', err);
+    if (!open) return;
+    
+    setSelectedAssetIds(new Set(eligible.map((a) => a.id)));
+    
+    let isMounted = true;
+    
+    (async () => {
+      try {
+        const results = await Promise.allSettled([
+          api.getAllLocations ? api.getAllLocations() : Promise.resolve([]),
+          api.getAllStatusLabels ? api.getAllStatusLabels() : Promise.resolve([]),
+          hrApiService.listEmployees(),
+          api.getAllAssets ? api.getAllAssets() : Promise.resolve([])
+        ]);
+        
+        if (!isMounted) return;
+        
+        const [locResult, statusResult, usersResult, assetsResult] = results;
+        
+        if (locResult.status === 'fulfilled') setLocations(locResult.value);
+        if (statusResult.status === 'fulfilled') {
+          setStatuses(statusResult.value.filter(s => normalizeStatus(s.name) === 'deployed' || normalizeStatus(s.name) === 'in use'));
         }
-      })();
-    }
-  }, [open, assets, eligible]);
+        if (usersResult.status === 'fulfilled') {
+          setUsers(usersResult.value.map(u => ({ id: u.id, name: `${u.firstName} ${u.lastName}` })));
+        }
+        if (assetsResult.status === 'fulfilled') {
+          setAssetsForCheckout(assetsResult.value.map(a => ({ id: Number(a.id), assetTag: a.assetTag || '', assetName: a.assetName || '' })));
+        }
+      } catch (err) {
+        console.error('Failed to fetch dropdown data:', err);
+      }
+    })();
+    
+    return () => { isMounted = false; };
+  }, [open]);
 
   const removeAsset = (id: number | string) => {
     setSelectedAssetIds(prev => {
@@ -83,25 +116,39 @@ export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, on
 
     setIsSubmitting(true);
     try {
-      const checkoutPromises = Array.from(selectedAssetIds).map((assetId) =>
-        assetApiService.checkoutAsset(Number(assetId), Number(assignedTo), checkoutType, notes)
-      );
-
-      const results = await Promise.all(checkoutPromises);
-      const updatedAssets = results.map((result, idx) => {
-        const assetId = Array.from(selectedAssetIds)[idx];
-        const originalAsset = assets.find((a) => a.id === assetId);
-        return {
-          ...originalAsset,
-          ...result,
-          status: status || 'Deployed',
-          assignedTo: Number(assignedTo),
-          assignedType: checkoutType,
-          expectedCheckin: expectedCheckinDate || undefined,
-        } as Asset;
+      const assignedToNum = Number(assignedTo);
+      const statusIdNum = status && status !== 'no-change' ? Number(status) : null;
+      const assignedType = checkoutType === 'user' ? 'user' : checkoutType === 'asset' ? 'asset' : 'location';
+      
+      const checkoutPromises = Array.from(selectedAssetIds).map(async (assetId) => {
+        const payload: CheckoutPayload = {
+          assignedToId: assignedToNum,
+          assignedType,
+          checkoutDate: checkoutDate || undefined,
+          expectedReturnDate: expectedCheckinDate || undefined,
+          notes: notes || undefined,
+        };
+        
+        let updated = await api.checkoutAsset!(Number(assetId), payload.assignedToId, payload.assignedType, payload.notes);
+        
+        if (statusIdNum) {
+          if (api.updateAssetStatus) {
+            const statusUpdate = await api.updateAssetStatus(Number(assetId), statusIdNum);
+            if (statusUpdate) updated = statusUpdate;
+          } else if (api.updateAsset) {
+            const statusUpdate = await api.updateAsset(Number(assetId), { statusId: statusIdNum });
+            if (statusUpdate) updated = statusUpdate;
+          }
+        }
+        
+        return updated;
       });
 
+      const updatedAssets = await Promise.all(checkoutPromises);
+
+      toast.success(`Successfully checked out ${updatedAssets.length} asset(s)`);
       onCheckout?.({ updatedAssets });
+      onOpenChange(false);
     } catch (error) {
       console.error('Failed to checkout assets:', error);
       toast.error('Failed to checkout some assets');
@@ -164,9 +211,10 @@ export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, on
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger id="bulk-checkout-status" className="flex-1"><SelectValue placeholder="Do not change" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Do not change</SelectItem>
-                <SelectItem value="Deployed">Deployed</SelectItem>
-                <SelectItem value="In Use">In Use</SelectItem>
+                <SelectItem value="no-change">Do not change</SelectItem>
+                {statuses.map(s => (
+                  <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
