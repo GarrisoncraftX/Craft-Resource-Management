@@ -31,13 +31,11 @@ public interface AssetService {
     List<Map<String, Object>> getAssetTrends();
 
     // Maintenance
-    List<Map<String, Object>> getAllMaintenanceRecords();
-    Map<String, Object> createMaintenanceRecord(Map<String, Object> record);
-    List<Map<String, Object>> getMaintenanceCosts();
-
-    // Disposal
-    List<Map<String, Object>> getAllDisposalRecords();
-    Map<String, Object> createDisposalRecord(Map<String, Object> record);
+    List<Map<String, Object>> getAllMaintenances();
+    Map<String, Object> createMaintenance(Map<String, Object> record);
+    Map<String, Object> updateMaintenance(Long id, Map<String, Object> record);
+    void deleteMaintenance(Long id);
+    Map<String, Object> getMaintenanceById(Long id);
 
     // Settings
     List<Map<String, Object>> getAllCategories();

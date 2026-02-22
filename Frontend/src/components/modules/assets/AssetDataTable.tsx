@@ -23,6 +23,7 @@ interface AssetDataTableProps<T> {
   readonly viewType?: 'assets' | 'licenses' | 'accessories' | 'components' | 'consumables' | 'kits' | 'people' | 'settings';
   readonly onBulkGo?: (action: string) => void;
   readonly onAction?: (action: string) => void;
+  readonly onRefresh?: () => void;
   readonly selectedCount?: number;
 }
 
@@ -63,6 +64,7 @@ export function AssetDataTable<T extends { id?: number | string }>({
   viewType = 'assets',
   onBulkGo,
   onAction,
+  onRefresh,
   selectedCount = 0,
 }: AssetDataTableProps<T>) {
   const [search, setSearch] = useState('');
@@ -145,6 +147,7 @@ export function AssetDataTable<T extends { id?: number | string }>({
       viewType={viewType}
       onBulkGo={onBulkGo}
       onAction={onAction}
+      onRefresh={onRefresh}
       selectedCount={selectedCount}
     />
 

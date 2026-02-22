@@ -1,9 +1,9 @@
 package com.craftresourcemanagement.asset.repositories;
 
-import com.craftresourcemanagement.asset.entities.DisposalRecord;
+import com.craftresourcemanagement.asset.entities.AssetMaintenance;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface DisposalRecordRepository extends JpaRepository<DisposalRecord, Long> {
+public interface AssetMaintenanceRepository extends JpaRepository<AssetMaintenance, Long> {
 }

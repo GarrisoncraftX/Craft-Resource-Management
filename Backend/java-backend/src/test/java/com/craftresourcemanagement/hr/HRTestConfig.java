@@ -1,9 +1,8 @@
 package com.craftresourcemanagement.hr;
 
 import com.craftresourcemanagement.asset.repositories.AssetRepository;
-import com.craftresourcemanagement.asset.repositories.DisposalRecordRepository;
-import com.craftresourcemanagement.asset.repositories.MaintenanceRecordRepository;
 import com.craftresourcemanagement.finance.repositories.*;
+import com.craftresourcemanagement.asset.repositories.*;
 import com.craftresourcemanagement.hr.repositories.*;
 import com.craftresourcemanagement.system.repositories.AuditLogRepository;
 import com.craftresourcemanagement.system.repositories.NotificationRepository;
@@ -21,8 +20,7 @@ import javax.sql.DataSource;
 public class HRTestConfig {
 
     @MockBean private AssetRepository assetRepository;
-    @MockBean private MaintenanceRecordRepository maintenanceRecordRepository;
-    @MockBean private DisposalRecordRepository disposalRecordRepository;
+    @MockBean private AssetAuditRepository assetAuditRepository;
     @MockBean private AuditLogRepository auditLogRepository;
     @MockBean private NotificationRepository notificationRepository;
     @MockBean private UserRepository userRepository;

@@ -507,6 +507,29 @@ export interface MaintenanceRecordInput {
   status?: string;
 }
 
+export interface MaintenanceReportData {
+  id: number;
+  assetId: number;
+  assetTag: string;
+  assetName: string;
+  supplierId?: number;
+  supplierName?: string;
+  maintenanceType: string;
+  title: string;
+  startDate: string;
+  completionDate?: string;
+  assetMaintenanceTime?: number;
+  cost?: number;
+  notes?: string;
+  userId?: number;
+  createdByName?: string;
+  companyName?: string;
+  locationName?: string;
+  defaultLocationName?: string;
+  warrantyExpiry?: string;
+  createdAt: string;
+}
+
 export interface MaintenanceReport {
   id: number;
   company: string;

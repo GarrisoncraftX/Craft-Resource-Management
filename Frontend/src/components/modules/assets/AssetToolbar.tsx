@@ -14,6 +14,7 @@ export default function AssetsToolbar({
   onBulkGo,
   onSearchChange,
   onAction,
+  onRefresh,
   onPageChange,
   onPageSizeChange,
   
@@ -163,13 +164,15 @@ export default function AssetsToolbar({
                 onToggleAll={onToggleAll}
               />
 
-              <IconBtn
-                title="Create New"
-                onClick={() => onAction?.("add")}
-                className="bg-amber-500 hover:bg-amber-600"
-              >
-                <Plus size={12} />
-              </IconBtn>
+              {viewType !== 'settings' && (
+                <IconBtn
+                  title="Create New"
+                  onClick={() => onAction?.("add")}
+                  className="bg-amber-500 hover:bg-amber-600"
+                >
+                  <Plus size={12} />
+                </IconBtn>
+              )}
 
               {viewType === 'licenses' && (
                 <>
@@ -208,19 +211,21 @@ export default function AssetsToolbar({
 
               <IconBtn
                 title="Refresh"
-                onClick={() => onAction?.("refresh")}
+                onClick={() => onRefresh ? onRefresh() : onAction?.("refresh")}
                 className="bg-sky-700 hover:bg-sky-800"
               >
                 <RefreshCw size={12} />
               </IconBtn>
 
-              <IconBtn
-                title="CSV"
-                onClick={() => onAction?.("csv")}
-                className="bg-sky-700 hover:bg-sky-800"
-              >
-                <FileText size={12} />
-              </IconBtn>
+              {viewType !== 'settings' && (
+                <IconBtn
+                  title="CSV"
+                  onClick={() => onAction?.("csv")}
+                  className="bg-sky-700 hover:bg-sky-800"
+                >
+                  <FileText size={12} />
+                </IconBtn>
+              )}
 
               <IconBtn
                 title="Download"
@@ -247,13 +252,15 @@ export default function AssetsToolbar({
                 <Maximize2 size={12} />
               </IconBtn>
 
-              <IconBtn
-                title="Advance Search"
-                onClick={() => onAction?.("search")}
-                className="bg-sky-700 hover:bg-sky-800"
-              >
-                <Search size={12} />
-              </IconBtn>
+              {viewType !== 'settings' && (
+                <IconBtn
+                  title="Advance Search"
+                  onClick={() => onAction?.("search")}
+                  className="bg-sky-700 hover:bg-sky-800"
+                >
+                  <Search size={12} />
+                </IconBtn>
+              )}
 
               {viewType === 'assets' && (
                 <IconBtn

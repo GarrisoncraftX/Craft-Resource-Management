@@ -41,6 +41,7 @@ public class AssetServiceImpl implements AssetService {
     private final UserRepository userRepository;
     private final LicenseRepository licenseRepository;
     private final LicenseAssignmentRepository licenseAssignmentRepository;
+    private final AssetMaintenanceRepository assetMaintenanceRepository;
 
     public AssetServiceImpl(AssetRepository assetRepository, AuditLogRepository auditLogRepository,
                            AssetAuditRepository assetAuditRepository,
@@ -50,7 +51,8 @@ public class AssetServiceImpl implements AssetService {
                            DepreciationRepository depreciationRepository, CompanyRepository companyRepository,
                            DepartmentRepository departmentRepository, CloudinaryService cloudinaryService,
                            UserRepository userRepository, LicenseRepository licenseRepository,
-                           LicenseAssignmentRepository licenseAssignmentRepository) {
+                           LicenseAssignmentRepository licenseAssignmentRepository,
+                           AssetMaintenanceRepository assetMaintenanceRepository) {
         this.assetRepository = assetRepository;
         this.auditLogRepository = auditLogRepository;
         this.assetAuditRepository = assetAuditRepository;
@@ -67,6 +69,7 @@ public class AssetServiceImpl implements AssetService {
         this.userRepository = userRepository;
         this.licenseRepository = licenseRepository;
         this.licenseAssignmentRepository = licenseAssignmentRepository;
+        this.assetMaintenanceRepository = assetMaintenanceRepository;
     }
 
     @Override
@@ -351,31 +354,210 @@ public class AssetServiceImpl implements AssetService {
     }
 
     @Override
-    public List<Map<String, Object>> getAllMaintenanceRecords() {
-        return new ArrayList<>();
+    public List<Map<String, Object>> getAllMaintenances() {
+        return assetMaintenanceRepository.findAll().stream()
+            .map(m -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", m.getId());
+                map.put("assetId", m.getAssetId());
+                map.put("supplierId", m.getSupplierId());
+                map.put("maintenanceType", m.getMaintenanceType());
+                map.put("title", m.getTitle());
+                map.put("startDate", m.getStartDate());
+                map.put("completionDate", m.getCompletionDate());
+                map.put("assetMaintenanceTime", m.getAssetMaintenanceTime());
+                map.put("cost", m.getCost());
+                map.put("notes", m.getNotes());
+                map.put("userId", m.getUserId());
+                map.put("createdAt", m.getCreatedAt());
+                
+                // Add asset details
+                assetRepository.findById(m.getAssetId()).ifPresent(asset -> {
+                    map.put("assetTag", asset.getAssetTag());
+                    map.put("assetName", asset.getName());
+                    
+                    // Add company name
+                    if (asset.getCompanyId() != null) {
+                        companyRepository.findById(asset.getCompanyId())
+                            .ifPresent(company -> map.put("companyName", company.getName()));
+                    }
+                    
+                    // Add location name
+                    if (asset.getLocationId() != null) {
+                        locationRepository.findById(asset.getLocationId())
+                            .ifPresent(location -> map.put("locationName", location.getName()));
+                    }
+                    
+                    // Add default location name
+                    if (asset.getRtdLocationId() != null) {
+                        locationRepository.findById(asset.getRtdLocationId())
+                            .ifPresent(location -> map.put("defaultLocationName", location.getName()));
+                    }
+                    
+                    // Add warranty info
+                    if (asset.getWarrantyMonths() != null && asset.getPurchaseDate() != null) {
+                        LocalDate warrantyExpiry = asset.getPurchaseDate().plusMonths(asset.getWarrantyMonths());
+                        map.put("warrantyExpiry", warrantyExpiry);
+                    }
+                });
+                
+                // Add supplier name
+                if (m.getSupplierId() != null) {
+                    supplierRepository.findById(m.getSupplierId())
+                        .ifPresent(supplier -> map.put("supplierName", supplier.getName()));
+                }
+                
+                // Add created by user name
+                if (m.getUserId() != null) {
+                    map.put("createdByName", getUserName(m.getUserId()));
+                }
+                
+                return map;
+            }).collect(Collectors.toList());
     }
 
     @Override
-    public Map<String, Object> createMaintenanceRecord(Map<String, Object> record) {
-        return record;
+    @Transactional
+    public Map<String, Object> createMaintenance(Map<String, Object> record) {
+        List<?> assetIds = (List<?>) record.get("asset_ids");
+        if (assetIds == null || assetIds.isEmpty()) {
+            throw new RuntimeException("At least one asset is required");
+        }
+        
+        Long firstMaintenanceId = null;
+        for (Object assetIdObj : assetIds) {
+            AssetMaintenance maintenance = new AssetMaintenance();
+            maintenance.setAssetId(Long.parseLong(assetIdObj.toString()));
+            maintenance.setTitle((String) record.get("name"));
+            maintenance.setMaintenanceType((String) record.get("maintenance_type"));
+            
+            LocalDate startDate = null;
+            LocalDate completionDate = null;
+            
+            if (record.containsKey("start_date") && record.get("start_date") != null) {
+                startDate = LocalDate.parse(record.get("start_date").toString());
+                maintenance.setStartDate(startDate);
+            }
+            if (record.containsKey("completion_date") && record.get("completion_date") != null) {
+                completionDate = LocalDate.parse(record.get("completion_date").toString());
+                maintenance.setCompletionDate(completionDate);
+            }
+            
+            // Calculate maintenance time in days
+            if (startDate != null && completionDate != null) {
+                long days = ChronoUnit.DAYS.between(startDate, completionDate);
+                maintenance.setAssetMaintenanceTime((int) days);
+            }
+            
+            if (record.containsKey("supplier_id") && record.get("supplier_id") != null) {
+                maintenance.setSupplierId(Long.parseLong(record.get("supplier_id").toString()));
+            }
+            if (record.containsKey("cost") && record.get("cost") != null) {
+                maintenance.setCost(new BigDecimal(record.get("cost").toString()));
+            }
+            if (record.containsKey("notes")) {
+                maintenance.setNotes((String) record.get("notes"));
+            }
+            
+            AssetMaintenance saved = assetMaintenanceRepository.save(maintenance);
+            if (firstMaintenanceId == null) {
+                firstMaintenanceId = saved.getId();
+            }
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", firstMaintenanceId);
+        result.put("message", "Maintenance records created for " + assetIds.size() + " asset(s)");
+        return result;
     }
 
     @Override
-    public List<Map<String, Object>> getMaintenanceCosts() {
-        return new ArrayList<>();
+    @Transactional
+    public Map<String, Object> updateMaintenance(Long id, Map<String, Object> record) {
+        AssetMaintenance maintenance = assetMaintenanceRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Maintenance record not found"));
+        
+        if (record.containsKey("title")) maintenance.setTitle((String) record.get("title"));
+        if (record.containsKey("maintenance_type")) maintenance.setMaintenanceType((String) record.get("maintenance_type"));
+        if (record.containsKey("start_date")) maintenance.setStartDate(LocalDate.parse(record.get("start_date").toString()));
+        if (record.containsKey("completion_date")) maintenance.setCompletionDate(LocalDate.parse(record.get("completion_date").toString()));
+        if (record.containsKey("supplier_id")) maintenance.setSupplierId(Long.parseLong(record.get("supplier_id").toString()));
+        if (record.containsKey("cost")) maintenance.setCost(new BigDecimal(record.get("cost").toString()));
+        if (record.containsKey("notes")) maintenance.setNotes((String) record.get("notes"));
+        
+        // Recalculate maintenance time if both dates are present
+        if (maintenance.getStartDate() != null && maintenance.getCompletionDate() != null) {
+            long days = ChronoUnit.DAYS.between(maintenance.getStartDate(), maintenance.getCompletionDate());
+            maintenance.setAssetMaintenanceTime((int) days);
+        }
+        
+        assetMaintenanceRepository.save(maintenance);
+        return Map.of("id", id, "message", "Maintenance record updated");
     }
 
     @Override
-    public List<Map<String, Object>> getAllDisposalRecords() {
-        return new ArrayList<>();
+    @Transactional
+    public void deleteMaintenance(Long id) {
+        assetMaintenanceRepository.deleteById(id);
     }
 
     @Override
-    public Map<String, Object> createDisposalRecord(Map<String, Object> record) {
-        return record;
+    public Map<String, Object> getMaintenanceById(Long id) {
+        AssetMaintenance m = assetMaintenanceRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Maintenance record not found"));
+        
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", m.getId());
+        map.put("assetId", m.getAssetId());
+        map.put("supplierId", m.getSupplierId());
+        map.put("maintenanceType", m.getMaintenanceType());
+        map.put("title", m.getTitle());
+        map.put("startDate", m.getStartDate());
+        map.put("completionDate", m.getCompletionDate());
+        map.put("assetMaintenanceTime", m.getAssetMaintenanceTime());
+        map.put("cost", m.getCost());
+        map.put("notes", m.getNotes());
+        map.put("userId", m.getUserId());
+        map.put("createdAt", m.getCreatedAt());
+        
+        assetRepository.findById(m.getAssetId()).ifPresent(asset -> {
+            map.put("assetTag", asset.getAssetTag());
+            map.put("assetName", asset.getName());
+            
+            if (asset.getCompanyId() != null) {
+                companyRepository.findById(asset.getCompanyId())
+                    .ifPresent(company -> map.put("companyName", company.getName()));
+            }
+            
+            if (asset.getLocationId() != null) {
+                locationRepository.findById(asset.getLocationId())
+                    .ifPresent(location -> map.put("locationName", location.getName()));
+            }
+            
+            if (asset.getRtdLocationId() != null) {
+                locationRepository.findById(asset.getRtdLocationId())
+                    .ifPresent(location -> map.put("defaultLocationName", location.getName()));
+            }
+            
+            if (asset.getWarrantyMonths() != null && asset.getPurchaseDate() != null) {
+                LocalDate warrantyExpiry = asset.getPurchaseDate().plusMonths(asset.getWarrantyMonths());
+                map.put("warrantyExpiry", warrantyExpiry);
+            }
+        });
+        
+        if (m.getSupplierId() != null) {
+            supplierRepository.findById(m.getSupplierId())
+                .ifPresent(supplier -> map.put("supplierName", supplier.getName()));
+        }
+        
+        if (m.getUserId() != null) {
+            map.put("createdByName", getUserName(m.getUserId()));
+        }
+        
+        return map;
     }
 
-    @Override
+
     public List<Map<String, Object>> getAllCategories() {
         return categoryRepository.findAll().stream()
             .map(c -> {
@@ -870,7 +1052,7 @@ public class AssetServiceImpl implements AssetService {
 
     @Override
     public List<Map<String, Object>> getMaintenanceReport() {
-        return new ArrayList<>();
+        return getAllMaintenances();
     }
 
     @Override

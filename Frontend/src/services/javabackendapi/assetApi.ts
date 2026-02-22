@@ -10,8 +10,9 @@ import {
   mockManufacturers,
   mockSuppliers,
   mockDepartments,
+  mockMaintenanceReports,
 } from '@/services/mockData/assets';
-import type { Asset, MaintenanceRecord, DisposalRecord, MaintenanceCost, Category, Manufacturer, Supplier, Location, AssetModel, StatusLabel, Depreciation, Company, Department, DepreciationReport, MaintenanceReport, AssetAudit, MaintenanceRecordInput, License } from '@/types/javabackendapi/assetTypes';
+import type { Asset, MaintenanceRecord,  MaintenanceReportData, DisposalRecord, MaintenanceCost, Category, Manufacturer, Supplier, Location, AssetModel, StatusLabel, Depreciation, Company, Department, DepreciationReport, AssetAudit, MaintenanceRecordInput, License } from '@/types/javabackendapi/assetTypes';
 
 const API_BASE = '/api/assets';
 
@@ -42,7 +43,7 @@ class AssetApiService {
         // Transform API response to match frontend Asset type
         return Array.isArray(response) ? response.map(asset => ({
           ...asset,
-          assetName: asset.name || asset.assetName,
+          assetName: asset.name || asset.assetName || asset.asset_name,
           assetTag: asset.asset_tag || asset.assetTag,
           status: asset.statusLabel?.name || asset.status,
         })) : response;
@@ -95,37 +96,37 @@ class AssetApiService {
 
 
   // Maintenance
-  async getAllMaintenanceRecords(): Promise<MaintenanceRecord[]> {
+  async getAllMaintenances(): Promise<MaintenanceReportData[]> {
     return this.handleApiCall(
-      () => apiClient.get(`${API_BASE}/maintenance-records`),
-      mockMaintenanceRecords
+      () => apiClient.get(`${API_BASE}/maintenances`),
+      []
     );
   }
 
-  async getMaintenanceRecordById(id: number): Promise<MaintenanceRecord> {
+  async getMaintenanceById(id: number): Promise<MaintenanceRecord> {
     return this.handleApiCall(
-      () => apiClient.get(`${API_BASE}/maintenance-records/${id}`),
+      () => apiClient.get(`${API_BASE}/maintenances/${id}`),
       mockMaintenanceRecords.find(r => r.id === id) || mockMaintenanceRecords[0]
     );
   }
 
-  async createMaintenanceRecord(record: MaintenanceRecordInput): Promise<MaintenanceRecord> {
+  async createMaintenance(record: MaintenanceRecordInput): Promise<MaintenanceRecord> {
     return this.handleApiCall(
-      () => apiClient.post(`${API_BASE}/maintenance-records`, record),
+      () => apiClient.post(`${API_BASE}/maintenances`, record),
       { ...record, id: Date.now() } as MaintenanceRecord
     );
   }
 
-  async updateMaintenanceRecord(id: number, record: Partial<MaintenanceRecord>): Promise<MaintenanceRecord> {
+  async updateMaintenance(id: number, record: Partial<MaintenanceRecord>): Promise<MaintenanceRecord> {
     return this.handleApiCall(
-      () => apiClient.put(`${API_BASE}/maintenance-records/${id}`, record),
+      () => apiClient.put(`${API_BASE}/maintenances/${id}`, record),
       { ...mockMaintenanceRecords[0], ...record, id }
     );
   }
 
-  async deleteMaintenanceRecord(id: number): Promise<void> {
+  async deleteMaintenance(id: number): Promise<void> {
     return this.handleApiCall(
-      () => apiClient.delete(`${API_BASE}/maintenance-records/${id}`),
+      () => apiClient.delete(`${API_BASE}/maintenances/${id}`),
       undefined
     );
   }
@@ -283,14 +284,7 @@ class AssetApiService {
     );
   }
 
-  async getMaintenanceReport(): Promise<MaintenanceReport[]> {
-    return this.handleApiCall(
-      () => apiClient.get(`${API_BASE}/reports/maintenance`),
-      []
-    );
-  }
-
-  // Asset Audits
+// Asset Audits
   async createAssetAudit(auditData: Record<string, unknown>): Promise<AssetAudit> {
     return this.handleApiCall(
       () => apiClient.post(`${API_BASE}/audits`, auditData),
@@ -354,7 +348,7 @@ export async function deleteAssetRecord(id: number | string): Promise<void> {
 }
 
 export async function fetchMaintenanceRecords() {
-  return assetApiService.getAllMaintenanceRecords();
+  return assetApiService.getAllMaintenances();
 }
 
 export async function createMaintenanceRecordItem(record: MaintenanceRecord) {
@@ -362,15 +356,15 @@ export async function createMaintenanceRecordItem(record: MaintenanceRecord) {
     ...record,
     asset: typeof record.asset === 'string' ? record.asset : String(record.asset.id)
   };
-  return assetApiService.createMaintenanceRecord(input);
+  return assetApiService.createMaintenance(input);
 }
 
 export async function updateMaintenanceRecordItem(id: number | string, record: unknown) {
-  return assetApiService.updateMaintenanceRecord(Number(id), record);
+  return assetApiService.updateMaintenance(Number(id), record);
 }
 
 export async function deleteMaintenanceRecordItem(id: number | string) {
-  return assetApiService.deleteMaintenanceRecord(Number(id));
+  return assetApiService.deleteMaintenance(Number(id));
 }
 
 export async function fetchDisposalRecords() {
