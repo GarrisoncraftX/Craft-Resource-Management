@@ -368,20 +368,25 @@ export interface Asset {
   // Model & Specifications
   model?: string;
   model_id?: number;
+  modelId?: number;
   modelNo?: string;
   model_no?: string;
   serial?: string;
   manufacturer?: string;
   supplier?: string;
   supplier_id?: number;
+  supplierId?: number;
   company?: string;
   company_id?: number;
+  companyId?: number;
   location?: string;
   location_id?: number;
   rtd_location?: string;
   rtd_location_id?: number;
+  rtdLocationId?: number;
   status?: string;
   status_id?: number;
+  statusId?: number;
   statusLabel?: { id: number; name: string; statusType: string; color?: string };
   defaultLocation?: string;
   requestable?: boolean | number;
@@ -391,11 +396,13 @@ export interface Asset {
   currentValue?: number;
   current_value?: number;
   assigned_to?: number;
+  assignedTo?: number;
   assigned_type?: string;
+  assignedType?: string;
 
   //Audit
   expectedCheckinDate?: string;
-  expected_checkin?: string;
+  expectedCheckin?: string;
   nextAuditDate?: string;
   next_audit_date?: string;
   byod?: boolean | number;

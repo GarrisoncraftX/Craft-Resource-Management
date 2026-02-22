@@ -24,7 +24,7 @@ interface CloneAssetDialogProps {
 
 export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpenChange, asset, onClone }) => {
   const navigate = useNavigate();
-  
+
   const [company, setCompany] = useState('');
   const [assetTag, setAssetTag] = useState('');
   const [serial, setSerial] = useState('');
@@ -60,13 +60,13 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
   useEffect(() => {
     const fetchAllData = async () => {
       if (!open || !asset?.id) return;
-      
+
       setLoading(true);
       setDataLoaded(false);
-      
+
       try {
         // First, fetch all dropdown options
-        const [companiesData, modelsData, statusData, locationsData, suppliersData, usersData, assetsData] = await Promise.all([
+        const results = await Promise.allSettled([
           assetApiService.getAllCompanies(),
           assetApiService.getAllModels(),
           assetApiService.getAllStatusLabels(),
@@ -75,20 +75,42 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
           hrApiService.listEmployees(),
           assetApiService.getAllAssets()
         ]);
-        
+        // Extract values from settled promises, defaulting to empty arrays on failure
+        const companiesData = results[0].status === 'fulfilled' ? results[0].value : [];
+        const modelsData = results[1].status === 'fulfilled' ? results[1].value : [];
+        const statusData = results[2].status === 'fulfilled' ? results[2].value : [];
+        const locationsData = results[3].status === 'fulfilled' ? results[3].value : [];
+        const suppliersData = results[4].status === 'fulfilled' ? results[4].value : [];
+        const usersData = results[5].status === 'fulfilled' ? results[5].value : [];
+        const assetsData = results[6].status === 'fulfilled' ? results[6].value : []
+        // Log any failures for debugging
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            const requestNames = ['companies', 'models', 'statusLabels', 'locations', 'suppliers', 'users', 'assets'];
+            console.warn(`Failed to fetch ${requestNames[index]}:`, result.reason);
+          }
+        })
         setCompanies(companiesData);
         setModels(modelsData);
         setStatusLabels(statusData);
         setLocations(locationsData);
-        setSuppliers(suppliersData);
         setUsers(usersData);
         setCheckoutAssets(assetsData);
         setCheckoutLocations(locationsData);
+        setSuppliers(suppliersData);
 
         // Then, fetch source asset data
         let sourceAsset = null;
         try {
-          sourceAsset = await assetApiService.getAssetById(Number(asset.id));
+          const assetResult = await Promise.allSettled([
+            assetApiService.getAssetById(Number(asset.id))
+          ]);
+          if (assetResult[0].status === 'fulfilled') {
+            sourceAsset = assetResult[0].value;
+          } else {
+            console.warn('Failed to fetch source asset from API:', assetResult[0].reason);
+            sourceAsset = asset;
+          }
         } catch (error) {
           console.warn('Failed to fetch source asset from API, using prop data:', error);
           sourceAsset = asset;
@@ -104,7 +126,6 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
           setNotes(sourceAsset.notes || '');
           setDefaultLocation(String(sourceAsset.rtd_location_id || sourceAsset.location_id || ''));
           setRequestable(Boolean(sourceAsset.requestable));
-          
           setOptionalData({
             assetName: sourceAsset.assetName || sourceAsset.asset_name || sourceAsset.name || '',
             warranty: String(sourceAsset.warrantyMonths || sourceAsset.warranty_months || ''),
@@ -112,7 +133,7 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
             nextAuditDate: sourceAsset.nextAuditDate || sourceAsset.next_audit_date || '',
             byod: Boolean(sourceAsset.byod)
           });
-          
+
           setOrderData({
             orderNumber: sourceAsset.orderNumber || sourceAsset.order_number || '',
             purchaseDate: sourceAsset.purchaseDate || sourceAsset.purchase_date || '',
@@ -121,13 +142,12 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
             purchaseCost: String(sourceAsset.purchaseCost || sourceAsset.purchase_cost || ''),
             currency: sourceAsset.currency || 'USD'
           });
-          
+
           // Handle existing image preview
           if (sourceAsset.imageUrl || sourceAsset.image) {
             setImagePreview(sourceAsset.imageUrl || sourceAsset.image || null);
           }
         }
-        
         setDataLoaded(true);
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -177,7 +197,7 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!assetTag?.trim()) {
       toast.error('Asset Tag is required');
       return;
@@ -193,31 +213,31 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
 
     try {
       setLoading(true);
-      
+
       const payload: Partial<Asset> = {
-        company_id: company ? Number(company) : undefined,
-        asset_tag: assetTag,
+        companyId: company ? Number(company) : undefined,
+        assetTag: assetTag,
         serial: serial || undefined,
-        model_id: Number(model),
-        status_id: Number(status),
+        modelId: Number(model),
+        statusId: Number(status),
         notes: notes || undefined,
-        rtd_location_id: defaultLocation ? Number(defaultLocation) : undefined,
+        rtdLocationId: defaultLocation ? Number(defaultLocation) : undefined,
         requestable: requestable ? 1 : 0,
         name: optionalData.assetName || undefined,
         warranty_months: optionalData.warranty ? Number(optionalData.warranty) : undefined,
-        expected_checkin: optionalData.expectedCheckinDate || undefined,
+        expectedCheckin: optionalData.expectedCheckinDate || undefined,
         next_audit_date: optionalData.nextAuditDate || undefined,
         byod: optionalData.byod ? 1 : 0,
         order_number: orderData.orderNumber || undefined,
         purchase_date: orderData.purchaseDate || undefined,
         eol_date: orderData.eolDate || undefined,
-        supplier_id: orderData.supplier ? Number(orderData.supplier) : undefined,
+        supplierId: orderData.supplier ? Number(orderData.supplier) : undefined,
         purchase_cost: orderData.purchaseCost ? Number(orderData.purchaseCost) : undefined,
         currency: orderData.currency || 'USD'
       };
 
       const result = await assetApiService.createAsset(payload);
-      
+
       if (selectedImage && result?.id) {
         try {
           await uploadAssetImage(result.id, selectedImage);
@@ -226,15 +246,15 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
           toast.warning('Asset created but image upload failed');
         }
       }
-      
+
       onClone?.(result);
       toast.success('Asset cloned successfully');
-      
+
       // Navigate to the newly created asset
       if (result?.id) {
         navigate(`/assets/hardware?highlight=${result.id}`);
       }
-      
+
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to clone asset:', error);
