@@ -182,7 +182,7 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
                         <button type="button" onClick={() => removeAsset(id)} className="hover:text-red-200">
                           <X className="w-3 h-3" />
                         </button>
-                        #{asset?.assetTag} - {asset?.assetName}
+                        #{asset?.assetTag} - {asset?.asset_name || asset?.assetName}
                       </Badge>
                     );
                   })}

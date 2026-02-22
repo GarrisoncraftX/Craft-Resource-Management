@@ -1,23 +1,38 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AssetDataTable, ColumnDef } from './AssetDataTable';
 import { Copy, Pencil, Trash2, } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { License } from '@/types/javabackendapi/assetTypes';
-import { mockLicenses } from '@/services/mockData/assets';
+import { assetApiService } from '@/services/javabackendapi/assetApi';
 
 export const LicensesView: React.FC = () => {
+  const [licenses, setLicenses] = useState<License[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLicenses = async () => {
+      try {
+        const data = await assetApiService.getAllLicenses();
+        setLicenses(data);
+      } catch (error) {
+        console.error('Failed to fetch licenses:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLicenses();
+  }, []);
 
   const columns: ColumnDef<License>[] = [
     { key: 'id', header: 'ID', accessor: (r) => r.id, defaultVisible: false },
-    { key: 'company_id', header: 'Company', accessor: (r) => r.company_id || '-', defaultVisible: false },
     { key: 'name', header: 'Name', accessor: (r) => <span className="text-sky-600 font-medium hover:underline cursor-pointer">{r.name}</span>, defaultVisible: true },
     { key: 'seats_total', header: 'Seats', accessor: (r) => r.seats_total, defaultVisible: true },
     { key: 'seats_used', header: 'Seats Used', accessor: (r) => r.seats_used, defaultVisible: true },
     { key: 'available_seats', header: 'Available', accessor: (r) => (r.available_seats !== undefined ? r.available_seats : r.seats_total - r.seats_used), defaultVisible: true },
-    { key: 'company_id', header: 'Company ID', accessor: (r) => r.company_id || '-', defaultVisible: false },
-    { key: 'supplier_id', header: 'Supplier ID', accessor: (r) => r.supplier_id || '-', defaultVisible: false },
-    { key: 'manufacturer_id', header: 'Manufacturer ID', accessor: (r) => r.manufacturer_id || '-', defaultVisible: true },
+    { key: 'company', header: 'Company', accessor: (r: any) => r.company || '-', defaultVisible: true },
+    { key: 'supplier', header: 'Supplier', accessor: (r: any) => r.supplier || '-', defaultVisible: false },
+    { key: 'manufacturer', header: 'Manufacturer', accessor: (r: any) => r.manufacturer || '-', defaultVisible: true },
     { key: 'expiration_date', header: 'Expiration Date', accessor: (r) => r.expiration_date || '-', defaultVisible: true },
     { key: 'product_key', header: 'Product Key', accessor: (r) => r.product_key ? <span className="font-mono text-xs">{r.product_key}</span> : '-', defaultVisible: false },
     { key: 'purchase_date', header: 'Purchase Date', accessor: (r) => r.purchase_date || '-', defaultVisible: false },
@@ -47,7 +62,7 @@ export const LicensesView: React.FC = () => {
         </div>
 
         <AssetDataTable
-          data={mockLicenses}
+          data={licenses}
           columns={columns}
           viewType="licenses"
           actions={(row) => (

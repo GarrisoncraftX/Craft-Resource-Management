@@ -11,7 +11,7 @@ import {
   mockSuppliers,
   mockDepartments,
 } from '@/services/mockData/assets';
-import type { Asset, MaintenanceRecord, DisposalRecord, MaintenanceCost, Category, Manufacturer, Supplier, Location, AssetModel, StatusLabel, Depreciation, Company, Department, DepreciationReport, MaintenanceReport, AssetAudit, MaintenanceRecordInput } from '@/types/javabackendapi/assetTypes';
+import type { Asset, MaintenanceRecord, DisposalRecord, MaintenanceCost, Category, Manufacturer, Supplier, Location, AssetModel, StatusLabel, Depreciation, Company, Department, DepreciationReport, MaintenanceReport, AssetAudit, MaintenanceRecordInput, License } from '@/types/javabackendapi/assetTypes';
 
 const API_BASE = '/api/assets';
 
@@ -316,6 +316,14 @@ class AssetApiService {
     return this.handleApiCall(
       () => apiClient.get(`${API_BASE}/audits/${id}`),
       {} as AssetAudit
+    );
+  }
+
+  // Licenses
+  async getAllLicenses(): Promise<License[]> {
+    return this.handleApiCall(
+      () => apiClient.get(`${API_BASE}/licenses`),
+      []
     );
   }
 }

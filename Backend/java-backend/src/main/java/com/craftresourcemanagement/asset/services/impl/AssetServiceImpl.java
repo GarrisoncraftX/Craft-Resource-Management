@@ -39,6 +39,8 @@ public class AssetServiceImpl implements AssetService {
     private final DepartmentRepository departmentRepository;
     private final CloudinaryService cloudinaryService;
     private final UserRepository userRepository;
+    private final LicenseRepository licenseRepository;
+    private final LicenseAssignmentRepository licenseAssignmentRepository;
 
     public AssetServiceImpl(AssetRepository assetRepository, AuditLogRepository auditLogRepository,
                            AssetAuditRepository assetAuditRepository,
@@ -47,7 +49,8 @@ public class AssetServiceImpl implements AssetService {
                            AssetModelRepository assetModelRepository, StatusLabelRepository statusLabelRepository,
                            DepreciationRepository depreciationRepository, CompanyRepository companyRepository,
                            DepartmentRepository departmentRepository, CloudinaryService cloudinaryService,
-                           UserRepository userRepository) {
+                           UserRepository userRepository, LicenseRepository licenseRepository,
+                           LicenseAssignmentRepository licenseAssignmentRepository) {
         this.assetRepository = assetRepository;
         this.auditLogRepository = auditLogRepository;
         this.assetAuditRepository = assetAuditRepository;
@@ -62,6 +65,8 @@ public class AssetServiceImpl implements AssetService {
         this.departmentRepository = departmentRepository;
         this.cloudinaryService = cloudinaryService;
         this.userRepository = userRepository;
+        this.licenseRepository = licenseRepository;
+        this.licenseAssignmentRepository = licenseAssignmentRepository;
     }
 
     @Override
@@ -1149,5 +1154,44 @@ public class AssetServiceImpl implements AssetService {
         } catch (Exception e) {
             // Silently fail - audits should never break operations
         }
+    }
+
+    @Override
+    public List<Map<String, Object>> getAllLicenses() {
+        return licenseRepository.findByDeletedAtIsNull().stream()
+            .map(license -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", license.getId());
+                map.put("name", license.getName());
+                map.put("category_id", license.getCategoryId());
+                map.put("manufacturer_id", license.getManufacturerId());
+                map.put("supplier_id", license.getSupplierId());
+                map.put("company_id", license.getCompanyId());
+                map.put("product_key", license.getProductKey());
+                map.put("seats_total", license.getSeatsTotal());
+                map.put("seats_used", licenseAssignmentRepository.countByLicenseId(license.getId()));
+                map.put("available_seats", license.getSeatsTotal() - licenseAssignmentRepository.countByLicenseId(license.getId()));
+                map.put("purchase_date", license.getPurchaseDate());
+                map.put("expiration_date", license.getExpirationDate());
+                map.put("purchase_cost", license.getPurchaseCost());
+                map.put("notes", license.getNotes());
+                map.put("created_at", license.getCreatedAt());
+                map.put("updated_at", license.getUpdatedAt());
+                
+                if (license.getCompanyId() != null) {
+                    companyRepository.findById(license.getCompanyId())
+                        .ifPresent(company -> map.put("company", company.getName()));
+                }
+                if (license.getManufacturerId() != null) {
+                    manufacturerRepository.findById(license.getManufacturerId())
+                        .ifPresent(manufacturer -> map.put("manufacturer", manufacturer.getName()));
+                }
+                if (license.getSupplierId() != null) {
+                    supplierRepository.findById(license.getSupplierId())
+                        .ifPresent(supplier -> map.put("supplier", supplier.getName()));
+                }
+                
+                return map;
+            }).collect(Collectors.toList());
     }
 }

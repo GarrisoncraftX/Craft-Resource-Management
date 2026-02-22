@@ -94,4 +94,7 @@ public interface AssetService {
     Map<String, Object> updateAssetAudit(Long id, Map<String, Object> auditData);
     List<Map<String, Object>> getAllAssetAudits();
     Map<String, Object> getAssetAuditById(Long id);
+
+    // Licenses
+    List<Map<String, Object>> getAllLicenses();
 }

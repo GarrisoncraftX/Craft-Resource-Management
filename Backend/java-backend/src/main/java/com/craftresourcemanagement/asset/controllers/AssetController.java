@@ -119,6 +119,16 @@ public class AssetController {
         return ResponseEntity.ok(assetService.getMaintenanceReport());
     }
 
+    @GetMapping("/licenses")
+    public ResponseEntity<List<Map<String, Object>>> getAllLicenses() {
+        return ResponseEntity.ok(assetService.getAllLicenses());
+    }
+
+      @GetMapping("/audits")
+    public ResponseEntity<List<Map<String, Object>>> getAllAssetAudits() {
+        return ResponseEntity.ok(assetService.getAllAssetAudits());
+    }
+    
     @GetMapping("/{id}")
     public ResponseEntity<AssetDTO> getAssetById(@PathVariable Long id) {
         return ResponseEntity.ok(assetService.getAssetById(id));
@@ -252,10 +262,7 @@ public class AssetController {
         }
     }
 
-    @GetMapping("/audits")
-    public ResponseEntity<List<Map<String, Object>>> getAllAssetAudits() {
-        return ResponseEntity.ok(assetService.getAllAssetAudits());
-    }
+  
 
     @GetMapping("/audits/{id}")
     public ResponseEntity<Map<String, Object>> getAssetAuditById(@PathVariable Long id) {
