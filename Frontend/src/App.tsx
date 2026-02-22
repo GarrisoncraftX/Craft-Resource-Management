@@ -58,7 +58,7 @@ const AssetFormPage = lazy(() => import("@/components/modules/assets/AssetForm")
 const MaintenanceReportView = lazy(() => import("@/components/modules/assets/AssetReports/MaintenanceReportView").then(module => ({ default: module.MaintenanceReportView })));
 const DepreciationReportView = lazy(() => import("@/components/modules/assets/AssetReports/DepreciationReportView").then(module => ({ default: module.DepreciationReportView })));
 const AssetsInfo = lazy(() => import("@/components/modules/assets/AssetsInfo").then(module => ({ default: module.AssetsInfo })));
-const CheckoutForm = lazy(() => import("@/components/modules/assets/forms/CheckoutForm").then(module => ({ default: module.CheckoutForm })));
+const CheckoutForm = lazy(() => import("@/components/modules/assets/forms/CheckoutDialog").then(module => ({ default: module.CheckoutForm })));
 const AuditReport = lazy(() => import("@/components/modules/assets/AssetReports/AuditReport").then(module => ({ default: module.AuditReport })));
 
 //Employee & Visitors Modules

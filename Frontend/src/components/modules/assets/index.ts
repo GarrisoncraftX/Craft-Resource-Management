@@ -15,5 +15,5 @@ export { LocationsView } from './AssetSettings/LocationsView';
 export { DepartmentsView } from './AssetSettings/DepartmentsView';
 export { PeopleView } from './PeopleView';
 export { AssetsInfo } from './AssetsInfo';
-export { CheckoutForm } from './forms/CheckoutForm';
+export { CheckoutForm } from './forms/CheckoutDialog';
 export { AuditReport } from './AssetReports/AuditReport';

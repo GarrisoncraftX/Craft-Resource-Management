@@ -339,6 +339,15 @@ export interface Supplier {
 }
 
 
+
+export interface CheckoutPayload {
+  assignedToId: number;
+  assignedType?: 'user' | 'location' | string;
+  checkoutDate: string;
+  expectedReturnDate?: string;
+  notes?: string;
+}
+
 export interface RequestableItem {
   id: string;
   image?: string;
@@ -403,6 +412,7 @@ export interface Asset {
   //Audit
   expectedCheckinDate?: string;
   expectedCheckin?: string;
+  expected_checkin?: string;
   nextAuditDate?: string;
   next_audit_date?: string;
   byod?: boolean | number;
