@@ -21,7 +21,7 @@ interface AssetFormProps {
 
 export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOpenChange, initialData, title = 'Create New Asset' }) => {
   const [company, setCompany] = useState(initialData?.company_id?.toString() || '');
-  const [assetTag, setAssetTag] = useState(initialData?.asset_tag || `AST-${Date.now().toString().slice(-10)}`);
+  const [assetTag, setAssetTag] = useState(initialData?.asset_tag || '');
   const [serial, setSerial] = useState(initialData?.serial || '');
   const [model, setModel] = useState(initialData?.model_id?.toString() || '');
   const [status, setStatus] = useState(initialData?.status_id?.toString() || '');
@@ -33,7 +33,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
   const [orderExpanded, setOrderExpanded] = useState(false);
   const [optionalData, setOptionalData] = useState({
     assetName: initialData?.asset_name || initialData?.name || '',
-    warranty: initialData?.warranty || '',
+    warranty: initialData?.warranty_months?.toString() || initialData?.warranty || '',
     expectedCheckinDate: initialData?.expected_checkin || '',
     nextAuditDate: initialData?.next_audit_date || '',
     byod: initialData?.byod || false,
@@ -96,7 +96,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
   React.useEffect(() => {
     if (initialData) {
       setCompany(initialData.company_id?.toString() || '');
-      setAssetTag(initialData.asset_tag || `AST-${Date.now().toString().slice(-10)}`);
+      setAssetTag(initialData.asset_tag || '');
       setSerial(initialData.serial || '');
       setModel(initialData.model_id?.toString() || '');
       setStatus(initialData.status_id?.toString() || '');
@@ -106,7 +106,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
       setImagePreview(initialData.image || null);
       setOptionalData({
         assetName: initialData.asset_name || initialData.name || '',
-        warranty: initialData.warranty || '',
+        warranty: initialData.warranty_months?.toString() || initialData.warranty || '',
         expectedCheckinDate: initialData.expected_checkin || '',
         nextAuditDate: initialData.next_audit_date || '',
         byod: initialData.byod || false,
@@ -172,7 +172,6 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
     try {
       const assetData = {
         companyId: company && company !== '' ? Number(company) : null,
-        assetTag, 
         serial, 
         modelId: model && model !== '' ? Number(model) : null,
         statusId: status && status !== '' ? Number(status) : null,
@@ -239,10 +238,14 @@ export const AssetForm: React.FC<AssetFormProps> = ({ onAssetCreated, open, onOp
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
               <label htmlFor="asset-tag-input" className="sm:w-40 text-sm font-bold text-gray-700 sm:text-right shrink-0">Asset Tag</label>
               <div className="flex items-center gap-2 flex-1">
-                <Input id="asset-tag-input" value={assetTag} onChange={(e) => setAssetTag(e.target.value)} className="flex-1 border-l-4 border-l-amber-400" />
-                <Button type="button" size="icon" className="bg-sky-500 hover:bg-sky-600 text-white h-9 w-9">
-                  <Plus className="w-4 h-4" />
-                </Button>
+                <Input 
+                  id="asset-tag-input" 
+                  value={assetTag} 
+                  readOnly 
+                  disabled
+                  className="flex-1 border-l-4 border-l-amber-400 bg-gray-50 cursor-not-allowed" 
+                  placeholder="Auto-generated on save"
+                />
               </div>
             </div>
 

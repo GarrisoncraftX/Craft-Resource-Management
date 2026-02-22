@@ -408,7 +408,17 @@ export const AssetHardware: React.FC = () => {
       { key: 'modelNo', header: 'Model No.', accessor: (row) => (row.modelNo as unknown as string) || row.model_no || '-', defaultVisible: false },
       { key: 'category', header: 'Category', accessor: (row) => row.category || (row.description as unknown as string) || 'N/A', defaultVisible: true },
       { key: 'status', header: 'Status', accessor: (row) => getStatusBadge(row.status || 'Unknown'), defaultVisible: true },
-      { key: 'checkedOutTo', header: 'Checked Out To', accessor: () => '-', defaultVisible: true },
+      { 
+        key: 'checkedOutTo', 
+        header: 'Checked Out To', 
+        accessor: (row) => {
+          if (row.assigned_to || row.assignedTo) {
+            return row.assigned_to_name || row.assignedToName || `ID: ${row.assigned_to || row.assignedTo}`;
+          }
+          return '-';
+        }, 
+        defaultVisible: true 
+      },
       { key: 'location', header: 'Location', accessor: (row) => row.location || 'N/A', defaultVisible: false },
       { key: 'defaultLocation', header: 'Default Location', accessor: (row) => row.defaultLocation || row.rtd_location || '-', defaultVisible: true },
       { key: 'manufacturer', header: 'Manufacturer', accessor: (row) => row.manufacturer || '-', defaultVisible: false },

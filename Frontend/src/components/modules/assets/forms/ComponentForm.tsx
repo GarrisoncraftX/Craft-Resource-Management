@@ -15,19 +15,19 @@ interface ComponentFormProps {
 
 export const ComponentForm: React.FC<ComponentFormProps> = ({ open, onOpenChange, initialData, onSubmit }) => {
   const [name, setName] = useState(initialData?.name || '');
-  const [qty_total, setQtyTotal] = useState(initialData?.qty_total || 0);
-  const [qty_remaining, setQtyRemaining] = useState(initialData?.qty_remaining || 0);
-  const [min_qty, setMinQty] = useState(initialData?.min_qty || 0);
-  const [location_id, setLocationId] = useState(initialData?.location_id || undefined);
-  const [company_id, setCompanyId] = useState(initialData?.company_id || undefined);
-  const [unit_cost, setUnitCost] = useState(initialData?.unit_cost || undefined);
-  const [model_no, setModelNo] = useState(initialData?.model_no || '');
+  const [qtyTotal, setQtyTotal] = useState(initialData?.qtyTotal || initialData?.qty_total || 0);
+  const [qtyRemaining, setQtyRemaining] = useState(initialData?.qtyRemaining || initialData?.qty_remaining || 0);
+  const [minQty, setMinQty] = useState(initialData?.minQty || initialData?.min_qty || 0);
+  const [locationId, setLocationId] = useState(initialData?.locationId || initialData?.location_id || undefined);
+  const [companyId, setCompanyId] = useState(initialData?.companyId || initialData?.company_id || undefined);
+  const [unitCost, setUnitCost] = useState(initialData?.unitCost || initialData?.unit_cost || undefined);
+  const [modelNo, setModelNo] = useState(initialData?.modelNo || initialData?.model_no || '');
   const [serial, setSerial] = useState(initialData?.serial || '');
   const [notes, setNotes] = useState(initialData?.notes || '');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ name, qty_total, qty_remaining, min_qty, location_id, company_id, unit_cost, model_no, serial, notes });
+    onSubmit({ name, qtyTotal, qtyRemaining, minQty, locationId, companyId, unitCost, modelNo, serial, notes });
     onOpenChange(false);
   };
 
@@ -42,19 +42,19 @@ export const ComponentForm: React.FC<ComponentFormProps> = ({ open, onOpenChange
           </div>
           <div className="flex items-center gap-4">
             <label className="w-40 text-sm font-bold text-right">Qty Total</label>
-            <Input type="number" value={qty_total} onChange={(e) => setQtyTotal(Number(e.target.value))} required className="w-32" />
+            <Input type="number" value={qtyTotal} onChange={(e) => setQtyTotal(Number(e.target.value))} required className="w-32" />
           </div>
           <div className="flex items-center gap-4">
             <label className="w-40 text-sm font-bold text-right">Qty Remaining</label>
-            <Input type="number" value={qty_remaining} onChange={(e) => setQtyRemaining(Number(e.target.value))} required className="w-32" />
+            <Input type="number" value={qtyRemaining} onChange={(e) => setQtyRemaining(Number(e.target.value))} required className="w-32" />
           </div>
           <div className="flex items-center gap-4">
             <label className="w-40 text-sm font-bold text-right">Min Qty</label>
-            <Input type="number" value={min_qty} onChange={(e) => setMinQty(Number(e.target.value))} className="w-32" />
+            <Input type="number" value={minQty} onChange={(e) => setMinQty(Number(e.target.value))} className="w-32" />
           </div>
           <div className="flex items-center gap-4">
             <label className="w-40 text-sm font-bold text-right">Model No</label>
-            <Input value={model_no} onChange={(e) => setModelNo(e.target.value)} className="flex-1" />
+            <Input value={modelNo} onChange={(e) => setModelNo(e.target.value)} className="flex-1" />
           </div>
           <div className="flex items-center gap-4">
             <label className="w-40 text-sm font-bold text-right">Serial</label>
@@ -62,7 +62,7 @@ export const ComponentForm: React.FC<ComponentFormProps> = ({ open, onOpenChange
           </div>
           <div className="flex items-center gap-4">
             <label className="w-40 text-sm font-bold text-right">Unit Cost</label>
-            <Input type="number" step="0.01" value={unit_cost} onChange={(e) => setUnitCost(Number(e.target.value))} className="w-40" />
+            <Input type="number" step="0.01" value={unitCost} onChange={(e) => setUnitCost(Number(e.target.value))} className="w-40" />
           </div>
           <div className="flex items-start gap-4">
             <label className="w-40 text-sm font-bold text-right mt-2">Notes</label>

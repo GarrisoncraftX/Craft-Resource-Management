@@ -5,6 +5,7 @@ import com.craftresourcemanagement.asset.entities.*;
 import com.craftresourcemanagement.asset.repositories.*;
 import com.craftresourcemanagement.asset.services.AssetService;
 import com.craftresourcemanagement.hr.services.CloudinaryService;
+import com.craftresourcemanagement.hr.repositories.UserRepository;
 import com.craftresourcemanagement.system.repositories.AuditLogRepository;
 import com.craftresourcemanagement.system.entities.AuditLog;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class AssetServiceImpl implements AssetService {
     private final CompanyRepository companyRepository;
     private final DepartmentRepository departmentRepository;
     private final CloudinaryService cloudinaryService;
+    private final UserRepository userRepository;
 
     public AssetServiceImpl(AssetRepository assetRepository, AuditLogRepository auditLogRepository,
                            AssetAuditRepository assetAuditRepository,
@@ -44,7 +46,8 @@ public class AssetServiceImpl implements AssetService {
                            SupplierRepository supplierRepository, LocationRepository locationRepository,
                            AssetModelRepository assetModelRepository, StatusLabelRepository statusLabelRepository,
                            DepreciationRepository depreciationRepository, CompanyRepository companyRepository,
-                           DepartmentRepository departmentRepository, CloudinaryService cloudinaryService) {
+                           DepartmentRepository departmentRepository, CloudinaryService cloudinaryService,
+                           UserRepository userRepository) {
         this.assetRepository = assetRepository;
         this.auditLogRepository = auditLogRepository;
         this.assetAuditRepository = assetAuditRepository;
@@ -58,14 +61,29 @@ public class AssetServiceImpl implements AssetService {
         this.companyRepository = companyRepository;
         this.departmentRepository = departmentRepository;
         this.cloudinaryService = cloudinaryService;
+        this.userRepository = userRepository;
     }
 
     @Override
     @Transactional
     public AssetDTO createAsset(Asset asset, Long userId) {
+        // Auto-generate asset tag if not provided
+        if (asset.getAssetTag() == null || asset.getAssetTag().trim().isEmpty()) {
+            asset.setAssetTag(generateUniqueAssetTag());
+        }
         Asset saved = assetRepository.save(asset);
         logAudit(userId, "CREATE", "Asset", saved.getId(), "Asset created: " + saved.getAssetTag());
         return convertToDTO(saved);
+    }
+    
+    private String generateUniqueAssetTag() {
+        String assetTag;
+        Random random = new Random();
+        do {
+            int randomNumber = 1000000 + random.nextInt(9000000);
+            assetTag = "CRMS" + randomNumber;
+        } while (assetRepository.existsByAssetTag(assetTag));
+        return assetTag;
     }
 
     @Override
@@ -87,28 +105,26 @@ public class AssetServiceImpl implements AssetService {
         Asset existing = assetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Asset not found"));
         
-        existing.setAssetTag(asset.getAssetTag());
-        existing.setName(asset.getName());
-        existing.setSerial(asset.getSerial());
-        existing.setModelId(asset.getModelId());
-        existing.setStatusId(asset.getStatusId());
-        existing.setCompanyId(asset.getCompanyId());
-        existing.setLocationId(asset.getLocationId());
-        existing.setRtdLocationId(asset.getRtdLocationId());
-        existing.setSupplierId(asset.getSupplierId());
-        existing.setPurchaseDate(asset.getPurchaseDate());
-        existing.setPurchaseCost(asset.getPurchaseCost());
-        existing.setWarrantyMonths(asset.getWarrantyMonths());
-        existing.setOrderNumber(asset.getOrderNumber());
-        existing.setNotes(asset.getNotes());
-        existing.setExpectedCheckin(asset.getExpectedCheckin());
-        existing.setNextAuditDate(asset.getNextAuditDate());
-        existing.setByod(asset.getByod());
-        existing.setEolDate(asset.getEolDate());
-        existing.setRequestable(asset.getRequestable());
-        if (asset.getImage() != null) {
-            existing.setImage(asset.getImage());
-        }
+        // Don't update assetTag - it's immutable after creation
+        if (asset.getName() != null) existing.setName(asset.getName());
+        if (asset.getSerial() != null) existing.setSerial(asset.getSerial());
+        if (asset.getModelId() != null) existing.setModelId(asset.getModelId());
+        if (asset.getStatusId() != null) existing.setStatusId(asset.getStatusId());
+        if (asset.getCompanyId() != null) existing.setCompanyId(asset.getCompanyId());
+        if (asset.getLocationId() != null) existing.setLocationId(asset.getLocationId());
+        if (asset.getRtdLocationId() != null) existing.setRtdLocationId(asset.getRtdLocationId());
+        if (asset.getSupplierId() != null) existing.setSupplierId(asset.getSupplierId());
+        if (asset.getPurchaseDate() != null) existing.setPurchaseDate(asset.getPurchaseDate());
+        if (asset.getPurchaseCost() != null) existing.setPurchaseCost(asset.getPurchaseCost());
+        if (asset.getWarrantyMonths() != null) existing.setWarrantyMonths(asset.getWarrantyMonths());
+        if (asset.getOrderNumber() != null) existing.setOrderNumber(asset.getOrderNumber());
+        if (asset.getNotes() != null) existing.setNotes(asset.getNotes());
+        if (asset.getExpectedCheckin() != null) existing.setExpectedCheckin(asset.getExpectedCheckin());
+        if (asset.getNextAuditDate() != null) existing.setNextAuditDate(asset.getNextAuditDate());
+        if (asset.getByod() != null) existing.setByod(asset.getByod());
+        if (asset.getEolDate() != null) existing.setEolDate(asset.getEolDate());
+        if (asset.getRequestable() != null) existing.setRequestable(asset.getRequestable());
+        if (asset.getImage() != null) existing.setImage(asset.getImage());
         
         Asset updated = assetRepository.save(existing);
         logAudit(userId, "UPDATE", "Asset", updated.getId(), "Asset updated: " + updated.getAssetTag());
@@ -954,6 +970,7 @@ public class AssetServiceImpl implements AssetService {
         dto.setStatusId(asset.getStatusId());
         dto.setPurchaseDate(asset.getPurchaseDate());
         dto.setPurchaseCost(asset.getPurchaseCost());
+        dto.setEolDate(asset.getEolDate());
         dto.setNotes(asset.getNotes());
         dto.setExpectedCheckin(asset.getExpectedCheckin());
         dto.setNextAuditDate(asset.getNextAuditDate());
@@ -964,6 +981,8 @@ public class AssetServiceImpl implements AssetService {
         dto.setLocationId(asset.getLocationId());
         dto.setRtdLocationId(asset.getRtdLocationId());
         dto.setSupplierId(asset.getSupplierId());
+        dto.setAssignedTo(asset.getAssignedTo());
+        dto.setAssignedType(asset.getAssignedType());
         
         // Populate related entity names
         if (asset.getStatusId() != null) {
@@ -1024,6 +1043,16 @@ public class AssetServiceImpl implements AssetService {
         if (asset.getSupplierId() != null) {
             supplierRepository.findById(asset.getSupplierId())
                 .ifPresent(supplier -> dto.setSupplierName(supplier.getName()));
+        }
+        
+        // Populate assigned user name
+        if (asset.getAssignedTo() != null && "user".equalsIgnoreCase(asset.getAssignedType())) {
+            userRepository.findById(asset.getAssignedTo()).ifPresent(user -> {
+                String fullName = (user.getFirstName() != null ? user.getFirstName() : "") + 
+                                  " " + 
+                                  (user.getLastName() != null ? user.getLastName() : "");
+                dto.setAssignedToName(fullName.trim());
+            });
         }
         
         return dto;

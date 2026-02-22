@@ -146,6 +146,7 @@ const EmployeeDashboard: React.FC = () => {
 
   const getModuleRoute = useCallback((departmentCode: string, roleCode: string) => {
     const departmentRoutes: Record<string, string> = {
+      'ADMIN': '/admin/dashboard',
       'FINANCE': '/finance/dashboard',
       'HR': '/hr/dashboard',
       'PROCUREMENT': '/procurement/dashboard',

@@ -198,10 +198,6 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!assetTag?.trim()) {
-      toast.error('Asset Tag is required');
-      return;
-    }
     if (!model) {
       toast.error('Model is required');
       return;
@@ -216,27 +212,27 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
 
       const payload: Partial<Asset> = {
         companyId: company ? Number(company) : undefined,
-        assetTag: assetTag,
         serial: serial || undefined,
         modelId: Number(model),
         statusId: Number(status),
         notes: notes || undefined,
         rtdLocationId: defaultLocation ? Number(defaultLocation) : undefined,
-        requestable: requestable ? 1 : 0,
+        requestable: requestable,
         name: optionalData.assetName || undefined,
-        warranty_months: optionalData.warranty ? Number(optionalData.warranty) : undefined,
+        warrantyMonths: optionalData.warranty ? Number(optionalData.warranty) : undefined,
         expectedCheckin: optionalData.expectedCheckinDate || undefined,
-        next_audit_date: optionalData.nextAuditDate || undefined,
-        byod: optionalData.byod ? 1 : 0,
-        order_number: orderData.orderNumber || undefined,
-        purchase_date: orderData.purchaseDate || undefined,
-        eol_date: orderData.eolDate || undefined,
+        nextAuditDate: optionalData.nextAuditDate || undefined,
+        byod: optionalData.byod,
+        orderNumber: orderData.orderNumber || undefined,
+        purchaseDate: orderData.purchaseDate || undefined,
+        eolDate: orderData.eolDate || undefined,
         supplierId: orderData.supplier ? Number(orderData.supplier) : undefined,
-        purchase_cost: orderData.purchaseCost ? Number(orderData.purchaseCost) : undefined,
-        currency: orderData.currency || 'USD'
+        purchaseCost: orderData.purchaseCost ? Number(orderData.purchaseCost) : undefined
       };
 
       const result = await assetApiService.createAsset(payload);
+
+      let finalResult = result;
 
       if (selectedImage && result?.id) {
         try {
@@ -247,10 +243,25 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
         }
       }
 
-      onClone?.(result);
+      // Checkout if user selected
+      if (checkoutTo && result?.id) {
+        try {
+          const checkoutResult = await assetApiService.checkoutAsset(
+            result.id,
+            Number(checkoutTo),
+            checkoutType,
+            notes
+          );
+          finalResult = checkoutResult; 
+        } catch (err) {
+          console.error('Checkout failed:', err);
+          toast.warning('Asset created but checkout failed');
+        }
+      }
+
+      onClone?.(finalResult);
       toast.success('Asset cloned successfully');
 
-      // Navigate to the newly created asset
       if (result?.id) {
         navigate(`/assets/hardware?highlight=${result.id}`);
       }
@@ -296,8 +307,13 @@ export const CloneAssetDialog: React.FC<CloneAssetDialogProps> = ({ open, onOpen
             <div className="flex items-center gap-4">
               <label className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Asset Tag</label>
               <div className="flex items-center gap-2 flex-1">
-                <Input value={assetTag} onChange={(e) => setAssetTag(e.target.value)} className="flex-1 border-l-4 border-l-amber-400" placeholder="Enter new asset tag" />
-                <Button type="button" size="icon" className="bg-sky-500 hover:bg-sky-600 text-white h-9 w-9"><Plus className="w-4 h-4" /></Button>
+                <Input 
+                  value={assetTag || 'Auto-generated on save'} 
+                  readOnly 
+                  disabled
+                  className="flex-1 border-l-4 border-l-amber-400 bg-gray-50 cursor-not-allowed" 
+                  placeholder="Auto-generated on save"
+                />
               </div>
             </div>
 

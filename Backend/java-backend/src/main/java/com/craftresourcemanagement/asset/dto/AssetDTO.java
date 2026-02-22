@@ -72,6 +72,9 @@ public class AssetDTO {
     @JsonProperty("purchase_cost")
     private BigDecimal purchaseCost;
 
+    @JsonProperty("eol_date")
+    private LocalDate eolDate;
+
     @JsonProperty("current_value")
     private BigDecimal currentValue;
 
@@ -84,6 +87,15 @@ public class AssetDTO {
     private LocalDate nextAuditDate;
 
     private String image;
+
+    @JsonProperty("assigned_to")
+    private Long assignedTo;
+
+    @JsonProperty("assigned_type")
+    private String assignedType;
+
+    @JsonProperty("assigned_to_name")
+    private String assignedToName;
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -124,6 +136,8 @@ public class AssetDTO {
     public void setPurchaseDate(LocalDate purchaseDate) { this.purchaseDate = purchaseDate; }
     public BigDecimal getPurchaseCost() { return purchaseCost; }
     public void setPurchaseCost(BigDecimal purchaseCost) { this.purchaseCost = purchaseCost; }
+    public LocalDate getEolDate() { return eolDate; }
+    public void setEolDate(LocalDate eolDate) { this.eolDate = eolDate; }
     public BigDecimal getCurrentValue() { return currentValue; }
     public void setCurrentValue(BigDecimal currentValue) { this.currentValue = currentValue; }
     public String getNotes() { return notes; }
@@ -142,4 +156,10 @@ public class AssetDTO {
     public void setRtdLocationName(String rtdLocationName) { this.rtdLocationName = rtdLocationName; }
     public Long getRtdLocationId() { return rtdLocationId; }
     public void setRtdLocationId(Long rtdLocationId) { this.rtdLocationId = rtdLocationId; }
+    public Long getAssignedTo() { return assignedTo; }
+    public void setAssignedTo(Long assignedTo) { this.assignedTo = assignedTo; }
+    public String getAssignedType() { return assignedType; }
+    public void setAssignedType(String assignedType) { this.assignedType = assignedType; }
+    public String getAssignedToName() { return assignedToName; }
+    public void setAssignedToName(String assignedToName) { this.assignedToName = assignedToName; }
 }

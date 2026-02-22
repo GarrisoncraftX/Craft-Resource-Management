@@ -26,7 +26,7 @@ export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, on
       s === 'in use' ||
       s === 'checked out' ||
       a.status_id === 2 ||
-      !!(a.assigned_to ?? a.assignedTo)
+      !!(a.assignedTo ?? a.assigned_to)
     );
   };
 
@@ -95,9 +95,9 @@ export const BulkCheckoutDialog: React.FC<BulkCheckoutDialogProps> = ({ open, on
           ...originalAsset,
           ...result,
           status: status || 'Deployed',
-          assigned_to: Number(assignedTo),
-          assigned_type: checkoutType,
-          expected_checkin: expectedCheckinDate || undefined,
+          assignedTo: Number(assignedTo),
+          assignedType: checkoutType,
+          expectedCheckin: expectedCheckinDate || undefined,
         } as Asset;
       });
 

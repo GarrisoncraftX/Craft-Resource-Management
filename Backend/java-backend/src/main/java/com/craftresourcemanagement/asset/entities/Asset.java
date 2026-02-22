@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Random;
 
 @Entity
 @Table(name = "assets")
@@ -112,8 +113,17 @@ public class Asset {
 
     @PrePersist
     protected void onCreate() {
+        if (assetTag == null || assetTag.trim().isEmpty()) {
+            assetTag = generateAssetTag();
+        }
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+    }
+    
+    private String generateAssetTag() {
+        Random random = new Random();
+        int randomNumber = 1000000 + random.nextInt(9000000);
+        return "CRMS" + randomNumber;
     }
 
     @PreUpdate
