@@ -11,7 +11,7 @@ import {
   mockSuppliers,
   mockDepartments,
 } from '@/services/mockData/assets';
-import type { Asset, MaintenanceRecord, DisposalRecord, MaintenanceCost, Category, Manufacturer, Supplier, Location, AssetModel, StatusLabel, Depreciation, Company, Department, DepreciationReport, MaintenanceReport, AssetAudit } from '@/types/javabackendapi/assetTypes';
+import type { Asset, MaintenanceRecord, DisposalRecord, MaintenanceCost, Category, Manufacturer, Supplier, Location, AssetModel, StatusLabel, Depreciation, Company, Department, DepreciationReport, MaintenanceReport, AssetAudit, MaintenanceRecordInput } from '@/types/javabackendapi/assetTypes';
 
 const API_BASE = '/api/assets';
 
@@ -109,10 +109,10 @@ class AssetApiService {
     );
   }
 
-  async createMaintenanceRecord(record: Omit<MaintenanceRecord, 'id'>): Promise<MaintenanceRecord> {
+  async createMaintenanceRecord(record: MaintenanceRecordInput): Promise<MaintenanceRecord> {
     return this.handleApiCall(
       () => apiClient.post(`${API_BASE}/maintenance-records`, record),
-      { ...record, id: Date.now() }
+      { ...record, id: Date.now() } as MaintenanceRecord
     );
   }
 
@@ -350,7 +350,11 @@ export async function fetchMaintenanceRecords() {
 }
 
 export async function createMaintenanceRecordItem(record: MaintenanceRecord) {
-  return assetApiService.createMaintenanceRecord(record);
+  const input: MaintenanceRecordInput = {
+    ...record,
+    asset: typeof record.asset === 'string' ? record.asset : String(record.asset.id)
+  };
+  return assetApiService.createMaintenanceRecord(input);
 }
 
 export async function updateMaintenanceRecordItem(id: number | string, record: unknown) {

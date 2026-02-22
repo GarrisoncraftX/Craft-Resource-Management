@@ -44,6 +44,7 @@ export const AssetHardware: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedRows, setSelectedRows] = useState<Set<number | string>>(new Set());
+  const [searchFilters, setSearchFilters] = useState<Record<string, string>>({});
 
   // Dialog states
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
@@ -230,10 +231,51 @@ export const AssetHardware: React.FC = () => {
   );
 
   const getFilteredAssets = () => {
-    if (activeFilter === 'all') return assets;
-    const filterKey = activeFilter.toLowerCase().replace(/\s+/g, '-');
-    const filterOption = filterOptions.find((f) => f.label.toLowerCase().replace(/\s+/g, '-') === filterKey);
-    return filterOption ? assets.filter(filterOption.filter) : assets;
+    let filtered = assets;
+    
+    // Apply category filter
+    if (activeFilter !== 'all') {
+      const filterKey = activeFilter.toLowerCase().replace(/\s+/g, '-');
+      const filterOption = filterOptions.find((f) => f.label.toLowerCase().replace(/\s+/g, '-') === filterKey);
+      if (filterOption) {
+        filtered = filtered.filter(filterOption.filter);
+      }
+    }
+    
+    // Apply advanced search filters
+    if (Object.keys(searchFilters).length > 0) {
+      filtered = filtered.filter(asset => {
+        return Object.entries(searchFilters).every(([key, value]) => {
+          if (!value) return true;
+          const searchValue = value.toLowerCase();
+          
+          switch(key) {
+            case 'assetTag':
+              return (asset.assetTag || asset.asset_tag || '')?.toString().toLowerCase().includes(searchValue);
+            case 'assetName':
+              return (asset.assetName || asset.asset_name || asset.name || '')?.toLowerCase().includes(searchValue);
+            case 'serial':
+              return (asset.serial || '')?.toLowerCase().includes(searchValue);
+            case 'model':
+              return (asset.model || '')?.toLowerCase().includes(searchValue);
+            case 'category':
+              return (asset.category || '')?.toLowerCase().includes(searchValue);
+            case 'status':
+              return (asset.status || '')?.toLowerCase().includes(searchValue);
+            case 'checkedOutTo':
+              return (asset.assigned_to || asset.assignedTo || '')?.toString().toLowerCase().includes(searchValue);
+            case 'location':
+              return (asset.location || asset.defaultLocation || asset.rtd_location || '')?.toLowerCase().includes(searchValue);
+            case 'purchaseCost':
+              return (asset.purchaseCost || asset.purchase_cost || '')?.toString().includes(searchValue);
+            default:
+              return true;
+          }
+        });
+      });
+    }
+    
+    return filtered;
   };
 
   const filteredAssets = getFilteredAssets();
@@ -327,21 +369,24 @@ export const AssetHardware: React.FC = () => {
         header: 'Check In/Out',
         defaultVisible: true,
         sticky: 'right',
-        accessor: (row) => (
-          <Button
-            size="sm"
-            variant="outline"
-            className={`h-7 text-white text-xs px-3 rounded ${
-              isAssetCheckedOut(row) ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-rose-500 hover:bg-rose-600'
-            }`}
-            onClick={() => {
-              setSelectedAssetForCheckout(row);
-              setShowCheckoutDialog(true);
-            }}
-          >
-            {isAssetCheckedOut(row) ? 'Check In' : 'Check Out'}
-          </Button>
-        ),
+        accessor: (row) => {
+          const checkedOut = isAssetCheckedOut(row);
+          return (
+            <Button
+              size="sm"
+              variant="outline"
+              className={`h-7 text-white text-xs px-3 rounded ${
+                checkedOut ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-rose-500 hover:bg-rose-600'
+              }`}
+              onClick={() => {
+                setSelectedAssetForCheckout(row);
+                setShowCheckoutDialog(true);
+              }}
+            >
+              {checkedOut ? 'Check In' : 'Check Out'}
+            </Button>
+          );
+        },
       },
     ],
     [selectedRows, filteredAssets.length]
@@ -365,6 +410,22 @@ export const AssetHardware: React.FC = () => {
             </span>
             <button onClick={() => setActiveFilter('all')} className="text-sm text-blue-600 hover:underline">
               Clear Filter
+            </button>
+          </div>
+        )}
+
+        {Object.keys(searchFilters).length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Search Filters:</span>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(searchFilters).map(([key, value]) => (
+                <span key={key} className="px-3 py-1 bg-sky-100 text-sky-700 rounded-full text-sm font-medium">
+                  {key}: {value}
+                </span>
+              ))}
+            </div>
+            <button onClick={() => setSearchFilters({})} className="text-sm text-blue-600 hover:underline">
+              Clear Search
             </button>
           </div>
         )}
@@ -485,9 +546,24 @@ export const AssetHardware: React.FC = () => {
         />
       )}
 
-      <AdvancedSearchDialog open={showAdvancedSearch} onOpenChange={setShowAdvancedSearch} />
+      <AdvancedSearchDialog 
+        open={showAdvancedSearch} 
+        onOpenChange={setShowAdvancedSearch}
+        onSearch={(filters) => {
+          setSearchFilters(filters);
+          toast.success(`Applied ${Object.keys(filters).length} search filter(s)`);
+        }}
+      />
 
-      <MaintenanceFormDialog open={showMaintenance} onOpenChange={setShowMaintenance} preSelectedAssetIds={maintenancePreselected} />
+      <MaintenanceFormDialog 
+        open={showMaintenance} 
+        onOpenChange={setShowMaintenance} 
+        preSelectedAssetIds={maintenancePreselected}
+        onSubmit={() => {
+          toast.success('Maintenance record created');
+          setMaintenancePreselected([]);
+        }}
+      />
 
       {showBulkEdit && <BulkEditDialog open={showBulkEdit} onOpenChange={setShowBulkEdit} selectedCount={selectedRows.size} />}
 

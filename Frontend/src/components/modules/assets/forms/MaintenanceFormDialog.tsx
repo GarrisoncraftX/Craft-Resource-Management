@@ -9,21 +9,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, X, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Asset, Supplier } from '@/types/javabackendapi/assetTypes';
+import type { Asset, Supplier, MaintenanceRecordInput } from '@/types/javabackendapi/assetTypes';
 
 interface MaintenanceFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Pre-selected asset IDs (for bulk maintenance) */
   preSelectedAssetIds?: (number | string)[];
-  onSubmit?: (data: any) => void;
+  onSubmit?: (data) => void;
 }
 
 export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ open, onOpenChange, preSelectedAssetIds = [], onSubmit }) => {
   const [name, setName] = useState('');
-  const [selectedAssets, setSelectedAssets] = useState<string[]>(
-    preSelectedAssetIds.map(id => String(id))
-  );
+  const [selectedAssets, setSelectedAssets] = useState<string[]>([]);
   const [maintenanceType, setMaintenanceType] = useState('');
   const [startDate, setStartDate] = useState('');
   const [completionDate, setCompletionDate] = useState('');
@@ -42,6 +40,12 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
   const [assets, setAssets] = useState<Asset[]>([]);
 
   useEffect(() => {
+    if (open && preSelectedAssetIds.length > 0) {
+      setSelectedAssets(preSelectedAssetIds.map(String));
+    }
+  }, [open, preSelectedAssetIds]);
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const [suppliersData, assetsData] = await Promise.all([
@@ -54,7 +58,23 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
         console.error('Failed to fetch data:', error);
       }
     };
-    if (open) fetchData();
+    if (open) {
+      fetchData();
+    } else {
+      // Reset form when dialog closes
+      setName('');
+      setSelectedAssets([]);
+      setMaintenanceType('');
+      setStartDate('');
+      setCompletionDate('');
+      setSupplier('');
+      setWarrantyImprovement(false);
+      setCost('');
+      setUrl('');
+      setNotes('');
+      setAssetSearch('');
+      removeImage();
+    }
   }, [open]);
 
   const filteredAssets = assets.filter(a => 
@@ -106,7 +126,7 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
     
     setIsSubmitting(true);
     try {
-      const maintenanceData = {
+      const maintenanceData: MaintenanceRecordInput = {
         name,
         asset_ids: selectedAssets,
         maintenance_type: maintenanceType,
@@ -114,7 +134,7 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
         completion_date: completionDate,
         supplier_id: supplier,
         warranty_improvement: warrantyImprovement,
-        cost: cost ? parseFloat(cost) : 0,
+        cost: cost ? Number.parseFloat(cost) : 0,
         url,
         notes,
       };
@@ -132,9 +152,7 @@ export const MaintenanceFormDialog: React.FC<MaintenanceFormDialogProps> = ({ op
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to create maintenance record:', error);
-      toast.error('Failed to create maintenance record. Using fallback.');
-      // Fallback to local handling
-      onSubmit?.({ name, assets: selectedAssets, maintenanceType, startDate, completionDate, supplier, warrantyImprovement, cost, url, notes });
+      toast.error('Failed to create maintenance record');
       onOpenChange(false);
     } finally {
       setIsSubmitting(false);

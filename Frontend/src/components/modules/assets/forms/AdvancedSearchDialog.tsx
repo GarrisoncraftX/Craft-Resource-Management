@@ -29,8 +29,15 @@ export const AdvancedSearchDialog: React.FC<AdvancedSearchDialogProps> = ({ open
   };
 
   const handleSearch = () => {
-    onSearch?.(filters);
+    const activeFilters = Object.fromEntries(
+      Object.entries(filters).filter(([_, value]) => value.trim() !== '')
+    );
+    onSearch?.(activeFilters);
     onOpenChange(false);
+  };
+
+  const handleReset = () => {
+    setFilters({});
   };
 
   return (
@@ -55,6 +62,12 @@ export const AdvancedSearchDialog: React.FC<AdvancedSearchDialogProps> = ({ open
         </div>
 
         <DialogFooter>
+          <Button onClick={handleReset} variant="outline" className="mr-auto">
+            Reset
+          </Button>
+          <Button onClick={handleSearch} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            Search
+          </Button>
           <Button onClick={() => onOpenChange(false)} className="bg-red-500 hover:bg-red-600 text-white">
             Close
           </Button>

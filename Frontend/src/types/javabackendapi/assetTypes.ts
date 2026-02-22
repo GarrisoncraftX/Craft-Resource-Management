@@ -486,6 +486,25 @@ export interface MaintenanceRecord {
   nextMaintenanceDate?: string;
 }
 
+export interface MaintenanceRecordInput {
+  name?: string;
+  asset_ids?: string[];
+  maintenance_type?: string;
+  start_date?: string;
+  completion_date?: string;
+  supplier_id?: string;
+  warranty_improvement?: boolean;
+  cost?: number;
+  url?: string;
+  notes?: string;
+  asset?: string;
+  maintenanceDate?: string;
+  description?: string;
+  performedBy?: string;
+  type?: string;
+  status?: string;
+}
+
 export interface MaintenanceReport {
   id: number;
   company: string;

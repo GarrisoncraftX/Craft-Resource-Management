@@ -53,17 +53,14 @@ const isAssetCheckedOut = (a: Asset) => {
 };
 
 type AssetApiLike = {
-  getStatuses?: () => Promise<StatusLabel[]>;
-  getLocations?: () => Promise<Location[]>;
+  getAllStatusLabels?: () => Promise<StatusLabel[]>;
+  getAllLocations?: () => Promise<Location[]>;
 
-  // your current signature (from your file)
   checkoutAsset?: (assetId: number, assignedToId: number, assignedType: string, notes?: string) => Promise<Asset>;
 
-  // possible checkin signatures (best-effort)
   checkinAssetById?: (assetId: number, payload: unknown) => Promise<Asset>;
   checkinAsset?: ((assetId: number, payload: unknown) => Promise<Asset>) | ((assetTag: string, payload: unknown) => Promise<Asset>);
 
-  // optional helpers (if your backend supports)
   updateAsset?: (assetId: number, payload: unknown) => Promise<Asset>;
   updateAssetStatus?: (assetId: number, statusId: number) => Promise<Asset>;
 };
@@ -87,6 +84,8 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, onOpenChan
   const [users, setUsers] = useState<User[]>([]);
   const [statuses, setStatuses] = useState<StatusLabel[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [readyToDeployStatus, setReadyToDeployStatus] = useState<StatusLabel | null>(null);
+  const [deployedStatus, setDeployedStatus] = useState<StatusLabel | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -116,25 +115,34 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, onOpenChan
       try {
         const [usersData, statusesData, locationsData] = await Promise.all([
           hrApiService.listEmployees().catch(() => [] as User[]),
-          api.getStatuses ? api.getStatuses().catch(() => [] as StatusLabel[]) : Promise.resolve([] as StatusLabel[]),
-          api.getLocations ? api.getLocations().catch(() => [] as Location[]) : Promise.resolve([] as Location[]),
+          api.getAllStatusLabels ? api.getAllStatusLabels().catch(() => [] as StatusLabel[]) : Promise.resolve([] as StatusLabel[]),
+          api.getAllLocations ? api.getAllLocations().catch(() => [] as Location[]) : Promise.resolve([] as Location[]),
         ]);
 
         setUsers(usersData || []);
         setStatuses(statusesData || []);
         setLocations(locationsData || []);
 
+        const rtdStatus = (statusesData || []).find((s) => normalizeStatus(s.name) === 'ready to deploy');
+        const depStatus = (statusesData || []).find((s) => normalizeStatus(s.name) === 'deployed');
+        setReadyToDeployStatus(rtdStatus || null);
+        setDeployedStatus(depStatus || null);
+
         if (asset) {
           const preName = (asset.assetName || asset.asset_name || asset.name || '') as string;
 
-          // try to preselect status by name match
-          const matchStatus = (statusesData || []).find((s) => normalizeStatus(s.name) === normalizeStatus(asset.status || ''));
-          const statusId = matchStatus ? String(matchStatus.id) : '';
+          let preselectedStatusId = '';
+          if (mode === 'checkout' && rtdStatus) {
+            preselectedStatusId = String(rtdStatus.id);
+          } else if (mode === 'checkin') {
+            const matchStatus = (statusesData || []).find((s) => normalizeStatus(s.name) === normalizeStatus(asset.status || ''));
+            preselectedStatusId = matchStatus ? String(matchStatus.id) : '';
+          }
 
           setFormData((prev) => ({
             ...prev,
             assetName: preName,
-            statusId: statusId || prev.statusId,
+            statusId: preselectedStatusId,
             notes: '',
             checkoutTo: 'user',
             assignedToId: '',
@@ -247,19 +255,17 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, onOpenChan
           notes: formData.notes || undefined,
         };
 
-        const updated = await api.checkoutAsset(assetId, payload.assignedToId, payload.assignedType, payload.notes);
+        let updated = await api.checkoutAsset(assetId, payload.assignedToId, payload.assignedType, payload.notes);
 
-        if (statusIdNum) {
+        if (deployedStatus) {
+          const maybe = await tryUpdateStatus(assetId, deployedStatus.id);
+          if (maybe) updated = maybe;
+        } else if (statusIdNum) {
           const maybe = await tryUpdateStatus(assetId, statusIdNum);
-          if (maybe) {
-            toast.success(`Asset ${asset.assetTag} checked out successfully`);
-            onSuccess?.(maybe);
-            close();
-            return;
-          }
+          if (maybe) updated = maybe;
         }
 
-        toast.success(`Asset ${asset.assetTag} checked out successfully`);
+        toast.success(`Asset ${asset.assetTag || asset.asset_tag} checked out successfully`);
         onSuccess?.(updated);
         close();
         return;
@@ -290,7 +296,7 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, onOpenChan
         throw new Error('checkin API not available');
       }
 
-      toast.success(`Asset ${asset.assetTag} checked in successfully`);
+      toast.success(`Asset ${asset.assetTag || asset.asset_tag} checked in successfully`);
       onSuccess?.(updatedAsset);
       close();
     } catch (error) {
@@ -350,10 +356,25 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, onOpenChan
                 <span className="text-sm font-medium text-gray-500">Category</span>
                 <span className="text-sm">{categoryDisplay}</span>
               </div>
+
               <div className="flex justify-between gap-4">
                 <span className="text-sm font-medium text-gray-500">Model</span>
                 <span className="text-sm">{modelDisplay || '—'}</span>
               </div>
+            </div>
+
+            {/* Asset Name field (both modes) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {mode === 'checkout' ? 'Asset Name' : 'Name'}
+              </label>
+              <input
+                type="text"
+                value={formData.assetName}
+                onChange={(e) => setField('assetName', e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                placeholder={mode === 'checkout' ? 'Asset name' : 'Name'}
+              />
             </div>
 
             {/* Shared field: Status */}
@@ -367,11 +388,27 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, onOpenChan
                 className={`w-full border rounded-md px-3 py-2 ${errors.statusId ? 'border-red-500' : 'border-gray-300'}`}
               >
                 <option value="">Select Status</option>
-                {statuses.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
+                {mode === 'checkout' ? (
+                  readyToDeployStatus ? (
+                    <option key={readyToDeployStatus.id} value={readyToDeployStatus.id}>
+                      {readyToDeployStatus.name}
+                    </option>
+                  ) : (
+                    statuses.filter((s) => normalizeStatus(s.name) === 'ready to deploy').map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))
+                  )
+                ) : (
+                  statuses
+                    .filter((s) => normalizeStatus(s.name) !== 'ready to deploy')
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))
+                )}
               </select>
               {errors.statusId && <p className="text-red-500 text-sm mt-1">{errors.statusId}</p>}
             </div>
@@ -379,18 +416,6 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, onOpenChan
             {/* MODE: CHECKOUT */}
             {mode === 'checkout' ? (
               <>
-                {/* Asset Name (checkout shows Asset Name) */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Asset Name</label>
-                  <input
-                    type="text"
-                    value={formData.assetName}
-                    onChange={(e) => setField('assetName', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    placeholder="Asset name"
-                  />
-                </div>
-
                 {/* Checkout to tabs */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Checkout to</label>
@@ -501,18 +526,6 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({ open, onOpenChan
               </>
             ) : (
               <>
-                {/* MODE: CHECKIN */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                  <input
-                    type="text"
-                    value={formData.assetName}
-                    onChange={(e) => setField('assetName', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    placeholder="Name"
-                  />
-                </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Location <span className="text-red-500">*</span>
