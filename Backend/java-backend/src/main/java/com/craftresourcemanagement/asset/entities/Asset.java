@@ -1,5 +1,6 @@
 package com.craftresourcemanagement.asset.entities;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -17,6 +18,7 @@ public class Asset {
 
     @Column(name = "asset_tag", nullable = false, unique = true)
     @JsonProperty("assetTag")
+    @JsonAlias({"asset_tag"})
     private String assetTag;
 
     @Column(name = "name")
@@ -27,46 +29,57 @@ public class Asset {
 
     @Column(name = "model_id", nullable = false)
     @JsonProperty("modelId")
+    @JsonAlias({"model_id"})
     private Long modelId;
 
     @Column(name = "status_id", nullable = false)
     @JsonProperty("statusId")
+    @JsonAlias({"status_id"})
     private Long statusId;
 
     @Column(name = "company_id")
     @JsonProperty("companyId")
+    @JsonAlias({"company_id"})
     private Long companyId;
 
     @Column(name = "location_id")
     @JsonProperty("locationId")
+    @JsonAlias({"location_id"})
     private Long locationId;
 
     @Column(name = "rtd_location_id")
     @JsonProperty("rtdLocationId")
+    @JsonAlias({"rtd_location_id"})
     private Long rtdLocationId;
 
     @Column(name = "supplier_id")
     @JsonProperty("supplierId")
+    @JsonAlias({"supplier_id"})
     private Long supplierId;
 
     @Column(name = "order_number")
     @JsonProperty("orderNumber")
+    @JsonAlias({"order_number"})
     private String orderNumber;
 
     @Column(name = "purchase_date")
     @JsonProperty("purchaseDate")
+    @JsonAlias({"purchase_date"})
     private LocalDate purchaseDate;
 
     @Column(name = "purchase_cost", precision = 13, scale = 4)
     @JsonProperty("purchaseCost")
+    @JsonAlias({"purchase_cost"})
     private BigDecimal purchaseCost;
 
     @Column(name = "warranty_months")
     @JsonProperty("warrantyMonths")
+    @JsonAlias({"warranty_months"})
     private Integer warrantyMonths;
 
     @Column(name = "eol_date")
     @JsonProperty("eolDate")
+    @JsonAlias({"eol_date"})
     private LocalDate eolDate;
 
     @Column(name = "notes", columnDefinition = "TEXT")
@@ -77,10 +90,12 @@ public class Asset {
 
     @Column(name = "assigned_to")
     @JsonProperty("assignedTo")
+    @JsonAlias({"assigned_to"})
     private Long assignedTo;
 
     @Column(name = "assigned_type")
     @JsonProperty("assignedType")
+    @JsonAlias({"assigned_type"})
     private String assignedType;
 
     @Column(name = "requestable")
@@ -88,18 +103,22 @@ public class Asset {
 
     @Column(name = "last_checkout")
     @JsonProperty("lastCheckout")
+    @JsonAlias({"last_checkout"})
     private LocalDateTime lastCheckout;
 
     @Column(name = "expected_checkin")
     @JsonProperty("expectedCheckin")
+    @JsonAlias({"expected_checkin"})
     private LocalDate expectedCheckin;
 
     @Column(name = "last_audit_date")
     @JsonProperty("lastAuditDate")
+    @JsonAlias({"last_audit_date"})
     private LocalDateTime lastAuditDate;
 
     @Column(name = "next_audit_date")
     @JsonProperty("nextAuditDate")
+    @JsonAlias({"next_audit_date"})
     private LocalDate nextAuditDate;
 
     @Column(name = "byod")

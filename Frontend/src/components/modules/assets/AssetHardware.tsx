@@ -171,55 +171,54 @@ export const AssetHardware: React.FC = () => {
     const deleteFlags = data.deleteFlags as Record<string, boolean> | undefined;
     setIsSubmitting(true);
     try {
-      const updates = await Promise.all(
-        selectedAssets.map((asset) => {
-          const updatePayload: Partial<Asset> = {};
-          if (data.assetName && !deleteFlags?.assetName) updatePayload.assetName = data.assetName as string;
+      await Promise.all(
+        selectedAssets.map(async (asset) => {
+          const updatePayload: Record<string, unknown> = {};
+          
+          if (data.assetName && !deleteFlags?.assetName) updatePayload.name = data.assetName as string;
           if (data.purchaseDate && !deleteFlags?.purchaseDate) updatePayload.purchaseDate = data.purchaseDate as string;
-          if (data.expectedCheckinDate && !deleteFlags?.expectedCheckinDate) updatePayload.expected_checkin = data.expectedCheckinDate as string;
-          if (data.eolDate && !deleteFlags?.eolDate) updatePayload.eol_date = data.eolDate as string;
-          if (data.status) updatePayload.status_id = Number(data.status);
-          if (data.model) updatePayload.model_id = Number(data.model);
+          if (data.expectedCheckinDate && !deleteFlags?.expectedCheckinDate) updatePayload.expectedCheckin = data.expectedCheckinDate as string;
+          if (data.eolDate && !deleteFlags?.eolDate) updatePayload.eolDate = data.eolDate as string;
+          if (data.status) updatePayload.statusId = Number(data.status);
+          if (data.model) updatePayload.modelId = Number(data.model);
           if (data.defaultLocation) {
             if (data.locationUpdateType === 'both' || data.locationUpdateType === 'default-only') {
-              updatePayload.rtd_location_id = Number(data.defaultLocation);
+              updatePayload.rtdLocationId = Number(data.defaultLocation);
             }
             if (data.locationUpdateType === 'both' || data.locationUpdateType === 'actual-only') {
-              updatePayload.location_id = Number(data.defaultLocation);
+              updatePayload.locationId = Number(data.defaultLocation);
             }
           }
-          if (data.purchaseCost) updatePayload.purchase_cost = Number(data.purchaseCost);
-          if (data.supplier) updatePayload.supplier_id = Number(data.supplier);
-          if (data.company) updatePayload.company_id = Number(data.company);
-          if (data.orderNumber) updatePayload.order_number = data.orderNumber as string;
-          if (data.warranty) updatePayload.warranty_months = Number(data.warranty);
-          if (data.nextAuditDate && !deleteFlags?.nextAuditDate) updatePayload.next_audit_date = data.nextAuditDate as string;
+          if (data.purchaseCost) updatePayload.purchaseCost = Number(data.purchaseCost);
+          if (data.supplier) updatePayload.supplierId = Number(data.supplier);
+          if (data.company) updatePayload.companyId = Number(data.company);
+          if (data.orderNumber) updatePayload.orderNumber = data.orderNumber as string;
+          if (data.warranty) updatePayload.warrantyMonths = Number(data.warranty);
+          if (data.nextAuditDate && !deleteFlags?.nextAuditDate) updatePayload.nextAuditDate = data.nextAuditDate as string;
           if (data.requestable === 'yes') updatePayload.requestable = true;
           else if (data.requestable === 'no') updatePayload.requestable = false;
           if (data.notes && !deleteFlags?.notes) updatePayload.notes = data.notes as string;
           
-          if (deleteFlags?.assetName) updatePayload.assetName = '';
-          if (deleteFlags?.purchaseDate) updatePayload.purchaseDate = '';
-          if (deleteFlags?.expectedCheckinDate) updatePayload.expected_checkin = '';
-          if (deleteFlags?.eolDate) updatePayload.eol_date = '';
-          if (deleteFlags?.nextAuditDate) updatePayload.next_audit_date = '';
+          if (deleteFlags?.assetName) updatePayload.name = '';
+          if (deleteFlags?.purchaseDate) updatePayload.purchaseDate = null;
+          if (deleteFlags?.expectedCheckinDate) updatePayload.expectedCheckin = null;
+          if (deleteFlags?.eolDate) updatePayload.eolDate = null;
+          if (deleteFlags?.nextAuditDate) updatePayload.nextAuditDate = null;
           if (deleteFlags?.notes) updatePayload.notes = '';
 
-          return assetApiService.updateAsset(Number(asset.id), updatePayload);
+          return await assetApiService.updateAsset(Number(asset.id), updatePayload);
         })
       );
-      setAssets((prev) =>
-        prev.map((a) => {
-          const updated = updates.find((u) => u.id === a.id);
-          return updated || a;
-        })
-      );
+      const refreshedAssets = await assetApiService.getAllAssets();
+      if (Array.isArray(refreshedAssets) && refreshedAssets.length > 0) {
+        setAssets(refreshedAssets);
+      }
       setSelectedRows(new Set());
       setShowBulkEdit(false);
       toast.success(`${selectedAssets.length} asset(s) updated successfully`);
     } catch (err) {
       toast.error('Failed to update some assets');
-      console.error(err);
+      console.error('❌ Bulk edit error:', err);
     } finally {
       setIsSubmitting(false);
     }

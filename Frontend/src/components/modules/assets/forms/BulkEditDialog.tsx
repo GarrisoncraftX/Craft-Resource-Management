@@ -24,13 +24,13 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
   const [purchaseDate, setPurchaseDate] = useState('');
   const [expectedCheckinDate, setExpectedCheckinDate] = useState('');
   const [eolDate, setEolDate] = useState('');
-  const [status, setStatus] = useState('');
-  const [model, setModel] = useState('');
-  const [defaultLocation, setDefaultLocation] = useState('');
+  const [status, setStatus] = useState<string | undefined>(undefined);
+  const [model, setModel] = useState<string | undefined>(undefined);
+  const [defaultLocation, setDefaultLocation] = useState<string | undefined>(undefined);
   const [locationUpdateType, setLocationUpdateType] = useState('both');
   const [purchaseCost, setPurchaseCost] = useState('');
-  const [supplier, setSupplier] = useState('');
-  const [company, setCompany] = useState('');
+  const [supplier, setSupplier] = useState<string | undefined>(undefined);
+  const [company, setCompany] = useState<string | undefined>(undefined);
   const [orderNumber, setOrderNumber] = useState('');
   const [warranty, setWarranty] = useState('');
   const [nextAuditDate, setNextAuditDate] = useState('');
@@ -158,7 +158,7 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
           <div className="flex items-start gap-4">
             <label htmlFor="bulk-status" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Status</label>
             <div className="flex-1 space-y-1">
-              <Select value={String(status)} onValueChange={setStatus}>
+              <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger id="bulk-status"><SelectValue placeholder="Select Status" /></SelectTrigger>
                 <SelectContent>
                   {statusLabels.map(s => (
@@ -173,7 +173,7 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
           {/* Model */}
           <div className="flex items-center gap-4">
             <label htmlFor="bulk-model" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Model</label>
-            <Select value={String(model)} onValueChange={setModel}>
+            <Select value={model} onValueChange={setModel}>
               <SelectTrigger id="bulk-model" className="flex-1"><SelectValue placeholder="Select a Model" /></SelectTrigger>
               <SelectContent>
                 {models.map(m => (
@@ -189,7 +189,7 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
             <label htmlFor="bulk-location" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0 mt-2">Default Location</label>
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
-                <Select value={String(defaultLocation)} onValueChange={setDefaultLocation}>
+                <Select value={defaultLocation} onValueChange={setDefaultLocation}>
                   <SelectTrigger id="bulk-location" className="flex-1"><SelectValue placeholder="Select a Location" /></SelectTrigger>
                   <SelectContent>
                     {locations.map(l => (
@@ -229,7 +229,7 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
           <div className="flex items-center gap-4">
             <label htmlFor="bulk-supplier" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Supplier</label>
             <div className="flex items-center gap-2 flex-1">
-              <Select value={String(supplier)} onValueChange={setSupplier}>
+              <Select value={supplier} onValueChange={setSupplier}>
                 <SelectTrigger id="bulk-supplier" className="flex-1"><SelectValue placeholder="Select a Supplier" /></SelectTrigger>
                 <SelectContent>
                   {suppliers.map(s => (
@@ -244,7 +244,7 @@ export const BulkEditDialog: React.FC<BulkEditDialogProps> = ({ open, onOpenChan
           {/* Company */}
           <div className="flex items-center gap-4">
             <label htmlFor="bulk-company" className="w-40 text-sm font-bold text-gray-700 text-right shrink-0">Company</label>
-            <Select value={String(company)} onValueChange={setCompany}>
+            <Select value={company} onValueChange={setCompany}>
               <SelectTrigger id="bulk-company" className="flex-1"><SelectValue placeholder="Select Company" /></SelectTrigger>
               <SelectContent>
                 {companies.map(c => (

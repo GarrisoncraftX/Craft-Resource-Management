@@ -115,7 +115,6 @@ public class AssetServiceImpl implements AssetService {
         Asset existing = assetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Asset not found"));
         
-        // Don't update assetTag - it's immutable after creation
         if (asset.getName() != null) existing.setName(asset.getName());
         if (asset.getSerial() != null) existing.setSerial(asset.getSerial());
         if (asset.getModelId() != null) existing.setModelId(asset.getModelId());
@@ -136,7 +135,8 @@ public class AssetServiceImpl implements AssetService {
         if (asset.getRequestable() != null) existing.setRequestable(asset.getRequestable());
         if (asset.getImage() != null) existing.setImage(asset.getImage());
         
-        Asset updated = assetRepository.save(existing);
+        Asset updated = assetRepository.saveAndFlush(existing);
+        
         String userName = getUserName(userId);
         logAudit(userId, "Asset Updated by " + userName, "Asset", updated.getId(), 
                 String.format("%s updated asset '%s' (%s)", userName, updated.getName(), updated.getAssetTag()));
